@@ -10,18 +10,24 @@ Cosa fa l'iscritto: esegue le schede assegnate dal trainer, segue il piano alime
 diario cibo con AI (testo, foto, manuale), registra peso e foto progressi, vede la dashboard
 e chatta col proprio trainer.
 
-## 📘 Documentazione
+## 📘 Documentazione — vive nel repo documentale
 
-| Documento | Dove | Cos'è |
-|---|---|---|
-| [`plan_trainingfe.md`](./plan_trainingfe.md) | qui | **La specsheet operativa dell'app.** Fasi A0–A8, ADR con le motivazioni, contratto con il backend, trappole note |
-| `plan_trainingbe.md` | [`trainingbe`](https://github.com/Frostmoore/trainingbe) | La specsheet operativa del backend (fasi B0–B10) |
-| `codebase_reference.md` | qui | Atlante del codice app. *Non esiste ancora: nasce a fine **A1*** |
-| `codebase_reference.md` | `trainingbe` | Atlante del codice backend. *Nasce a fine **B1*** |
-| `codebase_reference.md` generale | *da decidere* | Atlante di piattaforma. Vedi [`plan_trainingfe.md` §14](./plan_trainingfe.md) |
-
-Ogni piano è **self-contained**: non serve avere entrambi i repo per lavorare su uno dei due.
-Se questo README e il piano divergono, **vince il piano**.
+> **In questo repository non c'è documentazione, di proposito.**
+>
+> Piani e atlanti stanno tutti in **`TrainingCompanionAI`** (Gitea), cartella `memory/`:
+>
+> | File | Cosa |
+> |---|---|
+> | `memory/plan_trainingfe.md` | **La specsheet di questa app** — fasi A0–A8, ADR motivati, contratto con il backend, trappole note |
+> | `memory/plan_trainingbe.md` | La specsheet del backend (fasi B0–B10) |
+> | `memory/codebase_reference.md` | Atlante di piattaforma — *nasce a fine B1* |
+> | `memory/codebase_reference_fe.md` | Atlante di questo codice — *nasce a fine A1* |
+>
+> **Perché non qui:** il projects-tracker importa i documenti **solo dal repo principale** del
+> progetto; i sottoprogetti (questo) li traccia soltanto. Un `plan_*.md` messo qui non verrebbe
+> mai risincronizzato e diventerebbe una copia stantia.
+>
+> Se questo README e il piano divergono, **vince il piano**.
 
 ## Stack
 

@@ -1,3 +1,8 @@
+# FVM — la versione di Flutter e' un dato del repository (ADR-A02).
+# .fvmrc SI committa (dichiara la versione); .fvm/ NO (e' un symlink alla cache locale).
+.fvm/
+!.fvmrc
+
 # Flutter / Dart
 .dart_tool/
 .packages

@@ -10,33 +10,43 @@ Cosa fa l'iscritto: esegue le schede assegnate dal trainer, segue il piano alime
 diario cibo con AI (testo, foto, manuale), registra peso e foto progressi, vede la dashboard
 e chatta col proprio trainer.
 
-## 📘 Documentazione — fonte di verità nel backend
+## 📘 Documentazione
 
-> **Il piano di sviluppo di questo progetto NON vive qui.**
->
-> La specsheet operativa è **[`trainingbe/plan_training_companion.md`](https://github.com/Frostmoore/trainingbe/blob/main/plan_training_companion.md)**
-> e copre backend **e** app. Le fasi che riguardano questo repo sono **F9** (fondamenta:
-> scaffolding, tema a runtime, auth, client API) e **F10** (funzionalità: diario, player
-> allenamento, piano alimentare, progressi, chat).
->
-> Se questo file e il piano divergono, **vince il piano**.
+| Documento | Dove | Cos'è |
+|---|---|---|
+| [`plan_trainingfe.md`](./plan_trainingfe.md) | qui | **La specsheet operativa dell'app.** Fasi A0–A8, ADR con le motivazioni, contratto con il backend, trappole note |
+| `plan_trainingbe.md` | [`trainingbe`](https://github.com/Frostmoore/trainingbe) | La specsheet operativa del backend (fasi B0–B10) |
+| `codebase_reference.md` | qui | Atlante del codice app. *Non esiste ancora: nasce a fine **A1*** |
+| `codebase_reference.md` | `trainingbe` | Atlante del codice backend. *Nasce a fine **B1*** |
+| `codebase_reference.md` generale | *da decidere* | Atlante di piattaforma. Vedi [`plan_trainingfe.md` §14](./plan_trainingfe.md) |
+
+Ogni piano è **self-contained**: non serve avere entrambi i repo per lavorare su uno dei due.
+Se questo README e il piano divergono, **vince il piano**.
 
 ## Stack
 
-Flutter ≥ 3.44 · Dart ≥ 3.12 — target iOS e Android.
-I pacchetti Dart vengono fissati in **F9.1**, dopo l'aggiornamento del toolchain.
+Flutter **3.44.9** · Dart **3.12.2** — target iOS e Android.
+
+> ⚠️ La versione di Flutter è **pinnata con FVM su questo repository** (`.fvmrc`), non installata
+> globalmente: l'SDK di sistema resta quello che era, così gli altri progetti Flutter della
+> macchina non si rompono (ADR-A02).
+>
+> **Ogni comando va prefissato con `fvm`.**
 
 ## Backend
 
 Le API sono servite da [`trainingbe`](https://github.com/Frostmoore/trainingbe) sotto `/api/v1`,
-autenticate con token Sanctum (`Authorization: Bearer …`).
+autenticate con token Sanctum (`Authorization: Bearer …`). Il contratto completo è in
+[`plan_trainingfe.md` §8](./plan_trainingfe.md).
 
 ## Avvio in locale
 
 ```bash
-flutter --version     # atteso >= 3.44
-flutter pub get
-flutter run
+dart pub global activate fvm     # una volta sola, per macchina
+fvm install                      # legge .fvmrc e scarica la versione giusta
+fvm flutter --version            # atteso: 3.44.9 / Dart 3.12.2
+fvm flutter pub get
+fvm flutter run
 ```
 
 ## Versionamento

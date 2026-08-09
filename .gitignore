@@ -54,8 +54,20 @@ linux/flutter/ephemeral/
 
 # Editor
 .idea/
-.vscode/
 .zed/
+
+# 🚨 Di `.vscode/` si ignora il CONTENUTO, non la cartella, e la differenza
+# non e' un cavillo: git non entra in una directory esclusa, quindi un
+# `!.vscode/settings.json` dopo un `.vscode/` non verrebbe mai valutato — la
+# riga sembrerebbe funzionare e non farebbe niente.
+#
+# `settings.json` si committa perche' **quale Flutter usa questo repository e'
+# un dato del repository**, esattamente come `.fvmrc` (ADR-A02). Senza,
+# ogni macchina riparte dal Flutter globale e `pub get` fallisce con
+# «The current Dart SDK version is 3.6.0» — un messaggio che non nomina la
+# causa vera.
+.vscode/*
+!.vscode/settings.json
 
 # Segreti e config locale
 .env
@@ -66,3 +78,10 @@ linux/flutter/ephemeral/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Log di `flutter run` lanciato in background
+run.log
+run.err
+
+# Cartella di lavoro del compilatore Kotlin (build, non sorgente)
+android/.kotlin/

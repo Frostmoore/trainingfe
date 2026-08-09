@@ -57,6 +57,62 @@ void main() {
 
       expect(risposta['kcal'], 900);
     });
+
+    /// 🚨 **Il test che avrebbe risparmiato un pomeriggio.**
+    ///
+    /// `/auth/login` risponde `{token, data, branding}`: `data` è **una delle
+    /// tre cose**, non il contenitore. Srotolandola si ottiene il solo utente,
+    /// il token sparisce, e il login fallisce con un errore che l'interfaccia
+    /// mostrava come «email o password non corretti» — dando la colpa
+    /// all'utente di un difetto del client.
+    ///
+    /// Il login dell'app **non ha mai funzionato**, per nessuno, e nessun test
+    /// se ne era accorto perché nessuno provava questa forma di risposta.
+    test('con unwrap:false la risposta di login resta intera', () async {
+      adapter.onPost(
+        '/auth/login',
+        (s) => s.reply(200, {
+          'token': '1|abc',
+          'data': {'id': 1, 'email': 'mario@esempio.test'},
+          'branding': {'name': 'Palestra'},
+        }),
+        data: Matchers.any,
+      );
+
+      final risposta = await client.post<Map<String, dynamic>>(
+        '/auth/login',
+        body: const {'login': 'mario@esempio.test', 'password': 'x'},
+        unwrap: false,
+      );
+
+      expect(risposta['token'], '1|abc');
+      expect(risposta['branding'], isNotNull);
+      expect((risposta['data'] as Map)['email'], 'mario@esempio.test');
+    });
+
+    /// E la prova al contrario, che documenta perché serviva il parametro.
+    test('con unwrap:true la stessa risposta perde il token', () async {
+      adapter.onPost(
+        '/auth/login',
+        (s) => s.reply(200, {
+          'token': '1|abc',
+          'data': {'id': 1, 'email': 'mario@esempio.test'},
+        }),
+        data: Matchers.any,
+      );
+
+      final risposta = await client.post<Map<String, dynamic>>(
+        '/auth/login',
+        body: const {'login': 'mario@esempio.test', 'password': 'x'},
+      );
+
+      expect(
+        risposta['token'],
+        isNull,
+        reason: 'Srotolando `data` il token sparisce: è esattamente il difetto '
+            'che rendeva impossibile il login.',
+      );
+    });
   });
 
   group('traduzione degli errori', () {

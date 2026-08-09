@@ -20,7 +20,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  /// Accetta **email o nome utente**: si chiama così perché è quello che è.
+  final _login = TextEditingController();
   final _password = TextEditingController();
 
   bool _inCorso = false;
@@ -29,7 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _email.dispose();
+    _login.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -46,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .login(
-            email: _email.text,
+            login: _login.text,
             password: _password.text,
             joinCode: ref.read(brandingControllerProvider).joinCode,
           );
@@ -55,15 +56,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final tradotto = ApiClient.unwrapError(error);
 
       setState(() {
-        // 🚨 Un solo messaggio per credenziali sbagliate, utente inesistente e
-        // account disattivato. Distinguerli direbbe a chi prova indirizzi quali
-        // sono registrati in questa palestra — e il backend risponde già allo
-        // stesso modo apposta.
+        // 🚨 **Solo un 422 è «credenziali sbagliate».**
+        //
+        // Prima qui c'era un `_ =>` che mappava *qualunque* errore su «email o
+        // password non corretti», e ha nascosto per un pomeriggio un difetto
+        // del client: il login non funzionava per nessuno, e l'app dava la
+        // colpa all'utente. Un messaggio che accusa chi sta davanti allo
+        // schermo di un errore nostro è peggio di nessun messaggio, perché
+        // porta a cercare nel posto sbagliato — e chi lo cerca è l'utente.
+        //
+        // Il messaggio unico per credenziali sbagliate, utente inesistente e
+        // account disattivato resta: distinguerli direbbe a chi prova indirizzi
+        // quali sono registrati in questa palestra, e il backend risponde già
+        // allo stesso modo apposta.
         _errore = switch (tradotto) {
+          ValidationException() => 'Email, nome utente o password non corretti.',
           NetworkException() => tradotto.message,
           GymInactiveException() => tradotto.message,
           RateLimitedException() => 'Troppi tentativi. Aspetta un minuto.',
-          _ => 'Email o password non corretti.',
+          // Tutto il resto mostra il proprio messaggio: se è un guasto nostro,
+          // deve sembrare un guasto nostro.
+          _ => tradotto.message,
         };
       });
     } finally {
@@ -92,16 +105,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: Gap.xl),
 
                     TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: _login,
+                      // ⚠️ `emailAddress` **no**: quella tastiera mette la «@»
+                      // in evidenza e su iOS attiva la correzione, che su un
+                      // nome utente è un modo per sbagliarlo. `text` con
+                      // correzione e maiuscole spente va bene per entrambi.
+                      keyboardType: TextInputType.text,
                       autocorrect: false,
+                      textCapitalization: TextCapitalization.none,
                       autofillHints: const [AutofillHints.username],
                       decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.alternate_email_rounded),
+                        labelText: 'Email o nome utente',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
-                      validator: (v) =>
-                          (v ?? '').trim().isEmpty ? 'Serve la tua email.' : null,
+                      validator: (v) => (v ?? '').trim().isEmpty
+                          ? 'Serve la tua email o il tuo nome utente.'
+                          : null,
                     ),
                     const SizedBox(height: Gap.md),
 

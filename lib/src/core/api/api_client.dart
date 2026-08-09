@@ -96,22 +96,27 @@ class ApiClient {
 
   // ───────────────────────── verbi ─────────────────────────
 
-  Future<T> get<T>(String path, {Map<String, dynamic>? query}) async {
+  Future<T> get<T>(String path, {Map<String, dynamic>? query, bool unwrap = true}) async {
     final response = await _dio.get<dynamic>(path, queryParameters: query);
 
-    return _unwrap<T>(response);
+    return _unwrap<T>(response, unwrap);
   }
 
-  Future<T> post<T>(String path, {Object? body, Map<String, dynamic>? query}) async {
+  Future<T> post<T>(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    bool unwrap = true,
+  }) async {
     final response = await _dio.post<dynamic>(path, data: body, queryParameters: query);
 
-    return _unwrap<T>(response);
+    return _unwrap<T>(response, unwrap);
   }
 
-  Future<T> patch<T>(String path, {Object? body}) async {
+  Future<T> patch<T>(String path, {Object? body, bool unwrap = true}) async {
     final response = await _dio.patch<dynamic>(path, data: body);
 
-    return _unwrap<T>(response);
+    return _unwrap<T>(response, unwrap);
   }
 
   Future<void> delete(String path) async {
@@ -119,23 +124,37 @@ class ApiClient {
   }
 
   /// Invio multipart, per le foto.
-  Future<T> upload<T>(String path, FormData form) async {
+  Future<T> upload<T>(String path, FormData form, {bool unwrap = true}) async {
     final response = await _dio.post<dynamic>(path, data: form);
 
-    return _unwrap<T>(response);
+    return _unwrap<T>(response, unwrap);
   }
 
   // ───────────────────────── interni ─────────────────────────
 
   /// Estrae `data` dall'inviluppo del backend.
   ///
-  /// Ogni risposta è `{"data": …}`: srotolarlo qui evita che ogni chiamante
-  /// scriva `response.data['data']`, che è il punto in cui prima o poi qualcuno
-  /// scrive `response.data` e ottiene una mappa con una chiave sola.
-  T _unwrap<T>(Response<dynamic> response) {
+  /// Quasi ogni risposta è `{"data": …}`: srotolarlo qui evita che ogni
+  /// chiamante scriva `response.data['data']`, che è il punto in cui prima o
+  /// poi qualcuno scrive `response.data` e ottiene una mappa con una chiave
+  /// sola.
+  ///
+  /// 🚨 **`unwrap: false` esiste perché le risposte di autenticazione NON sono
+  /// un inviluppo.** `/auth/login`, `/auth/register` e `/auth/me` rispondono
+  /// `{token, data, branding}`: `data` è **una delle tre cose**, non il
+  /// contenitore. Srotolandole si ottiene il solo utente, il token sparisce, e
+  /// il login fallisce con un errore che sembra «credenziali sbagliate».
+  ///
+  /// È costato un pomeriggio: il login dell'app **non ha mai funzionato**, per
+  /// nessun utente, e il messaggio diceva una cosa falsa. Se un giorno si è
+  /// tentati di rendere questo metodo «più intelligente» — per esempio
+  /// srotolando solo quando `data` è l'unica chiave — la risposta è no: una
+  /// regola implicita che indovina è esattamente ciò che ha nascosto il
+  /// problema. Chi non vuole l'inviluppo lo dice.
+  T _unwrap<T>(Response<dynamic> response, bool unwrap) {
     final body = response.data;
 
-    if (body is Map<String, dynamic> && body.containsKey('data')) {
+    if (unwrap && body is Map<String, dynamic> && body.containsKey('data')) {
       return body['data'] as T;
     }
 

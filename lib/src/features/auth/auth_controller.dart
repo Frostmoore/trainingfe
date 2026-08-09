@@ -73,9 +73,18 @@ class AuthController extends StateNotifier<AuthState> {
     await _loadMe();
   }
 
-  Future<void> login({required String email, required String password, String? joinCode}) async {
+  /// Accesso con **email o nome utente**.
+  ///
+  /// Il campo si chiama `login` perché accetta entrambi: chiamarlo `email`
+  /// sarebbe un nome che mente, ed è il motivo per cui prima o poi qualcuno gli
+  /// rimetterebbe una validazione sull'email credendo di correggere una svista.
+  Future<void> login({
+    required String login,
+    required String password,
+    String? joinCode,
+  }) async {
     final payload = <String, dynamic>{
-      'email': email.trim(),
+      'login': login.trim(),
       'password': password,
       // Il nome del dispositivo finisce nell'elenco dei token: serve
       // all'utente per riconoscere e revocare una sessione che non ricorda.
@@ -83,7 +92,13 @@ class AuthController extends StateNotifier<AuthState> {
       if (joinCode != null && joinCode.isNotEmpty) 'join_code': joinCode,
     };
 
-    final data = await _api.post<Map<String, dynamic>>('/auth/login', body: payload);
+    // 🚨 `unwrap: false`: la risposta è `{token, data, branding}`, non un
+    // inviluppo. Vedi la nota in `ApiClient._unwrap()`.
+    final data = await _api.post<Map<String, dynamic>>(
+      '/auth/login',
+      body: payload,
+      unwrap: false,
+    );
 
     await _acceptToken(data);
   }
@@ -92,6 +107,7 @@ class AuthController extends StateNotifier<AuthState> {
     required String joinCode,
     required String name,
     required String email,
+    required String username,
     required String password,
   }) async {
     final data = await _api.post<Map<String, dynamic>>(
@@ -100,10 +116,12 @@ class AuthController extends StateNotifier<AuthState> {
         'join_code': joinCode,
         'name': name.trim(),
         'email': email.trim(),
+        'username': username.trim().toLowerCase(),
         'password': password,
         'password_confirmation': password,
         'device_name': 'app',
       },
+      unwrap: false,
     );
 
     await _acceptToken(data);
@@ -150,9 +168,15 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> _loadMe() async {
     try {
-      final data = await _api.get<Map<String, dynamic>>('/auth/me');
+      // Anche qui l'inviluppo non c'è: `/auth/me` risponde `{data, branding}`.
+      final risposta = await _api.get<Map<String, dynamic>>('/auth/me', unwrap: false);
 
-      state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(data));
+      final utente = risposta['data'];
+
+      state = AuthState(
+        status: AuthStatus.loggedIn,
+        user: utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null,
+      );
     } on Object catch (error) {
       // 🚨 Sul **tipo**, non sul messaggio. Riconoscere un errore dal testo
       // significa che il giorno in cui qualcuno riformula una frase l'app

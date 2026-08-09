@@ -1,0 +1,34 @@
+{
+  // 🚨 L'SDK di questo repository e' quello di FVM, non quello globale.
+  //
+  // Senza questa riga VS Code (e l'estensione Flutter) usano il Flutter sul
+  // PATH — su questa macchina 3.27.1 con Dart 3.6.0 — e ogni «Run» fallisce
+  // con «The current Dart SDK version is 3.6.0, because training_companion
+  // requires SDK version ^3.12.2». Il messaggio non nomina la causa vera, che
+  // e' semplicemente il Flutter sbagliato.
+  //
+  // Il percorso e' relativo: `.fvm/flutter_sdk` e' un collegamento che FVM crea
+  // in locale e che punta alla versione dichiarata in `.fvmrc`. Cambiando
+  // versione con `fvm use`, il collegamento si sposta e questa riga resta valida.
+  "dart.flutterSdkPath": ".fvm/flutter_sdk",
+
+  // La cartella del collegamento non va indicizzata: e' una copia intera
+  // dell'SDK, e l'analyzer ci metterebbe minuti a scandirla trovando migliaia
+  // di errori che non riguardano questo progetto.
+  "search.exclude": {
+    "**/.fvm": true
+  },
+  "files.watcherExclude": {
+    "**/.fvm": true
+  },
+
+  // L'analisi in salvataggio evita di scoprire un errore solo al «Run».
+  "editor.formatOnSave": true,
+  "[dart]": {
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.rulers": [100],
+    "editor.selectionHighlight": false,
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  }
+}

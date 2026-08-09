@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,7 +27,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nome = TextEditingController();
   final _email = TextEditingController();
+  final _username = TextEditingController();
   final _password = TextEditingController();
+
+  /// Il nome utente si propone dal nome, ma **smette** appena l'utente lo
+  /// tocca: continuare a sovrascriverlo mentre corregge il cognome sarebbe il
+  /// modo più rapido per fargli odiare il modulo.
+  bool _usernameToccato = false;
 
   bool _inCorso = false;
   String? _errore;
@@ -36,8 +43,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     _nome.dispose();
     _email.dispose();
+    _username.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  /// Propone un nome utente dal nome e cognome.
+  ///
+  /// 🚨 Solo finché l'utente non lo tocca. Continuare a sovrascriverlo mentre
+  /// corregge il cognome cancellerebbe quello che ha appena scritto, ed è il
+  /// tipo di «aiuto» che fa abbandonare un modulo.
+  void _proponiUsername(String nome) {
+    if (_usernameToccato) return;
+
+    final proposta = nome
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .replaceAll(RegExp(r'\s+'), '.');
+
+    _username.text = proposta.length > 30 ? proposta.substring(0, 30) : proposta;
   }
 
   Future<void> _registrati() async {
@@ -64,6 +89,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             joinCode: code,
             name: _nome.text,
             email: _email.text,
+            username: _username.text,
             password: _password.text,
           );
     } on Object catch (error) {
@@ -125,9 +151,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         labelText: 'Nome e cognome',
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        prefixIcon: const Icon(Icons.badge_outlined),
                         errorText: _erroriCampo['name']?.first,
                       ),
+                      onChanged: _proponiUsername,
                       validator: (v) =>
                           (v ?? '').trim().isEmpty ? 'Come ti chiami?' : null,
                     ),
@@ -151,6 +178,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         // del backend, e una regex severa qui rifiuterebbe
                         // indirizzi legittimi che il server accetta.
                         return value.contains('@') ? null : 'Non sembra un\'email.';
+                      },
+                    ),
+                    const SizedBox(height: Gap.md),
+
+                    TextFormField(
+                      controller: _username,
+                      // Le stesse restrizioni del backend, applicate mentre si
+                      // digita: scoprire al salvataggio che «Marco Rossi» non
+                      // va bene come nome utente è un giro inutile.
+                      keyboardType: TextInputType.text,
+                      autocorrect: false,
+                      textCapitalization: TextCapitalization.none,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._\-]')),
+                        TextInputFormatter.withFunction(
+                          (_, nuovo) => nuovo.copyWith(text: nuovo.text.toLowerCase()),
+                        ),
+                      ],
+                      maxLength: 30,
+                      decoration: InputDecoration(
+                        labelText: 'Nome utente',
+                        prefixIcon: const Icon(Icons.alternate_email_rounded),
+                        helperText: 'Ti servirà per accedere, al posto dell\'email.',
+                        counterText: '',
+                        errorText: _erroriCampo['username']?.first,
+                      ),
+                      onChanged: (_) => _usernameToccato = true,
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+
+                        if (value.length < 3) return 'Almeno 3 caratteri.';
+
+                        // Deve cominciare e finire con lettera o numero: un
+                        // nome utente che finisce con un punto confonde chi lo
+                        // legge ad alta voce al telefono.
+                        return RegExp(r'^[a-z0-9](?:[a-z0-9._\-]*[a-z0-9])?$').hasMatch(value)
+                            ? null
+                            : 'Lettere, numeri, punto, trattino e trattino basso.';
                       },
                     ),
                     const SizedBox(height: Gap.md),

@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Regole di analisi — A0.4
+#
+# 🚨 Le tre regole promosse a **errore** non sono pignoleria: sono le tre cose
+# che in un'app mobile si scoprono solo dall'utente, e tardi.
+# ---------------------------------------------------------------------------
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Un `await` dimenticato su una chiamata di rete non fallisce: prosegue e
+    # usa dati che non sono ancora arrivati. È il bug che sembra «a volte
+    # funziona».
+    unawaited_futures: error
+
+    # Usare un `BuildContext` dopo un `await` è la causa numero uno dei crash
+    # da «widget non più montato»: l'utente ha cambiato schermata mentre la
+    # richiesta era in volo.
+    use_build_context_synchronously: error
+
+    # Le TODO non diventano warning: restano visibili senza sporcare l'output.
+    todo: ignore
+
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # ── Correttezza ──────────────────────────────────────────────────────
+    always_declare_return_types: true
+    avoid_dynamic_calls: true
+    cancel_subscriptions: true
+    close_sinks: true
+    prefer_final_locals: true
+    unnecessary_await_in_return: true
+
+    # ── Leggibilità ──────────────────────────────────────────────────────
+    # `const` ovunque possibile: in Flutter non è stile, è il modo in cui si
+    # evita di ricostruire mezzo albero a ogni frame.
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+
+    directives_ordering: true
+    require_trailing_commas: true
+    sort_child_properties_last: true
+
+    # ── Disciplina ───────────────────────────────────────────────────────
+    # `print` in un'app pubblicata finisce nei log di sistema del telefono.
+    avoid_print: true
+    # Un'API pubblica senza documentazione è un'API che qualcuno userà a caso.
+    public_member_api_docs: false

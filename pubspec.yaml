@@ -1,0 +1,108 @@
+name: training_companion
+description: "App degli iscritti di Training Companion"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+# ---------------------------------------------------------------------------
+# Dipendenze — A0.5
+#
+# 🚨 ADR-A05: ogni pacchetto ha una motivazione scritta qui. Una dipendenza
+# senza motivazione è una dipendenza che nessuno saprà se togliere fra un anno,
+# e in un'app mobile ogni pacchetto è peso nel bundle e superficie di
+# incompatibilità al prossimo aggiornamento di Flutter.
+#
+# I vincoli sono `^`, cioè compatibili: pinnare al patch renderebbe impossibile
+# ricevere le correzioni di sicurezza senza un intervento manuale.
+# ---------------------------------------------------------------------------
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Date, mesi e testi dei widget di serie in italiano. Senza, il calendario
+  # resta in inglese e `DateFormat(…, 'it')` lancia a runtime.
+  flutter_localizations:
+    sdk: flutter
+
+  # ── Rete ────────────────────────────────────────────────────────────────
+  # `dio` e non `http`: servono gli **interceptor**. Il token va aggiunto a
+  # ogni richiesta e il 401 va intercettato in un punto solo — con `http` quella
+  # logica finirebbe copiata in ogni chiamata, e basta dimenticarla una volta
+  # per avere una schermata che non si accorge della sessione scaduta.
+  dio: ^5.7.0
+
+  # ── Stato e iniezione ───────────────────────────────────────────────────
+  # Riverpod: niente `BuildContext` per leggere lo stato (quindi testabile
+  # senza widget), invalidazione esplicita delle cache, e i provider fanno
+  # anche da contenitore di dipendenze — un pacchetto invece di due.
+  flutter_riverpod: ^2.6.1
+
+  # ── Navigazione ─────────────────────────────────────────────────────────
+  # `go_router` per i **deep link d'invito** (A2.1): una palestra manda un link
+  # e l'app si apre già sul codice giusto. Con il Navigator di serie quel caso
+  # va scritto a mano.
+  go_router: ^14.6.2
+
+  # ── Persistenza ─────────────────────────────────────────────────────────
+  # Il token di Sanctum sta nel Keychain/Keystore, non in un file: è una
+  # credenziale a lunga vita, e su un telefono con root un file di preferenze
+  # si legge.
+  flutter_secure_storage: ^9.2.2
+
+  # Tutto il resto — branding, ultima giornata sfogliata — sta qui: serve
+  # perché l'app si apra **a caldo** senza schermata bianca in attesa della
+  # rete (A2.5).
+  shared_preferences: ^2.3.3
+
+  # ── Media ───────────────────────────────────────────────────────────────
+  # Foto dei pasti e dei progressi.
+  image_picker: ^1.1.2
+
+  # 🚨 Comprimere PRIMA dell'upload non è un'ottimizzazione: una foto da
+  # fotocamera moderna sono 8-12 MB, e su rete mobile l'upload fallisce o
+  # impiega mezzo minuto. Il backend ridimensiona comunque a 1568 px per l'AI,
+  # quindi mandare l'originale è banda sprecata due volte.
+  flutter_image_compress: ^2.3.0
+
+  # Serve alla compressione: la cartella temporanea in cui scrivere il file
+  # ridotto. Arriva già come dipendenza transitiva, ma importarla senza
+  # dichiararla è il modo per ritrovarsi rotti quando quella transitiva sparisce.
+  path_provider: ^2.1.5
+
+  # La galleria dei progressi scorre decine di immagini remote: senza cache su
+  # disco ogni scroll le riscarica.
+  cached_network_image: ^3.4.1
+
+  # ── Presentazione ───────────────────────────────────────────────────────
+  # Grafici di peso e calorie (A6.2, A6.5).
+  fl_chart: ^0.69.2
+
+  # Date e numeri in italiano. `intl` è anche ciò che permette di non scrivere
+  # a mano «10/08/2026»: i formati cambiano con la lingua del telefono.
+  # ⚠️ La versione la impone `flutter_localizations`, che la pinna: un vincolo
+  # piu' basso qui fa fallire la risoluzione.
+  intl: ^0.20.2
+
+  # ── Realtime ────────────────────────────────────────────────────────────
+  # Client Pusher-compatibile per Reverb (A7.4).
+  # ⚠️ Il fallback di polling resta OBBLIGATORIO (ADR-A04): su staging non c'è
+  # nessun processo Reverb, e su rete mobile il socket spesso non si apre.
+  web_socket_channel: ^3.0.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Test del client API senza toccare la rete — stessa regola del backend:
+  # nessun test tocca la rete.
+  http_mock_adapter: ^0.6.1
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

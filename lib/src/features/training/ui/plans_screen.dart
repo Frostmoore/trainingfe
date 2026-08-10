@@ -32,7 +32,26 @@ class PlansScreen extends ConsumerWidget {
       // C9: si comincia da qui. Il pulsante è grande e sempre visibile perché
       // «inizia l'allenamento» è l'unica cosa che si fa entrando in palestra.
       floatingActionButton: const _AvviaAllenamento(),
-      body: schede.when(
+      body: Column(
+        children: [
+          // 🚨 L'allenamento lasciato a metà si vede **prima di tutto il
+          // resto**.
+          //
+          // Prima l'unico segnale era l'etichetta del pulsante in basso, che
+          // passava da «Inizia» a «Riprendi»: chi chiudeva l'app nel mezzo di
+          // una seduta non aveva modo di capire che quella seduta esisteva
+          // ancora, e ne apriva una nuova — lasciando la prima aperta per
+          // sempre. Una riga in cima, con dentro il nome e da quanto è aperta,
+          // è l'unica cosa che lo rende evidente.
+          const _SessioneAperta(),
+          Expanded(child: _corpo(context, ref, schede)),
+        ],
+      ),
+    );
+  }
+
+  Widget _corpo(BuildContext context, WidgetRef ref, AsyncValue<List<WorkoutPlan>> schede) {
+    return schede.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(plansProvider)),
         data: (elenco) => elenco.isEmpty
@@ -68,6 +87,70 @@ class PlansScreen extends ConsumerWidget {
                       : _SchedaCard(scheda: elenco[index]),
                 ),
               ),
+    );
+  }
+}
+
+/// La riga dell'allenamento lasciato aperto.
+///
+/// ⚠️ Non disegna niente quando non c'è niente da riprendere — **e nemmeno
+/// mentre carica**: una striscia che compare mezzo secondo dopo l'apertura e
+/// sposta tutto il contenuto in basso fa premere la cosa sbagliata.
+class _SessioneAperta extends ConsumerWidget {
+  const _SessioneAperta();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final aperta = ref.watch(openSessionProvider).valueOrNull;
+
+    if (aperta == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final da = DateTime.now().difference(aperta.startedAt);
+    final quanto = da.inHours >= 1
+        ? '${da.inHours} h fa'
+        : '${da.inMinutes} min fa';
+
+    return Material(
+      color: theme.colorScheme.tertiaryContainer,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.player(aperta.id)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
+          child: Row(
+            children: [
+              Icon(Icons.play_circle_outline_rounded, color: theme.colorScheme.onTertiaryContainer),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Allenamento in corso',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                    Text(
+                      '${aperta.titolo} · cominciato $quanto',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Gap.sm),
+              FilledButton(
+                onPressed: () => context.push(AppRoutes.player(aperta.id)),
+                child: const Text('Riprendi'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

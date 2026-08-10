@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/notifications/notifications.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
@@ -271,7 +272,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final conferma = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Terminare l\'allenamento?'),
+        title: const Text('Concludere l\'allenamento?'),
         content: const Text('Le calorie verranno stimate automaticamente.'),
         actions: [
           TextButton(
@@ -280,13 +281,23 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Termina'),
+            child: const Text('Concludi'),
           ),
         ],
       ),
     );
 
     if (conferma != true || !mounted) return;
+
+    // 🚨 La foto si chiede **prima** di chiudere, non dopo.
+    //
+    // Dopo `finish()` si esce dalla schermata, e a quel punto o si apre un
+    // altro modulo da un'altra parte — che nessuno collegherebbe più a questo
+    // allenamento — o la foto non si fa mai. È anche il momento giusto: si è
+    // appena finito, si è ancora davanti allo specchio.
+    await _chiediFoto();
+
+    if (!mounted) return;
 
     // Se durante la seduta la scheda è cambiata, si chiede se salvarla — ma
     // **solo se è sua**: proporlo per la scheda del trainer prometterebbe una
@@ -326,6 +337,69 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     } on Object catch (error) {
       setState(() => _chiusura = false);
       _avvisa(ApiClient.unwrapError(error).message);
+    }
+  }
+
+  /// La foto di fine allenamento, **facoltativa**.
+  ///
+  /// 🚨 «Non adesso» è una scelta di pari dignità, e sta in fondo dove si preme
+  /// senza pensarci. Una richiesta che sembra obbligatoria a fine allenamento —
+  /// quando si è stanchi e sudati — è il modo migliore per far chiudere l'app
+  /// senza concludere la sessione, che poi resta aperta e sporca lo storico.
+  ///
+  /// ⚠️ Un errore nel caricamento **non blocca la chiusura**: la sessione va
+  /// chiusa comunque. Perdere l'allenamento perché non è partita una foto
+  /// sarebbe sproporzionato.
+  Future<void> _chiediFoto() async {
+    final scelta = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(Gap.lg, Gap.lg, Gap.lg, Gap.sm),
+              child: Text(
+                'Una foto dei progressi?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.md),
+              child: Text(
+                'Resta legata a questo allenamento. Sempre nella stessa posizione '
+                'e con la stessa luce, racconta i progressi meglio della bilancia.',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Scatta'),
+              onTap: () => Navigator.of(sheet).pop(true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Scegli dalla galleria'),
+              onTap: () => Navigator.of(sheet).pop(false),
+            ),
+            ListTile(
+              leading: const Icon(Icons.skip_next_rounded),
+              title: const Text('Non adesso'),
+              onTap: () => Navigator.of(sheet).pop(),
+            ),
+            const SizedBox(height: Gap.sm),
+          ],
+        ),
+      ),
+    );
+
+    if (scelta == null) return;
+
+    try {
+      await ref
+          .read(progressActionsProvider)
+          .upload(daFotocamera: scelta, workoutSessionId: widget.sessionId);
+    } on Object catch (error) {
+      _avvisa('Foto non caricata: ${ApiClient.unwrapError(error).message}');
     }
   }
 
@@ -390,7 +464,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         actions: [
           TextButton(
             onPressed: _chiusura ? null : _termina,
-            child: const Text('Termina'),
+            child: const Text('Concludi'),
           ),
         ],
       ),
@@ -421,6 +495,23 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   onPressed: _aggiungiEsercizio,
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Aggiungi esercizio'),
+                ),
+
+                // 🚨 Il pulsante grosso sta QUI, in fondo alla lista.
+                //
+                // Il «Concludi» nella barra in alto è un testo piccolo in un
+                // angolo: finito l'ultimo esercizio si è in fondo allo schermo,
+                // e l'azione ovvia dev'essere sotto il pollice. Con il solo
+                // pulsante in alto la sessione resta aperta, e lo storico si
+                // riempie di allenamenti che non finiscono mai.
+                const SizedBox(height: Gap.lg),
+                FilledButton.icon(
+                  onPressed: _chiusura ? null : _termina,
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Concludi allenamento'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
                 ),
                 const SizedBox(height: Gap.xl),
               ],

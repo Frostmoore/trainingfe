@@ -83,15 +83,32 @@ class RestTimer extends ChangeNotifier {
     await _programmaAvviso(secondi);
   }
 
-  /// Allunga il riposo.
+  /// Allunga o accorcia il riposo.
   ///
   /// ⚠️ Riprogramma la notifica: lasciarla dov'era la farebbe suonare in
-  /// anticipo, cioè esattamente ciò che si stava evitando premendo «+30s».
+  /// anticipo, cioè esattamente ciò che si stava evitando premendo «+15 s».
+  ///
+  /// 🚨 **Con un valore negativo il recupero non va sotto zero: finisce.**
+  /// Senza questo, tre volte «−15 s» su un recupero da 30 secondi lascerebbero
+  /// un istante di fine nel passato: `rimanenti` risponderebbe 0, ma `attivo`
+  /// resterebbe vero e la barra rimarrebbe piantata su «0:00» finché non la si
+  /// salta a mano.
   Future<void> aggiungi(int secondi) async {
     if (!attivo) return;
 
+    if (secondi < 0 && rimanenti + secondi <= 0) {
+      _concludi();
+
+      await _annullaAvviso();
+
+      return;
+    }
+
     _fine = _fine!.add(Duration(seconds: secondi));
-    _totale += secondi;
+
+    // Il totale non scende sotto ciò che resta, o la barra di progresso
+    // tornerebbe indietro invece di avanzare.
+    _totale = (_totale + secondi).clamp(rimanenti, 24 * 3600);
 
     notifyListeners();
 
@@ -147,7 +164,16 @@ class RestTimer extends ChangeNotifier {
             interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        // 🚨 Esatta **solo se il permesso c'è già**, altrimenti inesatta.
+        //
+        // Chiedere il permesso per le sveglie esatte apre una schermata di
+        // sistema che da Android 14 è grigia e non attivabile per un'app come
+        // questa: l'utente si ritrova fuori dall'allenamento, in un vicolo
+        // cieco, nel mezzo di una serie. Una notifica inesatta arriva con
+        // qualche secondo di ritardo — incomparabilmente meglio.
+        androidScheduleMode: await _puoProgrammareEsatte()
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         // L'istante è **assoluto**: se il telefono cambia fuso mentre si
         // riposa (succede in aereo, non in palestra) il recupero non deve
         // allungarsi o accorciarsi di un'ora.
@@ -163,6 +189,25 @@ class RestTimer extends ChangeNotifier {
        * solo senza avviso a schermo spento: far fallire una serie perché manca
        * un permesso sarebbe sproporzionato rispetto al danno.
        */
+    }
+  }
+
+  /// Se il sistema ci lascia programmare sveglie esatte.
+  ///
+  /// ⚠️ Su iOS e sui vecchi Android la domanda non ha senso e la risposta è
+  /// sì. Se il plugin non risponde si assume **no**: programmare una esatta
+  /// senza permesso lancia, e a quel punto non arriverebbe nessuna notifica —
+  /// mentre una inesatta arriva comunque.
+  Future<bool> _puoProgrammareEsatte() async {
+    try {
+      final android = _notifiche
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      if (android == null) return true;
+
+      return await android.canScheduleExactNotifications() ?? false;
+    } on Object {
+      return false;
     }
   }
 

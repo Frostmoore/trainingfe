@@ -59,10 +59,23 @@ Future<bool> requestNotificationPermission() async {
     if (android != null) {
       final concesso = await android.requestNotificationsPermission();
 
-      // ⚠️ Su Android 13+ servono **due** permessi: notificare e programmare
-      // una sveglia esatta. Senza il secondo la notifica arriva quando capita
-      // al sistema, che per un recupero di 90 secondi vuol dire in ritardo.
-      await android.requestExactAlarmsPermission();
+      /*
+       * 🚨 **NON si chiede il permesso per le sveglie esatte.**
+       *
+       * `requestExactAlarmsPermission()` non mostra un dialogo: apre la
+       * schermata di sistema «Consenti impostazione di sveglie e promemoria»,
+       * e da Android 14 quell'interruttore e' **grigio e non attivabile** per
+       * le app che non sono sveglie o calendari. Il risultato e' che l'utente
+       * viene buttato fuori dall'allenamento su una schermata dove non puo'
+       * fare niente, e deve tornare indietro a mano — nel mezzo di una serie.
+       *
+       * Il recupero non ne ha bisogno: `RestTimer` prova a programmare una
+       * notifica esatta **solo se il permesso c'e' gia'**, altrimenti ne
+       * programma una inesatta. Su un recupero da 90 secondi con lo schermo
+       * acceso la differenza non si nota; su uno a schermo spento la notifica
+       * arriva con qualche secondo di ritardo, che e' incomparabilmente meglio
+       * di un vicolo cieco.
+       */
 
       return concesso ?? false;
     }

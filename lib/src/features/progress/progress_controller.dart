@@ -74,20 +74,30 @@ class ProgressActions {
   /// 8-12 MB: su rete mobile l'upload fallisce o impiega mezzo minuto, e il
   /// server la ridimensiona comunque. Mandare l'originale è banda sprecata due
   /// volte.
-  Future<void> upload({required bool daFotocamera}) async {
+  /// `workoutSessionId` lega la foto a quell'allenamento — C5.
+  ///
+  /// ⚠️ Restituisce `false` se la persona **annulla** la scelta della foto:
+  /// non è un errore, e chi chiama non deve mostrarlo come tale. È il motivo
+  /// per cui non basta un `Future<void>`: a fine allenamento la foto è
+  /// facoltativa, e «ho cambiato idea» dev'essere distinguibile da «non è
+  /// riuscito a caricarla».
+  Future<bool> upload({required bool daFotocamera, int? workoutSessionId}) async {
     final percorso = daFotocamera
         ? await PhotoPicker.dallaFotocamera()
         : await PhotoPicker.dallaGalleria();
 
-    if (percorso == null) return;
+    if (percorso == null) return false;
 
     final form = FormData.fromMap({
       'photo': await MultipartFile.fromFile(percorso),
+      'workout_session_id': ?workoutSessionId,
     });
 
     await _ref.read(apiClientProvider).upload<dynamic>('/photos', form);
 
     _ref.invalidate(progressPhotosProvider);
+
+    return true;
   }
 
   Future<void> delete(int id) async {

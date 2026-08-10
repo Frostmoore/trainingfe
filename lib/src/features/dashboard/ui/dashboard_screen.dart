@@ -169,9 +169,13 @@ class _GraficoPeso extends ConsumerWidget {
       child: serie.when(
         loading: () => const SizedBox(height: 160, child: Center(child: CircularProgressIndicator())),
         error: (_, _) => const SizedBox(height: 160, child: Center(child: Text('Non disponibile'))),
+        // ⚠️ «in due giorni diversi» e non «due volte»: pesarsi due volte lo
+        // stesso giorno è una correzione e lascia **un** punto solo. Chi lo ha
+        // fatto e legge «due volte» conclude che l'app abbia perso il dato.
         data: (s) => s.values.length < 2
             ? const _NienteDati(
-                messaggio: 'Registra il peso almeno due volte per vedere l\'andamento.',
+                messaggio: 'Registra il peso in almeno due giorni diversi '
+                    'per vedere l\'andamento.',
               )
             : SizedBox(
                 height: 180,

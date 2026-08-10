@@ -165,11 +165,23 @@ class AuthController extends StateNotifier<AuthState> {
 
     await _tokens.write(token);
 
-    final user = data['user'];
+    // 🚨 **L'utente sta sotto `data`, non sotto `user`.**
+    //
+    // La risposta è `{token, data, branding}` — la stessa forma su cui
+    // `unwrap: false` insiste tre righe più su. Leggendo `user` si otteneva
+    // sempre `null`, e la sessione partiva **senza utente**: si riempiva solo
+    // al riavvio successivo, quando `restore()` chiama `/auth/me`.
+    //
+    // Nel frattempo, nella sessione appena aperta, il filo della chat mostrava
+    // **ogni messaggio come se fosse dell'altra persona** (`user?.id ?? -1`
+    // non corrisponde a nessun mittente) e l'intestazione di «Oggi» non
+    // salutava nessuno. Difetto invisibile a chi riapriva l'app, cioè a chi
+    // provava — che è esattamente il motivo per cui è sopravvissuto.
+    final utente = data['data'];
 
     state = AuthState(
       status: AuthStatus.loggedIn,
-      user: user is Map<String, dynamic> ? AppUser.fromJson(user) : null,
+      user: utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null,
     );
   }
 

@@ -68,11 +68,22 @@ class ConversationsScreen extends ConsumerWidget {
 }
 
 /// Il pulsante per cominciare una conversazione — C22.
+///
+/// 🚨 **`heroTag` esplicito, qui e su ogni altro FAB dell'app.**
+///
+/// La shell è un `IndexedStack`: le schede **esistono tutte insieme**
+/// nell'albero, anche quelle non visibili. Due `FloatingActionButton` senza tag
+/// condividono `<default FloatingActionButton tag>`, e a ogni transizione di
+/// rotta Flutter lancia «multiple heroes share the same tag».
+///
+/// ⚠️ Non si vedeva sull'emulatore: capita durante l'animazione fra due rotte,
+/// ed è saltato fuori al primo uso su un telefono vero.
 class _NuovoMessaggio extends ConsumerWidget {
   const _NuovoMessaggio();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
+    heroTag: 'fab-messaggi',
     onPressed: () => _scegliDestinatario(context, ref),
     icon: const Icon(Icons.edit_outlined),
     label: const Text('Scrivi'),

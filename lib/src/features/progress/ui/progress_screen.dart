@@ -153,6 +153,8 @@ class _Aggiungi extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
+    // Vedi la nota su `heroTag` in `conversations_screen.dart`.
+    heroTag: 'fab-foto',
     onPressed: () => showModalBottomSheet<void>(
       context: context,
       builder: (sheet) => SafeArea(

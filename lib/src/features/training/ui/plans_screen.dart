@@ -329,6 +329,8 @@ class _AvviaAllenamento extends ConsumerWidget {
     final aperta = ref.watch(openSessionProvider).valueOrNull;
 
     return FloatingActionButton.extended(
+      // Vedi la nota su `heroTag` in `conversations_screen.dart`.
+      heroTag: 'fab-allenamento',
       onPressed: () => _avvia(context, ref, aperta?.id),
       icon: Icon(aperta == null ? Icons.play_arrow_rounded : Icons.replay_rounded),
       label: Text(aperta == null ? 'Inizia' : 'Riprendi'),

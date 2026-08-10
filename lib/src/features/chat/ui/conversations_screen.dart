@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
@@ -17,15 +18,24 @@ class ConversationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messaggi')),
+      floatingActionButton: const _NuovoMessaggio(),
       body: elenco.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(conversationsProvider)),
         data: (conversazioni) => conversazioni.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'Nessun messaggio',
-                message: 'Qui compaiono le conversazioni col tuo trainer. '
-                    'Se non ne hai ancora uno assegnato, chiedi in palestra.',
+                message: 'Qui compaiono le conversazioni col tuo trainer.',
+                // 🚨 Il vuoto porta all'azione, non si limita a constatarlo.
+                // Prima diceva «se non hai un trainer chiedi in palestra» e
+                // finiva lì: chi il trainer ce l'aveva restava comunque senza
+                // nessun modo di scrivergli.
+                action: FilledButton.icon(
+                  onPressed: () => _scegliDestinatario(context, ref),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Scrivi al tuo trainer'),
+                ),
               )
             : RefreshIndicator(
                 onRefresh: () async => ref.invalidate(conversationsProvider),
@@ -54,6 +64,90 @@ class ConversationsScreen extends ConsumerWidget {
               ),
       ),
     );
+  }
+}
+
+/// Il pulsante per cominciare una conversazione — C22.
+class _NuovoMessaggio extends ConsumerWidget {
+  const _NuovoMessaggio();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
+    onPressed: () => _scegliDestinatario(context, ref),
+    icon: const Icon(Icons.edit_outlined),
+    label: const Text('Scrivi'),
+  );
+}
+
+/// Chiede a chi scrivere, apre il filo e ci porta dentro.
+///
+/// ⚠️ **Con un solo contatto non si chiede niente**: se hai un trainer solo —
+/// il caso di quasi tutti — un elenco con una voce sola è un tocco in più per
+/// scegliere l'unica cosa scegliibile.
+Future<void> _scegliDestinatario(BuildContext context, WidgetRef ref) async {
+  final contatti = await ref.read(chatContactsProvider.future).catchError(
+    (Object _) => const <ChatContact>[],
+  );
+
+  if (!context.mounted) return;
+
+  if (contatti.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Non hai ancora un trainer assegnato. Chiedi in palestra di '
+          'collegartene uno.',
+        ),
+      ),
+    );
+
+    return;
+  }
+
+  final scelto = contatti.length == 1
+      ? contatti.first
+      : await showModalBottomSheet<ChatContact>(
+          context: context,
+          builder: (sheet) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ListTile(title: Text('A chi vuoi scrivere?')),
+                for (final c in contatti)
+                  ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                        c.name.isEmpty ? '?' : c.name.characters.first.toUpperCase(),
+                      ),
+                    ),
+                    title: Text(c.name),
+                    subtitle: Text(c.ruolo),
+                    onTap: () => Navigator.of(sheet).pop(c),
+                  ),
+                const SizedBox(height: Gap.sm),
+              ],
+            ),
+          ),
+        );
+
+  if (scelto == null || !context.mounted) return;
+
+  try {
+    final id = await ref.read(apriConversazioneProvider)(scelto.id);
+
+    if (!context.mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ThreadScreen(id: id, titolo: scelto.name),
+      ),
+    );
+  } on Object catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+      );
+    }
   }
 }
 

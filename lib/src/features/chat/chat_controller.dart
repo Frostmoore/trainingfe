@@ -48,6 +48,66 @@ class ChatMessage {
   final DateTime? createdAt;
 }
 
+/// Una persona a cui si può scrivere — C22.
+class ChatContact {
+  const ChatContact({
+    required this.id,
+    required this.name,
+    required this.isTrainer,
+    this.avatarUrl,
+  });
+
+  factory ChatContact.fromJson(Map<String, dynamic> j) => ChatContact(
+    id: (j['id'] as num).toInt(),
+    name: j['name']?.toString() ?? '',
+    isTrainer: j['is_trainer'] == true,
+    avatarUrl: j['avatar_url']?.toString(),
+  );
+
+  final int id;
+  final String name;
+  final bool isTrainer;
+  final String? avatarUrl;
+
+  /// «Il tuo trainer» invece del solo nome: in palestra si conosce il ruolo,
+  /// non sempre il cognome.
+  String get ruolo => isTrainer ? 'Il tuo trainer' : 'Segui il suo allenamento';
+}
+
+/// Chi posso contattare.
+///
+/// 🚨 **Senza questo, la chat era una stanza in cui non si poteva entrare.**
+/// `POST /conversations` vuole l'id della persona, e l'app non aveva nessun
+/// modo di saperlo: chi non aveva già una conversazione vedeva una schermata
+/// vuota e nessun modo di cominciarne una.
+final chatContactsProvider = FutureProvider.autoDispose<List<ChatContact>>((ref) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/conversations/contacts');
+
+  return data
+      .map((e) => ChatContact.fromJson((e as Map).cast<String, dynamic>()))
+      .toList();
+});
+
+/// Apre (o ritrova) la conversazione con una persona, e ne dà l'id.
+///
+/// ⚠️ Il server è idempotente: `Conversation::between()` non ne crea una
+/// seconda se esiste già. Chi tocca due volte lo stesso trainer non si ritrova
+/// due fili con la stessa persona — che è il modo più rapido per perdere metà
+/// dei messaggi.
+final apriConversazioneProvider = Provider<Future<int> Function(int)>((ref) {
+  return (int userId) async {
+    final data = await ref
+        .read(apiClientProvider)
+        .post<Map<String, dynamic>>('/conversations', body: {'user_id': userId});
+
+    ref.invalidate(conversationsProvider);
+
+    return (data['id'] as num).toInt();
+  };
+});
+
 final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((ref) async {
   final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/conversations');
 

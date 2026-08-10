@@ -125,6 +125,7 @@ class PlayerExercise {
     this.restSec = 90,
     this.targetWeight,
     this.notes,
+    this.imageUrl,
   });
 
   int? exerciseId;
@@ -136,6 +137,10 @@ class PlayerExercise {
   int restSec;
   double? targetWeight;
   String? notes;
+
+  /// L'illustrazione dell'esercizio — C23. Viene dalla scheda e resta anche
+  /// per gli esercizi aggiunti al volo, che semplicemente non ne hanno una.
+  String? imageUrl;
   List<PlayerSet> rows;
 
   /// Vero quando ogni serie prevista è stata registrata.

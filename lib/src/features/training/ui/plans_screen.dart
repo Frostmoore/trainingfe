@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
@@ -175,10 +176,9 @@ class _SchedaCard extends StatelessWidget {
           padding: const EdgeInsets.all(Gap.md),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(Icons.fitness_center_rounded, color: theme.colorScheme.onPrimaryContainer),
-              ),
+              // C23 — la copertina. Fra sei «Full body A/B/C» e' la sola cosa
+              // che le distingue a colpo d'occhio.
+              Miniatura(url: scheda.imageUrl, etichetta: scheda.name),
               const SizedBox(width: Gap.md),
               Expanded(
                 child: Column(
@@ -259,6 +259,7 @@ class _DettaglioScheda extends ConsumerWidget {
               Card(
                 margin: const EdgeInsets.only(bottom: Gap.sm),
                 child: ListTile(
+                  leading: Miniatura(url: e.imageUrl, etichetta: e.name, lato: 44),
                   title: Text(e.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text([
                     e.prescription,

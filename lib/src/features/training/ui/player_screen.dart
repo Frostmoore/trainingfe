@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/notifications/notifications.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/miniatura.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
@@ -102,6 +103,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               restSec: riga.restSec ?? 90,
               targetWeight: riga.targetWeight,
               notes: riga.notes,
+              imageUrl: riga.imageUrl,
               rows: const [],
             ),
           );
@@ -527,6 +529,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 }
 
+/// «72.5» invece di «72.5000», «60» invece di «60.0».
+///
+/// A livello di file e non dentro una classe: la usano sia la riga della serie
+/// sia i parametri prescritti, e due copie della stessa formattazione sono due
+/// modi diversi di scrivere lo stesso peso nella stessa schermata.
+String _pulito(double v) =>
+    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
 /// Un esercizio con le sue righe-serie.
 class _CardEsercizio extends StatefulWidget {
   const _CardEsercizio({
@@ -549,10 +559,27 @@ class _CardEsercizio extends StatefulWidget {
 
 class _CardEsercizioState extends State<_CardEsercizio> {
   late final _nome = TextEditingController(text: widget.esercizio.name);
+  late final _repsPreviste = TextEditingController(text: widget.esercizio.reps ?? '');
+  late final _recupero = TextEditingController(text: widget.esercizio.restSec.toString());
+  late final _pesoObiettivo = TextEditingController(
+    text: widget.esercizio.targetWeight == null
+        ? ''
+        : _pulito(widget.esercizio.targetWeight!),
+  );
+
+  /// I parametri prescritti si aprono su richiesta.
+  ///
+  /// Chiusi di serie: mentre ci si allena servono le righe delle serie, non
+  /// tre campi di configurazione — che occuperebbero lo spazio di due esercizi
+  /// per ogni scheda.
+  bool _apertoIlDettaglio = false;
 
   @override
   void dispose() {
     _nome.dispose();
+    _repsPreviste.dispose();
+    _recupero.dispose();
+    _pesoObiettivo.dispose();
     super.dispose();
   }
 
@@ -570,6 +597,10 @@ class _CardEsercizioState extends State<_CardEsercizio> {
           children: [
             Row(
               children: [
+                // C23 — durante l'allenamento un'immagine dice quale movimento
+                // molto piu' in fretta di un nome, e si guarda da lontano.
+                Miniatura(url: e.imageUrl, etichetta: e.name, lato: 40),
+                const SizedBox(width: Gap.sm),
                 Expanded(
                   child: TextField(
                     controller: _nome,
@@ -589,6 +620,18 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                     },
                   ),
                 ),
+                // 🚨 La matita, come sull'app homelab.
+                //
+                // I parametri prescritti — ripetizioni, recupero, peso
+                // obiettivo — si cambiano **mentre ci si allena**, perché è lì
+                // che ci si accorge che 8 erano troppe o che 90 secondi non
+                // bastano. Doverli correggere dopo, dall'editor delle schede,
+                // vuol dire non correggerli mai.
+                IconButton(
+                  onPressed: () => setState(() => _apertoIlDettaglio = !_apertoIlDettaglio),
+                  icon: Icon(_apertoIlDettaglio ? Icons.expand_less_rounded : Icons.edit_outlined),
+                  tooltip: 'Parametri',
+                ),
                 IconButton(
                   onPressed: widget.onRimuovi,
                   icon: const Icon(Icons.close_rounded),
@@ -597,7 +640,7 @@ class _CardEsercizioState extends State<_CardEsercizio> {
               ],
             ),
 
-            if (e.reps != null || e.targetWeight != null)
+            if (!_apertoIlDettaglio && (e.reps != null || e.targetWeight != null))
               Text(
                 [
                   if (e.reps != null) '${e.rows.length} × ${e.reps}',
@@ -605,6 +648,64 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                   '${e.restSec}s di recupero',
                 ].join(' · '),
                 style: theme.textTheme.bodySmall,
+              ),
+
+            if (_apertoIlDettaglio)
+              Padding(
+                padding: const EdgeInsets.only(top: Gap.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _repsPreviste,
+                        decoration: const InputDecoration(
+                          labelText: 'Ripetizioni',
+                          hintText: '8-12',
+                          isDense: true,
+                        ),
+                        // ⚠️ Testo e non numero: «8-12», «cedimento» e «max»
+                        // sono prescrizioni legittime, ed è il motivo per cui
+                        // anche a database `reps` è una stringa.
+                        onChanged: (v) {
+                          e.reps = v.trim().isEmpty ? null : v.trim();
+                          widget.onCambiato();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: TextField(
+                        controller: _recupero,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Recupero',
+                          suffixText: 's',
+                          isDense: true,
+                        ),
+                        onChanged: (v) {
+                          e.restSec = int.tryParse(v.trim()) ?? e.restSec;
+                          widget.onCambiato();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: TextField(
+                        controller: _pesoObiettivo,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Peso',
+                          suffixText: 'kg',
+                          isDense: true,
+                        ),
+                        onChanged: (v) {
+                          e.targetWeight = double.tryParse(v.trim().replaceAll(',', '.'));
+                          widget.onCambiato();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
             if ((e.notes ?? '').isNotEmpty)
@@ -645,9 +746,6 @@ class _RigaSerieState extends State<_RigaSerie> {
   late final _peso = TextEditingController(
     text: widget.riga.weight == null ? '' : _pulito(widget.riga.weight!),
   );
-
-  static String _pulito(double v) =>
-      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
   @override
   void dispose() {

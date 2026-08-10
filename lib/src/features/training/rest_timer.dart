@@ -29,6 +29,13 @@ class RestTimer extends ChangeNotifier {
   /// accumulare una notifica per ogni serie.
   static const _idNotifica = 8801;
 
+  /// L'id della notifica **persistente** con il conto alla rovescia.
+  ///
+  /// Diverso da `_idNotifica` perché le due convivono: una resta in tendina
+  /// mentre il recupero scorre, l'altra suona quando finisce. Con lo stesso id
+  /// la seconda sostituirebbe la prima e non ci sarebbe nessun avviso.
+  static const _idPersistente = 8802;
+
   final FlutterLocalNotificationsPlugin _notifiche;
 
   /// Sostituibile nei test: programmare una notifica vera richiede i canali
@@ -81,6 +88,7 @@ class RestTimer extends ChangeNotifier {
     notifyListeners();
 
     await _programmaAvviso(secondi);
+    await _mostraPersistente(_fine!);
   }
 
   /// Allunga o accorcia il riposo.
@@ -100,6 +108,7 @@ class RestTimer extends ChangeNotifier {
       _concludi();
 
       await _annullaAvviso();
+      await _togliPersistente();
 
       return;
     }
@@ -113,12 +122,16 @@ class RestTimer extends ChangeNotifier {
     notifyListeners();
 
     await _programmaAvviso(rimanenti);
+    // Anche la persistente si rifà: mostra un istante di fine, e quello è
+    // appena cambiato.
+    await _mostraPersistente(_fine!);
   }
 
   Future<void> salta() async {
     _ferma();
 
     await _annullaAvviso();
+    await _togliPersistente();
 
     notifyListeners();
   }
@@ -133,9 +146,14 @@ class RestTimer extends ChangeNotifier {
   void _concludi() {
     _ferma();
 
-    // In primo piano la vibrazione arriva subito; per lo schermo spento c'è la
-    // notifica, già in coda da quando il riposo è cominciato.
+    // In primo piano la vibrazione arriva subito; il suono lo fa comunque la
+    // notifica programmata, che scatta anche ad app aperta.
     HapticFeedback.heavyImpact();
+
+    // ⚠️ La persistente va tolta **subito**: con il recupero finito resterebbe
+    // in tendina a mostrare «0:00», e una notifica che non corrisponde a niente
+    // è peggio di nessuna notifica.
+    unawaited(_togliPersistente());
 
     notifyListeners();
   }
@@ -159,8 +177,18 @@ class RestTimer extends ChangeNotifier {
             importance: Importance.high,
             priority: Priority.high,
             category: AndroidNotificationCategory.alarm,
+            // 🚨 **La campanella.** `playSound` è già il default, ma qui è
+            // scritto apposta: è il punto di tutta la funzione — fra una serie
+            // e l'altra il telefono è in tasca o sulla panca, e un avviso
+            // silenzioso non avvisa nessuno.
+            playSound: true,
+            enableVibration: true,
           ),
           iOS: DarwinNotificationDetails(
+            presentSound: true,
+            // Su iOS, senza questo, una notifica ad app aperta non suona: e
+            // il caso «app aperta sulla panca» è quello che capita di più.
+            presentAlert: true,
             interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
@@ -189,6 +217,75 @@ class RestTimer extends ChangeNotifier {
        * solo senza avviso a schermo spento: far fallire una serie perché manca
        * un permesso sarebbe sproporzionato rispetto al danno.
        */
+    }
+  }
+
+  /// La notifica che resta in tendina e **conta alla rovescia da sola**.
+  ///
+  /// 🚨 **Il conto alla rovescia lo disegna Android, non noi.**
+  /// `usesChronometer` + `chronometerCountDown` + `when` all'istante di fine:
+  /// il sistema aggiorna i secondi anche con l'app chiusa e senza che giri una
+  /// riga di Dart. È l'unico modo onesto di avere un timer vivo in background:
+  /// l'alternativa — tenere vivo un isolate o un foreground service — vuol dire
+  /// batteria consumata, un permesso in più da giustificare sugli store, e un
+  /// processo che il sistema può comunque uccidere.
+  ///
+  /// ⚠️ `importance: low` e `silent`: questa non deve suonare né vibrare. Il
+  /// suono è dell'**altra** notifica, quella di fine. Se suonassero entrambe,
+  /// il telefono squillerebbe all'**inizio** del recupero — cioè nel momento
+  /// esatto in cui non serve.
+  ///
+  /// `timeoutAfter` la fa sparire da sola qualche secondo dopo la fine: se
+  /// l'app resta chiusa, `_concludi()` non gira e senza questo la notifica
+  /// resterebbe in tendina a mostrare «0:00» per sempre.
+  Future<void> _mostraPersistente(DateTime fine) async {
+    if (!notificheAttive) return;
+
+    final mancano = fine.difference(DateTime.now()).inMilliseconds;
+
+    if (mancano <= 0) return;
+
+    try {
+      await _notifiche.show(
+        _idPersistente,
+        'Recupero in corso',
+        'Tocca per tornare all\'allenamento.',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'rest_timer_ongoing',
+            'Recupero in corso',
+            channelDescription:
+                'Mostra quanto manca alla fine del recupero mentre l\'app è chiusa.',
+            importance: Importance.low,
+            priority: Priority.low,
+            ongoing: true,
+            autoCancel: false,
+            silent: true,
+            showWhen: true,
+            when: fine.millisecondsSinceEpoch,
+            usesChronometer: true,
+            chronometerCountDown: true,
+            timeoutAfter: mancano + 5000,
+          ),
+          // ⚠️ Su iOS non esiste niente di equivalente: una notifica non si
+          // aggiorna da sola. Meglio non mostrarne una ferma su un numero
+          // sbagliato — lì resta solo l'avviso di fine.
+          iOS: null,
+        ),
+      );
+    } on Object catch (_) {
+      // Senza permesso di notifica non si mostra niente, e il recupero
+      // funziona lo stesso in primo piano. Vedi la nota in `_programmaAvviso`.
+    }
+  }
+
+  Future<void> _togliPersistente() async {
+    if (!notificheAttive) return;
+
+    try {
+      await _notifiche.cancel(_idPersistente);
+    } on Object catch (_) {
+      // Vedi sopra.
     }
   }
 

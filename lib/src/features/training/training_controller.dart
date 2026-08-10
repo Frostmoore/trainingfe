@@ -12,6 +12,7 @@ class WorkoutPlan {
     this.notes,
     this.exercises = const [],
     this.editable = false,
+    this.imageUrl,
     this.authorName,
     this.authorIsMe = false,
   });
@@ -30,6 +31,7 @@ class WorkoutPlan {
     // sempre, e quella sbagliata mostra un pulsante «Modifica» che il server
     // rifiuta con un 403.
     editable: j['editable'] == true,
+    imageUrl: j['image_url']?.toString(),
     authorName: (j['author'] as Map?)?['name']?.toString(),
     authorIsMe: (j['author'] as Map?)?['is_me'] == true,
   );
@@ -42,6 +44,9 @@ class WorkoutPlan {
 
   /// Vero solo per le schede che l'iscritto si è scritto da solo.
   final bool editable;
+
+  /// La copertina — C23. `null` quando nessuno l'ha caricata.
+  final String? imageUrl;
 
   final String? authorName;
   final bool authorIsMe;
@@ -61,6 +66,7 @@ class PlanExercise {
     this.restSec,
     this.targetWeight,
     this.notes,
+    this.imageUrl,
   });
 
   factory PlanExercise.fromJson(Map<String, dynamic> j) => PlanExercise(
@@ -70,6 +76,7 @@ class PlanExercise {
     // significherebbe avere due formati diversi fra app e pannello per la
     // stessa scheda.
     prescription: j['prescription']?.toString() ?? '',
+    imageUrl: (j['exercise'] as Map?)?['image_url']?.toString(),
     restSec: (j['rest_sec'] as num?)?.toInt(),
     targetWeight: (j['target_weight'] as num?)?.toDouble(),
     notes: j['notes']?.toString(),
@@ -81,6 +88,9 @@ class PlanExercise {
   final int? restSec;
   final double? targetWeight;
   final String? notes;
+
+  /// L'illustrazione dell'esercizio — C23.
+  final String? imageUrl;
 }
 
 /// Le schede pubblicate dell'iscritto.

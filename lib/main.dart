@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'src/app.dart';
 import 'src/core/config/app_config.dart';
+import 'src/core/notifications/notifications.dart';
 import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
 import 'src/features/auth/auth_controller.dart';
@@ -31,6 +32,10 @@ Future<void> main() async {
       // è stata chiamata, e lo fa alla **prima data formattata**, cioè in una
       // schermata a caso e non all'avvio.
       await initializeDateFormatting('it');
+
+      // 🚨 Il fuso e i canali delle notifiche: senza, `tz.local` lancia alla
+      // prima serie registrata nel player — in palestra, non all'avvio.
+      await initNotifications();
 
       FlutterError.onError = (dettagli) {
         FlutterError.presentError(dettagli);

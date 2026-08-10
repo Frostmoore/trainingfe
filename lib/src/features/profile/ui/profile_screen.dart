@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../onboarding/branding_controller.dart';
+import '../profile_controller.dart';
+import 'widgets/weight_sheet.dart';
 
 /// Il profilo — A8.
 class ProfileScreen extends ConsumerWidget {
@@ -61,6 +65,72 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: Gap.md),
 
+          // ── C8: le voci che prima non c'erano ────────────────────────
+          Card(
+            child: Column(
+              children: [
+                Consumer(
+                  builder: (context, ref, _) {
+                    final profilo = ref.watch(profileProvider);
+
+                    return ListTile(
+                      leading: const Icon(Icons.tune_rounded),
+                      title: const Text('I tuoi dati'),
+                      // Il sottotitolo dice a colpo d'occhio se il fabbisogno
+                      // esiste: è la domanda che porta qui.
+                      subtitle: Text(
+                        profilo.maybeWhen(
+                          data: (p) => p.isComplete
+                              ? 'Fabbisogno: ${p.derived!.targetKcal} kcal al giorno'
+                              : 'Da completare per avere il tuo fabbisogno',
+                          orElse: () => 'Sesso, età, altezza, obiettivo',
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push(AppRoutes.profileEdit),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final peso = ref.watch(weightHistoryProvider);
+
+                    return ListTile(
+                      leading: const Icon(Icons.monitor_weight_outlined),
+                      title: const Text('Registra il peso'),
+                      subtitle: Text(
+                        peso.maybeWhen(
+                          data: (lista) => lista.isEmpty
+                              ? 'Nessuna pesata registrata'
+                              : 'Ultima: ${lista.last.weightKg.toStringAsFixed(1)} kg',
+                          orElse: () => '',
+                        ),
+                      ),
+                      trailing: const Icon(Icons.add_rounded),
+                      onTap: () => WeightSheet.mostra(
+                        context,
+                        iniziale: peso.valueOrNull?.isNotEmpty ?? false
+                            ? peso.value!.last.weightKg
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.bedtime_outlined),
+                  title: const Text('Sonno'),
+                  subtitle: const Text('Ipnogramma e andamento delle fasi'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.sleep),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: Gap.md),
+
           Card(
             child: ListTile(
               leading: const Icon(Icons.storefront_outlined),
@@ -76,6 +146,24 @@ class ProfileScreen extends ConsumerWidget {
             icon: const Icon(Icons.logout_rounded),
             label: const Text('Esci'),
           ),
+
+          const SizedBox(height: Gap.md),
+
+          // ⚠️ In fondo e in colore d'errore, ma **presente**: Apple pretende
+          // che l'eliminazione sia raggiungibile dall'app. Nasconderla dietro
+          // un contatto via email è motivo di rifiuto.
+          TextButton.icon(
+            onPressed: () => context.push(AppRoutes.deleteAccount),
+            icon: Icon(
+              Icons.delete_forever_outlined,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            label: Text(
+              'Elimina account',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+          const SizedBox(height: Gap.xl),
         ],
       ),
     );

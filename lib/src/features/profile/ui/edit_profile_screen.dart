@@ -1,0 +1,331 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/api/api_client.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/states.dart';
+import '../data/profile_models.dart';
+import '../profile_controller.dart';
+import 'widgets/meal_hours_editor.dart';
+
+/// Modifica del profilo — C8.
+///
+/// 🚨 **Senza questa schermata metà app resta muta.** Senza sesso, età, altezza
+/// e livello di attività non esiste BMR, quindi non esiste target calorico:
+/// diario, dashboard e calendario mostrano barre senza riferimento. Fino alla
+/// fase C il profilo si poteva modificare **solo dal pannello della palestra**,
+/// e l'app diceva «Nessun obiettivo impostato» senza offrire il modo di
+/// impostarlo.
+class EditProfileScreen extends ConsumerWidget {
+  const EditProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profilo = ref.watch(profileProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('I tuoi dati')),
+      body: profilo.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          error: ApiClient.unwrapError(e),
+          onRetry: () => ref.invalidate(profileProvider),
+        ),
+        data: (p) => _Modulo(profilo: p),
+      ),
+    );
+  }
+}
+
+class _Modulo extends ConsumerStatefulWidget {
+  const _Modulo({required this.profilo});
+
+  final UserProfile profilo;
+
+  @override
+  ConsumerState<_Modulo> createState() => _ModuloState();
+}
+
+class _ModuloState extends ConsumerState<_Modulo> {
+  late String? _sesso = widget.profilo.sex;
+  late DateTime? _nascita = widget.profilo.birthdate;
+  late String? _attivita = widget.profilo.activityLevel;
+  late String? _obiettivo = widget.profilo.goal;
+  late final _altezza = TextEditingController(
+    text: widget.profilo.heightCm?.toString() ?? '',
+  );
+  late final _pesoObiettivo = TextEditingController(
+    text: widget.profilo.targetWeightKg?.toStringAsFixed(1) ?? '',
+  );
+  late Map<String, String> _orari = Map.of(widget.profilo.mealHours);
+
+  bool _inCorso = false;
+  String? _errore;
+
+  @override
+  void dispose() {
+    _altezza.dispose();
+    _pesoObiettivo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _salva() async {
+    setState(() {
+      _inCorso = true;
+      _errore = null;
+    });
+
+    try {
+      await ref
+          .read(profileActionsProvider)
+          .save(
+            sex: _sesso,
+            birthdate: _nascita,
+            heightCm: int.tryParse(_altezza.text.trim()),
+            activityLevel: _attivita,
+            goal: _obiettivo,
+            targetWeightKg: double.tryParse(_pesoObiettivo.text.trim().replaceAll(',', '.')),
+            mealHours: _orari,
+          );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profilo salvato')),
+        );
+      }
+    } on Object catch (error) {
+      setState(() => _errore = ApiClient.unwrapError(error).message);
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.profilo;
+    final theme = Theme.of(context);
+
+    return ListView(
+      padding: const EdgeInsets.all(Gap.md),
+      children: [
+        if (!p.isComplete) _CosaManca(profilo: p),
+
+        if (p.derived != null) _Derivati(d: p.derived!),
+
+        const SizedBox(height: Gap.md),
+        Text('Chi sei', style: theme.textTheme.titleMedium),
+        const SizedBox(height: Gap.sm),
+
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'm', label: Text('Uomo')),
+            ButtonSegment(value: 'f', label: Text('Donna')),
+          ],
+          selected: _sesso == null ? <String>{} : {_sesso!},
+          emptySelectionAllowed: true,
+          onSelectionChanged: (s) => setState(() => _sesso = s.isEmpty ? null : s.first),
+        ),
+        const SizedBox(height: Gap.md),
+
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.cake_outlined),
+          title: const Text('Data di nascita'),
+          subtitle: Text(
+            _nascita == null
+                ? 'Non impostata'
+                : '${DateFormat('d MMMM y', 'it').format(_nascita!)}'
+                      '${p.age != null ? ' · ${p.age} anni' : ''}',
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: _scegliData,
+        ),
+
+        TextField(
+          controller: _altezza,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Altezza',
+            suffixText: 'cm',
+            prefixIcon: Icon(Icons.height_rounded),
+          ),
+        ),
+        const SizedBox(height: Gap.md),
+
+        // Le tendine arrivano dal server: aggiungere un livello non richiede
+        // una nuova versione dell'app sugli store.
+        DropdownButtonFormField<String>(
+          initialValue: p.activityLevels.containsKey(_attivita) ? _attivita : null,
+          decoration: const InputDecoration(
+            labelText: 'Quanto ti muovi',
+            prefixIcon: Icon(Icons.directions_run_rounded),
+          ),
+          items: p.activityLevels.entries
+              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+              .toList(),
+          onChanged: (v) => setState(() => _attivita = v),
+        ),
+        const SizedBox(height: Gap.md),
+
+        DropdownButtonFormField<String>(
+          initialValue: p.goals.containsKey(_obiettivo) ? _obiettivo : null,
+          decoration: const InputDecoration(
+            labelText: 'Obiettivo',
+            prefixIcon: Icon(Icons.flag_outlined),
+          ),
+          items: p.goals.entries
+              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+              .toList(),
+          onChanged: (v) => setState(() => _obiettivo = v),
+        ),
+        const SizedBox(height: Gap.md),
+
+        TextField(
+          controller: _pesoObiettivo,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Peso che vuoi raggiungere (facoltativo)',
+            suffixText: 'kg',
+            prefixIcon: Icon(Icons.flag_circle_outlined),
+          ),
+        ),
+
+        const SizedBox(height: Gap.lg),
+        Text('Orari dei pasti', style: theme.textTheme.titleMedium),
+        Text(
+          'Servono a mettere ogni cibo nel pasto giusto in base all\'ora.',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: Gap.sm),
+
+        MealHoursEditor(
+          orari: _orari,
+          onChanged: (nuovi) => setState(() => _orari = nuovi),
+        ),
+
+        if (_errore != null) ...[
+          const SizedBox(height: Gap.md),
+          Text(_errore!, style: TextStyle(color: theme.colorScheme.error)),
+        ],
+
+        const SizedBox(height: Gap.lg),
+        FilledButton(
+          onPressed: _inCorso ? null : _salva,
+          child: _inCorso
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Salva'),
+        ),
+        const SizedBox(height: Gap.xl),
+      ],
+    );
+  }
+
+  Future<void> _scegliData() async {
+    final oggi = DateTime.now();
+
+    final scelta = await showDatePicker(
+      context: context,
+      initialDate: _nascita ?? DateTime(oggi.year - 30, oggi.month, oggi.day),
+      // ⚠️ `lastDate` è ieri, non oggi: una data di nascita di oggi darebbe
+      // età 0, e le formule metaboliche su un neonato non hanno senso. Il
+      // server la rifiuta comunque, ma farlo scoprire al salvataggio è un giro
+      // inutile.
+      firstDate: DateTime(1900),
+      lastDate: oggi.subtract(const Duration(days: 1)),
+      locale: const Locale('it'),
+    );
+
+    if (scelta != null) setState(() => _nascita = scelta);
+  }
+}
+
+/// Cosa manca per avere un fabbisogno — con i nomi delle cose, non delle colonne.
+class _CosaManca extends StatelessWidget {
+  const _CosaManca({required this.profilo});
+
+  final UserProfile profilo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final mancanti = profilo.missing.map(UserProfile.labelFor).toList();
+
+    return Card(
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, color: theme.colorScheme.onSecondaryContainer),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(
+                // 🚨 Si dice **quale** campo manca. «Manca qualcosa» lascia la
+                // persona a indovinare, ed è il modo più rapido per farle
+                // chiudere la schermata senza completarla.
+                mancanti.length == 1
+                    ? 'Per calcolare il tuo fabbisogno manca ${mancanti.first}.'
+                    : 'Per calcolare il tuo fabbisogno mancano: ${mancanti.join(', ')}.',
+                style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// I numeri calcolati dal server.
+class _Derivati extends StatelessWidget {
+  const _Derivati({required this.d});
+
+  final DerivedTargets d;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    Widget cella(String valore, String etichetta) => Expanded(
+      child: Column(
+        children: [
+          Text(
+            valore,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          Text(etichetta, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                cella('${d.targetKcal}', 'kcal al giorno'),
+                cella(d.bmi.toStringAsFixed(1), 'BMI'),
+                cella('${d.tdee.round()}', 'consumo stimato'),
+              ],
+            ),
+            const Divider(height: Gap.lg),
+            Row(
+              children: [
+                cella('${d.proteinG} g', 'proteine'),
+                cella('${d.carbsG} g', 'carboidrati'),
+                cella('${d.fatG} g', 'grassi'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

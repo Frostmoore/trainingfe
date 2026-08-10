@@ -119,8 +119,26 @@ class ApiClient {
     return _unwrap<T>(response, unwrap);
   }
 
-  Future<void> delete(String path) async {
-    await _dio.delete<dynamic>(path);
+  /// PUT — sostituisce la risorsa per intero.
+  ///
+  /// ⚠️ Distinta da `patch` di proposito: il backend usa PUT per le schede
+  /// (dove le righe si riscrivono tutte) e PATCH per il profilo (dove si salva
+  /// un campo alla volta). Confonderle significherebbe azzerare ciò che non si
+  /// è mandato, o non riscrivere ciò che si voleva sostituire.
+  Future<T> put<T>(String path, {Object? body, bool unwrap = true}) async {
+    final response = await _dio.put<dynamic>(path, data: body);
+
+    return _unwrap<T>(response, unwrap);
+  }
+
+  /// La DELETE accetta un corpo.
+  ///
+  /// ⚠️ Serve a `DELETE /account`, che richiede la password come conferma. È
+  /// insolito ma legittimo (HTTP non lo vieta) e l'alternativa — la password in
+  /// query string — la scriverebbe nei log del server e nella cronologia dei
+  /// proxy.
+  Future<void> delete(String path, {Object? body}) async {
+    await _dio.delete<dynamic>(path, data: body);
   }
 
   /// Invio multipart, per le foto.

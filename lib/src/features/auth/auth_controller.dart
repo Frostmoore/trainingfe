@@ -147,6 +147,13 @@ class AuthController extends StateNotifier<AuthState> {
   /// Ricarica l'utente: dopo un cambio di profilo, o al ritorno in primo piano.
   Future<void> refresh() => _loadMe();
 
+  /// Dimentica la sessione **senza chiamare il server** — C6.
+  ///
+  /// Serve dopo l'eliminazione dell'account: il token è già stato revocato, e
+  /// una `logout()` farebbe una chiamata destinata a un 401. Il router reagisce
+  /// al cambio di stato e riporta all'accesso.
+  Future<void> forgetSession() => _forgetSession();
+
   // ───────────────────────── interni ─────────────────────────
 
   Future<void> _acceptToken(Map<String, dynamic> data) async {

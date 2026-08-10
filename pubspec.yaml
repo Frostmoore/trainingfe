@@ -92,6 +92,22 @@ dependencies:
   # nessun processo Reverb, e su rete mobile il socket spesso non si apre.
   web_socket_channel: ^3.0.1
 
+  # ── Il player di allenamento (C9) ───────────────────────────────────────
+  # Lo schermo non deve spegnersi mentre si è sotto un bilanciere: sbloccare il
+  # telefono con le mani sudate fra una serie e l'altra è il modo più rapido per
+  # far smettere di usare il player.
+  wakelock_plus: ^1.2.8
+
+  # 🚨 Il timer di riposo va PROGRAMMATO come notifica, non tenuto con un
+  # `Timer`: su iOS il codice Dart in background non gira, e il riposo finirebbe
+  # senza avvisare proprio quando il telefono è in tasca. Su Android un `Timer`
+  # sopravvive più a lungo ma non è garantito.
+  flutter_local_notifications: ^18.0.1
+
+  # Serve a `flutter_local_notifications` per programmare a un istante preciso
+  # nel fuso locale.
+  timezone: ^0.10.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

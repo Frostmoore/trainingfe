@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../data/diary_models.dart';
@@ -26,6 +28,13 @@ class DiaryScreen extends ConsumerWidget {
             onPressed: () => _scegliData(context, ref, giorno),
             icon: const Icon(Icons.calendar_today_rounded),
             tooltip: 'Cambia giorno',
+          ),
+          // C13 — il mese intero. Sta qui perché la domanda «come è andata la
+          // settimana» nasce guardando la giornata, non da un'altra sezione.
+          IconButton(
+            onPressed: () => context.push(AppRoutes.calendar),
+            icon: const Icon(Icons.calendar_month_rounded),
+            tooltip: 'Calendario',
           ),
         ],
         bottom: _BarraGiorno(giorno: giorno, ref: ref),

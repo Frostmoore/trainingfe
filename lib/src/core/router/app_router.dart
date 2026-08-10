@@ -6,14 +6,23 @@ import '../../features/auth/auth_controller.dart';
 import '../../features/auth/ui/gym_inactive_screen.dart';
 import '../../features/auth/ui/login_screen.dart';
 import '../../features/auth/ui/register_screen.dart';
+import '../../features/calendar/ui/calendar_screen.dart';
+import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
+import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
+import '../../features/profile/ui/delete_account_screen.dart';
+import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/progress/ui/progress_screen.dart';
+import '../../features/sleep/ui/sleep_screen.dart';
+import '../../features/training/ui/history_screen.dart';
+import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
+import '../../features/training/ui/player_screen.dart';
 
 /// Le rotte dell'app — A1.5.
 ///
@@ -44,6 +53,25 @@ class AppRoutes {
   static const progress = '/progressi';
   static const chat = '/messaggi';
   static const profile = '/profilo';
+
+  // ── Fase C: le schermate che prima non c'erano ─────────────────────────
+  //
+  // Sono tutte **sopra** la shell (`push`, non `go`): hanno un percorso
+  // proprio con un pulsante «indietro», e non devono far sparire la barra di
+  // navigazione dal sotto — è il comportamento che ci si aspetta da un
+  // dettaglio, non da una sezione.
+  static const profileEdit = '/profilo/dati';
+  static const deleteAccount = '/profilo/elimina';
+  static const sleep = '/sonno';
+  static const calendar = '/calendario';
+  static const dashboard = '/andamento';
+  static const history = '/allenamento/storico';
+  static const planNew = '/schede/nuova';
+
+  /// `/allenamento/:id` — il player. `/schede/:id/modifica` — l'editor.
+  static String player(int sessionId) => '/allenamento/$sessionId';
+  static String planEdit(int planId) => '/schede/$planId/modifica';
+  static String day(String date) => '/giorno/$date';
 
   /// Le schermate raggiungibili senza sessione.
   static const _public = {gymCode, login, register, gymInactive};
@@ -98,6 +126,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: AppRoutes.register, builder: (_, _) => const RegisterScreen()),
       GoRoute(path: AppRoutes.gymInactive, builder: (_, _) => const GymInactiveScreen()),
+
+      // ── Fase C ────────────────────────────────────────────────────────
+      GoRoute(path: AppRoutes.profileEdit, builder: (_, _) => const EditProfileScreen()),
+      GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
+      GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
+      GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),
+      GoRoute(path: AppRoutes.dashboard, builder: (_, _) => const DashboardScreen()),
+      GoRoute(path: AppRoutes.history, builder: (_, _) => const HistoryScreen()),
+      GoRoute(path: AppRoutes.planNew, builder: (_, _) => const PlanEditorScreen()),
+      GoRoute(
+        path: '/schede/:id/modifica',
+        builder: (_, state) =>
+            PlanEditorScreen(planId: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/giorno/:date',
+        builder: (_, state) => DayScreen(date: state.pathParameters['date']!),
+      ),
+      // ⚠️ Questa DOPO `/allenamento/storico`: go_router prova le rotte
+      // nell'ordine, e `:id` intercetterebbe anche «storico» facendo fallire
+      // `int.parse`.
+      GoRoute(
+        path: '/allenamento/:id',
+        builder: (_, state) =>
+            PlayerScreen(sessionId: int.parse(state.pathParameters['id']!)),
+      ),
 
       // La shell tiene la barra di navigazione ferma mentre cambia il
       // contenuto: senza, ogni cambio di scheda ricostruirebbe la barra e

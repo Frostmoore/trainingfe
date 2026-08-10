@@ -99,10 +99,14 @@ class DayScreen extends ConsumerWidget {
                       ].join(' · '),
                     ),
                     trailing: s['kcal'] == null ? null : Text('${s['kcal']} kcal'),
-                    // go_router, non `Navigator.pushNamed`: con un router
+                    // Il **riepilogo**, non il player: dal calendario si
+                    // guarda una seduta passata, e riaprirla come allenamento
+                    // in corso non ha senso. Vedi la nota in `history_screen`.
+                    //
+                    // ⚠️ go_router e non `Navigator.pushNamed`: con un router
                     // dichiarativo il `Navigator` non ha `onGenerateRoute` e
                     // una rotta con nome lancia sempre.
-                    onTap: () => context.push(AppRoutes.player(s['id'] as int)),
+                    onTap: () => context.push(AppRoutes.riepilogo(s['id'] as int)),
                   ),
               const SizedBox(height: Gap.xl),
             ],

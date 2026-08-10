@@ -30,13 +30,12 @@ class SessionSummaryScreen extends ConsumerWidget {
     final sessione = ref.watch(sessionProvider(sessionId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Allenamento concluso'),
-        // ⚠️ Niente freccia indietro: si viene qui **dopo** aver chiuso la
-        // sessione, e tornare al player vorrebbe dire riaprire una schermata
-        // che non ha più senso. Si esce con «Fine».
-        automaticallyImplyLeading: false,
-      ),
+      // ⚠️ La freccia indietro **c'è**, e va bene: il player è stato
+      // sostituito (`pushReplacement`), quindi tornare indietro porta
+      // all'elenco, non a una sessione chiusa. E da G13 a questa schermata si
+      // arriva anche dallo storico e dal calendario, dove una schermata senza
+      // via d'uscita sarebbe un vicolo cieco.
+      appBar: AppBar(title: const Text('Allenamento concluso')),
       body: sessione.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(

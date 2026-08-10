@@ -174,14 +174,24 @@ class _CardSessione extends ConsumerWidget {
     );
   }
 
-  /// 🚨 `context.push` di go_router, **non** `Navigator.pushNamed`.
+  /// 🚨 **Una seduta conclusa si GUARDA, non si riapre.**
   ///
-  /// Il `Navigator` di un'app con go_router non ha nessun `onGenerateRoute`:
-  /// una rotta con nome lancia sempre, e la riga dello storico non si e' mai
-  /// potuta aprire. Il difetto era li' da C10 e non lo vedeva nessuno perche'
-  /// allo storico ci si arrivava di rado — da G6 e' la pagina principale della
-  /// sezione, e salta fuori al primo tocco.
-  void _apri(BuildContext context) => context.push(AppRoutes.player(sessione.id));
+  /// Toccando una riga dello storico si finiva nel player: una schermata che
+  /// tiene lo schermo acceso, fa partire i recuperi e invita a registrare
+  /// serie — su un allenamento di tre giorni fa. Non ha senso, e il rischio è
+  /// di sporcare una seduta chiusa con dati di oggi.
+  ///
+  /// Il player resta per quella **ancora aperta**: lì «riprendi» è esattamente
+  /// ciò che si vuole, ed è il pulsante che la riga mostra al suo posto.
+  ///
+  /// ⚠️ `context.push` di go_router, **non** `Navigator.pushNamed`: il
+  /// `Navigator` di un'app con go_router non ha nessun `onGenerateRoute`, e una
+  /// rotta con nome lancia sempre.
+  void _apri(BuildContext context) => context.push(
+    sessione.isOpen
+        ? AppRoutes.player(sessione.id)
+        : AppRoutes.riepilogo(sessione.id),
+  );
 
   /// Correzione manuale delle calorie.
   ///

@@ -379,7 +379,12 @@ class TrainingCard extends ConsumerWidget {
                   ].join(' · '),
                 ),
                 trailing: s.kcal == null ? null : Text('${s.kcal} kcal'),
-                onTap: () => context.push(AppRoutes.player(s.id)),
+                // Conclusa → riepilogo; ancora aperta → player. Riaprire
+                // come «allenamento in corso» una seduta di tre giorni fa non
+                // ha senso, e rischia di sporcarla con dati di oggi.
+                onTap: () => context.push(
+                  s.isOpen ? AppRoutes.player(s.id) : AppRoutes.riepilogo(s.id),
+                ),
               ),
           ],
         ),

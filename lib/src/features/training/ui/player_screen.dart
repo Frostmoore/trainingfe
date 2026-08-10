@@ -129,6 +129,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
   }
 
+  /// Il primo numero di una prescrizione: «8-12» → 8, «cedimento» → `null`.
+  ///
+  /// Serve a precompilare la riga della serie con un punto di partenza
+  /// ragionevole. Il valore prescritto resta comunque visibile per intero fra i
+  /// parametri dell'esercizio.
+  static int? _primoNumero(String? prescrizione) {
+    if (prescrizione == null) return null;
+
+    final trovato = RegExp(r'\d+').firstMatch(prescrizione);
+
+    return trovato == null ? null : int.tryParse(trovato.group(0)!);
+  }
+
   /// Le ripetizioni prescritte, estratte da «3 × 8-12».
   ///
   /// ⚠️ La prescrizione arriva **già composta** dal backend perché app e
@@ -181,7 +194,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       for (var i = 1; i <= totale; i++)
         PlayerSet(
           setNumber: i,
-          reps: perNumero[i]?.reps ?? int.tryParse(riga.reps ?? ''),
+          // 🚨 `int.tryParse('8-12')` da' **null**: con una prescrizione a
+          // intervallo — cioe' quasi sempre — il campo restava vuoto e le
+          // ripetizioni andavano riscritte a ogni serie. Si prende il primo
+          // numero: da «8-12» si parte da 8, da «cedimento» non si parte.
+          reps: perNumero[i]?.reps ?? _primoNumero(riga.reps),
           weight: perNumero[i]?.weight ?? riga.targetWeight,
           done: perNumero.containsKey(i),
         ),
@@ -689,10 +706,41 @@ class _RigaSerieState extends State<_RigaSerie> {
     text: widget.riga.weight == null ? '' : _pulito(widget.riga.weight!),
   );
 
+  /// 🚨 **Toccando il campo, il valore si seleziona tutto.**
+  ///
+  /// I campi arrivano già riempiti con quello che prescrive la scheda — ed è
+  /// giusto: nove volte su dieci il peso è quello, e non si deve riscrivere
+  /// niente. Ma quando **non** è quello, con il cursore piazzato in mezzo alle
+  /// cifre bisognerebbe cancellarle una a una con le mani sudate, in piedi
+  /// davanti a un bilanciere. Selezionandole tutte, la prima cifra digitata le
+  /// sostituisce: è come trovare il campo vuoto, ma se si tocca per sbaglio e
+  /// si tocca altrove il valore prescritto è ancora lì.
+  final FocusNode _fuocoReps = FocusNode();
+  final FocusNode _fuocoPeso = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fuocoReps.addListener(() => _seleziona(_fuocoReps, _reps));
+    _fuocoPeso.addListener(() => _seleziona(_fuocoPeso, _peso));
+  }
+
+  void _seleziona(FocusNode fuoco, TextEditingController controller) {
+    if (!fuoco.hasFocus || controller.text.isEmpty) return;
+
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+  }
+
   @override
   void dispose() {
     _reps.dispose();
     _peso.dispose();
+    _fuocoReps.dispose();
+    _fuocoPeso.dispose();
     super.dispose();
   }
 
@@ -711,6 +759,7 @@ class _RigaSerieState extends State<_RigaSerie> {
           Expanded(
             child: TextField(
               controller: _reps,
+              focusNode: _fuocoReps,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'rip.', isDense: true),
               onChanged: (v) => riga.reps = int.tryParse(v),
@@ -720,6 +769,7 @@ class _RigaSerieState extends State<_RigaSerie> {
           Expanded(
             child: TextField(
               controller: _peso,
+              focusNode: _fuocoPeso,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'kg', isDense: true),
               onChanged: (v) => riga.weight = double.tryParse(v.replaceAll(',', '.')),

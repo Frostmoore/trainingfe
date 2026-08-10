@@ -112,6 +112,43 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
     }
   }
 
+  Future<void> _elimina() async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Eliminare «${widget.voce.description}»?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma != true) return;
+
+    setState(() => _inCorso = true);
+
+    try {
+      await ref.read(diaryActionsProvider).delete(widget.voce.id);
+
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      setState(() {
+        _errore = ApiClient.unwrapError(error).message;
+        _inCorso = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -200,6 +237,20 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Salva'),
+            ),
+
+            const SizedBox(height: Gap.sm),
+            // 🚨 L'eliminazione sta QUI, in chiaro.
+            //
+            // Esiste anche lo scorrimento a sinistra sulla riga, ma un gesto
+            // senza nessun segno che lo annunci è una funzione che per la
+            // maggior parte delle persone non esiste: e senza un modo visibile
+            // di togliere un alimento sbagliato, il diario diventa una lista
+            // che si può solo far crescere.
+            TextButton.icon(
+              onPressed: _inCorso ? null : _elimina,
+              icon: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
+              label: Text('Elimina', style: TextStyle(color: theme.colorScheme.error)),
             ),
           ],
         ),

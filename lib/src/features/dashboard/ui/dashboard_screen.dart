@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../dashboard_controller.dart';
 import 'widgets/today_cards.dart';
+import 'widgets/today_header.dart';
 
 /// La dashboard — C12.
 ///
@@ -22,7 +23,9 @@ class DashboardScreen extends ConsumerWidget {
     final consiglio = ref.watch(adviceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Oggi')),
+      // 🚨 Niente AppBar: l'intestazione **è** la scheda della palestra, e una
+      // barra sopra di essa aggiungerebbe una seconda riga di titolo che dice
+      // la stessa cosa due volte, rubando un quinto dello schermo.
       body: RefreshIndicator(
         onRefresh: () async {
           ref
@@ -38,29 +41,67 @@ class DashboardScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(dashboardProvider),
           ),
           data: (r) => ListView(
-            padding: const EdgeInsets.all(Gap.md),
+            // ⚠️ Nessun `padding` orizzontale sulla lista: l'intestazione deve
+            // arrivare ai bordi. Lo spazio lo mette `_Blocchi`, che è anche il
+            // punto unico in cui vive la distanza fra una scheda e l'altra —
+            // affidarla al margine di serie di `Card` le lasciava appiccicate.
+            padding: EdgeInsets.zero,
             children: [
-              CaloriesCard(riepilogo: r),
+              TodayHeader(riepilogo: r),
 
-              consiglio.maybeWhen(
-                data: (testo) => testo == null || testo.isEmpty
-                    ? const SizedBox.shrink()
-                    : _Consiglio(testo: testo),
-                orElse: () => const SizedBox.shrink(),
+              _Blocchi(
+                children: [
+                  CaloriesCard(riepilogo: r),
+
+                  consiglio.maybeWhen(
+                    data: (testo) => testo == null || testo.isEmpty
+                        ? null
+                        : _Consiglio(testo: testo),
+                    orElse: () => null,
+                  ),
+
+                  RecoveryCard(riepilogo: r),
+                  WeightCard(body: r.body),
+                  TrainingCard(riepilogo: r),
+                  const _GraficoPeso(),
+                  const _GraficoCalorie(),
+                ],
               ),
 
-              RecoveryCard(riepilogo: r),
-              WeightCard(body: r.body),
-              TrainingCard(riepilogo: r),
-
-              const SizedBox(height: Gap.md),
-              const _GraficoPeso(),
-              const SizedBox(height: Gap.md),
-              const _GraficoCalorie(),
               const SizedBox(height: Gap.xl),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Impila le schede con **una** distanza, decisa in un posto solo.
+///
+/// 🚨 Lasciare la spaziatura al margine di serie di `Card` (4 px verticali) le
+/// fa sembrare incollate, e aggiungerne una a mano dentro ogni scheda
+/// significherebbe sette punti da tenere allineati. I `null` si scartano qui: chi
+/// costruisce l'elenco non deve preoccuparsi di lasciare buchi.
+class _Blocchi extends StatelessWidget {
+  const _Blocchi({required this.children});
+
+  final List<Widget?> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibili = children.whereType<Widget>().toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < visibili.length; i++) ...[
+            if (i > 0) const SizedBox(height: Gap.md),
+            visibili[i],
+          ],
+        ],
       ),
     );
   }
@@ -76,6 +117,7 @@ class _Consiglio extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
+      margin: EdgeInsets.zero,
       color: theme.colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
@@ -301,6 +343,7 @@ class _Riquadro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
     child: Padding(
       padding: const EdgeInsets.all(Gap.md),
       child: Column(

@@ -315,6 +315,16 @@ class _Voce extends ConsumerWidget {
               tooltip: 'Salva fra i preferiti',
               visualDensity: VisualDensity.compact,
             ),
+            // 🚨 Eliminare deve essere **visibile**. Lo scorrimento a sinistra
+            // resta come scorciatoia, ma un gesto che niente annuncia è una
+            // funzione che per la maggior parte delle persone non esiste — e
+            // senza, il diario è una lista che si può solo far crescere.
+            IconButton(
+              onPressed: () => _elimina(context, ref),
+              icon: const Icon(Icons.close_rounded, size: 18),
+              tooltip: 'Elimina',
+              visualDensity: VisualDensity.compact,
+            ),
           ],
         ),
         // L'icona dice da dove viene la voce: serve a capire, guardando lo
@@ -332,6 +342,32 @@ class _Voce extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _elimina(BuildContext context, WidgetRef ref) async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Eliminare «${voce.description}»?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma == true) {
+      await ref.read(diaryActionsProvider).delete(voce.id);
+    }
   }
 
   Future<void> _salvaPreferito(BuildContext context, WidgetRef ref) async {

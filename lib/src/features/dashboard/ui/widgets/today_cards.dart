@@ -27,6 +27,7 @@ class CaloriesCard extends StatelessWidget {
     final scostamento = riepilogo.scostamentoRitmo;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
         child: Column(
@@ -207,6 +208,7 @@ class RecoveryCard extends StatelessWidget {
     // mostrare zeri: uno zero si legge come un valore pessimo.
     if (sonno == null && !riepilogo.hasVitals) {
       return const Card(
+        margin: EdgeInsets.zero,
         child: ListTile(
           leading: Icon(Icons.watch_outlined),
           title: Text('Nessun dato dall\'orologio'),
@@ -220,6 +222,7 @@ class RecoveryCard extends StatelessWidget {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
         child: Column(
@@ -321,6 +324,7 @@ class TrainingCard extends ConsumerWidget {
     final t = riepilogo.training;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
         child: Column(
@@ -396,6 +400,7 @@ class WeightCard extends StatelessWidget {
 
     if (body.weightKg == null) {
       return const Card(
+        margin: EdgeInsets.zero,
         child: ListTile(
           leading: Icon(Icons.monitor_weight_outlined),
           title: Text('Nessuna pesata'),
@@ -407,6 +412,7 @@ class WeightCard extends StatelessWidget {
     final delta = body.weightDelta;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: ListTile(
         leading: const Icon(Icons.monitor_weight_outlined),
         title: Text(

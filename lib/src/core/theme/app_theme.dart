@@ -54,12 +54,34 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
 
+      /*
+       * 🚨 **`Size(64, 48)` e NON `Size.fromHeight(48)`.**
+       *
+       * `Size.fromHeight(48)` vale `Size(double.infinity, 48)`: impone a ogni
+       * pulsante dell'app una larghezza **minima infinita**. Dentro una `Column`
+       * o una lista non si nota — riempie e basta, che era l'intenzione — ma
+       * dentro una `Row` che contiene anche un figlio flessibile è un disastro:
+       * `RenderFlex` misura i figli NON flessibili con larghezza **illimitata**
+       * prima di distribuire lo spazio, il pulsante chiede infinito, e il layout
+       * lancia. Da lì parte la solita cascata di «RenderBox was not laid out» e
+       * **non si disegna più niente** — non il pulsante: l'intera schermata.
+       *
+       * È costato due schermate bianche: la riga «Riprendi» e il riepilogo di
+       * fine allenamento, dove il campo delle calorie sta accanto a «Salva».
+       *
+       * 48 px resta il vincolo che conta — è la soglia sotto la quale un
+       * bersaglio diventa difficile da centrare col pollice, ed è la linea guida
+       * di accessibilità di entrambe le piattaforme. 64 px di larghezza minima è
+       * il default di Material.
+       *
+       * ⚠️ Chi vuole un pulsante a tutta larghezza lo dice dove serve, con
+       * `style: FilledButton.styleFrom(minimumSize: Size.fromHeight(52))` o
+       * mettendolo in una `Column(crossAxisAlignment: stretch)`. Un default che
+       * può far sparire una schermata non è un default.
+       */
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          // 48 px è la soglia sotto la quale un bersaglio diventa difficile da
-          // centrare col pollice: non è estetica, è la linea guida di
-          // accessibilità di entrambe le piattaforme.
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
@@ -67,7 +89,7 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -105,6 +127,18 @@ class AppTheme {
 /// significa che cambiare la densità dell'interfaccia è una ricerca e
 /// sostituzione su cinquanta file, con il rischio di prendere anche i 16 che
 /// erano un'altra cosa.
+/// «Questo pulsante occupa tutta la larghezza».
+///
+/// 🚨 Da chiedere **dove serve**, non da imporre nel tema: `Size.fromHeight`
+/// vale `Size(double.infinity, …)`, e un pulsante che pretende larghezza
+/// infinita dentro una `Row` con un figlio flessibile fa lanciare il layout —
+/// e con esso sparire l'intera schermata. Vedi la nota in `AppTheme._build()`.
+///
+/// Si usa solo dove il pulsante è figlio diretto di una `Column` o di una lista,
+/// cioè dove la larghezza è comunque limitata.
+ButtonStyle bottonePieno({double altezza = 48}) =>
+    FilledButton.styleFrom(minimumSize: Size.fromHeight(altezza));
+
 class Gap {
   const Gap._();
 

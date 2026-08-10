@@ -2,17 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/notifications/notifications.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/miniatura.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
-import 'session_summary_screen.dart';
 import 'widgets/rest_bar.dart';
 
 /// Il player di allenamento — C9.
@@ -334,11 +335,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       // il tasto indietro riaprirebbe una sessione ormai chiusa. Ed e' li' che
       // si carica la foto e si correggono le calorie — le tre cose che dopo
       // cinque minuti non fa piu' nessuno.
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => SessionSummaryScreen(sessionId: widget.sessionId),
-        ),
-      );
+      //
+      // ⚠️ Quello di **go_router**, non `Navigator.pushReplacement`: spingendo
+      // una `MaterialPageRoute` a mano, go_router continuerebbe a credere che
+      // la rotta corrente sia il player, e «Fine» riporterebbe li' — su una
+      // sessione ormai chiusa.
+      context.pushReplacement(AppRoutes.riepilogo(widget.sessionId));
     } on Object catch (error) {
       setState(() => _chiusura = false);
       _avvisa(ApiClient.unwrapError(error).message);

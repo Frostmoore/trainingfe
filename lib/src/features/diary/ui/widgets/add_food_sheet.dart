@@ -196,6 +196,7 @@ class _Testo extends StatelessWidget {
         ),
         const Spacer(),
         FilledButton.icon(
+          style: bottonePieno(),
           onPressed: inCorso ? null : onInvia,
           icon: inCorso
               ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
@@ -223,6 +224,7 @@ class _Foto extends StatelessWidget {
           const CircularProgressIndicator()
         else ...[
           FilledButton.icon(
+            style: bottonePieno(),
             onPressed: () async {
               final path = await PhotoPicker.dallaFotocamera();
 
@@ -233,6 +235,7 @@ class _Foto extends StatelessWidget {
           ),
           const SizedBox(height: Gap.md),
           OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () async {
               final path = await PhotoPicker.dallaGalleria();
 
@@ -318,6 +321,7 @@ class _Manuale extends StatelessWidget {
         ),
         const SizedBox(height: Gap.lg),
         FilledButton(
+          style: bottonePieno(),
           onPressed: inCorso ? null : onSalva,
           child: const Text('Aggiungi'),
         ),

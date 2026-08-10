@@ -24,6 +24,7 @@ import '../../features/training/ui/history_screen.dart';
 import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
 import '../../features/training/ui/player_screen.dart';
+import '../../features/training/ui/session_summary_screen.dart';
 
 /// Le rotte dell'app — A1.5.
 ///
@@ -71,6 +72,14 @@ class AppRoutes {
 
   /// `/allenamento/:id` — il player. `/schede/:id/modifica` — l'editor.
   static String player(int sessionId) => '/allenamento/$sessionId';
+
+  /// Il riepilogo di fine allenamento — G7.
+  ///
+  /// 🚨 È una **rotta di go_router**, non un `Navigator.push` imperativo.
+  /// Il player la apre con `pushReplacement`: spingendola con il `Navigator`
+  /// del router, go_router continuerebbe a credere che la rotta corrente sia il
+  /// player, e «Fine» riporterebbe su una sessione ormai chiusa.
+  static String riepilogo(int sessionId) => '/allenamento/$sessionId/riepilogo';
   static String planEdit(int planId) => '/schede/$planId/modifica';
   static String day(String date) => '/giorno/$date';
 
@@ -145,6 +154,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/giorno/:date',
         builder: (_, state) => DayScreen(date: state.pathParameters['date']!),
+      ),
+      GoRoute(
+        path: '/allenamento/:id/riepilogo',
+        builder: (_, state) =>
+            SessionSummaryScreen(sessionId: int.parse(state.pathParameters['id']!)),
       ),
       // ⚠️ Questa DOPO `/allenamento/storico`: go_router prova le rotte
       // nell'ordine, e `:id` intercetterebbe anche «storico» facendo fallire

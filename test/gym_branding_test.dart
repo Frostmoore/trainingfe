@@ -59,6 +59,39 @@ void main() {
       expect(b.accent, GymBranding.fallbackAccent);
     });
 
+    /// 🚨 Quali pulsanti d'accesso esterno mostrare lo decide il **server**.
+    ///
+    /// Un «Accedi con Apple» che risponde sempre errore fa sembrare rotta tutta
+    /// l'applicazione, non solo quel pulsante — ed è anche il motivo per cui non
+    /// è una costante dentro l'app: cambiarla richiederebbe una pubblicazione.
+    test('i fornitori esterni arrivano dal server', () {
+      final b = GymBranding.fromJson(const {
+        'name': 'X',
+        'social': ['google', 'apple'],
+      });
+
+      expect(b.supporta('google'), isTrue);
+      expect(b.supporta('apple'), isTrue);
+    });
+
+    test('senza `social` non si mostra nessun pulsante', () {
+      // È il caso di una cache scritta da una versione precedente dell'app,
+      // e il risultato giusto è lo stesso di «non configurato».
+      final b = GymBranding.fromJson(const {'name': 'X'});
+
+      expect(b.social, isEmpty);
+      expect(b.supporta('google'), isFalse);
+    });
+
+    test('un fornitore sconosciuto si scarta invece di disegnare un pulsante muto', () {
+      final b = GymBranding.fromJson(const {
+        'name': 'X',
+        'social': ['google', 'facebook'],
+      });
+
+      expect(b.social, ['google']);
+    });
+
     test('un colore sbagliato ricade sul valore di riserva', () {
       final b = GymBranding.fromJson(const {
         'name': 'X',

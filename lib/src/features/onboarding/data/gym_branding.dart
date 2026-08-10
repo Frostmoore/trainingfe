@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../../auth/data/social_sign_in.dart';
+
 /// Il branding della palestra — ADR-A01.
 ///
 /// È l'unica cosa che l'app scarica **prima** di autenticarsi: serve a vestirsi
@@ -14,6 +16,7 @@ class GymBranding {
     required this.accent,
     this.logoUrl,
     this.locale = 'it',
+    this.social = const [],
   });
 
   /// 🚨 **Tollerante per costruzione.**
@@ -35,6 +38,12 @@ class GymBranding {
       accent: parseHex(colors['accent']?.toString()) ?? fallbackAccent,
       logoUrl: json['logo_url']?.toString(),
       locale: json['locale']?.toString() ?? 'it',
+      // ⚠️ Assente su una cache scritta da una versione precedente, e va bene
+      // così: nessun pulsante, che è lo stesso esito di «non configurato».
+      social: ((json['social'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .where(SocialProviderId.esiste)
+          .toList(growable: false),
     );
   }
 
@@ -45,6 +54,16 @@ class GymBranding {
   final Color accent;
   final String? logoUrl;
   final String locale;
+
+  /// I fornitori esterni con cui si può accedere: `google`, `apple` — C17.
+  ///
+  /// 🚨 **Lo decide il server.** L'elenco è vuoto finché le credenziali non
+  /// sono configurate lato backend, e allora l'app non disegna nessun pulsante.
+  /// Un «Accedi con Apple» che risponde sempre errore fa sembrare rotta tutta
+  /// l'applicazione, non solo quel pulsante.
+  final List<String> social;
+
+  bool supporta(String provider) => social.contains(provider);
 
   /// I colori di riserva: gli stessi che il backend usa come default sui
   /// `tenants`, così una palestra che non li ha impostati non si vede diversa
@@ -85,6 +104,7 @@ class GymBranding {
     'slug': slug,
     'logo_url': logoUrl,
     'locale': locale,
+    'social': social,
     'colors': {
       'primary': _hex(primary),
       'secondary': _hex(secondary),

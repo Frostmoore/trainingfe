@@ -7,6 +7,7 @@ import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/storage/token_store.dart';
 import 'data/app_user.dart';
+import 'data/social_sign_in.dart';
 
 /// In quale dei quattro stati si trova la sessione — A2.4.
 enum AuthStatus {
@@ -103,12 +104,21 @@ class AuthController extends StateNotifier<AuthState> {
     await _acceptToken(data);
   }
 
+  /// 🚨 `passwordConfirmation` è un parametro vero, non `password` ripetuta.
+  ///
+  /// Il backend valida con `confirmed`, ma se il client manda due volte lo
+  /// stesso valore quella regola non può fallire mai: il controllo esiste per
+  /// intercettare un **errore di battitura**, e ricopiando il primo campo lo si
+  /// disattiva senza toglierlo. È il tipo di finta protezione che si scopre
+  /// quando qualcuno resta chiuso fuori dal proprio account il giorno dopo
+  /// l'iscrizione.
   Future<void> register({
     required String joinCode,
     required String name,
     required String email,
     required String username,
     required String password,
+    required String passwordConfirmation,
   }) async {
     final data = await _api.post<Map<String, dynamic>>(
       '/auth/register',
@@ -118,13 +128,44 @@ class AuthController extends StateNotifier<AuthState> {
         'email': email.trim(),
         'username': username.trim().toLowerCase(),
         'password': password,
-        'password_confirmation': password,
+        'password_confirmation': passwordConfirmation,
         'device_name': 'app',
       },
       unwrap: false,
     );
 
     await _acceptToken(data);
+  }
+
+  /// Accesso con Google o Apple — C17.
+  ///
+  /// 🚨 `joinCode` serve **solo la prima volta**, e il server lo dice: se
+  /// risponde `join_code_required`, l'app deve chiedere il codice palestra e
+  /// riprovare. Mandarlo sempre non servirebbe — dal secondo accesso il server
+  /// lo ignora, perché la palestra di una persona è quella scritta sul suo
+  /// utente e non quella che presenta al momento dell'accesso.
+  ///
+  /// Restituisce `false` se la persona ha annullato: **non è un errore** e non
+  /// va mostrato come tale.
+  Future<bool> loginWithSocial(String provider, {String? joinCode}) async {
+    final credenziale = await SocialSignIn.instance.accedi(provider);
+
+    if (credenziale == null) return false;
+
+    final data = await _api.post<Map<String, dynamic>>(
+      '/auth/social',
+      body: {
+        'provider': credenziale.provider,
+        'id_token': credenziale.idToken,
+        'join_code': ?joinCode,
+        'device_name': 'app',
+      },
+      unwrap: false,
+    );
+
+    await _acceptToken(data);
+
+    return true;
   }
 
   /// Esce, e **non lascia il token addosso se il server non risponde**.

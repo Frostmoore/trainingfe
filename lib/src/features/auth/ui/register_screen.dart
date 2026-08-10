@@ -9,7 +9,10 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
 import '../auth_controller.dart';
+import '../data/password_strength.dart';
 import 'widgets/gym_header.dart';
+import 'widgets/password_meter.dart';
+import 'widgets/social_buttons.dart';
 
 /// L'iscrizione — A2.3.
 ///
@@ -29,11 +32,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _email = TextEditingController();
   final _username = TextEditingController();
   final _password = TextEditingController();
+  final _conferma = TextEditingController();
 
   /// Il nome utente si propone dal nome, ma **smette** appena l'utente lo
   /// tocca: continuare a sovrascriverlo mentre corregge il cognome sarebbe il
   /// modo più rapido per fargli odiare il modulo.
   bool _usernameToccato = false;
+
+  /// La robustezza, ricalcolata a ogni tasto.
+  ///
+  /// Sta nello stato e non dentro il `build` perché serve anche al `validator`,
+  /// che deve poter rifiutare l'invio senza rifare il conto.
+  PasswordStrength _forza = const PasswordStrength(
+    score: 0,
+    level: PasswordLevel.inesistente,
+    suggerimenti: [],
+  );
+
+  /// 🚨 Le due password si vedono in chiaro insieme, o non si vedono affatto.
+  ///
+  /// Mostrarne una sola renderebbe il secondo campo un test di battitura alla
+  /// cieca su qualcosa che si è appena letto: chi si accorge di un errore di
+  /// digitazione nel primo campo deve poter controllare **entrambi**.
+  bool _nascondi = true;
 
   bool _inCorso = false;
   String? _errore;
@@ -45,7 +66,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _email.dispose();
     _username.dispose();
     _password.dispose();
+    _conferma.dispose();
     super.dispose();
+  }
+
+  /// Ricalcola la robustezza tenendo conto dei dati personali già digitati.
+  ///
+  /// ⚠️ Va richiamata anche quando cambiano **nome, email e nome utente**, non
+  /// solo la password: chi scrive prima la password e poi il nome creerebbe
+  /// altrimenti «riccardo1234» senza che nessuno glielo dica più.
+  void _ricalcolaForza() {
+    setState(() {
+      _forza = PasswordStrength.valuta(
+        _password.text,
+        nome: _nome.text,
+        email: _email.text,
+        username: _username.text,
+      );
+    });
   }
 
   /// Propone un nome utente dal nome e cognome.
@@ -91,6 +129,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _email.text,
             username: _username.text,
             password: _password.text,
+            passwordConfirmation: _conferma.text,
           );
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
@@ -154,7 +193,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: const Icon(Icons.badge_outlined),
                         errorText: _erroriCampo['name']?.first,
                       ),
-                      onChanged: _proponiUsername,
+                      onChanged: (v) {
+                        _proponiUsername(v);
+                        // Il nome entra nel giudizio della password: chi scrive
+                        // prima la password e poi il nome creerebbe altrimenti
+                        // «riccardo1234» senza che nessuno glielo dica più.
+                        _ricalcolaForza();
+                      },
                       validator: (v) =>
                           (v ?? '').trim().isEmpty ? 'Come ti chiami?' : null,
                     ),
@@ -169,6 +214,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: const Icon(Icons.alternate_email_rounded),
                         errorText: _erroriCampo['email']?.first,
                       ),
+                      onChanged: (_) => _ricalcolaForza(),
                       validator: (v) {
                         final value = (v ?? '').trim();
 
@@ -204,7 +250,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         counterText: '',
                         errorText: _erroriCampo['username']?.first,
                       ),
-                      onChanged: (_) => _usernameToccato = true,
+                      onChanged: (_) {
+                        _usernameToccato = true;
+                        _ricalcolaForza();
+                      },
                       validator: (v) {
                         final value = (v ?? '').trim();
 
@@ -222,15 +271,72 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                     TextFormField(
                       controller: _password,
-                      obscureText: true,
+                      obscureText: _nascondi,
+                      autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        helperText: 'Almeno 8 caratteri.',
+                        helperText: 'Almeno ${PasswordStrength.lunghezzaMinima} '
+                            'caratteri, con lettere e numeri.',
                         errorText: _erroriCampo['password']?.first,
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() => _nascondi = !_nascondi),
+                          icon: Icon(
+                            _nascondi
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          tooltip: _nascondi ? 'Mostra' : 'Nascondi',
+                        ),
                       ),
-                      validator: (v) =>
-                          (v ?? '').length >= 8 ? null : 'Almeno 8 caratteri.',
+                      onChanged: (_) => _ricalcolaForza(),
+                      validator: (v) {
+                        final value = v ?? '';
+
+                        if (value.length < PasswordStrength.lunghezzaMinima) {
+                          return 'Almeno ${PasswordStrength.lunghezzaMinima} caratteri.';
+                        }
+
+                        // 🚨 Si blocca sul **giudizio**, non solo sulla
+                        // lunghezza: sotto questa soglia il backend risponde
+                        // 422 comunque, e far premere il pulsante per fallire
+                        // dopo un giro di rete è solo un modo più lento di dire
+                        // la stessa cosa.
+                        return _forza.accettabile
+                            ? null
+                            : 'Troppo debole: segui il consiglio qui sotto.';
+                      },
+                    ),
+
+                    PasswordMeter(forza: _forza),
+                    const SizedBox(height: Gap.md),
+
+                    TextFormField(
+                      controller: _conferma,
+                      obscureText: _nascondi,
+                      autofillHints: const [AutofillHints.newPassword],
+                      decoration: InputDecoration(
+                        labelText: 'Ripeti la password',
+                        prefixIcon: const Icon(Icons.lock_reset_rounded),
+                        // ⚠️ La spunta compare solo quando **combaciano e non
+                        // sono vuote**: un segno di conferma su due campi vuoti
+                        // è una bugia rassicurante.
+                        suffixIcon: _conferma.text.isNotEmpty &&
+                                _conferma.text == _password.text
+                            ? Icon(
+                                Icons.check_circle_outline_rounded,
+                                color: theme.colorScheme.primary,
+                              )
+                            : null,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      validator: (v) {
+                        if ((v ?? '').isEmpty) return 'Riscrivi la password.';
+
+                        return v == _password.text
+                            ? null
+                            : 'Le due password non coincidono.';
+                      },
                       onFieldSubmitted: (_) => _registrati(),
                     ),
 
@@ -256,6 +362,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             )
                           : const Text('Crea account'),
                     ),
+
+                    // Sull'iscrizione servono quanto sull'accesso: con Google o
+                    // Apple non c'è nessun modulo da compilare, ed è il motivo
+                    // principale per cui la gente li usa.
+                    const SocialButtons(),
                   ],
                 ),
               ),

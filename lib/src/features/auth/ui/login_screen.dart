@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
 import '../auth_controller.dart';
 import 'widgets/gym_header.dart';
+import 'widgets/social_buttons.dart';
 
 /// L'accesso — A2.3.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -168,6 +169,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             )
                           : const Text('Accedi'),
                     ),
+
+                    // Non disegna niente finché il server non dichiara un
+                    // fornitore configurato.
+                    const SocialButtons(),
+
                     const SizedBox(height: Gap.sm),
                     TextButton(
                       onPressed: () => context.go(AppRoutes.register),

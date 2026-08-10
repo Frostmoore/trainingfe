@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/foto_protetta.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
@@ -374,22 +374,13 @@ class _FotoState extends ConsumerState<_Foto> {
                   separatorBuilder: (context, i) => const SizedBox(width: Gap.sm),
                   itemBuilder: (context, i) => ClipRRect(
                     borderRadius: BorderRadius.circular(Gap.radiusSm),
-                    child: CachedNetworkImage(
-                      imageUrl: foto[i].url,
-                      width: 130,
-                      fit: BoxFit.cover,
-                      // ⚠️ Il token serve anche qui: le foto sono dati
-                      // personali e l'endpoint controlla di chi sono.
-                      httpHeaders:
-                          ref.watch(progressAuthHeaderProvider).valueOrNull ?? const {},
-                      errorWidget: (context, _, _) => ColoredBox(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ),
+                    // 🚨 `FotoProtetta` e non `CachedNetworkImage` a mano: il
+                    // token si legge dal Keychain in modo asincrono, e alla
+                    // prima costruzione non c'e'. Una richiesta senza
+                    // intestazione prende 401, e quell'errore resta in cache —
+                    // riquadro rotto permanente su un file perfettamente
+                    // presente sul server.
+                    child: FotoProtetta(url: foto[i].url, width: 130),
                   ),
                 ),
               ),

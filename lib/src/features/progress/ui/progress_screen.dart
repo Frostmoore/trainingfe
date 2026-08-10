@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/foto_protetta.dart';
 import '../../../core/ui/states.dart';
 import '../progress_controller.dart';
 
@@ -87,21 +87,12 @@ class _Cella extends ConsumerWidget {
                       : null,
                   borderRadius: BorderRadius.circular(Gap.radiusSm),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: foto.url,
-                  fit: BoxFit.cover,
-                  // ⚠️ Il token di Sanctum serve anche alle immagini: l'endpoint
-                  // controlla di chi è la foto prima di consegnarla, e senza
-                  // intestazione risponde 401.
-                  httpHeaders: ref.watch(progressAuthHeaderProvider).valueOrNull ?? const {},
-                  placeholder: (context, _) => ColoredBox(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                  ),
-                  errorWidget: (context, _, _) => ColoredBox(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: Icon(Icons.broken_image_outlined, color: theme.colorScheme.outline),
-                  ),
-                ),
+                // 🚨 Il token si legge dal Keychain in modo asincrono: finché
+                // non c'è, `FotoProtetta` non fa partire nessuna richiesta.
+                // Con `?? const {}` la prima sarebbe partita senza
+                // intestazione, avrebbe preso 401, e quell'errore sarebbe
+                // rimasto in cache anche dopo l'arrivo del token.
+                child: FotoProtetta(url: foto.url),
               ),
             ),
           ),
@@ -121,10 +112,7 @@ class _Cella extends ConsumerWidget {
       insetPadding: const EdgeInsets.all(Gap.md),
       child: Consumer(
         builder: (context, ref, _) => InteractiveViewer(
-          child: CachedNetworkImage(
-            imageUrl: foto.url,
-            httpHeaders: ref.watch(progressAuthHeaderProvider).valueOrNull ?? const {},
-          ),
+          child: FotoProtetta(url: foto.url, fit: BoxFit.contain),
         ),
       ),
     ),

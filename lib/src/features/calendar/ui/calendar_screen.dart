@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../calendar_controller.dart';
@@ -116,9 +118,11 @@ class _Cella extends StatelessWidget {
       opacity: giorno.inMonth ? 1 : 0.35,
       child: InkWell(
         borderRadius: BorderRadius.circular(Gap.radiusSm),
-        onTap: () => Navigator.of(
-          context,
-        ).pushNamed('/giorno/${DateFormat('yyyy-MM-dd').format(giorno.date)}'),
+        // go_router, non `Navigator.pushNamed`: vedi la nota in
+        // `history_screen.dart`.
+        onTap: () => context.push(
+          AppRoutes.day(DateFormat('yyyy-MM-dd').format(giorno.date)),
+        ),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(Gap.radiusSm),

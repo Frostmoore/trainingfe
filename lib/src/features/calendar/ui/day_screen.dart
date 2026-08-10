@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../calendar_controller.dart';
@@ -97,8 +99,10 @@ class DayScreen extends ConsumerWidget {
                       ].join(' · '),
                     ),
                     trailing: s['kcal'] == null ? null : Text('${s['kcal']} kcal'),
-                    onTap: () =>
-                        Navigator.of(context).pushNamed('/allenamento/${s['id']}'),
+                    // go_router, non `Navigator.pushNamed`: con un router
+                    // dichiarativo il `Navigator` non ha `onGenerateRoute` e
+                    // una rotta con nome lancia sempre.
+                    onTap: () => context.push(AppRoutes.player(s['id'] as int)),
                   ),
               const SizedBox(height: Gap.xl),
             ],

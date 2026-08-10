@@ -1,10 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/foto_protetta.dart';
 import '../../../core/ui/states.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
@@ -138,7 +140,9 @@ class _CardSessione extends ConsumerWidget {
                 )
               : ClipRRect(
                   borderRadius: BorderRadius.circular(Gap.radiusSm),
-                  child: CachedNetworkImage(imageUrl: foto.url, fit: BoxFit.cover),
+                  // 🚨 `FotoProtetta`: qui non c'era **nessuna** intestazione,
+                  // quindi la miniatura prendeva 401 e non si e' mai vista.
+                  child: FotoProtetta(url: foto.url),
                 ),
         ),
         title: Text(
@@ -170,8 +174,14 @@ class _CardSessione extends ConsumerWidget {
     );
   }
 
-  void _apri(BuildContext context) =>
-      Navigator.of(context).pushNamed('/allenamento/${sessione.id}');
+  /// 🚨 `context.push` di go_router, **non** `Navigator.pushNamed`.
+  ///
+  /// Il `Navigator` di un'app con go_router non ha nessun `onGenerateRoute`:
+  /// una rotta con nome lancia sempre, e la riga dello storico non si e' mai
+  /// potuta aprire. Il difetto era li' da C10 e non lo vedeva nessuno perche'
+  /// allo storico ci si arrivava di rado — da G6 e' la pagina principale della
+  /// sezione, e salta fuori al primo tocco.
+  void _apri(BuildContext context) => context.push(AppRoutes.player(sessione.id));
 
   /// Correzione manuale delle calorie.
   ///

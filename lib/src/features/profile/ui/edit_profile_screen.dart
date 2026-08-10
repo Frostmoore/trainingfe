@@ -8,6 +8,7 @@ import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
 import '../profile_controller.dart';
 import 'widgets/meal_hours_editor.dart';
+import 'widgets/weight_sheet.dart';
 
 /// Modifica del profilo — C8.
 ///
@@ -241,36 +242,59 @@ class _ModuloState extends ConsumerState<_Modulo> {
 }
 
 /// Cosa manca per avere un fabbisogno — con i nomi delle cose, non delle colonne.
-class _CosaManca extends StatelessWidget {
+///
+/// 🚨 **E con il modo di rimediare lì dentro.** Dire «manca il tuo peso» e
+/// lasciare la persona a cercare dove si registra è la stessa cosa che dire
+/// «manca qualcosa»: sa cosa fare e non sa dove. Il peso non sta fra i campi di
+/// questo modulo — è una serie storica, non un dato del profilo — quindi il
+/// pulsante deve portarcelo da qui.
+class _CosaManca extends ConsumerWidget {
   const _CosaManca({required this.profilo});
 
   final UserProfile profilo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final mancanti = profilo.missing.map(UserProfile.labelFor).toList();
+    final mancaIlPeso = profilo.missing.contains('weight_kg');
 
     return Card(
       color: theme.colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline_rounded, color: theme.colorScheme.onSecondaryContainer),
-            const SizedBox(width: Gap.sm),
-            Expanded(
-              child: Text(
-                // 🚨 Si dice **quale** campo manca. «Manca qualcosa» lascia la
-                // persona a indovinare, ed è il modo più rapido per farle
-                // chiudere la schermata senza completarla.
-                mancanti.length == 1
-                    ? 'Per calcolare il tuo fabbisogno manca ${mancanti.first}.'
-                    : 'Per calcolare il tuo fabbisogno mancano: ${mancanti.join(', ')}.',
-                style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, color: theme.colorScheme.onSecondaryContainer),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    // 🚨 Si dice **quale** campo manca. «Manca qualcosa» lascia
+                    // la persona a indovinare, ed è il modo più rapido per
+                    // farle chiudere la schermata senza completarla.
+                    mancanti.length == 1
+                        ? 'Per calcolare il tuo fabbisogno manca ${mancanti.first}.'
+                        : 'Per calcolare il tuo fabbisogno mancano: ${mancanti.join(', ')}.',
+                    style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                  ),
+                ),
+              ],
             ),
+            if (mancaIlPeso) ...[
+              const SizedBox(height: Gap.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => WeightSheet.mostra(context),
+                  icon: const Icon(Icons.monitor_weight_outlined, size: 18),
+                  label: const Text('Registra il peso'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -15,8 +15,8 @@ class HomeShell extends StatelessWidget {
 
   static const _destinazioni = [
     NavigationDestination(
-      icon: Icon(Icons.insights_outlined),
-      selectedIcon: Icon(Icons.insights_rounded),
+      icon: Icon(Icons.today_outlined),
+      selectedIcon: Icon(Icons.today_rounded),
       label: 'Oggi',
     ),
     NavigationDestination(

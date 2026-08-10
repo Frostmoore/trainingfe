@@ -1,6 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import 'data/dashboard_models.dart';
+
+/// Il riepilogo di oggi — D5.
+///
+/// 🚨 **Una chiamata sola.** Calorie, allenamenti, peso, sonno e parametri
+/// arrivano insieme: con cinque richieste separate basta che una sia lenta
+/// perché la schermata compaia a pezzi, e su rete mobile succede sempre.
+final dashboardProvider = FutureProvider.autoDispose<DashboardSummary>((ref) async {
+  final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/dashboard');
+
+  return DashboardSummary.fromJson(data);
+});
 
 /// Una serie per i grafici — C12.
 ///

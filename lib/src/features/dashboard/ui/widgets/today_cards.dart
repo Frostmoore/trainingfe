@@ -1,0 +1,434 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../data/dashboard_models.dart';
+
+/// Le schede del riepilogo di oggi — D5.
+
+/// Le calorie, lette **rispetto all'ora che è**.
+///
+/// 🚨 La barra ha due indicatori: quanto si è mangiato e **a che punto è la
+/// giornata**. 1.200 kcal su 2.400 non vogliono dire niente da sole: a metà
+/// mattina sono tantissime, alle nove di sera sono poche. È la differenza fra
+/// un'app che informa e una che sembra giudicare a caso.
+class CaloriesCard extends StatelessWidget {
+  const CaloriesCard({required this.riepilogo, super.key});
+
+  final DashboardSummary riepilogo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final n = riepilogo.nutrition;
+    final scostamento = riepilogo.scostamentoRitmo;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  n.kcal.round().toString(),
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: Gap.xs),
+                Text(
+                  n.haTarget ? '/ ${n.targetKcal!.round()} kcal' : 'kcal',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const Spacer(),
+                if (n.burnedKcal > 0)
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 18,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      Text('${n.burnedKcal}', style: theme.textTheme.titleSmall),
+                    ],
+                  ),
+              ],
+            ),
+
+            if (n.haTarget) ...[
+              const SizedBox(height: Gap.sm),
+              _BarraConRitmo(
+                percentualeMangiata: (n.kcal / n.targetKcal!).clamp(0.0, 1.5),
+                percentualeGiornata: riepilogo.dayProgressPct / 100,
+              ),
+              const SizedBox(height: Gap.xs),
+              Text(
+                _frase(scostamento, n.residuo!, riepilogo.dayProgressPct),
+                style: theme.textTheme.bodySmall,
+              ),
+            ] else ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Nessun obiettivo impostato.',
+                style: theme.textTheme.bodySmall,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => context.push(AppRoutes.profileEdit),
+                  child: const Text('Compila i tuoi dati'),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: Gap.sm),
+            Row(
+              children: [
+                _Macro(nome: 'P', valore: n.protein, target: n.targetProtein),
+                _Macro(nome: 'C', valore: n.carbs, target: n.targetCarbs),
+                _Macro(nome: 'G', valore: n.fat, target: n.targetFat),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// La frase che dà senso ai numeri, e **cambia con l'ora**.
+  static String _frase(double? scostamento, double residuo, int giornata) {
+    if (giornata >= 90) {
+      return residuo >= 0
+          ? 'Giornata quasi finita: sei rimasto sotto di ${residuo.round()} kcal.'
+          : 'Giornata quasi finita: hai superato di ${(-residuo).round()} kcal.';
+    }
+
+    if (giornata <= 20) {
+      return 'La giornata è appena cominciata. Ti restano ${residuo.round()} kcal.';
+    }
+
+    if (scostamento == null) return 'Ti restano ${residuo.round()} kcal.';
+
+    // Sopra le 250 kcal di scarto vale la pena dirlo: sotto è rumore, e
+    // segnalare rumore insegna a ignorare i segnali.
+    if (scostamento > 250) {
+      return 'Sei avanti rispetto all\'ora: ti restano ${residuo.round()} kcal per il resto della giornata.';
+    }
+
+    if (scostamento < -250) {
+      return 'Sei indietro rispetto all\'ora: hai ancora ${residuo.round()} kcal.';
+    }
+
+    return 'In linea con l\'ora. Ti restano ${residuo.round()} kcal.';
+  }
+}
+
+/// La barra con il segno di dove **dovrebbe** essere la giornata.
+class _BarraConRitmo extends StatelessWidget {
+  const _BarraConRitmo({required this.percentualeMangiata, required this.percentualeGiornata});
+
+  final double percentualeMangiata;
+  final double percentualeGiornata;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final sfora = percentualeMangiata > 1;
+
+    return LayoutBuilder(
+      builder: (context, vincoli) => SizedBox(
+        height: 14,
+        child: Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: percentualeMangiata.clamp(0.0, 1.0),
+                minHeight: 10,
+                color: sfora ? theme.colorScheme.error : theme.colorScheme.primary,
+              ),
+            ),
+            // Il segno del ritmo: senza, la barra dice quanto si è mangiato ma
+            // non se è troppo **per l'ora che è**.
+            Positioned(
+              left: (vincoli.maxWidth * percentualeGiornata).clamp(0.0, vincoli.maxWidth - 2),
+              child: Container(
+                width: 2,
+                height: 14,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Macro extends StatelessWidget {
+  const _Macro({required this.nome, required this.valore, this.target});
+
+  final String nome;
+  final double valore;
+  final double? target;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Text(
+      target == null
+          ? '$nome ${valore.round()} g'
+          : '$nome ${valore.round()}/${target!.round()} g',
+      style: Theme.of(context).textTheme.bodySmall,
+    ),
+  );
+}
+
+/// Sonno, HRV e battito: come sta andando il recupero.
+class RecoveryCard extends StatelessWidget {
+  const RecoveryCard({required this.riepilogo, super.key});
+
+  final DashboardSummary riepilogo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final sonno = riepilogo.sleep;
+
+    // 🚨 Se non è mai arrivato niente dall'orologio si **dice**, invece di
+    // mostrare zeri: uno zero si legge come un valore pessimo.
+    if (sonno == null && !riepilogo.hasVitals) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.watch_outlined),
+          title: Text('Nessun dato dall\'orologio'),
+          subtitle: Text(
+            'Sonno, variabilità cardiaca e battito compaiono qui appena il tuo '
+            'orologio comincia a inviarli.',
+          ),
+          isThreeLine: true,
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recupero',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: Gap.sm),
+
+            if (sonno != null)
+              InkWell(
+                onTap: () => context.push(AppRoutes.sleep),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Gap.xs),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bedtime_outlined, size: 20, color: _colore(context, sonno.overall)),
+                      const SizedBox(width: Gap.sm),
+                      Expanded(child: Text('Sonno · ${sonno.durata}')),
+                      Text(
+                        'profondo ${sonno.deepPct.round()}% · REM ${sonno.remPct.round()}%',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const Icon(Icons.chevron_right_rounded, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+
+            for (final v in riepilogo.vitals) _RigaParametro(vital: v),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Color? _colore(BuildContext context, String giudizio) => switch (giudizio) {
+    'bad' => Theme.of(context).colorScheme.error,
+    'warn' => const Color(0xFFE0B341),
+    _ => null,
+  };
+}
+
+class _RigaParametro extends StatelessWidget {
+  const _RigaParametro({required this.vital});
+
+  final Vital vital;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final delta = vital.deltaPct;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
+      child: Row(
+        children: [
+          Icon(
+            vital.metric == 'hrv' ? Icons.favorite_outline_rounded : Icons.monitor_heart_outlined,
+            size: 20,
+            color: vital.anomalo ? theme.colorScheme.error : null,
+          ),
+          const SizedBox(width: Gap.sm),
+          Expanded(child: Text(vital.label)),
+          Text(
+            '${vital.value.round()} ${vital.unit}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          // 🚨 Lo scostamento accanto al valore, sempre. Il numero assoluto non
+          // si può giudicare: 42 ms sono ottimi per qualcuno e pessimi per un
+          // altro, e conta solo il confronto con la propria media.
+          if (delta != null) ...[
+            const SizedBox(width: Gap.xs),
+            Text(
+              '${delta > 0 ? '+' : ''}${delta.round()}%',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: vital.anomalo ? theme.colorScheme.error : theme.colorScheme.outline,
+                fontWeight: vital.anomalo ? FontWeight.w700 : null,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Peso e allenamenti recenti.
+class TrainingCard extends ConsumerWidget {
+  const TrainingCard({required this.riepilogo, super.key});
+
+  final DashboardSummary riepilogo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final t = riepilogo.training;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Allenamento',
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push(AppRoutes.history),
+                  child: const Text('Storico'),
+                ),
+              ],
+            ),
+
+            Text(
+              // «Non ti alleni da 5 giorni» è l'informazione che fa tornare in
+              // palestra: un elenco di date costringe a fare il conto a mente.
+              switch (t.daysSinceLast) {
+                null => 'Nessun allenamento registrato.',
+                0 => 'Ti sei allenato oggi. ${t.last30Days} sedute negli ultimi 30 giorni.',
+                1 => 'Ultimo allenamento ieri. ${t.last30Days} negli ultimi 30 giorni.',
+                final g => 'Non ti alleni da $g giorni. ${t.last30Days} negli ultimi 30.',
+              },
+              style: theme.textTheme.bodySmall,
+            ),
+
+            const SizedBox(height: Gap.sm),
+
+            for (final s in t.recent.take(3))
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  s.isOpen ? Icons.play_circle_outline_rounded : Icons.fitness_center_rounded,
+                  size: 20,
+                ),
+                title: Text(s.name),
+                subtitle: Text(
+                  [
+                    DateFormat('EEE d/MM', 'it').format(s.startedAt),
+                    if (s.isOpen)
+                      'in corso'
+                    else if (s.durationMinutes != null)
+                      '${s.durationMinutes} min',
+                    '${s.setsCount} serie',
+                  ].join(' · '),
+                ),
+                trailing: s.kcal == null ? null : Text('${s.kcal} kcal'),
+                onTap: () => context.push(AppRoutes.player(s.id)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Il peso, con la direzione in cui si sta muovendo.
+class WeightCard extends StatelessWidget {
+  const WeightCard({required this.body, super.key});
+
+  final BodyToday body;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (body.weightKg == null) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.monitor_weight_outlined),
+          title: Text('Nessuna pesata'),
+          subtitle: Text('Registrala dal profilo per vedere l\'andamento.'),
+        ),
+      );
+    }
+
+    final delta = body.weightDelta;
+
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.monitor_weight_outlined),
+        title: Text(
+          '${body.weightKg!.toStringAsFixed(1)} kg',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          [
+            if (body.weightAt != null) DateFormat('d MMM', 'it').format(body.weightAt!),
+            if (body.targetWeightKg != null)
+              'obiettivo ${body.targetWeightKg!.toStringAsFixed(1)} kg',
+          ].join(' · '),
+        ),
+        trailing: delta == null
+            ? null
+            : Text(
+                '${delta > 0 ? '+' : ''}${delta.toStringAsFixed(1)} kg',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+      ),
+    );
+  }
+}

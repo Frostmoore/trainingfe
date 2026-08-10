@@ -125,6 +125,15 @@ class ProfileScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(AppRoutes.sleep),
                 ),
+                const Divider(height: 1),
+                // La galleria ha lasciato la prima scheda alla dashboard: si
+                // guarda ogni tanto, non ogni volta che si apre l'app.
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Foto dei progressi'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.progress),
+                ),
               ],
             ),
           ),

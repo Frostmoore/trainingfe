@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/diary_models.dart';
 
@@ -85,10 +87,22 @@ class MacroSummary extends StatelessWidget {
                 // 🚨 Si dice **perché** manca il target invece di mostrarne uno
                 // inventato: un numero inventato diventerebbe la dieta di
                 // qualcuno.
-                'Nessun obiettivo impostato. Chiedi al tuo trainer un piano, '
-                'oppure completa il profilo con altezza, età e peso.',
+                'Nessun obiettivo impostato. Compila i tuoi dati, oppure '
+                'chiedi al tuo trainer un piano alimentare.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              // 🚨 Con un pulsante, non solo con una spiegazione. Dire cosa fare
+              // e non dare il modo di farlo è la stessa cosa che non dirlo:
+              // dalla fase C il profilo si compila dall'app, e questo messaggio
+              // deve portarci.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push(AppRoutes.profileEdit),
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  label: const Text('Compila i tuoi dati'),
                 ),
               ),
             ],

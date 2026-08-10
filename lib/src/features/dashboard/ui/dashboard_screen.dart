@@ -2,9 +2,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../profile/profile_controller.dart';
+import '../../../core/ui/states.dart';
 import '../dashboard_controller.dart';
+import 'widgets/today_cards.dart';
 
 /// La dashboard — C12.
 ///
@@ -16,81 +18,48 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profilo = ref.watch(profileProvider);
+    final riepilogo = ref.watch(dashboardProvider);
     final consiglio = ref.watch(adviceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Andamento')),
+      appBar: AppBar(title: const Text('Oggi')),
       body: RefreshIndicator(
         onRefresh: () async {
           ref
+            ..invalidate(dashboardProvider)
             ..invalidate(weightSeriesProvider)
             ..invalidate(caloriesSeriesProvider)
-            ..invalidate(adviceProvider)
-            ..invalidate(profileProvider);
+            ..invalidate(adviceProvider);
         },
-        child: ListView(
-          padding: const EdgeInsets.all(Gap.md),
-          children: [
-            profilo.maybeWhen(
-              data: (p) => p.isComplete
-                  ? _Riepilogo(target: p.derived!.targetKcal, peso: p.weightKg)
-                  : const SizedBox.shrink(),
-              orElse: () => const SizedBox.shrink(),
-            ),
-
-            consiglio.maybeWhen(
-              data: (testo) => testo == null || testo.isEmpty
-                  ? const SizedBox.shrink()
-                  : _Consiglio(testo: testo),
-              orElse: () => const SizedBox.shrink(),
-            ),
-
-            const SizedBox(height: Gap.md),
-            const _GraficoPeso(),
-            const SizedBox(height: Gap.md),
-            const _GraficoCalorie(),
-            const SizedBox(height: Gap.xl),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Riepilogo extends StatelessWidget {
-  const _Riepilogo({required this.target, this.peso});
-
-  final int target;
-  final double? peso;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    Widget cella(String v, String l) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            v,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.primary,
-            ),
+        child: riepilogo.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            error: ApiClient.unwrapError(e),
+            onRetry: () => ref.invalidate(dashboardProvider),
           ),
-          Text(l, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
-        ],
-      ),
-    );
+          data: (r) => ListView(
+            padding: const EdgeInsets.all(Gap.md),
+            children: [
+              CaloriesCard(riepilogo: r),
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Row(
-          children: [
-            cella(peso == null ? '—' : peso!.toStringAsFixed(1), 'peso (kg)'),
-            cella('$target', 'target kcal'),
-          ],
+              consiglio.maybeWhen(
+                data: (testo) => testo == null || testo.isEmpty
+                    ? const SizedBox.shrink()
+                    : _Consiglio(testo: testo),
+                orElse: () => const SizedBox.shrink(),
+              ),
+
+              RecoveryCard(riepilogo: r),
+              WeightCard(body: r.body),
+              TrainingCard(riepilogo: r),
+
+              const SizedBox(height: Gap.md),
+              const _GraficoPeso(),
+              const SizedBox(height: Gap.md),
+              const _GraficoCalorie(),
+              const SizedBox(height: Gap.xl),
+            ],
+          ),
         ),
       ),
     );

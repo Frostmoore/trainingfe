@@ -64,7 +64,6 @@ class AppRoutes {
   static const deleteAccount = '/profilo/elimina';
   static const sleep = '/sonno';
   static const calendar = '/calendario';
-  static const dashboard = '/andamento';
   static const history = '/allenamento/storico';
   static const planNew = '/schede/nuova';
 
@@ -132,7 +131,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
       GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),
-      GoRoute(path: AppRoutes.dashboard, builder: (_, _) => const DashboardScreen()),
+      GoRoute(path: AppRoutes.progress, builder: (_, _) => const ProgressScreen()),
       GoRoute(path: AppRoutes.history, builder: (_, _) => const HistoryScreen()),
       GoRoute(path: AppRoutes.planNew, builder: (_, _) => const PlanEditorScreen()),
       GoRoute(
@@ -160,7 +159,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _, shell) => HomeShell(shell: shell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.home, builder: (_, _) => const ProgressScreen())],
+            // D5 — la prima scheda è il riepilogo di oggi, non la galleria:
+            // aprendo l'app la domanda è «come sto andando», non «che foto ho
+            // fatto». I progressi restano raggiungibili dal profilo.
+            routes: [GoRoute(path: AppRoutes.home, builder: (_, _) => const DashboardScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: AppRoutes.diary, builder: (_, _) => const DiaryScreen())],

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
 import 'widgets/add_food_sheet.dart';
+import 'widgets/favorites_sheet.dart';
 import 'widgets/macro_summary.dart';
 
 /// Il diario del giorno — A4.1.
@@ -157,6 +159,16 @@ class _Pasto extends ConsumerWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  // D2 — «salva questo pasto fra i preferiti». È la funzione
+                  // che fa risparmiare davvero: una colazione si ripete uguale
+                  // per mesi, e riscriverne cinque voci ogni mattina è ciò che
+                  // fa smettere di registrare.
+                  if (pasto.entries.isNotEmpty)
+                    IconButton(
+                      onPressed: () => _salvaPasto(context, ref),
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 20),
+                      tooltip: 'Salva questo pasto fra i preferiti',
+                    ),
                 ],
               ),
             ),
@@ -174,15 +186,83 @@ class _Pasto extends ConsumerWidget {
             else
               for (final voce in pasto.entries) _Voce(voce: voce),
 
-            TextButton.icon(
-              onPressed: () => AddFoodSheet.show(context, meal: pasto.meal),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => AddFoodSheet.show(context, meal: pasto.meal),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => FavoritesSheet.mostra(context, meal: pasto.meal),
+                  icon: const Icon(Icons.star_outline_rounded, size: 18),
+                  label: const Text('Preferiti'),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+extension on _Pasto {
+  /// Salva l'intero pasto del giorno che si sta guardando.
+  ///
+  /// Il nome si propone («Colazione 10/08») ma si può cambiare: «la mia
+  /// colazione» dice molto di più di una data, e un preferito che non si
+  /// riconosce dal nome non viene riusato.
+  Future<void> _salvaPasto(BuildContext context, WidgetRef ref) async {
+    final giorno = ref.read(selectedDateProvider);
+    final controller = TextEditingController(
+      text: '${pasto.label} ${DateFormat('d/MM', 'it').format(giorno)}',
+    );
+
+    final nome = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Salva il pasto fra i preferiti'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Nome del preferito'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Salva'),
+          ),
+        ],
+      ),
+    );
+
+    if (nome == null || nome.isEmpty || !context.mounted) return;
+
+    try {
+      await ref
+          .read(favoriteActionsProvider)
+          .saveMeal(meal: pasto.meal, description: nome);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('«$nome» salvato fra i preferiti')));
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+      }
+    }
   }
 }
 
@@ -213,9 +293,24 @@ class _Voce extends ConsumerWidget {
         dense: true,
         title: Text(voce.description),
         subtitle: Text(voce.quantita),
-        trailing: Text(
-          voce.kcal != null ? '${voce.kcal!.round()} kcal' : '—',
-          style: theme.textTheme.labelMedium,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              voce.kcal != null ? '${voce.kcal!.round()} kcal' : '—',
+              style: theme.textTheme.labelMedium,
+            ),
+            // D2 — la stella salva **questo alimento** fra i preferiti, con
+            // quantità e macro già dentro. Si parte da una voce esistente e non
+            // da un modulo vuoto: chi ha appena registrato qualcosa di buono
+            // vuole salvarlo con un tocco, non riscriverlo.
+            IconButton(
+              onPressed: () => _salvaPreferito(context, ref),
+              icon: const Icon(Icons.star_outline_rounded, size: 18),
+              tooltip: 'Salva fra i preferiti',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ),
         // L'icona dice da dove viene la voce: serve a capire, guardando lo
         // storico, quali stime sono dell'AI quando un totale non torna.
@@ -232,5 +327,24 @@ class _Voce extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _salvaPreferito(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(diaryActionsProvider).favorite(voce.id);
+      ref.invalidate(favoritesProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('«${voce.description}» salvato fra i preferiti')),
+        );
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+      }
+    }
   }
 }

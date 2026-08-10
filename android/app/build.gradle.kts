@@ -12,6 +12,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+
+        // 🚨 Serve a `flutter_local_notifications` (C9.3), che usa le API di
+        // data e ora di Java 8 anche su Android vecchi. Senza, la build
+        // fallisce con «requires core library desugaring to be enabled» e il
+        // messaggio non dice a cosa serve: l'ha portato dentro il timer di
+        // riposo del player.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -32,6 +39,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    // ⚠️ La versione la impone il plugin delle notifiche: una più vecchia fa
+    // fallire la build con un errore che parla di classi mancanti, non di
+    // versioni sbagliate.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 kotlin {

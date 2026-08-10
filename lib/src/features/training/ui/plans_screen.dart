@@ -27,11 +27,6 @@ class PlansScreen extends ConsumerWidget {
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Storico',
           ),
-          IconButton(
-            onPressed: () => context.push(AppRoutes.dashboard),
-            icon: const Icon(Icons.insights_rounded),
-            tooltip: 'Andamento',
-          ),
         ],
       ),
       // C9: si comincia da qui. Il pulsante è grande e sempre visibile perché

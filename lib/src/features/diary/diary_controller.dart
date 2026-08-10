@@ -119,6 +119,59 @@ class DiaryActions {
   }
 
   /// Salva una voce fra i preferiti — A4.5.
+  /// Modifica una voce — C15.
+  ///
+  /// 🚨 **Si manda solo ciò che è stato toccato.** I macro che arrivano vincono
+  /// sempre sul ricalcolo del server: se l'utente li ha corretti a mano non
+  /// vanno sovrascritti da una stima. Mandarli sempre — anche invariati —
+  /// impedirebbe per sempre il ricalcolo automatico, e cambiare la quantità non
+  /// aggiornerebbe più niente.
+  Future<void> update(
+    int entryId, {
+    String? description,
+    String? meal,
+    double? qty,
+    String? unit,
+    double? grams,
+    double? kcal,
+    double? protein,
+    double? carbs,
+    double? fat,
+  }) async {
+    await _api.patch<dynamic>(
+      '/food-entries/$entryId',
+      body: {
+        'description': ?description,
+        'meal': ?meal,
+        'qty': ?qty,
+        'unit': ?unit,
+        'grams': ?grams,
+        'kcal': ?kcal,
+        'protein': ?protein,
+        'carbs': ?carbs,
+        'fat': ?fat,
+      },
+    );
+
+    _ref.invalidate(diaryProvider);
+  }
+
+  /// Le calorie bruciate dichiarate a mano per il giorno — C15.
+  ///
+  /// ⚠️ `null` **rimette la stima**, non azzera: è la differenza fra «non lo so»
+  /// e «oggi ho bruciato zero», e il backend la rispetta.
+  Future<void> setDailyBurn(int? kcal) async {
+    await _api.post<dynamic>(
+      '/daily-burn',
+      body: {
+        'date': DateFormat('yyyy-MM-dd').format(_ref.read(selectedDateProvider)),
+        'kcal': kcal,
+      },
+    );
+
+    _ref.invalidate(diaryProvider);
+  }
+
   Future<void> favorite(int entryId) async {
     await _api.post<dynamic>('/food-entries/$entryId/favorite');
   }

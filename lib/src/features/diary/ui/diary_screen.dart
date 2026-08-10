@@ -10,6 +10,7 @@ import '../../../core/ui/states.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
 import 'widgets/add_food_sheet.dart';
+import 'widgets/edit_entry_sheet.dart';
 import 'widgets/favorites_sheet.dart';
 import 'widgets/macro_summary.dart';
 
@@ -291,6 +292,10 @@ class _Voce extends ConsumerWidget {
       onDismissed: (_) => ref.read(diaryActionsProvider).delete(voce.id),
       child: ListTile(
         dense: true,
+        // C15 — toccare una voce la apre in modifica. È il gesto che ci si
+        // aspetta, e senza restava l'unico modo per correggere una stima
+        // sbagliata: cancellarla e riscriverla.
+        onTap: () => EditEntrySheet.mostra(context, voce),
         title: Text(voce.description),
         subtitle: Text(voce.quantita),
         trailing: Row(

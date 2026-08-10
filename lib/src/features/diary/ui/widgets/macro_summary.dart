@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/diary_models.dart';
+import '../../diary_controller.dart';
 
 /// Il riepilogo in cima al diario — A4.1.
 ///
@@ -11,13 +13,13 @@ import '../../data/diary_models.dart';
 /// Una barra che si riempie e si blocca al 100% dice «sei arrivato», non «hai
 /// superato»: sono due cose diverse e l'utente deve poter distinguere 2.000 su
 /// 2.000 da 2.600 su 2.000 con un'occhiata, senza leggere i numeri.
-class MacroSummary extends StatelessWidget {
+class MacroSummary extends ConsumerWidget {
   const MacroSummary({required this.day, super.key});
 
   final DiaryDay day;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final sforato = day.hasTarget && day.kcal > day.targetKcal!;
 
@@ -48,15 +50,19 @@ class MacroSummary extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                if (day.burnedKcal > 0)
-                  // Le bruciate si mostrano perché il target del giorno le
-                  // comprende già: senza, l'utente vedrebbe un target più alto
-                  // del solito e non capirebbe perché.
-                  Chip(
-                    avatar: const Icon(Icons.local_fire_department_rounded, size: 16),
-                    label: Text('${day.burnedKcal}'),
-                    visualDensity: VisualDensity.compact,
-                  ),
+                // Le bruciate si mostrano perché il target del giorno le
+                // comprende già: senza, l'utente vedrebbe un target più alto
+                // del solito e non capirebbe perché.
+                //
+                // C15 — ed è toccabile: il totale bruciato si può dichiarare a
+                // mano, per chi porta un orologio che conta meglio della nostra
+                // stima o per chi ha fatto qualcosa che non ha registrato.
+                ActionChip(
+                  avatar: const Icon(Icons.local_fire_department_rounded, size: 16),
+                  label: Text('${day.burnedKcal}'),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _bruciateAMano(context, ref, day.burnedKcal),
+                ),
               ],
             ),
 
@@ -120,6 +126,47 @@ class MacroSummary extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Dichiarare a mano le calorie bruciate del giorno — C15.
+///
+/// ⚠️ **Svuotare il campo rimette la stima**, non azzera: è la differenza fra
+/// «non lo so» e «oggi ho bruciato zero», e il backend la rispetta. Va detto nel
+/// modulo, o l'unico modo per scoprirlo è provare.
+Future<void> _bruciateAMano(BuildContext context, WidgetRef ref, int attuale) async {
+  final controller = TextEditingController(text: attuale > 0 ? attuale.toString() : '');
+
+  final valore = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Calorie bruciate oggi'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'kcal',
+          helperText: 'Vuoto = usa la stima degli allenamenti',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: const Text('Salva'),
+        ),
+      ],
+    ),
+  );
+
+  if (valore == null) return;
+
+  await ref
+      .read(diaryActionsProvider)
+      .setDailyBurn(valore.isEmpty ? null : int.tryParse(valore));
 }
 
 class _Macro extends StatelessWidget {

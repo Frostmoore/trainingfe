@@ -23,6 +23,7 @@ class FoodEntry {
     this.protein,
     this.carbs,
     this.fat,
+    this.kcal100,
     this.source = 'manual',
   });
 
@@ -37,6 +38,7 @@ class FoodEntry {
     protein: _num(j['protein']),
     carbs: _num(j['carbs']),
     fat: _num(j['fat']),
+    kcal100: _num(j['kcal_100']),
     source: j['source']?.toString() ?? 'manual',
   );
 
@@ -45,6 +47,17 @@ class FoodEntry {
   final String meal;
   final double? grams, qty, kcal, protein, carbs, fat;
   final String? unit;
+
+  /// Le calorie per 100 g.
+  ///
+  /// 🚨 **Non serve all'app per contare** — il ricalcolo lo fa il server, che
+  /// possiede la tabella delle unità. Serve solo a **sapere** se cambiando la
+  /// quantità i macro si aggiorneranno: quando manca, il modulo deve dirlo
+  /// invece di lasciar credere a un ricalcolo che non avverrà.
+  final double? kcal100;
+
+  bool get siRicalcola => kcal100 != null;
+
   final String source;
 
   /// «120 g» oppure «2 cucchiai»: come lo ha scritto l'utente, non come lo

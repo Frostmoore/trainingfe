@@ -1,81 +1,213 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-import '../../../core/providers.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
-import '../../auth/auth_controller.dart';
-import '../../diary/diary_controller.dart';
-import '../../diary/ui/widgets/macro_summary.dart';
+import '../progress_controller.dart';
 
-/// Il consiglio del giorno, dal backend.
+/// La galleria delle foto dei progressi — C16.
 ///
-/// 🚨 Restituisce `null` quando la funzione è spenta o la quota è finita: in
-/// quel caso la schermata **non mostra niente**, invece di un errore. Un
-/// consiglio è un di più; farlo sembrare un guasto sarebbe sproporzionato.
-final adviceProvider = FutureProvider.autoDispose<String?>((ref) async {
-  try {
-    final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>?>('/ai/advice');
-
-    return data?['body']?.toString();
-  } on Object {
-    return null;
-  }
-});
-
-/// La schermata «Oggi» — A6.5.
+/// 🚨 **Le immagini si scaricano solo quando entrano nello schermo.** È
+/// `CachedNetworkImage` dentro una griglia pigra a farlo, e non è un dettaglio:
+/// una galleria di due anni sono centinaia di foto da un megabyte, e scaricarle
+/// tutte all'apertura vorrebbe dire mezzo minuto di attesa e un conto di traffico
+/// che nessuno si aspetta. La cache su disco fa il resto: scorrere avanti e
+/// indietro non riscarica niente.
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final utente = ref.watch(authControllerProvider).user;
-    final diario = ref.watch(diaryProvider);
-    final consiglio = ref.watch(adviceProvider);
+    final foto = ref.watch(progressPhotosProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(utente != null ? 'Ciao, ${utente.name.split(' ').first}' : 'Oggi'),
+      appBar: AppBar(title: const Text('Foto dei progressi')),
+      floatingActionButton: const _Aggiungi(),
+      body: foto.when(
+        loading: () => const LoadingState(),
+        error: (e, _) => ErrorState(
+          error: ApiClient.unwrapError(e),
+          onRetry: () => ref.invalidate(progressPhotosProvider),
+        ),
+        data: (elenco) => elenco.isEmpty
+            ? const EmptyState(
+                icon: Icons.photo_camera_outlined,
+                title: 'Nessuna foto',
+                message:
+                    'Una foto ogni tanto, sempre nella stessa posizione e con la '
+                    'stessa luce, racconta i progressi meglio della bilancia.',
+              )
+            : RefreshIndicator(
+                onRefresh: () async => ref.invalidate(progressPhotosProvider),
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.78,
+                    mainAxisSpacing: Gap.sm,
+                    crossAxisSpacing: Gap.sm,
+                  ),
+                  itemCount: elenco.length,
+                  itemBuilder: (context, i) => _Cella(foto: elenco[i]),
+                ),
+              ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref
-            ..invalidate(diaryProvider)
-            ..invalidate(adviceProvider);
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(Gap.md),
-          children: [
-            diario.when(
-              loading: () => const LoadingState(),
-              error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
-              data: (day) => MacroSummary(day: day),
+    );
+  }
+}
+
+class _Cella extends ConsumerWidget {
+  const _Cella({required this.foto});
+
+  final ProgressPhoto foto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => _apri(context),
+            onLongPress: () => _elimina(context, ref),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(Gap.radiusSm),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  // Il bordo dorato distingue le foto di fine allenamento da
+                  // quelle scattate apposta: sono due cose diverse nella stessa
+                  // griglia, come nell'app storica.
+                  border: foto.daAllenamento
+                      ? Border.all(color: theme.colorScheme.tertiary, width: 2)
+                      : null,
+                  borderRadius: BorderRadius.circular(Gap.radiusSm),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: foto.url,
+                  fit: BoxFit.cover,
+                  // ⚠️ Il token di Sanctum serve anche alle immagini: l'endpoint
+                  // controlla di chi è la foto prima di consegnarla, e senza
+                  // intestazione risponde 401.
+                  httpHeaders: ref.watch(progressAuthHeaderProvider).valueOrNull ?? const {},
+                  placeholder: (context, _) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  errorWidget: (context, _, _) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Icon(Icons.broken_image_outlined, color: theme.colorScheme.outline),
+                  ),
+                ),
+              ),
             ),
+          ),
+        ),
+        const SizedBox(height: Gap.xs),
+        Text(
+          foto.takenOn == null ? '' : DateFormat('d MMM y', 'it').format(foto.takenOn!),
+          style: theme.textTheme.labelSmall,
+        ),
+      ],
+    );
+  }
 
-            const SizedBox(height: Gap.md),
+  void _apri(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.all(Gap.md),
+      child: Consumer(
+        builder: (context, ref, _) => InteractiveViewer(
+          child: CachedNetworkImage(
+            imageUrl: foto.url,
+            httpHeaders: ref.watch(progressAuthHeaderProvider).valueOrNull ?? const {},
+          ),
+        ),
+      ),
+    ),
+  );
 
-            consiglio.maybeWhen(
-              data: (testo) => testo == null || testo.isEmpty
-                  ? const SizedBox.shrink()
-                  : Card(
-                      color: Theme.of(context).colorScheme.tertiaryContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(Gap.md),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.auto_awesome_rounded, size: 20),
-                            const SizedBox(width: Gap.sm),
-                            Expanded(child: Text(testo)),
-                          ],
-                        ),
-                      ),
-                    ),
-              orElse: () => const SizedBox.shrink(),
+  Future<void> _elimina(BuildContext context, WidgetRef ref) async {
+    // 🚨 Qui la conferma serve: una foto cancellata non si recupera, e il
+    // gesto è una pressione lunga, che capita anche per sbaglio scorrendo.
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminare la foto?'),
+        content: const Text('Non sarà possibile recuperarla.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma == true) {
+      await ref.read(progressActionsProvider).delete(foto.id);
+    }
+  }
+}
+
+class _Aggiungi extends ConsumerWidget {
+  const _Aggiungi();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
+    onPressed: () => showModalBottomSheet<void>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Scatta'),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                _carica(context, ref, daFotocamera: true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Scegli dalla galleria'),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                _carica(context, ref, daFotocamera: false);
+              },
             ),
           ],
         ),
       ),
-    );
+    ),
+    icon: const Icon(Icons.add_a_photo_outlined),
+    label: const Text('Aggiungi'),
+  );
+
+  Future<void> _carica(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool daFotocamera,
+  }) async {
+    try {
+      await ref.read(progressActionsProvider).upload(daFotocamera: daFotocamera);
+    } on Object catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+      }
+    }
   }
 }

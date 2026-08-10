@@ -10,25 +10,60 @@ import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
+import 'history_screen.dart';
 
-/// Le schede assegnate — A5.1.
-class PlansScreen extends ConsumerWidget {
+/// La sezione Allenamento — A5.1, riorganizzata in G6.
+///
+/// 🚨 **Si apre sullo STORICO, non sulle schede.**
+/// Entrando qui la domanda è «quando mi sono allenato l'ultima volta, e come è
+/// andata» — non «quali schede ho», che si sa già. Le schede servono in due
+/// momenti soli: quando si comincia una seduta (e per quello c'è il pulsante in
+/// basso, che le propone) e quando se ne modifica una. Tenerle come pagina
+/// principale metteva davanti un elenco che non cambia quasi mai e nascondeva
+/// dietro un pulsantino l'unica cosa che cresce ogni settimana.
+class PlansScreen extends ConsumerStatefulWidget {
   const PlansScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlansScreen> createState() => _PlansScreenState();
+}
+
+class _PlansScreenState extends ConsumerState<PlansScreen> {
+  /// 0 = storico, 1 = schede.
+  int _vista = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final schede = ref.watch(plansProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Allenamento'),
-        actions: [
-          IconButton(
-            onPressed: () => context.push(AppRoutes.history),
-            icon: const Icon(Icons.history_rounded),
-            tooltip: 'Storico',
+        // Il selettore sta **nella barra**, sotto il titolo: è la posizione in
+        // cui si cerca un cambio di vista, e non ruba una riga al contenuto.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(
+                  value: 0,
+                  label: Text('Storico'),
+                  icon: Icon(Icons.history_rounded),
+                ),
+                ButtonSegment(
+                  value: 1,
+                  label: Text('Schede'),
+                  icon: Icon(Icons.assignment_outlined),
+                ),
+              ],
+              selected: {_vista},
+              onSelectionChanged: (s) => setState(() => _vista = s.first),
+              showSelectedIcon: false,
+            ),
           ),
-        ],
+        ),
       ),
       // C9: si comincia da qui. Il pulsante è grande e sempre visibile perché
       // «inizia l'allenamento» è l'unica cosa che si fa entrando in palestra.
@@ -36,7 +71,7 @@ class PlansScreen extends ConsumerWidget {
       body: Column(
         children: [
           // 🚨 L'allenamento lasciato a metà si vede **prima di tutto il
-          // resto**.
+          // resto**, in **entrambe** le viste.
           //
           // Prima l'unico segnale era l'etichetta del pulsante in basso, che
           // passava da «Inizia» a «Riprendi»: chi chiudeva l'app nel mezzo di
@@ -45,7 +80,11 @@ class PlansScreen extends ConsumerWidget {
           // sempre. Una riga in cima, con dentro il nome e da quanto è aperta,
           // è l'unica cosa che lo rende evidente.
           const _SessioneAperta(),
-          Expanded(child: _corpo(context, ref, schede)),
+          Expanded(
+            child: _vista == 0
+                ? const StoricoAllenamenti()
+                : _corpo(context, ref, schede),
+          ),
         ],
       ),
     );

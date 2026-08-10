@@ -81,6 +81,41 @@ class ProfileActions {
     _invalida();
   }
 
+  /// Cambia la propria email — G8.
+  ///
+  /// 🚨 Serve la password attuale: cambiare l'email è come cambiare le chiavi,
+  /// perché è con quella che si recupera l'accesso.
+  Future<void> cambiaEmail({required String email, required String passwordAttuale}) async {
+    await _api.patch<dynamic>(
+      '/account/email',
+      body: {'email': email, 'current_password': passwordAttuale},
+    );
+
+    // L'utente in memoria ha ancora l'indirizzo vecchio: senza questo, il
+    // profilo continuerebbe a mostrarlo finché non si riavvia l'app.
+    await _ref.read(authControllerProvider.notifier).refresh();
+  }
+
+  /// Cambia la propria password — G8.
+  ///
+  /// ⚠️ Il server chiude **le altre sessioni**: chi la cambia spesso teme che
+  /// qualcuno sia entrato, e lasciare attivi gli altri token vorrebbe dire non
+  /// aver cambiato niente per chi è già dentro.
+  Future<void> cambiaPassword({
+    required String passwordAttuale,
+    required String nuova,
+    required String conferma,
+  }) async {
+    await _api.patch<dynamic>(
+      '/account/password',
+      body: {
+        'current_password': passwordAttuale,
+        'password': nuova,
+        'password_confirmation': conferma,
+      },
+    );
+  }
+
   /// Cosa succede eliminando l'account, **detto dal server** — C6.
   Future<Map<String, dynamic>> deletionPreview() =>
       _api.get<Map<String, dynamic>>('/account/deletion-preview');

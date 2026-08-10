@@ -8,11 +8,11 @@ import '../../../core/api/api_client.dart';
 import '../../../core/notifications/notifications.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/miniatura.dart';
-import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
+import 'session_summary_screen.dart';
 import 'widgets/rest_bar.dart';
 
 /// Il player di allenamento — C9.
@@ -291,15 +291,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
     if (conferma != true || !mounted) return;
 
-    // 🚨 La foto si chiede **prima** di chiudere, non dopo.
-    //
-    // Dopo `finish()` si esce dalla schermata, e a quel punto o si apre un
-    // altro modulo da un'altra parte — che nessuno collegherebbe più a questo
-    // allenamento — o la foto non si fa mai. È anche il momento giusto: si è
-    // appena finito, si è ancora davanti allo specchio.
-    await _chiediFoto();
-
-    if (!mounted) return;
 
     // Se durante la seduta la scheda è cambiata, si chiede se salvarla — ma
     // **solo se è sua**: proporlo per la scheda del trainer prometterebbe una
@@ -335,73 +326,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     try {
       await ref.read(sessionActionsProvider).finish(widget.sessionId);
 
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+
+      // 🚨 **Si va al riepilogo, non si torna all'elenco.**
+      //
+      // `pushReplacement` e non `push`: il player non deve restare dietro, o
+      // il tasto indietro riaprirebbe una sessione ormai chiusa. Ed e' li' che
+      // si carica la foto e si correggono le calorie — le tre cose che dopo
+      // cinque minuti non fa piu' nessuno.
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => SessionSummaryScreen(sessionId: widget.sessionId),
+        ),
+      );
     } on Object catch (error) {
       setState(() => _chiusura = false);
       _avvisa(ApiClient.unwrapError(error).message);
-    }
-  }
-
-  /// La foto di fine allenamento, **facoltativa**.
-  ///
-  /// 🚨 «Non adesso» è una scelta di pari dignità, e sta in fondo dove si preme
-  /// senza pensarci. Una richiesta che sembra obbligatoria a fine allenamento —
-  /// quando si è stanchi e sudati — è il modo migliore per far chiudere l'app
-  /// senza concludere la sessione, che poi resta aperta e sporca lo storico.
-  ///
-  /// ⚠️ Un errore nel caricamento **non blocca la chiusura**: la sessione va
-  /// chiusa comunque. Perdere l'allenamento perché non è partita una foto
-  /// sarebbe sproporzionato.
-  Future<void> _chiediFoto() async {
-    final scelta = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(Gap.lg, Gap.lg, Gap.lg, Gap.sm),
-              child: Text(
-                'Una foto dei progressi?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.md),
-              child: Text(
-                'Resta legata a questo allenamento. Sempre nella stessa posizione '
-                'e con la stessa luce, racconta i progressi meglio della bilancia.',
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Scatta'),
-              onTap: () => Navigator.of(sheet).pop(true),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Scegli dalla galleria'),
-              onTap: () => Navigator.of(sheet).pop(false),
-            ),
-            ListTile(
-              leading: const Icon(Icons.skip_next_rounded),
-              title: const Text('Non adesso'),
-              onTap: () => Navigator.of(sheet).pop(),
-            ),
-            const SizedBox(height: Gap.sm),
-          ],
-        ),
-      ),
-    );
-
-    if (scelta == null) return;
-
-    try {
-      await ref
-          .read(progressActionsProvider)
-          .upload(daFotocamera: scelta, workoutSessionId: widget.sessionId);
-    } on Object catch (error) {
-      _avvisa('Foto non caricata: ${ApiClient.unwrapError(error).message}');
     }
   }
 

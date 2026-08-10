@@ -134,6 +134,33 @@ class ProfileScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(AppRoutes.progress),
                 ),
+
+                // 🚨 **Solo per chi ha una password che conosce** — G8.
+                //
+                // Chi entra con Google o Apple ne ha una, ma casuale e mai
+                // vista: il modulo gli chiederebbe «quella attuale» e non
+                // potrebbe compilarlo. Al suo posto, la riga qui sotto dice
+                // con che cosa accede.
+                if (utente?.passwordIsSet ?? true) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.key_outlined),
+                    title: const Text('Email e password'),
+                    subtitle: const Text('Cambia le tue credenziali di accesso'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.credentials),
+                  ),
+                ] else if ((utente?.social ?? const []).isNotEmpty) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.verified_user_outlined),
+                    title: const Text('Accesso'),
+                    subtitle: Text(
+                      'Entri con ${utente!.social.map(_nomeFornitore).join(' e ')}. '
+                      'Non c\'è nessuna password da cambiare.',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -205,3 +232,10 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 }
+
+/// `google` → «Google». Le stringhe sono quelle del backend.
+String _nomeFornitore(String id) => switch (id) {
+  'google' => 'Google',
+  'apple' => 'Apple',
+  _ => id,
+};

@@ -18,12 +18,26 @@ class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+    appBar: AppBar(title: const Text('Storico allenamenti')),
+    body: const StoricoAllenamenti(),
+  );
+}
+
+/// Lo storico **senza Scaffold**, per poterlo mettere dentro un'altra schermata.
+///
+/// ⚠️ Da G6 vive dentro la sezione Allenamento, sotto il selettore
+/// Storico/Schede. `HistoryScreen` resta come rotta a sé perché ci si arriva
+/// anche dalla scheda «Allenamento» del riepilogo di oggi, dove una schermata
+/// propria con il suo titolo è la cosa giusta.
+class StoricoAllenamenti extends ConsumerWidget {
+  const StoricoAllenamenti({super.key});
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessioni = ref.watch(sessionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Storico allenamenti')),
-      body: sessioni.when(
+    return sessioni.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           error: ApiClient.unwrapError(e),
@@ -39,7 +53,6 @@ class HistoryScreen extends ConsumerWidget {
                 onRefresh: () async => ref.invalidate(sessionsProvider),
                 child: _PerSettimana(sessioni: lista),
               ),
-      ),
     );
   }
 }

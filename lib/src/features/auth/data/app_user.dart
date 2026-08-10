@@ -13,6 +13,8 @@ class AppUser {
     this.username,
     this.avatarUrl,
     this.tenantName,
+    this.passwordIsSet = true,
+    this.social = const [],
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -21,6 +23,10 @@ class AppUser {
     email: json['email']?.toString() ?? '',
     username: json['username']?.toString(),
     avatarUrl: json['avatar_url']?.toString(),
+    passwordIsSet: json['password_is_set'] != false,
+    social: ((json['social'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .toList(growable: false),
     tenantName: json['tenant'] is Map
         ? (json['tenant'] as Map)['name']?.toString()
         : json['tenant_name']?.toString(),
@@ -32,6 +38,20 @@ class AppUser {
   final String? username;
   final String? avatarUrl;
   final String? tenantName;
+
+  /// Se questa persona ha una password **che conosce** — G8.
+  ///
+  /// 🚨 Falso per chi entra con Google o Apple: ne ha una, ma casuale e mai
+  /// vista. Mostrargli «cambia password» vorrebbe dire chiedergli quella
+  /// attuale — un modulo che non può compilare e che sembra un guasto.
+  ///
+  /// ⚠️ Il default è `true`, non `false`: una risposta vecchia senza il campo
+  /// viene da un account nato con email e password, e nascondergli la funzione
+  /// sarebbe l'errore peggiore dei due.
+  final bool passwordIsSet;
+
+  /// I fornitori esterni collegati: `google`, `apple`.
+  final List<String> social;
 
   /// Le iniziali per l'avatar quando non c'è una foto.
   String get initials {

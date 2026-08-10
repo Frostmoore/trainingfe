@@ -14,6 +14,7 @@ import '../../features/diary/ui/diary_screen.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
+import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
 import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
@@ -62,6 +63,7 @@ class AppRoutes {
   // dettaglio, non da una sezione.
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
+  static const credentials = '/profilo/credenziali';
   static const sleep = '/sonno';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
@@ -129,6 +131,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Fase C ────────────────────────────────────────────────────────
       GoRoute(path: AppRoutes.profileEdit, builder: (_, _) => const EditProfileScreen()),
       GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
+      GoRoute(path: AppRoutes.credentials, builder: (_, _) => const CredentialsScreen()),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
       GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),
       GoRoute(path: AppRoutes.progress, builder: (_, _) => const ProgressScreen()),

@@ -25,6 +25,17 @@ class RestTimer extends ChangeNotifier {
   RestTimer({FlutterLocalNotificationsPlugin? notifiche})
     : _notifiche = notifiche ?? FlutterLocalNotificationsPlugin();
 
+  /// 🚨 **I canali Android sono IMMUTABILI dopo la prima creazione.**
+  ///
+  /// Suono, importanza e vibrazione si fissano quando il canale nasce: cambiarli
+  /// nel codice **non ha nessun effetto** su un telefono che ha già installato
+  /// una versione precedente. È il motivo per cui il recupero finiva in silenzio
+  /// pur avendo `playSound: true` scritto nel codice — il canale era nato muto e
+  /// nessuna modifica poteva più svegliarlo. Cambiando idea su come deve
+  /// avvisare, si cambia **anche l'identificativo**: è l'unico modo.
+  static const _canaleFine = 'rest_timer_v2';
+  static const _canaleInCorso = 'rest_timer_ongoing_v2';
+
   /// Un id solo: programmarne una nuova sostituisce la precedente invece di
   /// accumulare una notifica per ogni serie.
   static const _idNotifica = 8801;
@@ -146,9 +157,19 @@ class RestTimer extends ChangeNotifier {
   void _concludi() {
     _ferma();
 
-    // In primo piano la vibrazione arriva subito; il suono lo fa comunque la
-    // notifica programmata, che scatta anche ad app aperta.
-    HapticFeedback.heavyImpact();
+    // 🚨 **Si avvisa in tre modi, e non è ridondanza.**
+    //
+    // Il caso vero è: telefono appoggiato sulla panca, palestra rumorosa,
+    // l'utente sta guardando altrove. Ognuno dei tre copre un buco degli altri:
+    //  - la **vibrazione** funziona anche a suoneria spenta;
+    //  - il **suono di sistema** arriva anche se le notifiche sono negate;
+    //  - la **notifica** è l'unica che arriva a schermo spento.
+    //
+    // Prima c'era solo `HapticFeedback.heavyImpact()`, che su molti telefoni è
+    // un tocco appena percettibile — e su un emulatore non è niente affatto.
+    HapticFeedback.vibrate();
+    unawaited(SystemSound.play(SystemSoundType.alert));
+    unawaited(_suonaAdesso());
 
     // ⚠️ La persistente va tolta **subito**: con il recupero finito resterebbe
     // in tendina a mostrare «0:00», e una notifica che non corrisponde a niente
@@ -157,6 +178,60 @@ class RestTimer extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// L'avviso **immediato**, per quando il recupero finisce ad app aperta.
+  ///
+  /// ⚠️ Non basta la notifica programmata: senza il permesso per le sveglie
+  /// esatte si ricade su `inexactAllowWhileIdle`, e il sistema può farla
+  /// scattare **decine di secondi dopo**. In primo piano lo sappiamo noi che è
+  /// finita, e possiamo dirlo subito.
+  ///
+  /// La programmata resta comunque: è l'unica che arriva a schermo spento.
+  /// Si cancella qui per non farne suonare due.
+  Future<void> _suonaAdesso() async {
+    if (!notificheAttive) return;
+
+    try {
+      await _annullaAvviso();
+
+      await _notifiche.show(
+        _idNotifica,
+        'Riposo finito',
+        'Vai con la prossima serie.',
+        const NotificationDetails(
+          android: _dettagliFine,
+          iOS: DarwinNotificationDetails(
+            presentSound: true,
+            presentAlert: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
+          ),
+        ),
+      );
+    } on Object catch (_) {
+      // Senza permesso non si mostra niente: restano vibrazione e suono di
+      // sistema, ed è il motivo per cui sono tre e non uno.
+    }
+  }
+
+  /// Come deve avvisare la notifica di fine — un posto solo.
+  ///
+  /// Serve sia alla programmata sia a quella immediata: due copie divergono, e
+  /// la copia sbagliata è quella che resta muta.
+  static const AndroidNotificationDetails _dettagliFine = AndroidNotificationDetails(
+    _canaleFine,
+    'Fine del recupero',
+    channelDescription: 'Suona e vibra quando finisce il recupero fra le serie.',
+    importance: Importance.max,
+    priority: Priority.max,
+    category: AndroidNotificationCategory.alarm,
+    playSound: true,
+    enableVibration: true,
+    // Una pulsazione lunga: fra le serie il telefono è appoggiato, e un
+    // singolo colpo breve non si sente.
+    vibrationPattern: null,
+    fullScreenIntent: false,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+  );
 
   Future<void> _programmaAvviso(int fraSecondi) async {
     if (!notificheAttive || fraSecondi <= 0) return;
@@ -170,20 +245,7 @@ class RestTimer extends ChangeNotifier {
         'Vai con la prossima serie.',
         tz.TZDateTime.now(tz.local).add(Duration(seconds: fraSecondi)),
         const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'rest_timer',
-            'Timer di riposo',
-            channelDescription: 'Avvisa quando finisce il recupero fra le serie.',
-            importance: Importance.high,
-            priority: Priority.high,
-            category: AndroidNotificationCategory.alarm,
-            // 🚨 **La campanella.** `playSound` è già il default, ma qui è
-            // scritto apposta: è il punto di tutta la funzione — fra una serie
-            // e l'altra il telefono è in tasca o sulla panca, e un avviso
-            // silenzioso non avvisa nessuno.
-            playSound: true,
-            enableVibration: true,
-          ),
+          android: _dettagliFine,
           iOS: DarwinNotificationDetails(
             presentSound: true,
             // Su iOS, senza questo, una notifica ad app aperta non suona: e
@@ -252,7 +314,7 @@ class RestTimer extends ChangeNotifier {
         'Tocca per tornare all\'allenamento.',
         NotificationDetails(
           android: AndroidNotificationDetails(
-            'rest_timer_ongoing',
+            _canaleInCorso,
             'Recupero in corso',
             channelDescription:
                 'Mostra quanto manca alla fine del recupero mentre l\'app è chiusa.',

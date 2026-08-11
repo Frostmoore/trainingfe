@@ -1,8 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sodium/sodium_sumo.dart';
 
+import '../../core/crypto/busta_messaggio.dart';
+import '../../core/crypto/providers_crypto.dart';
+import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/providers.dart';
+
+/// L'altra persona non ha ancora pubblicato una chiave.
+///
+/// ⚠️ Vuol dire che non ha mai aperto l'app dopo l'arrivo della chat cifrata.
+/// Non è un errore da nascondere: senza la sua chiave **non le si può
+/// scrivere**, e un messaggio mandato lo stesso non lo leggerebbe nessuno.
+class ChatSenzaChiave implements Exception {
+  const ChatSenzaChiave();
+
+  @override
+  String toString() =>
+      'Questa persona non ha ancora aperto l\'app: non puoi ancora scriverle.';
+}
 
 /// Una conversazione nell'elenco — A7.1.
 class Conversation {
@@ -26,26 +43,50 @@ class Conversation {
   final DateTime? lastMessageAt;
 }
 
-/// Un messaggio — A7.2.
+/// Un messaggio, già decifrato — A7.2 / S6.5.
+///
+/// 🚨 **`body` non arriva più leggibile dalla rete.** Il server conserva una
+/// busta cifrata fra i due telefoni; il testo che sta qui dentro esiste solo
+/// dopo che [ThreadController] l'ha aperta con la chiave di questo dispositivo.
 class ChatMessage {
   const ChatMessage({
     required this.id,
     required this.senderId,
     required this.body,
     this.createdAt,
+    this.leggibile = true,
   });
-
-  factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
-    id: (j['id'] as num).toInt(),
-    senderId: (j['sender_id'] as num).toInt(),
-    body: j['body']?.toString() ?? '',
-    createdAt: DateTime.tryParse(j['created_at']?.toString() ?? ''),
-  );
 
   final int id;
   final int senderId;
+
+  /// Il testo in chiaro, oppure la spiegazione se non si è potuto aprire.
   final String body;
+
   final DateTime? createdAt;
+
+  /// ⚠️ **Falso non vuol dire «attacco».** Il caso di gran lunga più comune è
+  /// un messaggio cifrato verso una chiave che non c'è più, perché l'altra
+  /// persona ha perso la propria chiave maestra e ne ha generata una nuova.
+  /// L'interfaccia deve dirlo così, non gridare alla manomissione.
+  final bool leggibile;
+
+  /// Il messaggio che non si è potuto aprire.
+  ///
+  /// 💡 Si mostra **al posto** del testo e non si nasconde la riga: sapere che
+  /// «qui c'era un messaggio che non riesco a leggere» è un'informazione utile,
+  /// mentre una riga sparita fa solo pensare che l'altro non abbia risposto.
+  factory ChatMessage.illeggibile({
+    required int id,
+    required int senderId,
+    DateTime? createdAt,
+  }) => ChatMessage(
+    id: id,
+    senderId: senderId,
+    body: 'Questo messaggio non è più leggibile su questo dispositivo.',
+    createdAt: createdAt,
+    leggibile: false,
+  );
 }
 
 /// Una persona a cui si può scrivere — C22.
@@ -137,14 +178,73 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   Timer? _timer;
   int _ultimoId = 0;
 
+  ServizioChiavi? _chiavi;
+  KeyPair? _mia;
+  ChiavePubblica? _sua;
+
+  /// L'impronta da leggersi a voce, quando le chiavi sono note.
+  ///
+  /// 🚨 È l'unica difesa contro l'attacco che questo schema non ferma da solo:
+  /// **le chiavi pubbliche le distribuisce il nostro server**, che potrebbe
+  /// darne una propria a entrambi e mettersi in mezzo. I conti tornerebbero lo
+  /// stesso — sarebbero solo le chiavi sbagliate.
+  String? get impronta => _mia == null || _sua == null
+      ? null
+      : _chiavi!.cifratura.improntaDiSicurezza(_mia!.publicKey, _sua!.byte);
+
+  /// Prende le due chiavi, una volta per conversazione.
+  ///
+  /// ⚠️ Se l'altra persona non ha ancora una chiave, `_sua` resta `null` e la
+  /// schermata deve dire *«non puoi ancora scrivergli»*: cifrare verso il nulla
+  /// produrrebbe un messaggio che nessuno potrà mai leggere.
+  Future<void> _preparaChiavi() async {
+    if (_mia != null) return;
+
+    _chiavi = await _ref.read(servizioChiaviProvider.future);
+    _mia = await _chiavi!.identita();
+    _sua = await _chiavi!.chiaveDellAltro(conversationId);
+  }
+
+  /// Apre una busta, o restituisce il messaggio segnaposto.
+  ChatMessage _apri(Map<String, dynamic> j) {
+    final id = (j['id'] as num).toInt();
+    final mittente = (j['sender_id'] as num).toInt();
+    final quando = DateTime.tryParse(j['created_at']?.toString() ?? '');
+
+    if (_sua == null) {
+      return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
+    }
+
+    try {
+      return ChatMessage(
+        id: id,
+        senderId: mittente,
+        body: _chiavi!.cifratura.decifra(
+          busta: BustaMessaggio.daApi(j),
+          mieSegrete: _mia!.secretKey,
+          suaPubblica: _sua!.byte,
+        ),
+        createdAt: quando,
+      );
+    } on Object {
+      // 🚨 Qualunque cosa vada storta qui — MAC che non torna, base64
+      // malformato, versione sconosciuta — **non deve far sparire il filo**.
+      // Una singola busta illeggibile è un caso normale; una schermata che
+      // esplode per un messaggio su duecento no.
+      return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
+    }
+  }
+
   Future<void> _carica() async {
     try {
+      await _preparaChiavi();
+
       final data = await _ref
           .read(apiClientProvider)
           .get<List<dynamic>>('/conversations/$conversationId/messages');
 
       final messaggi = data
-          .map((e) => ChatMessage.fromJson((e as Map).cast<String, dynamic>()))
+          .map((e) => _apri((e as Map).cast<String, dynamic>()))
           .toList();
 
       _ultimoId = messaggi.isEmpty ? 0 : messaggi.last.id;
@@ -172,7 +272,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
       if (data.isEmpty) return;
 
       final nuovi = data
-          .map((e) => ChatMessage.fromJson((e as Map).cast<String, dynamic>()))
+          .map((e) => _apri((e as Map).cast<String, dynamic>()))
           .toList();
 
       _ultimoId = nuovi.last.id;
@@ -185,19 +285,41 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     }
   }
 
+  /// Cifra e manda.
+  ///
+  /// 🚨 **Si cifra qui, prima della rete.** Non esiste nessun percorso in cui il
+  /// testo in chiaro lasci questo telefono: il server rifiuta i messaggi senza
+  /// busta (422), quindi anche un errore di programmazione fallirebbe
+  /// rumorosamente invece di mandare in chiaro.
+  ///
+  /// ⚠️ Lancia [ChatSenzaChiave] se l'altra persona non ne ha ancora una.
   Future<void> invia(String testo) async {
     final pulito = testo.trim();
 
     if (pulito.isEmpty) return;
 
+    await _preparaChiavi();
+
+    if (_sua == null) throw const ChatSenzaChiave();
+
+    final busta = _chiavi!.cifratura.cifra(
+      testo: pulito,
+      mieSegrete: _mia!.secretKey,
+      suaPubblica: _sua!.byte,
+    );
+
     final data = await _ref
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
           '/conversations/$conversationId/messages',
-          body: {'body': pulito},
+          body: busta.perApi(),
         );
 
-    final messaggio = ChatMessage.fromJson(data);
+    // 💡 Il messaggio appena scritto si rilegge **dalla stessa identica busta**:
+    // il segreto condiviso è lo stesso calcolato da una parte o dall'altra. È il
+    // motivo per cui il server non deve conservare una seconda copia cifrata per
+    // il mittente.
+    final messaggio = _apri(data);
 
     _ultimoId = messaggio.id;
     state = AsyncValue.data([...state.value ?? const [], messaggio]);

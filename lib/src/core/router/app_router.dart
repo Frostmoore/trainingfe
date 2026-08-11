@@ -9,6 +9,7 @@ import '../../features/auth/ui/register_screen.dart';
 import '../../features/calendar/ui/calendar_screen.dart';
 import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
+import '../../features/chiavi/ui/porta_delle_chiavi.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/health/ui/schermata_salute.dart';
@@ -197,7 +198,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: AppRoutes.training, builder: (_, _) => const PlansScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.chat, builder: (_, _) => const ConversationsScreen())],
+            // 🚨 La chat passa dalla porta delle chiavi (S6.7): senza chiave
+            // maestra non si può né leggere né scrivere, e la porta decide se
+            // chiedere di **creare** la password o di **ripristinare**.
+            // ⚠️ L'ordine è la cosa facile da sbagliare — la spiegazione sta
+            // per esteso in `PortaDelleChiavi`.
+            routes: [
+              GoRoute(
+                path: AppRoutes.chat,
+                builder: (_, _) =>
+                    const PortaDelleChiavi(child: ConversationsScreen()),
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfileScreen())],

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../profile/corpo_controller.dart';
+import '../profile/target_locale_controller.dart';
 import 'data/dashboard_models.dart';
 
 /// Il riepilogo di oggi — D5.
@@ -152,8 +153,38 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
 /// target l'AI non ha niente su cui costruire un consiglio, e inventarne uno
 /// generico sarebbe rumore.
 final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
+  /*
+   * 🚨 **Il fabbisogno lo manda l'app, perché il server non può più
+   * calcolarlo** — S8.2.
+   *
+   * Da S5 il peso non sta sul server: senza, il consiglio del giorno arrivava
+   * al modello con le calorie assunte e **nessun numero con cui
+   * confrontarle**, cioè muto o generico.
+   *
+   * ⚠️ **Si manda solo il risultato, non il peso.** Il target è un numero
+   * derivato; il peso da cui nasce resta su questo telefono, che è il punto di
+   * tutta la fase S5. E il server lo **inoltra al modello senza conservarlo**.
+   *
+   * 💡 Se non c'è — profilo incompleto, nessuna pesata — non si manda niente e
+   * il consiglio esce come può. Meglio un consiglio generico che uno costruito
+   * su un numero inventato.
+   */
+  final locale = await ref.watch(targetLocaleProvider.future);
+
   try {
-    final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/ai/advice');
+    final data = await ref
+        .watch(apiClientProvider)
+        .get<Map<String, dynamic>>(
+          '/ai/advice',
+          query: {
+            if (locale != null) ...{
+              'target_kcal': locale.kcal,
+              'target_protein_g': locale.macro.proteineG,
+              'target_carbs_g': locale.macro.carboidratiG,
+              'target_fat_g': locale.macro.grassiG,
+            },
+          },
+        );
 
     return Consiglio(testo: data['body']?.toString());
   } on ForbiddenException {

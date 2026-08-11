@@ -60,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
                     orElse: () => null,
                   ),
 
-                  RecoveryCard(riepilogo: r),
+                  const RecoveryCard(),
                   WeightCard(body: r.body),
                   TrainingCard(riepilogo: r),
                   const _GraficoPeso(),

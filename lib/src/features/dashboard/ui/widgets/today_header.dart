@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
+import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
 import '../../data/dashboard_models.dart';
@@ -105,8 +106,13 @@ class TodayHeader extends ConsumerWidget {
                 etichetta: 'kg',
                 icona: Icons.monitor_weight_outlined,
               ),
+              /*
+               * ⚠️ Il sonno arriva dal TELEFONO, non dal riepilogo del server —
+               * S4.3. `riepilogo.sleep` dopo S1 e' sempre `null`, e lasciarlo
+               * qui avrebbe mostrato un trattino per sempre.
+               */
               _Valore(
-                valore: riepilogo.sleep?.durata ?? '—',
+                valore: ref.watch(recuperoProvider).valueOrNull?.notte?.durata ?? '—',
                 etichetta: 'sonno',
                 icona: Icons.bedtime_outlined,
               ),

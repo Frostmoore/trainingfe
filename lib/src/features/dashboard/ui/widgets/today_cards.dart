@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../health/dati_salute.dart';
+import '../../../health/media_di_riferimento.dart';
+import '../../../health/recupero_controller.dart';
 import '../../data/dashboard_models.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -194,29 +197,32 @@ class _Macro extends StatelessWidget {
 }
 
 /// Sonno, HRV e battito: come sta andando il recupero.
-class RecoveryCard extends StatelessWidget {
-  const RecoveryCard({required this.riepilogo, super.key});
-
-  final DashboardSummary riepilogo;
+///
+/// 🚨 **Legge dal TELEFONO, non dalla risposta del server** — S4.3.
+///
+/// Fino a `v4.8.1` prendeva `sleep` e `vitals` da `DashboardSummary`, cioè da
+/// `GET /dashboard`. Dopo S1 quel payload non li contiene più: i dati del
+/// sensore restano sul telefono (decisione D9) e questa card li chiede a
+/// `recuperoProvider`, che li calcola da `ArchivioSalute`.
+///
+/// ⚠️ **Per questo non prende più `riepilogo`**: portarsi dietro un parametro
+/// che non si usa avrebbe lasciato credere che la sorgente fosse ancora quella.
+class RecoveryCard extends ConsumerWidget {
+  const RecoveryCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final sonno = riepilogo.sleep;
+    final recupero = ref.watch(recuperoProvider).valueOrNull;
 
-    // 🚨 Senza dati la card **sparisce**, non mostra zeri né promesse.
-    //
-    // ⚠️ Fino a `v4.8.1` qui c'era un messaggio che diceva «compaiono appena il
-    // tuo orologio comincia a inviarli». Dopo S1 quella frase è **falsa**: il
-    // canale di ingest non esiste più, e nessun orologio può inviare niente al
-    // server. Una card che promette un dato che non può arrivare è peggio di
-    // una card assente — chi la legge aspetta.
-    //
-    // **Torna in S4.3**, alimentata dall'archivio locale, e con il messaggio
-    // giusto: «collega Health Connect», che sarà una cosa che si può fare.
-    if (sonno == null && !riepilogo.hasVitals) {
-      return const SizedBox.shrink();
+    // ⚠️ Mentre si legge dal database locale non si mostra uno scheletro: sono
+    // millisecondi, e un lampo di caricamento a ogni apertura della schermata
+    // principale si nota più del dato.
+    if (recupero == null || !recupero.haQualcosa) {
+      return const _InvitoACollegare();
     }
+
+    final notte = recupero.notte;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -231,18 +237,22 @@ class RecoveryCard extends StatelessWidget {
             ),
             const SizedBox(height: Gap.sm),
 
-            if (sonno != null)
+            if (notte != null)
               InkWell(
                 onTap: () => context.push(AppRoutes.sleep),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: Gap.xs),
                   child: Row(
                     children: [
-                      Icon(Icons.bedtime_outlined, size: 20, color: _colore(context, sonno.overall)),
+                      Icon(
+                        Icons.bedtime_outlined,
+                        size: 20,
+                        color: _colore(context, notte.complessivo),
+                      ),
                       const SizedBox(width: Gap.sm),
-                      Expanded(child: Text('Sonno · ${sonno.durata}')),
+                      Expanded(child: Text('Sonno · ${notte.durata}')),
                       Text(
-                        'profondo ${sonno.deepPct.round()}% · REM ${sonno.remPct.round()}%',
+                        'profondo ${notte.profondoPct.round()}% · REM ${notte.remPct.round()}%',
                         style: theme.textTheme.bodySmall,
                       ),
                       const Icon(Icons.chevron_right_rounded, size: 18),
@@ -251,43 +261,72 @@ class RecoveryCard extends StatelessWidget {
                 ),
               ),
 
-            for (final v in riepilogo.vitals) _RigaParametro(vital: v),
+            for (final lettura in recupero.parametri.values) _RigaParametro(lettura: lettura),
           ],
         ),
       ),
     );
   }
 
-  static Color? _colore(BuildContext context, String giudizio) => switch (giudizio) {
-    'bad' => Theme.of(context).colorScheme.error,
-    'warn' => const Color(0xFFE0B341),
-    _ => null,
+  static Color? _colore(BuildContext context, Giudizio giudizio) => switch (giudizio) {
+    Giudizio.bad => Theme.of(context).colorScheme.error,
+    Giudizio.warn => const Color(0xFFE0B341),
+    Giudizio.ok => null,
   };
 }
 
-class _RigaParametro extends StatelessWidget {
-  const _RigaParametro({required this.vital});
+/// Quando non c'è niente da mostrare.
+///
+/// 🚨 **Adesso la frase è vera, e porta da qualche parte.** Prima di S3 diceva
+/// «compaiono appena il tuo orologio comincia a inviarli» — una promessa che
+/// dopo S1 nessuno poteva mantenere, perché il canale di ingest non esisteva
+/// più. Adesso c'è qualcosa che l'utente **può fare**, ed è a un tocco.
+class _InvitoACollegare extends StatelessWidget {
+  const _InvitoACollegare();
 
-  final Vital vital;
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    child: ListTile(
+      leading: const Icon(Icons.monitor_heart_outlined),
+      title: const Text('Sonno e recupero'),
+      subtitle: const Text(
+        'Collega Health Connect per vedere qui come dormi e come stai '
+        'recuperando. I dati restano sul tuo telefono.',
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      isThreeLine: true,
+      onTap: () => context.push(AppRoutes.salute),
+    ),
+  );
+}
+
+class _RigaParametro extends StatelessWidget {
+  const _RigaParametro({required this.lettura});
+
+  final LetturaConMedia lettura;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final delta = vital.deltaPct;
+    final delta = lettura.scostamentoPct;
+    final anomalo = lettura.anomalo;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Gap.xs),
       child: Row(
         children: [
           Icon(
-            vital.metric == 'hrv' ? Icons.favorite_outline_rounded : Icons.monitor_heart_outlined,
+            lettura.metrica == MetricaSalute.hrv
+                ? Icons.favorite_outline_rounded
+                : Icons.monitor_heart_outlined,
             size: 20,
-            color: vital.anomalo ? theme.colorScheme.error : null,
+            color: anomalo ? theme.colorScheme.error : null,
           ),
           const SizedBox(width: Gap.sm),
-          Expanded(child: Text(vital.label)),
+          Expanded(child: Text(lettura.metrica.etichetta)),
           Text(
-            '${vital.value.round()} ${vital.unit}',
+            '${lettura.valore.round()} ${lettura.metrica.unita}',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           // 🚨 Lo scostamento accanto al valore, sempre. Il numero assoluto non
@@ -298,8 +337,8 @@ class _RigaParametro extends StatelessWidget {
             Text(
               '${delta > 0 ? '+' : ''}${delta.round()}%',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: vital.anomalo ? theme.colorScheme.error : theme.colorScheme.outline,
-                fontWeight: vital.anomalo ? FontWeight.w700 : null,
+                color: anomalo ? theme.colorScheme.error : theme.colorScheme.outline,
+                fontWeight: anomalo ? FontWeight.w700 : null,
               ),
             ),
           ],

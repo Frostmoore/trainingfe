@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// ⚠️ `intl` e `core/providers.dart` sono stati tolti in S2.2 insieme alla
-// chiamata di rete: servivano a formattare la data per la query e a prendere
-// `apiClientProvider`. **Torneranno in S4.3** — `intl` per la data della notte
-// nell'archivio locale, `providers` no: la sorgente non sarà più la rete.
+import '../../core/storage/archivio_salute.dart';
+import '../health/analizzatore_sonno.dart';
+import '../health/dati_salute.dart';
+import '../health/health_controller.dart';
+
+// ⚠️ `core/providers.dart` non torna: la sorgente non è più la rete, e
+// `apiClientProvider` qui non serve più a niente.
 
 /// Una notte — C14.
 ///
@@ -28,6 +31,43 @@ class SleepNight {
     required this.hypnogram,
     this.disclaimer,
   });
+
+  /// Dal giudizio calcolato in locale — S4.3.
+  ///
+  /// 🚨 **È un adattatore, non un modello nuovo.** `GiudizioNotte` è ciò che
+  /// `AnalizzatoreSonno` produce leggendo l'archivio; `SleepNight` è ciò che la
+  /// schermata sa disegnare da C14. Tenendoli separati, il giorno che si vorrà
+  /// cambiare la presentazione non si toccherà il calcolo — e viceversa.
+  ///
+  /// ⚠️ `fromJson` resta al suo posto **anche se nessuno la chiama più**: è la
+  /// prova documentale del contratto che il backend aveva, e cancellarla
+  /// renderebbe impossibile capire da cosa viene questa forma.
+  factory SleepNight.daGiudizio(GiudizioNotte g) => SleepNight(
+    night: g.notte,
+    from: g.da,
+    to: g.a,
+    asleepMinutes: g.minutiDormiti,
+    awakeMinutes: g.minutiSvegli,
+    lightMinutes: g.minutiLeggero,
+    deepMinutes: g.minutiProfondo,
+    remMinutes: g.minutiRem,
+    deepPct: g.profondoPct,
+    remPct: g.remPct,
+    ratings: g.valutazioni.map((k, v) => MapEntry(k, v.nome)),
+    overall: g.complessivo.nome,
+    disclaimer: GiudizioNotte.avvertenza,
+    hypnogram: g.ipnogramma.map((c) {
+      final fase = FaseSonno.daCodice(c.fase);
+
+      return SleepBlock(
+        from: c.iniziatoIl,
+        to: c.finitoIl,
+        stage: fase.codice,
+        label: fase.etichetta,
+        minutes: c.minuti,
+      );
+    }).toList(),
+  );
 
   factory SleepNight.fromJson(Map<String, dynamic> j) => SleepNight(
     night: DateTime.parse(j['night'].toString()),
@@ -103,29 +143,31 @@ class SleepBlock {
 /// La notte che si sta guardando.
 final sleepNightProvider = StateProvider<DateTime?>((ref) => null);
 
-/// L'ipnogramma della notte.
+/// L'ipnogramma della notte, **letto dal telefono** — S4.3.
 ///
-/// 🚨 **Non chiama più il server, e per ora non ha nessuna sorgente.**
+/// 🚨 **Non chiama il server, e non lo chiamerà più.** Fino a `v4.8.1` faceva
+/// `GET /health/sleep`; quell'endpoint è stato rimosso in S1 perché sonno, HRV
+/// e battito restano sul telefono di chi li produce (decisione D9).
 ///
-/// Fino a `v4.8.1` questo provider faceva `GET /health/sleep`. Quell'endpoint
-/// **non esiste più**: la fase S1 di `plan_security_and_retention.md` l'ha
-/// rimosso perché sonno, HRV e battito restano sul telefono di chi li produce
-/// (decisione D9).
-///
-/// ⚠️ **Restituisce `null` di proposito, e non è un ripiego provvisorio mal
-/// fatto**: è la finestra prevista dal piano fra «il backend smette di servire
-/// il dato» (S1) e «l'app impara a produrselo» (S3 e S4). Lasciare la chiamata
-/// avrebbe dato un **404** a ogni apertura della schermata, cioè un errore che
-/// sembra un guasto invece di un'assenza.
-///
-/// **Dove torna la sorgente**: `ArchivioSalute` in S3, e `AnalizzatoreSonno`
-/// in S4.2. Da lì questo provider legge dal database locale e la firma —
-/// `FutureProvider.autoDispose<SleepNight?>` — **non cambia**: è il motivo per
-/// cui `SleepNight`, `SleepBlock` e `SleepScreen` non sono stati cancellati.
+/// 💡 **La firma non è mai cambiata** — `FutureProvider.autoDispose<SleepNight?>`
+/// — ed è il motivo per cui `SleepNight`, `SleepBlock` e `SleepScreen` non sono
+/// stati cancellati in S2: è cambiata **solo la sorgente**, e nessuna schermata
+/// se n'è accorta.
 final sleepProvider = FutureProvider.autoDispose<SleepNight?>((ref) async {
-  // Si continua a osservare la notte scelta: quando in S4 arriverà l'archivio
-  // locale, cambiare notte dovrà gia' rileggere senza toccare le schermate.
-  ref.watch(sleepNightProvider);
+  final archivio = ref.watch(archivioSaluteProvider);
 
-  return null;
+  // Si ricalcola quando il ponte scrive: senza, collegare Health Connect non
+  // aggiornerebbe la schermata fino al riavvio dell'app.
+  ref.watch(healthControllerProvider);
+
+  // ⚠️ Nessuna notte scelta = **l'ultima con dati**, non «stanotte». Chi apre
+  // l'app alle 18 senza aver sincronizzato vedrebbe altrimenti una schermata
+  // vuota pur avendo dormito: il dato c'è, è solo di ieri.
+  final quale = ref.watch(sleepNightProvider) ?? await archivio.ultimaNotteConDati();
+
+  if (quale == null) return null;
+
+  final giudizio = await AnalizzatoreSonno.notte(archivio, quale);
+
+  return giudizio == null ? null : SleepNight.daGiudizio(giudizio);
 });

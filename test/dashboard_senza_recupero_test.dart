@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/dashboard/data/dashboard_models.dart';
 import 'package:training_companion/src/features/dashboard/ui/widgets/today_cards.dart';
+import 'package:training_companion/src/features/health/health_controller.dart';
 
 /// 🚨 **Il contratto nuovo di `/dashboard` — S2.4.**
 ///
@@ -63,40 +66,49 @@ void main() {
   });
 
   group('la card del recupero', () {
-    testWidgets('senza dati sparisce, invece di promettere qualcosa', (tester) async {
-      final riepilogo = DashboardSummary.fromJson(rispostaDopoS1());
+    /// Un archivio vuoto: nessun dato del sensore su questo telefono.
+    ///
+    /// ⚠️ Da S4.3 la card **non legge più da `DashboardSummary`**: legge da
+    /// `recuperoProvider`, cioè dall'archivio locale. Per questo il test
+    /// costruisce un `ProviderScope` invece di passare un modello.
+    Widget conArchivioVuoto(Widget figlio) {
+      final archivio = ArchivioSalute.inMemoria();
 
-      await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: RecoveryCard(riepilogo: riepilogo))),
+      addTearDown(archivio.close);
+
+      return ProviderScope(
+        overrides: [archivioSaluteProvider.overrideWithValue(archivio)],
+        child: MaterialApp(home: Scaffold(body: figlio)),
       );
+    }
 
-      // ⚠️ Prima di S2 qui c'era «compaiono appena il tuo orologio comincia a
-      // inviarli»: una frase che dopo S1 è **falsa**, perché il canale di
-      // ingest non esiste più. Chi la legge aspetta un dato che non arriverà.
+    testWidgets('senza dati invita a collegare, invece di promettere', (tester) async {
+      await tester.pumpWidget(conArchivioVuoto(const RecoveryCard()));
+      await tester.pumpAndSettle();
+
+      // 🚨 Prima di S2 qui c'era «compaiono appena il tuo orologio comincia a
+      // inviarli»: una promessa che dopo S1 nessuno poteva mantenere, perché il
+      // canale di ingest non esisteva più. Adesso c'è qualcosa che si **può
+      // fare**, ed è a un tocco.
       expect(find.textContaining('orologio'), findsNothing);
-      expect(find.byType(Card), findsNothing);
+      expect(find.textContaining('Collega Health Connect'), findsOneWidget);
+      expect(find.textContaining('restano sul tuo telefono'), findsOneWidget);
     });
 
     testWidgets('e non fa esplodere il layout dentro una colonna stretta', (tester) async {
-      final riepilogo = DashboardSummary.fromJson(rispostaDopoS1());
-
       // 320 px: la larghezza sotto cui la barra del recupero era già esplosa
       // una volta (F1). Il layout si prova dove rompe, non dove sta comodo.
       await tester.binding.setSurfaceSize(const Size(320, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: [
-                RecoveryCard(riepilogo: riepilogo),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
+        conArchivioVuoto(
+          const Column(
+            children: [RecoveryCard(), Expanded(child: SizedBox())],
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
     });

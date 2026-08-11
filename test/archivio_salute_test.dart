@@ -193,6 +193,62 @@ void main() {
     expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 10)), isEmpty);
   });
 
+  group('il corpo — S5.2', () {
+    Future<void> pesa(double kg, DateTime giorno) => archivio.registraMisura(
+      MisuraCorpo(id: 0, giorno: giorno, pesoKg: kg),
+    );
+
+    /// 🚨 Pesarsi due volte lo stesso giorno è una **correzione**, non un
+    /// secondo punto sul grafico: la bilancia si guarda spesso due volte di
+    /// seguito, e due punti a un minuto di distanza lo renderebbero illeggibile.
+    ///
+    /// Era `UNIQUE(user_id, date)` sul server. La regola non cambia perché
+    /// cambia casa.
+    test('due pesate nello stesso giorno sono una correzione', () async {
+      await pesa(84.5, DateTime(2026, 8, 11));
+      await pesa(84.2, DateTime(2026, 8, 11));
+
+      final storico = await archivio.storicoMisure();
+
+      expect(storico, hasLength(1));
+      expect(storico.single.pesoKg, 84.2);
+    });
+
+    test('lo storico torna dalla più recente', () async {
+      await pesa(85.0, DateTime(2026, 8, 4));
+      await pesa(84.2, DateTime(2026, 8, 11));
+
+      final storico = await archivio.storicoMisure();
+
+      expect(storico.first.pesoKg, 84.2);
+      expect(storico.last.pesoKg, 85.0);
+    });
+
+    /// ⚠️ **L'ultimo con un peso**, non l'ultima riga: una misura può portare
+    /// solo la circonferenza della vita, e in quel caso il peso non è
+    /// cambiato — è solo assente da quella riga.
+    test('l\'ultimo peso salta le misure che non ne hanno', () async {
+      await pesa(84.2, DateTime(2026, 8, 10));
+
+      await archivio.registraMisura(
+        MisuraCorpo(id: 0, giorno: DateTime(2026, 8, 11), vitaCm: 88),
+      );
+
+      final ultimo = await archivio.ultimoPeso();
+
+      expect(ultimo!.pesoKg, 84.2);
+      expect(ultimo.giorno, DateTime(2026, 8, 10));
+    });
+
+    test('svuota() porta via anche il corpo', () async {
+      await pesa(84.2, DateTime(2026, 8, 11));
+
+      await archivio.svuota();
+
+      expect(await archivio.storicoMisure(), isEmpty);
+    });
+  });
+
   group('la traduzione dalle scale di Health Connect', () {
     test('le fasi note si mappano sulla nostra numerazione', () {
       expect(FaseSonno.daHealthConnect(5), FaseSonno.profondo);

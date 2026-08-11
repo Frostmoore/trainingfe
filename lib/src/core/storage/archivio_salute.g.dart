@@ -828,11 +828,569 @@ class CampioniSonnoCompanion extends UpdateCompanion<CampioneSonno> {
   }
 }
 
+class $MisureCorpoTable extends MisureCorpo
+    with TableInfo<$MisureCorpoTable, MisuraCorpo> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MisureCorpoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _giornoMeta = const VerificationMeta('giorno');
+  @override
+  late final GeneratedColumn<DateTime> giorno = GeneratedColumn<DateTime>(
+    'giorno',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _pesoKgMeta = const VerificationMeta('pesoKg');
+  @override
+  late final GeneratedColumn<double> pesoKg = GeneratedColumn<double>(
+    'peso_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _massaGrassaPctMeta = const VerificationMeta(
+    'massaGrassaPct',
+  );
+  @override
+  late final GeneratedColumn<double> massaGrassaPct = GeneratedColumn<double>(
+    'massa_grassa_pct',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _vitaCmMeta = const VerificationMeta('vitaCm');
+  @override
+  late final GeneratedColumn<double> vitaCm = GeneratedColumn<double>(
+    'vita_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _toraceCmMeta = const VerificationMeta(
+    'toraceCm',
+  );
+  @override
+  late final GeneratedColumn<double> toraceCm = GeneratedColumn<double>(
+    'torace_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _braccioCmMeta = const VerificationMeta(
+    'braccioCm',
+  );
+  @override
+  late final GeneratedColumn<double> braccioCm = GeneratedColumn<double>(
+    'braccio_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cosciaCmMeta = const VerificationMeta(
+    'cosciaCm',
+  );
+  @override
+  late final GeneratedColumn<double> cosciaCm = GeneratedColumn<double>(
+    'coscia_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    giorno,
+    pesoKg,
+    massaGrassaPct,
+    vitaCm,
+    toraceCm,
+    braccioCm,
+    cosciaCm,
+    note,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'misure_corpo';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MisuraCorpo> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('giorno')) {
+      context.handle(
+        _giornoMeta,
+        giorno.isAcceptableOrUnknown(data['giorno']!, _giornoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_giornoMeta);
+    }
+    if (data.containsKey('peso_kg')) {
+      context.handle(
+        _pesoKgMeta,
+        pesoKg.isAcceptableOrUnknown(data['peso_kg']!, _pesoKgMeta),
+      );
+    }
+    if (data.containsKey('massa_grassa_pct')) {
+      context.handle(
+        _massaGrassaPctMeta,
+        massaGrassaPct.isAcceptableOrUnknown(
+          data['massa_grassa_pct']!,
+          _massaGrassaPctMeta,
+        ),
+      );
+    }
+    if (data.containsKey('vita_cm')) {
+      context.handle(
+        _vitaCmMeta,
+        vitaCm.isAcceptableOrUnknown(data['vita_cm']!, _vitaCmMeta),
+      );
+    }
+    if (data.containsKey('torace_cm')) {
+      context.handle(
+        _toraceCmMeta,
+        toraceCm.isAcceptableOrUnknown(data['torace_cm']!, _toraceCmMeta),
+      );
+    }
+    if (data.containsKey('braccio_cm')) {
+      context.handle(
+        _braccioCmMeta,
+        braccioCm.isAcceptableOrUnknown(data['braccio_cm']!, _braccioCmMeta),
+      );
+    }
+    if (data.containsKey('coscia_cm')) {
+      context.handle(
+        _cosciaCmMeta,
+        cosciaCm.isAcceptableOrUnknown(data['coscia_cm']!, _cosciaCmMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MisuraCorpo map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MisuraCorpo(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      giorno: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}giorno'],
+      )!,
+      pesoKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso_kg'],
+      ),
+      massaGrassaPct: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}massa_grassa_pct'],
+      ),
+      vitaCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}vita_cm'],
+      ),
+      toraceCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}torace_cm'],
+      ),
+      braccioCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}braccio_cm'],
+      ),
+      cosciaCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}coscia_cm'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+    );
+  }
+
+  @override
+  $MisureCorpoTable createAlias(String alias) {
+    return $MisureCorpoTable(attachedDatabase, alias);
+  }
+}
+
+class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
+  final int id;
+
+  /// 🚨 **Una misura al giorno per persona.** Vedi `registraMisura()`.
+  final DateTime giorno;
+  final double? pesoKg;
+  final double? massaGrassaPct;
+  final double? vitaCm;
+  final double? toraceCm;
+  final double? braccioCm;
+  final double? cosciaCm;
+  final String? note;
+  const MisuraCorpo({
+    required this.id,
+    required this.giorno,
+    this.pesoKg,
+    this.massaGrassaPct,
+    this.vitaCm,
+    this.toraceCm,
+    this.braccioCm,
+    this.cosciaCm,
+    this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['giorno'] = Variable<DateTime>(giorno);
+    if (!nullToAbsent || pesoKg != null) {
+      map['peso_kg'] = Variable<double>(pesoKg);
+    }
+    if (!nullToAbsent || massaGrassaPct != null) {
+      map['massa_grassa_pct'] = Variable<double>(massaGrassaPct);
+    }
+    if (!nullToAbsent || vitaCm != null) {
+      map['vita_cm'] = Variable<double>(vitaCm);
+    }
+    if (!nullToAbsent || toraceCm != null) {
+      map['torace_cm'] = Variable<double>(toraceCm);
+    }
+    if (!nullToAbsent || braccioCm != null) {
+      map['braccio_cm'] = Variable<double>(braccioCm);
+    }
+    if (!nullToAbsent || cosciaCm != null) {
+      map['coscia_cm'] = Variable<double>(cosciaCm);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    return map;
+  }
+
+  MisureCorpoCompanion toCompanion(bool nullToAbsent) {
+    return MisureCorpoCompanion(
+      id: Value(id),
+      giorno: Value(giorno),
+      pesoKg: pesoKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pesoKg),
+      massaGrassaPct: massaGrassaPct == null && nullToAbsent
+          ? const Value.absent()
+          : Value(massaGrassaPct),
+      vitaCm: vitaCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vitaCm),
+      toraceCm: toraceCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toraceCm),
+      braccioCm: braccioCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(braccioCm),
+      cosciaCm: cosciaCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cosciaCm),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+    );
+  }
+
+  factory MisuraCorpo.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MisuraCorpo(
+      id: serializer.fromJson<int>(json['id']),
+      giorno: serializer.fromJson<DateTime>(json['giorno']),
+      pesoKg: serializer.fromJson<double?>(json['pesoKg']),
+      massaGrassaPct: serializer.fromJson<double?>(json['massaGrassaPct']),
+      vitaCm: serializer.fromJson<double?>(json['vitaCm']),
+      toraceCm: serializer.fromJson<double?>(json['toraceCm']),
+      braccioCm: serializer.fromJson<double?>(json['braccioCm']),
+      cosciaCm: serializer.fromJson<double?>(json['cosciaCm']),
+      note: serializer.fromJson<String?>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'giorno': serializer.toJson<DateTime>(giorno),
+      'pesoKg': serializer.toJson<double?>(pesoKg),
+      'massaGrassaPct': serializer.toJson<double?>(massaGrassaPct),
+      'vitaCm': serializer.toJson<double?>(vitaCm),
+      'toraceCm': serializer.toJson<double?>(toraceCm),
+      'braccioCm': serializer.toJson<double?>(braccioCm),
+      'cosciaCm': serializer.toJson<double?>(cosciaCm),
+      'note': serializer.toJson<String?>(note),
+    };
+  }
+
+  MisuraCorpo copyWith({
+    int? id,
+    DateTime? giorno,
+    Value<double?> pesoKg = const Value.absent(),
+    Value<double?> massaGrassaPct = const Value.absent(),
+    Value<double?> vitaCm = const Value.absent(),
+    Value<double?> toraceCm = const Value.absent(),
+    Value<double?> braccioCm = const Value.absent(),
+    Value<double?> cosciaCm = const Value.absent(),
+    Value<String?> note = const Value.absent(),
+  }) => MisuraCorpo(
+    id: id ?? this.id,
+    giorno: giorno ?? this.giorno,
+    pesoKg: pesoKg.present ? pesoKg.value : this.pesoKg,
+    massaGrassaPct: massaGrassaPct.present
+        ? massaGrassaPct.value
+        : this.massaGrassaPct,
+    vitaCm: vitaCm.present ? vitaCm.value : this.vitaCm,
+    toraceCm: toraceCm.present ? toraceCm.value : this.toraceCm,
+    braccioCm: braccioCm.present ? braccioCm.value : this.braccioCm,
+    cosciaCm: cosciaCm.present ? cosciaCm.value : this.cosciaCm,
+    note: note.present ? note.value : this.note,
+  );
+  MisuraCorpo copyWithCompanion(MisureCorpoCompanion data) {
+    return MisuraCorpo(
+      id: data.id.present ? data.id.value : this.id,
+      giorno: data.giorno.present ? data.giorno.value : this.giorno,
+      pesoKg: data.pesoKg.present ? data.pesoKg.value : this.pesoKg,
+      massaGrassaPct: data.massaGrassaPct.present
+          ? data.massaGrassaPct.value
+          : this.massaGrassaPct,
+      vitaCm: data.vitaCm.present ? data.vitaCm.value : this.vitaCm,
+      toraceCm: data.toraceCm.present ? data.toraceCm.value : this.toraceCm,
+      braccioCm: data.braccioCm.present ? data.braccioCm.value : this.braccioCm,
+      cosciaCm: data.cosciaCm.present ? data.cosciaCm.value : this.cosciaCm,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MisuraCorpo(')
+          ..write('id: $id, ')
+          ..write('giorno: $giorno, ')
+          ..write('pesoKg: $pesoKg, ')
+          ..write('massaGrassaPct: $massaGrassaPct, ')
+          ..write('vitaCm: $vitaCm, ')
+          ..write('toraceCm: $toraceCm, ')
+          ..write('braccioCm: $braccioCm, ')
+          ..write('cosciaCm: $cosciaCm, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    giorno,
+    pesoKg,
+    massaGrassaPct,
+    vitaCm,
+    toraceCm,
+    braccioCm,
+    cosciaCm,
+    note,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MisuraCorpo &&
+          other.id == this.id &&
+          other.giorno == this.giorno &&
+          other.pesoKg == this.pesoKg &&
+          other.massaGrassaPct == this.massaGrassaPct &&
+          other.vitaCm == this.vitaCm &&
+          other.toraceCm == this.toraceCm &&
+          other.braccioCm == this.braccioCm &&
+          other.cosciaCm == this.cosciaCm &&
+          other.note == this.note);
+}
+
+class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
+  final Value<int> id;
+  final Value<DateTime> giorno;
+  final Value<double?> pesoKg;
+  final Value<double?> massaGrassaPct;
+  final Value<double?> vitaCm;
+  final Value<double?> toraceCm;
+  final Value<double?> braccioCm;
+  final Value<double?> cosciaCm;
+  final Value<String?> note;
+  const MisureCorpoCompanion({
+    this.id = const Value.absent(),
+    this.giorno = const Value.absent(),
+    this.pesoKg = const Value.absent(),
+    this.massaGrassaPct = const Value.absent(),
+    this.vitaCm = const Value.absent(),
+    this.toraceCm = const Value.absent(),
+    this.braccioCm = const Value.absent(),
+    this.cosciaCm = const Value.absent(),
+    this.note = const Value.absent(),
+  });
+  MisureCorpoCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime giorno,
+    this.pesoKg = const Value.absent(),
+    this.massaGrassaPct = const Value.absent(),
+    this.vitaCm = const Value.absent(),
+    this.toraceCm = const Value.absent(),
+    this.braccioCm = const Value.absent(),
+    this.cosciaCm = const Value.absent(),
+    this.note = const Value.absent(),
+  }) : giorno = Value(giorno);
+  static Insertable<MisuraCorpo> custom({
+    Expression<int>? id,
+    Expression<DateTime>? giorno,
+    Expression<double>? pesoKg,
+    Expression<double>? massaGrassaPct,
+    Expression<double>? vitaCm,
+    Expression<double>? toraceCm,
+    Expression<double>? braccioCm,
+    Expression<double>? cosciaCm,
+    Expression<String>? note,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (giorno != null) 'giorno': giorno,
+      if (pesoKg != null) 'peso_kg': pesoKg,
+      if (massaGrassaPct != null) 'massa_grassa_pct': massaGrassaPct,
+      if (vitaCm != null) 'vita_cm': vitaCm,
+      if (toraceCm != null) 'torace_cm': toraceCm,
+      if (braccioCm != null) 'braccio_cm': braccioCm,
+      if (cosciaCm != null) 'coscia_cm': cosciaCm,
+      if (note != null) 'note': note,
+    });
+  }
+
+  MisureCorpoCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? giorno,
+    Value<double?>? pesoKg,
+    Value<double?>? massaGrassaPct,
+    Value<double?>? vitaCm,
+    Value<double?>? toraceCm,
+    Value<double?>? braccioCm,
+    Value<double?>? cosciaCm,
+    Value<String?>? note,
+  }) {
+    return MisureCorpoCompanion(
+      id: id ?? this.id,
+      giorno: giorno ?? this.giorno,
+      pesoKg: pesoKg ?? this.pesoKg,
+      massaGrassaPct: massaGrassaPct ?? this.massaGrassaPct,
+      vitaCm: vitaCm ?? this.vitaCm,
+      toraceCm: toraceCm ?? this.toraceCm,
+      braccioCm: braccioCm ?? this.braccioCm,
+      cosciaCm: cosciaCm ?? this.cosciaCm,
+      note: note ?? this.note,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (giorno.present) {
+      map['giorno'] = Variable<DateTime>(giorno.value);
+    }
+    if (pesoKg.present) {
+      map['peso_kg'] = Variable<double>(pesoKg.value);
+    }
+    if (massaGrassaPct.present) {
+      map['massa_grassa_pct'] = Variable<double>(massaGrassaPct.value);
+    }
+    if (vitaCm.present) {
+      map['vita_cm'] = Variable<double>(vitaCm.value);
+    }
+    if (toraceCm.present) {
+      map['torace_cm'] = Variable<double>(toraceCm.value);
+    }
+    if (braccioCm.present) {
+      map['braccio_cm'] = Variable<double>(braccioCm.value);
+    }
+    if (cosciaCm.present) {
+      map['coscia_cm'] = Variable<double>(cosciaCm.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MisureCorpoCompanion(')
+          ..write('id: $id, ')
+          ..write('giorno: $giorno, ')
+          ..write('pesoKg: $pesoKg, ')
+          ..write('massaGrassaPct: $massaGrassaPct, ')
+          ..write('vitaCm: $vitaCm, ')
+          ..write('toraceCm: $toraceCm, ')
+          ..write('braccioCm: $braccioCm, ')
+          ..write('cosciaCm: $cosciaCm, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
   late final $LettureSaluteTable lettureSalute = $LettureSaluteTable(this);
   late final $CampioniSonnoTable campioniSonno = $CampioniSonnoTable(this);
+  late final $MisureCorpoTable misureCorpo = $MisureCorpoTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -840,6 +1398,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     lettureSalute,
     campioniSonno,
+    misureCorpo,
   ];
 }
 
@@ -1285,6 +1844,278 @@ typedef $$CampioniSonnoTableProcessedTableManager =
       CampioneSonno,
       PrefetchHooks Function()
     >;
+typedef $$MisureCorpoTableCreateCompanionBuilder =
+    MisureCorpoCompanion Function({
+      Value<int> id,
+      required DateTime giorno,
+      Value<double?> pesoKg,
+      Value<double?> massaGrassaPct,
+      Value<double?> vitaCm,
+      Value<double?> toraceCm,
+      Value<double?> braccioCm,
+      Value<double?> cosciaCm,
+      Value<String?> note,
+    });
+typedef $$MisureCorpoTableUpdateCompanionBuilder =
+    MisureCorpoCompanion Function({
+      Value<int> id,
+      Value<DateTime> giorno,
+      Value<double?> pesoKg,
+      Value<double?> massaGrassaPct,
+      Value<double?> vitaCm,
+      Value<double?> toraceCm,
+      Value<double?> braccioCm,
+      Value<double?> cosciaCm,
+      Value<String?> note,
+    });
+
+class $$MisureCorpoTableFilterComposer
+    extends Composer<_$ArchivioSalute, $MisureCorpoTable> {
+  $$MisureCorpoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pesoKg => $composableBuilder(
+    column: $table.pesoKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get massaGrassaPct => $composableBuilder(
+    column: $table.massaGrassaPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get vitaCm => $composableBuilder(
+    column: $table.vitaCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get toraceCm => $composableBuilder(
+    column: $table.toraceCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get braccioCm => $composableBuilder(
+    column: $table.braccioCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cosciaCm => $composableBuilder(
+    column: $table.cosciaCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MisureCorpoTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $MisureCorpoTable> {
+  $$MisureCorpoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pesoKg => $composableBuilder(
+    column: $table.pesoKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get massaGrassaPct => $composableBuilder(
+    column: $table.massaGrassaPct,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get vitaCm => $composableBuilder(
+    column: $table.vitaCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get toraceCm => $composableBuilder(
+    column: $table.toraceCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get braccioCm => $composableBuilder(
+    column: $table.braccioCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cosciaCm => $composableBuilder(
+    column: $table.cosciaCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MisureCorpoTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $MisureCorpoTable> {
+  $$MisureCorpoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get giorno =>
+      $composableBuilder(column: $table.giorno, builder: (column) => column);
+
+  GeneratedColumn<double> get pesoKg =>
+      $composableBuilder(column: $table.pesoKg, builder: (column) => column);
+
+  GeneratedColumn<double> get massaGrassaPct => $composableBuilder(
+    column: $table.massaGrassaPct,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get vitaCm =>
+      $composableBuilder(column: $table.vitaCm, builder: (column) => column);
+
+  GeneratedColumn<double> get toraceCm =>
+      $composableBuilder(column: $table.toraceCm, builder: (column) => column);
+
+  GeneratedColumn<double> get braccioCm =>
+      $composableBuilder(column: $table.braccioCm, builder: (column) => column);
+
+  GeneratedColumn<double> get cosciaCm =>
+      $composableBuilder(column: $table.cosciaCm, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+}
+
+class $$MisureCorpoTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $MisureCorpoTable,
+          MisuraCorpo,
+          $$MisureCorpoTableFilterComposer,
+          $$MisureCorpoTableOrderingComposer,
+          $$MisureCorpoTableAnnotationComposer,
+          $$MisureCorpoTableCreateCompanionBuilder,
+          $$MisureCorpoTableUpdateCompanionBuilder,
+          (
+            MisuraCorpo,
+            BaseReferences<_$ArchivioSalute, $MisureCorpoTable, MisuraCorpo>,
+          ),
+          MisuraCorpo,
+          PrefetchHooks Function()
+        > {
+  $$MisureCorpoTableTableManager(_$ArchivioSalute db, $MisureCorpoTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MisureCorpoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MisureCorpoTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MisureCorpoTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> giorno = const Value.absent(),
+                Value<double?> pesoKg = const Value.absent(),
+                Value<double?> massaGrassaPct = const Value.absent(),
+                Value<double?> vitaCm = const Value.absent(),
+                Value<double?> toraceCm = const Value.absent(),
+                Value<double?> braccioCm = const Value.absent(),
+                Value<double?> cosciaCm = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+              }) => MisureCorpoCompanion(
+                id: id,
+                giorno: giorno,
+                pesoKg: pesoKg,
+                massaGrassaPct: massaGrassaPct,
+                vitaCm: vitaCm,
+                toraceCm: toraceCm,
+                braccioCm: braccioCm,
+                cosciaCm: cosciaCm,
+                note: note,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime giorno,
+                Value<double?> pesoKg = const Value.absent(),
+                Value<double?> massaGrassaPct = const Value.absent(),
+                Value<double?> vitaCm = const Value.absent(),
+                Value<double?> toraceCm = const Value.absent(),
+                Value<double?> braccioCm = const Value.absent(),
+                Value<double?> cosciaCm = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+              }) => MisureCorpoCompanion.insert(
+                id: id,
+                giorno: giorno,
+                pesoKg: pesoKg,
+                massaGrassaPct: massaGrassaPct,
+                vitaCm: vitaCm,
+                toraceCm: toraceCm,
+                braccioCm: braccioCm,
+                cosciaCm: cosciaCm,
+                note: note,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MisureCorpoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $MisureCorpoTable,
+      MisuraCorpo,
+      $$MisureCorpoTableFilterComposer,
+      $$MisureCorpoTableOrderingComposer,
+      $$MisureCorpoTableAnnotationComposer,
+      $$MisureCorpoTableCreateCompanionBuilder,
+      $$MisureCorpoTableUpdateCompanionBuilder,
+      (
+        MisuraCorpo,
+        BaseReferences<_$ArchivioSalute, $MisureCorpoTable, MisuraCorpo>,
+      ),
+      MisuraCorpo,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -1293,4 +2124,6 @@ class $ArchivioSaluteManager {
       $$LettureSaluteTableTableManager(_db, _db.lettureSalute);
   $$CampioniSonnoTableTableManager get campioniSonno =>
       $$CampioniSonnoTableTableManager(_db, _db.campioniSonno);
+  $$MisureCorpoTableTableManager get misureCorpo =>
+      $$MisureCorpoTableTableManager(_db, _db.misureCorpo);
 }

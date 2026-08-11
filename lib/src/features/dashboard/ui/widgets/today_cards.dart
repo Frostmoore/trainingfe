@@ -8,6 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../health/dati_salute.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
+import '../../../profile/corpo_controller.dart';
 import '../../data/dashboard_models.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -430,14 +431,31 @@ class TrainingCard extends ConsumerWidget {
 }
 
 /// Il peso, con la direzione in cui si sta muovendo.
-class WeightCard extends StatelessWidget {
-  const WeightCard({required this.body, super.key});
+/// Il peso e come sta cambiando.
+///
+/// 🚨 **Legge dal TELEFONO** — S5.2. Prendeva `body` da `GET /dashboard`; dopo
+/// S5 quel payload non lo contiene più, perché peso e misure sono dati del
+/// corpo e non stanno sul server (decisione **D9-bis**).
+///
+/// ⚠️ **Il peso OBIETTIVO invece resta sul server**, dentro il profilo: è una
+/// **preferenza**, non una misura del corpo. Per questo la card mette insieme
+/// due sorgenti — ed è l'unico punto dell'app in cui succede.
+class WeightCard extends ConsumerWidget {
+  const WeightCard({this.pesoObiettivo, super.key});
 
-  final BodyToday body;
+  /// Da `profileProvider`, cioè dal server.
+  final double? pesoObiettivo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final locale = ref.watch(corpoOggiProvider).valueOrNull;
+
+    final body = BodyToday(
+      weightKg: locale?.weightKg,
+      weightDelta: locale?.weightDelta,
+      targetWeightKg: pesoObiettivo,
+    );
 
     if (body.weightKg == null) {
       return const Card(

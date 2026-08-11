@@ -26,7 +26,7 @@ part 'archivio_salute.g.dart';
 /// lascia rileggere solo ~30 giorni indietro. La media di riferimento su una
 /// finestra più lunga esiste **solo** se l'app accumula dal momento
 /// dell'installazione.
-@DriftDatabase(tables: [LettureSalute, CampioniSonno])
+@DriftDatabase(tables: [LettureSalute, CampioniSonno, MisureCorpo])
 class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute() : super(_apri());
 
@@ -34,7 +34,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, da, a) async {
+          // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
+          if (da < 2) await m.createTable(misureCorpo);
+        },
+      );
 
   // ─────────────────────────── scrittura ───────────────────────────
 
@@ -173,6 +181,72 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga?.notte;
   }
 
+  // ─────────────────────────── corpo (S5.2) ───────────────────────────
+
+  /// Registra una misura del corpo.
+  ///
+  /// 🚨 **UPSERT su `(giorno)`, non `insert`.** Pesarsi due volte lo stesso
+  /// giorno è una **correzione**, non un secondo punto sul grafico: la bilancia
+  /// si guarda spesso due volte di seguito, e due punti a distanza di un minuto
+  /// renderebbero il grafico illeggibile.
+  ///
+  /// ⚠️ Era `UNIQUE(user_id, date)` sul server. La regola non cambia perché
+  /// cambia casa.
+  Future<void> registraMisura(MisuraCorpo misura) async {
+    final riga = MisureCorpoCompanion.insert(
+      giorno: _soloGiorno(misura.giorno),
+      pesoKg: Value(misura.pesoKg),
+      massaGrassaPct: Value(misura.massaGrassaPct),
+      vitaCm: Value(misura.vitaCm),
+      toraceCm: Value(misura.toraceCm),
+      braccioCm: Value(misura.braccioCm),
+      cosciaCm: Value(misura.cosciaCm),
+      note: Value(misura.note),
+    );
+
+    /*
+     * 🚨 `target: [giorno]` e NON `insertOnConflictUpdate()` da solo.
+     *
+     * `insertOnConflictUpdate()` risolve il conflitto sulla **chiave
+     * primaria**, che qui e' `id` — un autoincrement che non collide mai.
+     * L'unicita' che ci interessa e' su `giorno`, ed e' un vincolo separato:
+     * senza indicarlo esplicitamente, la seconda pesata dello stesso giorno
+     * **lancia** `UNIQUE constraint failed` invece di correggere la prima.
+     *
+     * ⚠️ Il sintomo sarebbe arrivato all'utente, non a noi: si pesa, si
+     * ripesa un minuto dopo perche' la bilancia ballava, e l'app da' errore.
+     */
+    await into(misureCorpo).insert(
+      riga,
+      onConflict: DoUpdate((_) => riga, target: [misureCorpo.giorno]),
+    );
+  }
+
+  /// Lo storico delle misure, **dalla più recente**.
+  Future<List<MisuraCorpo>> storicoMisure({int? ultimiGiorni}) {
+    final q = select(misureCorpo)..orderBy([(t) => OrderingTerm.desc(t.giorno)]);
+
+    if (ultimiGiorni != null) {
+      final da = _soloGiorno(DateTime.now().subtract(Duration(days: ultimiGiorni)));
+      q.where((t) => t.giorno.isBiggerOrEqualValue(da));
+    }
+
+    return q.get();
+  }
+
+  /// L'ultimo peso registrato, se c'è.
+  ///
+  /// ⚠️ **L'ultimo con un peso**, non l'ultima riga: una misura può portare solo
+  /// la circonferenza della vita, e in quel caso il peso non è cambiato — è solo
+  /// assente da quella riga.
+  Future<MisuraCorpo?> ultimoPeso() {
+    return (select(misureCorpo)
+          ..where((t) => t.pesoKg.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   // ─────────────────────────── cancellazione ───────────────────────────
 
   /// Cancella tutto.
@@ -189,6 +263,7 @@ class ArchivioSalute extends _$ArchivioSalute {
     await batch((b) {
       b.deleteAll(lettureSalute);
       b.deleteAll(campioniSonno);
+      b.deleteAll(misureCorpo);
     });
   }
 
@@ -262,6 +337,32 @@ class CampioniSonno extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
     {fonte, iniziatoIl},
   ];
+}
+
+/// Peso e misure — S5.2.
+///
+/// 🚨 **Erano `body_metrics` sul server, e da S5 non ci stanno più**
+/// (decisione D9-bis: *«tutti i dati sensibili devono sparire dal server»*).
+///
+/// ⚠️ **Sono i dati che vale davvero la pena non perdere.** Il peso di due anni
+/// è la cosa che si guarda indietro; sonno e HRV valgono giorni e si ripigliano
+/// da Health Connect. È per questo che il backup di S6.6 esiste soprattutto per
+/// questa tabella.
+@DataClassName('MisuraCorpo')
+class MisureCorpo extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 🚨 **Una misura al giorno per persona.** Vedi `registraMisura()`.
+  DateTimeColumn get giorno => dateTime().unique()();
+
+  RealColumn get pesoKg => real().nullable()();
+  RealColumn get massaGrassaPct => real().nullable()();
+  RealColumn get vitaCm => real().nullable()();
+  RealColumn get toraceCm => real().nullable()();
+  RealColumn get braccioCm => real().nullable()();
+  RealColumn get cosciaCm => real().nullable()();
+
+  TextColumn get note => text().nullable()();
 }
 
 /// I minuti di un campione.

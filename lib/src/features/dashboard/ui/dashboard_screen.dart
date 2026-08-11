@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
+import '../../profile/corpo_controller.dart';
 import '../dashboard_controller.dart';
 import 'widgets/today_cards.dart';
 import 'widgets/today_header.dart';
@@ -31,6 +32,7 @@ class DashboardScreen extends ConsumerWidget {
           ref
             ..invalidate(dashboardProvider)
             ..invalidate(weightSeriesProvider)
+            ..invalidate(storicoCorpoProvider)
             ..invalidate(caloriesSeriesProvider)
             ..invalidate(adviceProvider);
         },
@@ -61,7 +63,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
 
                   const RecoveryCard(),
-                  WeightCard(body: r.body),
+                  WeightCard(pesoObiettivo: r.body.targetWeightKg),
                   TrainingCard(riepilogo: r),
                   const _GraficoPeso(),
                   const _GraficoCalorie(),

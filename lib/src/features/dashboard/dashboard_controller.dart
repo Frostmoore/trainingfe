@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
+import '../profile/corpo_controller.dart';
 import 'data/dashboard_models.dart';
 
 /// Il riepilogo di oggi — D5.
@@ -93,14 +95,41 @@ final caloriesWindowProvider = StateProvider<CaloriesWindow>((ref) => const Calo
 
 final weightWindowProvider = StateProvider<int>((ref) => 0);
 
+/// La serie del peso, **costruita sul telefono** — S5.2.
+///
+/// 🚨 **Era `GET /series?metric=weight`.** Da S5 quell'endpoint non serve più il
+/// peso: i dati del corpo non stanno sul server (decisione **D9-bis**).
+///
+/// ⚠️ `caloriesSeriesProvider` invece **continua a chiamare il server**: le
+/// calorie del diario non sono un dato del corpo, e restano dove sono. Le due
+/// serie hanno la stessa forma e due sorgenti diverse, ed è voluto.
 final weightSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
   final giorni = ref.watch(weightWindowProvider);
+  final misure = await ref.watch(storicoCorpoProvider.future);
 
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/series', query: {'metric': 'weight', 'days': giorni});
+  // `0` = tutto lo storico, come faceva il backend.
+  final da = giorni == 0
+      ? null
+      : DateTime.now().subtract(Duration(days: giorni));
 
-  return Series.fromJson(data);
+  final punti = misure
+      .where((m) => m.pesoKg != null && (da == null || !m.giorno.isBefore(da)))
+      .toList()
+      // 🚨 In ordine **crescente**: `storicoMisure()` torna dal più recente,
+      // e un grafico disegnato al contrario mostrerebbe un dimagrimento come
+      // un ingrassamento.
+      .reversed
+      .toList();
+
+  return Series(
+    labels: punti.map((m) => DateFormat('d/MM').format(m.giorno)).toList(),
+    values: punti.map((m) => m.pesoKg!).toList(),
+    granularity: 'day',
+    daysWithData: punti.length,
+    // ⚠️ Con i dati in locale non c'è nessuna pagina precedente da chiedere:
+    // c'è già tutto quello che esiste.
+    canGoBack: false,
+  );
 });
 
 final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {

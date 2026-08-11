@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../auth/auth_controller.dart';
+import 'corpo_controller.dart';
 import 'data/profile_models.dart';
 
 /// Il profilo dell'iscritto — C8.
@@ -14,12 +15,23 @@ final profileProvider = FutureProvider.autoDispose<UserProfile>((ref) async {
 });
 
 /// Lo storico del peso, per il grafico e per l'ultima pesata.
+///
+/// 🚨 **Legge dal TELEFONO, non da `GET /body-metrics`** — S5.2. Quell'endpoint
+/// non esiste più: peso e misure sono dati del corpo, e i dati del corpo non
+/// stanno sul server (decisione **D9-bis**).
+///
+/// ⚠️ La firma non cambia — `List<WeightEntry>` — così nessuna schermata si
+/// accorge del trasloco. È la stessa disciplina usata per `sleepProvider` in S4.
 final weightHistoryProvider = FutureProvider.autoDispose<List<WeightEntry>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/body-metrics');
+  final misure = await ref.watch(storicoCorpoProvider.future);
 
-  return data
-      .map((e) => WeightEntry.fromJson((e as Map).cast<String, dynamic>()))
-      .where((e) => true)
+  return misure
+      .where((m) => m.pesoKg != null)
+      .map((m) => WeightEntry(
+            date: m.giorno,
+            weightKg: m.pesoKg!,
+            bodyFatPct: m.massaGrassaPct,
+          ))
       .toList();
 });
 
@@ -69,14 +81,16 @@ class ProfileActions {
   /// giorno è una **correzione**, non un secondo punto sul grafico. È il
   /// comportamento giusto — la bilancia si guarda spesso due volte di seguito.
   Future<void> logWeight({required double kg, DateTime? date, double? bodyFatPct}) async {
-    await _api.post<dynamic>(
-      '/body-metrics',
-      body: {
-        'weight_kg': kg,
-        'date': DateFormat('yyyy-MM-dd').format(date ?? DateTime.now()),
-        'body_fat_pct': ?bodyFatPct,
-      },
-    );
+    // 🚨 Scrive nell'**archivio locale**, non su `POST /body-metrics` — S5.2.
+    // Quell'endpoint non esiste più: i dati del corpo non stanno sul server.
+    //
+    // ⚠️ La firma resta identica di proposito: `WeightSheet` e le altre
+    // schermate non sanno né devono sapere dove finisce il dato.
+    await _ref.read(azioniCorpoProvider).registraPeso(
+          kg: kg,
+          giorno: date,
+          massaGrassaPct: bodyFatPct,
+        );
 
     _invalida();
   }

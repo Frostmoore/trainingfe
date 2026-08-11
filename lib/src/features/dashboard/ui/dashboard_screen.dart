@@ -1,8 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../profile/corpo_controller.dart';
@@ -55,10 +57,13 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   CaloriesCard(riepilogo: r),
 
+                  // 🚨 Se manca il consenso all'AI si **porta a darlo**, invece
+                  // di tacere: il consiglio che sparisce in silenzio sembra un
+                  // guasto, ed è così che è stato segnalato.
                   consiglio.maybeWhen(
-                    data: (testo) => testo == null || testo.isEmpty
-                        ? null
-                        : _Consiglio(testo: testo),
+                    data: (c) => c.haTesto
+                        ? _Consiglio(testo: c.testo!)
+                        : (c.serveConsenso ? const _ConsensoAiMancante() : null),
                     orElse: () => null,
                   ),
 
@@ -428,4 +433,57 @@ class _NienteDati extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Il consiglio del giorno c'è, ma serve il consenso — S9.
+///
+/// 🚨 **Non è un errore da nascondere: è un'azione da proporre.** Prima questo
+/// caso spariva dentro un `catch` che inghiottiva tutto allo stesso modo, e la
+/// card semplicemente non compariva — indistinguibile da un guasto.
+class _ConsensoAiMancante extends StatelessWidget {
+  const _ConsensoAiMancante();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: Gap.sm),
+                Text(
+                  'Il consiglio del giorno',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              'Per prepararlo dobbiamo mandare quello che hai scritto nel '
+              'diario a un servizio esterno. Non lo facciamo senza il tuo '
+              'permesso.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: Gap.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonal(
+                onPressed: () => context.push(AppRoutes.consensi),
+                child: const Text('Decidi tu'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

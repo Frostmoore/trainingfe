@@ -64,9 +64,20 @@ class _SchermataPasswordDiRecuperoState
       final servizio = await ref.read(servizioChiaviProvider.future);
       await servizio.creaPasswordDiRecupero(_password.text);
 
+      /*
+       * 🚨 **NIENTE `Navigator.pop()`, ed è un difetto pagato: pagina nera.**
+       *
+       * Questa schermata non è **spinta sopra** a niente: è il corpo che
+       * `PortaDelleChiavi` disegna al posto della chat finché la chiave non
+       * c'è. Un `pop()` qui chiude l'unica rotta dello stack e lascia un
+       * `Navigator` vuoto — cioè uno schermo nero che ha tutta l'aria di un
+       * crash, tanto che è così che è stato segnalato.
+       *
+       * ⚠️ Invalidare basta e avanza: `PortaDelleChiavi` rilegge lo stato,
+       * trova `pronto` e disegna la chat. La navigazione la fa il cambio di
+       * stato, non un comando.
+       */
       ref.invalidate(statoChiaviProvider);
-
-      if (mounted) Navigator.of(context).pop(true);
     } on Object catch (e) {
       if (mounted) {
         setState(() {

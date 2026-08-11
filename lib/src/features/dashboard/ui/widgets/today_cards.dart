@@ -9,6 +9,7 @@ import '../../../health/dati_salute.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../profile/corpo_controller.dart';
+import '../../../profile/target_locale_controller.dart';
 import '../../data/dashboard_models.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -19,16 +20,36 @@ import '../../data/dashboard_models.dart';
 /// giornata**. 1.200 kcal su 2.400 non vogliono dire niente da sole: a metà
 /// mattina sono tantissime, alle nove di sera sono poche. È la differenza fra
 /// un'app che informa e una che sembra giudicare a caso.
-class CaloriesCard extends StatelessWidget {
+class CaloriesCard extends ConsumerWidget {
   const CaloriesCard({required this.riepilogo, super.key});
 
   final DashboardSummary riepilogo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final n = riepilogo.nutrition;
     final scostamento = riepilogo.scostamentoRitmo;
+
+    /*
+     * 🚨 **Se il server non ha un obiettivo, se lo calcola l'app** — correzione
+     * di S7 su un difetto nato in S5.
+     *
+     * Da quando il peso è uscito dal server, `Profile::computedTargets()` non
+     * può più calcolare niente: senza peso non c'è BMR, senza BMR non c'è TDEE.
+     * Il backend restituisce `null`, ed è corretto — ⚠️ **ma nell'app non lo
+     * calcolava nessuno**, e la card diceva «Nessun obiettivo impostato» a
+     * chi il profilo lo aveva compilato e il peso lo aveva registrato.
+     *
+     * 💡 L'ordine di precedenza è quello di sempre: **il piano del trainer
+     * vince sul calcolo**, e il calcolo vince sul nulla.
+     */
+    final locale = n.haTarget
+        ? null
+        : ref.watch(targetLocaleProvider).valueOrNull;
+
+    final target = n.haTarget ? n.targetKcal : locale?.kcal.toDouble();
+    final haObiettivo = target != null && target > 0;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -50,7 +71,7 @@ class CaloriesCard extends StatelessWidget {
                 ),
                 const SizedBox(width: Gap.xs),
                 Text(
-                  n.haTarget ? '/ ${n.targetKcal!.round()} kcal' : 'kcal',
+                  haObiettivo ? '/ ${target.round()} kcal' : 'kcal',
                   style: theme.textTheme.titleMedium,
                 ),
                 const Spacer(),
@@ -68,15 +89,23 @@ class CaloriesCard extends StatelessWidget {
               ],
             ),
 
-            if (n.haTarget) ...[
+            if (haObiettivo) ...[
               const SizedBox(height: Gap.sm),
               _BarraConRitmo(
-                percentualeMangiata: (n.kcal / n.targetKcal!).clamp(0.0, 1.5),
+                percentualeMangiata: (n.kcal / target).clamp(0.0, 1.5),
                 percentualeGiornata: riepilogo.dayProgressPct / 100,
               ),
               const SizedBox(height: Gap.xs),
               Text(
-                _frase(scostamento, n.residuo!, riepilogo.dayProgressPct),
+                _frase(
+                  // ⚠️ Il ritmo si ricalcola sull'obiettivo **che si sta
+                  // mostrando**: usare quello del server quando il numero viene
+                  // dal calcolo locale darebbe una frase che non c'entra niente
+                  // con la barra sopra.
+                  n.haTarget ? scostamento : n.kcal - target * riepilogo.dayProgressPct / 100,
+                  target - n.kcal,
+                  riepilogo.dayProgressPct,
+                ),
                 style: theme.textTheme.bodySmall,
               ),
 
@@ -113,9 +142,24 @@ class CaloriesCard extends StatelessWidget {
             const SizedBox(height: Gap.sm),
             Row(
               children: [
-                _Macro(nome: 'P', valore: n.protein, target: n.targetProtein),
-                _Macro(nome: 'C', valore: n.carbs, target: n.targetCarbs),
-                _Macro(nome: 'G', valore: n.fat, target: n.targetFat),
+                // ⚠️ Anche i macro seguono la stessa precedenza del totale:
+                // mostrarne uno calcolato accanto a un totale che viene dal
+                // piano — o viceversa — darebbe una scheda che si contraddice.
+                _Macro(
+                  nome: 'P',
+                  valore: n.protein,
+                  target: n.targetProtein ?? locale?.macro.proteineG.toDouble(),
+                ),
+                _Macro(
+                  nome: 'C',
+                  valore: n.carbs,
+                  target: n.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+                ),
+                _Macro(
+                  nome: 'G',
+                  valore: n.fat,
+                  target: n.targetFat ?? locale?.macro.grassiG.toDouble(),
+                ),
               ],
             ),
           ],

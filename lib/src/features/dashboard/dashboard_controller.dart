@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../profile/corpo_controller.dart';
 import 'data/dashboard_models.dart';
@@ -150,15 +151,49 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
 /// ⚠️ `null` quando il profilo non basta a calcolare un fabbisogno: senza
 /// target l'AI non ha niente su cui costruire un consiglio, e inventarne uno
 /// generico sarebbe rumore.
-final adviceProvider = FutureProvider.autoDispose<String?>((ref) async {
+final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
   try {
     final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/ai/advice');
 
-    return data['body']?.toString();
+    return Consiglio(testo: data['body']?.toString());
+  } on ForbiddenException {
+    /*
+     * 🚨 **Il 403 del consenso NON è «l'AI non risponde»** — S9.
+     *
+     * Da S9 le rotte AI pretendono il consenso esplicito, e senza rispondono
+     * `403` con `code: ai_consent_required`. ⚠️ Prima questo `catch` inghiottiva
+     * **tutto** allo stesso modo, quindi il consiglio del giorno spariva in
+     * silenzio e sembrava un guasto — è così che l'ha segnalato il committente:
+     * *«non mi mostra il consiglio del giorno»*.
+     *
+     * 💡 La differenza fra «non ha funzionato» e «devi dare il permesso» è
+     * tutto: la prima è una cosa che si aspetta, la seconda è una cosa che si
+     * fa. E l'unico posto in cui si può fare è la schermata dei consensi.
+     *
+     * ⚠️ **Si riconosce dal 403 e non da un codice**, perché
+     * `ForbiddenException` il codice non lo porta. Oggi è esatto: su
+     * `/ai/advice` l'unico 403 è quello del consenso — la quota esaurita
+     * risponde **429**. Se un domani quell'endpoint imparasse a rifiutare per
+     * un altro motivo, il posto giusto per distinguerli sarà l'eccezione, non
+     * questo ramo.
+     */
+    return const Consiglio(serveConsenso: true);
   } on Object {
     // Il consiglio è un di più: se l'AI non risponde, la dashboard resta
     // utilizzabile. Far fallire tutta la schermata per questo sarebbe
     // sproporzionato.
-    return null;
+    return const Consiglio();
   }
 });
+
+/// Il consiglio, o il motivo per cui non c'è.
+class Consiglio {
+  const Consiglio({this.testo, this.serveConsenso = false});
+
+  final String? testo;
+
+  /// L'app deve **portare al consenso**, non limitarsi a tacere.
+  final bool serveConsenso;
+
+  bool get haTesto => testo != null && testo!.isNotEmpty;
+}

@@ -65,9 +65,11 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       final servizio = await ref.read(servizioChiaviProvider.future);
       await servizio.ripristinaConPassword(_password.text);
 
+      // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
+      // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
+      // uno schermo nero che sembra un crash. Vedi
+      // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
       ref.invalidate(statoChiaviProvider);
-
-      if (mounted) Navigator.of(context).pop(true);
     } on PasswordDiRecuperoSbagliata {
       _fallito('Questa password non apre il tuo account. Riprova.');
     } on Object catch (e) {
@@ -106,9 +108,11 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
         nuovaPassword: scelta.nuovaPassword,
       );
 
+      // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
+      // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
+      // uno schermo nero che sembra un crash. Vedi
+      // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
       ref.invalidate(statoChiaviProvider);
-
-      if (mounted) Navigator.of(context).pop(true);
     } on CodiceDiRipristinoSbagliato catch (e) {
       _fallito(e.motivo);
     } on FileSystemException {
@@ -170,9 +174,11 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
         nuovaPassword: nuova,
       );
 
+      // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
+      // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
+      // uno schermo nero che sembra un crash. Vedi
+      // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
       ref.invalidate(statoChiaviProvider);
-
-      if (mounted) Navigator.of(context).pop(true);
     } on Object catch (e) {
       _fallito(e.toString());
     }

@@ -117,18 +117,24 @@ class ProfileScreen extends ConsumerWidget {
                     );
                   },
                 ),
+                const Divider(height: 1),
+
                 /*
-                 * ⚠️ Qui c'era la voce «Sonno», che portava all'ipnogramma.
+                 * ⚠️ Qui c'era la voce «Sonno» che portava all'ipnogramma;
+                 * nascosta in S2.2 perche' dopo S1 non c'era piu' nessuna
+                 * sorgente. **Torna in S4.3**, quando l'archivio locale
+                 * comincera' a produrre il giudizio della notte.
                  *
-                 * Nascosta in S2.2: dopo S1 il server non ha più i dati del
-                 * sonno, e l'archivio locale che li produrrà arriva in S3.
-                 * Una voce di menu che apre una schermata vuota è un vicolo
-                 * cieco, non una funzione in arrivo.
-                 *
-                 * 🚨 La rotta `AppRoutes.sleep` e `SleepScreen` **restano al
-                 * loro posto**: in S4.3 questa riga torna identica, e nel
-                 * frattempo cancellarle avrebbe voluto dire riscriverle.
+                 * Al suo posto, da S3.4, c'e' il collegamento: prima si collega
+                 * la sorgente, poi ha senso mostrarne il risultato.
                  */
+                ListTile(
+                  leading: const Icon(Icons.monitor_heart_outlined),
+                  title: const Text('Sonno e recupero'),
+                  subtitle: const Text('Collega Health Connect · i dati restano sul telefono'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.salute),
+                ),
                 const Divider(height: 1),
                 // La galleria ha lasciato la prima scheda alla dashboard: si
                 // guarda ogni tanto, non ogni volta che si apre l'app.

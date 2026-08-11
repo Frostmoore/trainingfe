@@ -11,6 +11,7 @@ import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
+import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
@@ -66,6 +67,13 @@ class AppRoutes {
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
   static const sleep = '/sonno';
+
+  /// Il collegamento con Health Connect e la spiegazione dell'uso dei dati.
+  ///
+  /// 🚨 **Google pretende che questa schermata esista e sia raggiungibile**: il
+  /// manifest la aggancia a `ACTION_SHOW_PERMISSIONS_RATIONALE`, ed è quello
+  /// che il sistema apre quando chiede all'app di spiegarsi (S3.4).
+  static const salute = '/salute';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
   static const planNew = '/schede/nuova';
@@ -142,6 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: AppRoutes.credentials, builder: (_, _) => const CredentialsScreen()),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
+      GoRoute(path: AppRoutes.salute, builder: (_, _) => const SchermataSalute()),
       GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),
       GoRoute(path: AppRoutes.progress, builder: (_, _) => const ProgressScreen()),
       GoRoute(path: AppRoutes.history, builder: (_, _) => const HistoryScreen()),

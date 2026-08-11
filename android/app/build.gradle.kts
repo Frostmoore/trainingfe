@@ -26,7 +26,22 @@ android {
         applicationId = "it.riccardoronconi.training_companion"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        /*
+         * 🚨 minSdk 26 (Android 8.0) fissato a mano — S3.3.
+         *
+         * Lo pretende il pacchetto `health`, cioe' Health Connect. Non e' una
+         * scelta nostra e non si puo' aggirare: sotto Android 8 quelle API non
+         * esistono proprio.
+         *
+         * ⚠️ **Chi resta fuori**: i telefoni con Android 7 o precedente, usciti
+         * prima del 2017. E' una quota di mercato ormai sotto l'1%, e in
+         * palestra un telefono di nove anni fa non regge nemmeno il player.
+         *
+         * ⚠️ Va tenuto **allineato con `flutter.minSdkVersion`**: se un domani
+         * Flutter alzasse il suo default sopra 26, questa riga lo abbasserebbe
+         * in silenzio. Per questo c'e' il `maxOf`, e non un 26 secco.
+         */
+        minSdk = maxOf(26, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

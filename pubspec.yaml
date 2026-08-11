@@ -109,6 +109,10 @@ dependencies:
   timezone: ^0.10.0
 
   cupertino_icons: ^1.0.8
+  drift: ^2.34.3
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path: ^1.9.1
+  health: ^13.3.1
 
 dev_dependencies:
   flutter_test:
@@ -119,6 +123,8 @@ dev_dependencies:
   http_mock_adapter: ^0.6.1
 
   flutter_lints: ^6.0.0
+  drift_dev: ^2.34.5
+  build_runner: ^2.15.1
 
 flutter:
   uses-material-design: true

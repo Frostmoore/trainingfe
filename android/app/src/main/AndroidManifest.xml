@@ -1,4 +1,31 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Health Connect — S3.3 di plan_security_and_retention.md
+
+      🚨 SOLA LETTURA. L'app non scrive niente in Health Connect: non ne ha
+      motivo, e chiedere anche la scrittura raddoppierebbe la superficie del
+      consenso in cambio di nulla.
+
+      🚨 E i dati letti NON LASCIANO IL TELEFONO. Finiscono in un database
+      SQLite locale (ArchivioSalute) e da lì non partono verso nessun server —
+      né il nostro, né quello di un modello AI. È la decisione D9, ed è anche
+      ciò che la policy di Google su Health Connect pretende venga dichiarato.
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+
+    <!--
+      ⚠️ Serve a sapere SE Health Connect esiste su questo telefono.
+      Senza, su un dispositivo che non ce l'ha l'app non riesce nemmeno a
+      distinguere «l'utente ha detto di no» da «qui non c'è niente da chiedere»,
+      e finirebbe per mostrare un errore al posto di una funzione assente.
+    -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata"/>
+    </queries>
+
     <application
         android:label="training_companion"
         android:name="${applicationName}"
@@ -24,7 +51,34 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!--
+              🚨 OBBLIGATORIO per Health Connect: Google rifiuta la
+              pubblicazione senza. È il punto in cui il sistema chiede all'app
+              di spiegare PERCHÉ vuole quei dati, e apre la nostra schermata di
+              spiegazione (SchermataSalute).
+
+              ⚠️ Ne servono DUE: questa vale fino ad Android 13, quella con
+              activity-alias qui sotto da Android 14 in poi. Metterne una sola
+              fa funzionare l'app su metà dei telefoni — ed è il tipo di
+              differenza che in prova su un dispositivo solo non si vede mai.
+            -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+            </intent-filter>
         </activity>
+
+        <!-- Android 14+ (API 34): la stessa spiegazione, per la via nuova. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+            </intent-filter>
+        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

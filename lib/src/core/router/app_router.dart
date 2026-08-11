@@ -16,6 +16,7 @@ import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
+import '../../features/privacy/ui/schermata_consensi.dart';
 import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
 import '../../features/profile/ui/edit_profile_screen.dart';
@@ -67,6 +68,10 @@ class AppRoutes {
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
+
+  /// I consensi facoltativi (S9.1). 🚨 Sta nel profilo e non in un sottomenù:
+  /// revocare dev'essere facile quanto concedere (art. 7(3)).
+  static const consensi = '/profilo/privacy';
   static const sleep = '/sonno';
 
   /// Il collegamento con Health Connect e la spiegazione dell'uso dei dati.
@@ -150,6 +155,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.profileEdit, builder: (_, _) => const EditProfileScreen()),
       GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: AppRoutes.credentials, builder: (_, _) => const CredentialsScreen()),
+      GoRoute(path: AppRoutes.consensi, builder: (_, _) => const SchermataConsensi()),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
       GoRoute(path: AppRoutes.salute, builder: (_, _) => const SchermataSalute()),
       GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),

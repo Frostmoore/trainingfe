@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
+import '../../core/storage/archivio_salute.dart';
 import '../../core/storage/token_store.dart';
+import '../health/health_controller.dart';
 import 'data/app_user.dart';
 import 'data/social_sign_in.dart';
 
@@ -44,7 +46,8 @@ class AuthState {
 
 /// Chi è l'utente, e cosa succede quando smette di esserlo — A2.3 / A2.4.
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._api, this._tokens) : super(const AuthState.unknown()) {
+  AuthController(this._api, this._tokens, [this._archivio])
+    : super(const AuthState.unknown()) {
     // 🚨 Il 401 arriva da **qualunque** richiesta, non solo da quelle di
     // autenticazione: una schermata qualsiasi può essere la prima ad accorgersi
     // che la sessione è morta. Ascoltare lo stream centrale è ciò che evita di
@@ -53,6 +56,13 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   final ApiClient _api;
+
+  /// L'archivio locale, da svuotare all'uscita.
+  ///
+  /// ⚠️ **Facoltativo di proposito**: i test del controller non hanno un
+  /// database `drift` sotto, e pretenderlo li costringerebbe a montarne uno per
+  /// verificare cose che con l'archivio non c'entrano niente.
+  final ArchivioSalute? _archivio;
   final TokenStore _tokens;
 
   StreamSubscription<void>? _sessionSub;
@@ -119,6 +129,8 @@ class AuthController extends StateNotifier<AuthState> {
     required String username,
     required String password,
     required String passwordConfirmation,
+    required bool maggiorenne,
+    required bool condizioniAccettate,
   }) async {
     final data = await _api.post<Map<String, dynamic>>(
       '/auth/register',
@@ -129,6 +141,15 @@ class AuthController extends StateNotifier<AuthState> {
         'username': username.trim().toLowerCase(),
         'password': password,
         'password_confirmation': passwordConfirmation,
+
+        // 🚨 S9.2 — senza queste due il server risponde 422 e non si registra
+        // nessuno. Sono `required` di proposito e **non hanno un valore di
+        // serie**: un `= true` qui dentro vorrebbe dire dichiarare la maggiore
+        // età al posto di chi si iscrive, che è esattamente ciò che lo
+        // sbarramento esiste per impedire.
+        'age_confirmed': maggiorenne,
+        'terms_accepted': condizioniAccettate,
+
         'device_name': 'app',
       },
       unwrap: false,
@@ -147,7 +168,12 @@ class AuthController extends StateNotifier<AuthState> {
   ///
   /// Restituisce `false` se la persona ha annullato: **non è un errore** e non
   /// va mostrato come tale.
-  Future<bool> loginWithSocial(String provider, {String? joinCode}) async {
+  Future<bool> loginWithSocial(
+    String provider, {
+    String? joinCode,
+    bool maggiorenne = false,
+    bool condizioniAccettate = false,
+  }) async {
     final credenziale = await SocialSignIn.instance.accedi(provider);
 
     if (credenziale == null) return false;
@@ -158,6 +184,15 @@ class AuthController extends StateNotifier<AuthState> {
         'provider': credenziale.provider,
         'id_token': credenziale.idToken,
         'join_code': ?joinCode,
+
+        // 🚨 S9.2 — servono **solo insieme al `join_code`**, cioè al primo
+        // accesso: è quello il momento in cui ci si iscrive. Il server le
+        // ignora quando il codice non c'è (`exclude_without:join_code`), e
+        // chiederle a ogni accesso trasformerebbe una dichiarazione in un tasto
+        // che si preme senza leggere.
+        if (joinCode != null) 'age_confirmed': maggiorenne,
+        if (joinCode != null) 'terms_accepted': condizioniAccettate,
+
         'device_name': 'app',
       },
       unwrap: false,
@@ -260,6 +295,32 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _forgetSession() async {
     await _tokens.clear();
 
+    /*
+     * 🚨 **La cancellazione deve arrivare al telefono — S9.3.**
+     *
+     * Dopo S1-S5 peso, misure, sonno, HRV e battito **non stanno più sul
+     * server**: vivono qui, in un database SQLite. Quando qualcuno cancella il
+     * proprio account, `AccountEraser` fa il suo lavoro su ciò che ha — ⚠️ e
+     * **il server non può cancellare quello che non ha**. Senza questa riga, i
+     * dati più personali del sistema sopravvivrebbero a una cancellazione,
+     * proprio come faceva `health_readings`.
+     *
+     * ⚠️ **Vale anche al logout, e non è eccesso di zelo**: su un telefono
+     * condiviso — la tavoletta della reception, il telefono di famiglia — «esci»
+     * deve voler dire che la persona dopo non trova il peso e il diario di
+     * quella prima. L'archivio si ripopola da Health Connect in pochi secondi
+     * per chi rientra.
+     *
+     * 🚨 L'eccezione si cattura: un guasto del database locale **non deve
+     * lasciare qualcuno dentro l'app** con la sessione già cancellata. Peggio
+     * fallire la pulizia che bloccare l'uscita.
+     */
+    try {
+      await _archivio?.svuota();
+    } on Object {
+      // Volutamente silenzioso: vedi sopra.
+    }
+
     state = const AuthState(status: AuthStatus.loggedOut);
   }
 
@@ -271,5 +332,9 @@ class AuthController extends StateNotifier<AuthState> {
 }
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
-  (ref) => AuthController(ref.watch(apiClientProvider), ref.watch(tokenStoreProvider)),
+  (ref) => AuthController(
+    ref.watch(apiClientProvider),
+    ref.watch(tokenStoreProvider),
+    ref.watch(archivioSaluteProvider),
+  ),
 );

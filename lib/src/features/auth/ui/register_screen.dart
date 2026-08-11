@@ -57,6 +57,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _nascondi = true;
 
   bool _inCorso = false;
+
+  /// 🚨 S9.2 — la dichiarazione di maggiore età, e le condizioni d'uso.
+  ///
+  /// ⚠️ **Partono da `false` e non si possono spuntare in blocco.** Sono due
+  /// caselle separate perché sono due cose diverse: una è un'affermazione su di
+  /// sé, l'altra è l'accettazione di un contratto.
+  ///
+  /// 💡 Le funzioni facoltative — dati sanitari, invio del diario all'AI —
+  /// **non stanno qui**: si concedono dopo, dal profilo. Un consenso richiesto
+  /// per potersi iscrivere non è «liberamente dato» (art. 7(4) GDPR), e quindi
+  /// non è consenso.
+  bool _maggiorenne = false;
+
+  bool _condizioni = false;
+
+  bool get _dichiarazioniComplete => _maggiorenne && _condizioni;
   String? _errore;
   Map<String, List<String>> _erroriCampo = const {};
 
@@ -130,6 +146,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             username: _username.text,
             password: _password.text,
             passwordConfirmation: _conferma.text,
+            maggiorenne: _maggiorenne,
+            condizioniAccettate: _condizioni,
           );
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
@@ -351,9 +369,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ],
 
+                    const SizedBox(height: Gap.md),
+                    CheckboxListTile(
+                      value: _maggiorenne,
+                      onChanged: (v) =>
+                          setState(() => _maggiorenne = v ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: const Text('Dichiaro di avere almeno 18 anni.'),
+                    ),
+                    CheckboxListTile(
+                      value: _condizioni,
+                      onChanged: (v) => setState(() => _condizioni = v ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: const Text(
+                        'Accetto le condizioni d\'uso e ho letto l\'informativa '
+                        'sulla privacy.',
+                      ),
+                    ),
+
                     const SizedBox(height: Gap.lg),
                     FilledButton(
-                      onPressed: _inCorso ? null : _registrati,
+                      onPressed: _inCorso || !_dichiarazioniComplete
+                          ? null
+                          : _registrati,
                       child: _inCorso
                           ? const SizedBox(
                               height: 20,
@@ -366,7 +408,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     // Sull'iscrizione servono quanto sull'accesso: con Google o
                     // Apple non c'è nessun modulo da compilare, ed è il motivo
                     // principale per cui la gente li usa.
-                    const SocialButtons(),
+                    //
+                    // 🚨 **Le due caselle valgono anche per loro.** Chi entra
+                    // con Google si iscrive esattamente come chi compila il
+                    // modulo: lasciare la strada social scoperta vorrebbe dire
+                    // che lo sbarramento non c'è per metà delle persone — e
+                    // nella Parte B, con i *free user*, sarà la maggioranza.
+                    SocialButtons(dichiarazioniDate: _dichiarazioniComplete),
                   ],
                 ),
               ),

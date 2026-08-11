@@ -151,6 +151,20 @@ class ProfileScreen extends ConsumerWidget {
                 // vista: il modulo gli chiederebbe «quella attuale» e non
                 // potrebbe compilarlo. Al suo posto, la riga qui sotto dice
                 // con che cosa accede.
+                // 🚨 S9.1 — i consensi devono essere **raggiungibili quanto
+                // sono stati facili da dare**: sepolti in un sottomenù non
+                // sarebbero «revocabili con la stessa facilità» (art. 7(3)).
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const Text('Privacy e consensi'),
+                  subtitle: const Text(
+                    'Decidi cosa può leggere l\'app e cosa può uscire da qui',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.consensi),
+                ),
+
                 if (utente?.passwordIsSet ?? true) ...[
                   const Divider(height: 1),
                   ListTile(

@@ -113,6 +113,8 @@ void main() {
       username: 'mario.rossi',
       password: 'x',
       passwordConfirmation: 'x',
+      maggiorenne: true,
+      condizioniAccettate: true,
     );
 
     expect(auth.state.user?.id, 7);
@@ -153,10 +155,18 @@ void main() {
       username: 'mario.rossi',
       password: 'primo-valore',
       passwordConfirmation: 'secondo-valore',
+      maggiorenne: true,
+      condizioniAccettate: true,
     );
 
     expect(inviato?['password'], 'primo-valore');
     expect(inviato?['password_confirmation'], 'secondo-valore');
+
+    // 🚨 S9.2 — le dichiarazioni devono partire davvero, non restare
+    // nell'interfaccia: senza, il server risponde 422 e non si registra
+    // nessuno.
+    expect(inviato?['age_confirmed'], true);
+    expect(inviato?['terms_accepted'], true);
   });
 
   /// La via che funzionava già, e che nascondeva l'altra: qui l'utente sta

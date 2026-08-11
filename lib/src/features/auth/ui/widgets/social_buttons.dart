@@ -16,7 +16,16 @@ import '../../data/social_sign_in.dart';
 /// disponibilità non è una costante dentro l'app — cambiarla richiederebbe una
 /// pubblicazione sugli store.
 class SocialButtons extends ConsumerStatefulWidget {
-  const SocialButtons({super.key});
+  const SocialButtons({this.dichiarazioniDate = true, super.key});
+
+  /// 🚨 S9.2 — se questa schermata **iscrive**, le due caselle valgono anche
+  /// qui: chi entra con Google si iscrive esattamente come chi compila il
+  /// modulo.
+  ///
+  /// ⚠️ Il valore di serie è `true` perché sulla schermata di **accesso** non
+  /// c'è niente da dichiarare — lì non nasce nessun account. È la schermata di
+  /// registrazione che lo mette a `false` finché le caselle non sono spuntate.
+  final bool dichiarazioniDate;
 
   @override
   ConsumerState<SocialButtons> createState() => _SocialButtonsState();
@@ -43,6 +52,12 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
           .loginWithSocial(
             provider,
             joinCode: ref.read(brandingControllerProvider).joinCode,
+            // 🚨 Arrivano fin qui solo se le caselle sono spuntate: il pulsante
+            // è disabilitato altrimenti. Il server le pretende comunque insieme
+            // al `join_code`, quindi anche un percorso che le saltasse
+            // fallirebbe con un 422 — rumorosamente, invece che in silenzio.
+            maggiorenne: widget.dichiarazioniDate,
+            condizioniAccettate: widget.dichiarazioniDate,
           );
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
@@ -82,7 +97,9 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
 
         for (final provider in disponibili) ...[
           OutlinedButton.icon(
-            onPressed: _inCorso != null ? null : () => _accedi(provider),
+            onPressed: _inCorso != null || ! widget.dichiarazioniDate
+                ? null
+                : () => _accedi(provider),
             icon: _inCorso == provider
                 ? const SizedBox(
                     height: 18,

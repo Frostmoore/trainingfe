@@ -87,7 +87,16 @@ class ServizioChiavi {
       final pacchetto = await _pacchettoDalServer();
 
       return pacchetto == null ? StatoChiavi.daCreare : StatoChiavi.daRipristinare;
-    } on ApiException {
+    } on Object {
+      // 🚨 **`on Object` e non `on ApiException`.** Il primo difetto di questa
+      // fase è passato esattamente di qui: un `TypeError` sul 204 non è
+      // un'`ApiException`, quindi attraversava questo `try` e faceva finire la
+      // chat nella schermata di guasto.
+      //
+      // ⚠️ Qualunque cosa vada storta, la risposta è **`daRipristinare`**:
+      // sbagliando in questa direzione si chiede una password di troppo,
+      // sbagliando nell'altra si genera una chiave nuova su un account che ne
+      // aveva già una — e si distrugge un account.
       return StatoChiavi.daRipristinare;
     }
   }
@@ -272,10 +281,27 @@ class ServizioChiavi {
     );
   }
 
+  /// Il pacchetto, oppure `null` se questo account non ne ha ancora uno.
+  ///
+  /// 🚨 **`get<dynamic>` e non `get<Map<String, dynamic>?>`, ed è un difetto
+  /// pagato: la chat non si apriva affatto.**
+  ///
+  /// Il server risponde **204 No Content** quando il pacchetto non c'è — che è
+  /// lo stato normale di chiunque non abbia ancora creato la password di
+  /// recupero, cioè di *tutti* al primo avvio. Su un 204 `dio` non consegna una
+  /// mappa: consegna `null` **o una stringa vuota**, a seconda di come il server
+  /// chiude la risposta. Il cast a `Map<String, dynamic>?` su `''` lancia un
+  /// `TypeError`, che non è un'`ApiException` e quindi **attraversava** il
+  /// `try` di [stato] finendo dritto nella schermata «Non riesco a controllare
+  /// le tue chiavi».
+  ///
+  /// ⚠️ Il sintomo era crudele: nessun errore nei log, nessuna eccezione
+  /// visibile, e una chat che non si apriva **mai** — su un caso che capita al
+  /// 100% degli utenti la prima volta.
   Future<Map<String, dynamic>?> _pacchettoDalServer() async {
-    final json = await _api.get<Map<String, dynamic>?>('/account/recovery-key');
+    final risposta = await _api.get<dynamic>('/account/recovery-key');
 
-    return json;
+    return risposta is Map ? risposta.cast<String, dynamic>() : null;
   }
 }
 

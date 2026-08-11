@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sodium/sodium_sumo.dart';
 
 import '../../core/crypto/busta_messaggio.dart';
+import '../../core/crypto/contenuto_messaggio.dart';
 import '../../core/crypto/providers_crypto.dart';
 import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/providers.dart';
@@ -55,13 +56,24 @@ class ChatMessage {
     required this.body,
     this.createdAt,
     this.leggibile = true,
+    this.contenuto,
   });
 
   final int id;
   final int senderId;
 
   /// Il testo in chiaro, oppure la spiegazione se non si è potuto aprire.
+  ///
+  /// 💡 Per una scheda è il **titolo**: serve all'anteprima nell'elenco, dove
+  /// una riga di JSON non direbbe niente a nessuno.
   final String body;
+
+  /// Cosa c'era davvero dentro la busta — S7.
+  ///
+  /// `null` sui messaggi che non si è potuto aprire. ⚠️ È questo, e non `body`,
+  /// che l'interfaccia deve guardare per decidere se disegnare una nuvoletta o
+  /// una scheda con il pulsante «Aggiungi alle mie schede».
+  final ContenutoMessaggio? contenuto;
 
   final DateTime? createdAt;
 
@@ -216,14 +228,25 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     }
 
     try {
+      final chiaro = _chiavi!.cifratura.decifra(
+        busta: BustaMessaggio.daApi(j),
+        mieSegrete: _mia!.secretKey,
+        suaPubblica: _sua!.byte,
+      );
+
+      final contenuto = ContenutoMessaggio.daChiaro(chiaro);
+
       return ChatMessage(
         id: id,
         senderId: mittente,
-        body: _chiavi!.cifratura.decifra(
-          busta: BustaMessaggio.daApi(j),
-          mieSegrete: _mia!.secretKey,
-          suaPubblica: _sua!.byte,
-        ),
+        body: switch (contenuto) {
+          ContenutoTesto(:final testo) => testo,
+          ContenutoScheda(:final titolo) => titolo,
+          ContenutoPianoAlimentare(:final titolo) => titolo,
+          ContenutoSconosciuto() =>
+            'Questo messaggio richiede una versione più recente dell\'app.',
+        },
+        contenuto: contenuto,
         createdAt: quando,
       );
     } on Object {
@@ -298,12 +321,23 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
 
     if (pulito.isEmpty) return;
 
+    await inviaContenuto(ContenutoTesto(pulito));
+  }
+
+  /// Manda **qualunque cosa** il canale sappia trasportare — S7.
+  ///
+  /// 🎯 Una scheda passa esattamente per di qui: non c'è nessun endpoint nuovo,
+  /// nessun caricamento a parte, nessun permesso in più. Il server continua a
+  /// instradare buste senza sapere che una di esse è un programma di
+  /// allenamento — ed è la prova che S6 non era un costo, ma l'infrastruttura
+  /// su cui questo si appoggia gratis.
+  Future<void> inviaContenuto(ContenutoMessaggio contenuto) async {
     await _preparaChiavi();
 
     if (_sua == null) throw const ChatSenzaChiave();
 
     final busta = _chiavi!.cifratura.cifra(
-      testo: pulito,
+      testo: contenuto.perLaBusta(),
       mieSegrete: _mia!.secretKey,
       suaPubblica: _sua!.byte,
     );

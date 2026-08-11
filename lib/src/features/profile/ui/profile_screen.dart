@@ -117,14 +117,18 @@ class ProfileScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.bedtime_outlined),
-                  title: const Text('Sonno'),
-                  subtitle: const Text('Ipnogramma e andamento delle fasi'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.sleep),
-                ),
+                /*
+                 * ⚠️ Qui c'era la voce «Sonno», che portava all'ipnogramma.
+                 *
+                 * Nascosta in S2.2: dopo S1 il server non ha più i dati del
+                 * sonno, e l'archivio locale che li produrrà arriva in S3.
+                 * Una voce di menu che apre una schermata vuota è un vicolo
+                 * cieco, non una funzione in arrivo.
+                 *
+                 * 🚨 La rotta `AppRoutes.sleep` e `SleepScreen` **restano al
+                 * loro posto**: in S4.3 questa riga torna identica, e nel
+                 * frattempo cancellarle avrebbe voluto dire riscriverle.
+                 */
                 const Divider(height: 1),
                 // La galleria ha lasciato la prima scheda alla dashboard: si
                 // guarda ogni tanto, non ogni volta che si apre l'app.

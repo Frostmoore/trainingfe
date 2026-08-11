@@ -204,21 +204,18 @@ class RecoveryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final sonno = riepilogo.sleep;
 
-    // 🚨 Se non è mai arrivato niente dall'orologio si **dice**, invece di
-    // mostrare zeri: uno zero si legge come un valore pessimo.
+    // 🚨 Senza dati la card **sparisce**, non mostra zeri né promesse.
+    //
+    // ⚠️ Fino a `v4.8.1` qui c'era un messaggio che diceva «compaiono appena il
+    // tuo orologio comincia a inviarli». Dopo S1 quella frase è **falsa**: il
+    // canale di ingest non esiste più, e nessun orologio può inviare niente al
+    // server. Una card che promette un dato che non può arrivare è peggio di
+    // una card assente — chi la legge aspetta.
+    //
+    // **Torna in S4.3**, alimentata dall'archivio locale, e con il messaggio
+    // giusto: «collega Health Connect», che sarà una cosa che si può fare.
     if (sonno == null && !riepilogo.hasVitals) {
-      return const Card(
-        margin: EdgeInsets.zero,
-        child: ListTile(
-          leading: Icon(Icons.watch_outlined),
-          title: Text('Nessun dato dall\'orologio'),
-          subtitle: Text(
-            'Sonno, variabilità cardiaca e battito compaiono qui appena il tuo '
-            'orologio comincia a inviarli.',
-          ),
-          isThreeLine: true,
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return Card(

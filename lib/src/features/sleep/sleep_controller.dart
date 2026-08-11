@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
-import '../../core/providers.dart';
+// ⚠️ `intl` e `core/providers.dart` sono stati tolti in S2.2 insieme alla
+// chiamata di rete: servivano a formattare la data per la query e a prendere
+// `apiClientProvider`. **Torneranno in S4.3** — `intl` per la data della notte
+// nell'archivio locale, `providers` no: la sorgente non sarà più la rete.
 
 /// Una notte — C14.
 ///
@@ -101,17 +103,29 @@ class SleepBlock {
 /// La notte che si sta guardando.
 final sleepNightProvider = StateProvider<DateTime?>((ref) => null);
 
+/// L'ipnogramma della notte.
+///
+/// 🚨 **Non chiama più il server, e per ora non ha nessuna sorgente.**
+///
+/// Fino a `v4.8.1` questo provider faceva `GET /health/sleep`. Quell'endpoint
+/// **non esiste più**: la fase S1 di `plan_security_and_retention.md` l'ha
+/// rimosso perché sonno, HRV e battito restano sul telefono di chi li produce
+/// (decisione D9).
+///
+/// ⚠️ **Restituisce `null` di proposito, e non è un ripiego provvisorio mal
+/// fatto**: è la finestra prevista dal piano fra «il backend smette di servire
+/// il dato» (S1) e «l'app impara a produrselo» (S3 e S4). Lasciare la chiamata
+/// avrebbe dato un **404** a ogni apertura della schermata, cioè un errore che
+/// sembra un guasto invece di un'assenza.
+///
+/// **Dove torna la sorgente**: `ArchivioSalute` in S3, e `AnalizzatoreSonno`
+/// in S4.2. Da lì questo provider legge dal database locale e la firma —
+/// `FutureProvider.autoDispose<SleepNight?>` — **non cambia**: è il motivo per
+/// cui `SleepNight`, `SleepBlock` e `SleepScreen` non sono stati cancellati.
 final sleepProvider = FutureProvider.autoDispose<SleepNight?>((ref) async {
-  final notte = ref.watch(sleepNightProvider);
+  // Si continua a osservare la notte scelta: quando in S4 arriverà l'archivio
+  // locale, cambiare notte dovrà gia' rileggere senza toccare le schermate.
+  ref.watch(sleepNightProvider);
 
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>?>(
-        '/health/sleep',
-        query: {if (notte != null) 'night': DateFormat('yyyy-MM-dd').format(notte)},
-      );
-
-  // `null` quando per quella notte non è mai arrivato niente dall'orologio:
-  // non è un errore, è l'assenza di dati.
-  return data == null ? null : SleepNight.fromJson(data);
+  return null;
 });

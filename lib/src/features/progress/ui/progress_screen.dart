@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/ui/foto_protetta.dart';
+import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
 import '../progress_controller.dart';
 
@@ -87,19 +87,18 @@ class _Cella extends ConsumerWidget {
                       : null,
                   borderRadius: BorderRadius.circular(Gap.radiusSm),
                 ),
-                // 🚨 Il token si legge dal Keychain in modo asincrono: finché
-                // non c'è, `FotoProtetta` non fa partire nessuna richiesta.
-                // Con `?? const {}` la prima sarebbe partita senza
-                // intestazione, avrebbe preso 401, e quell'errore sarebbe
-                // rimasto in cache anche dopo l'arrivo del token.
-                child: FotoProtetta(url: foto.url),
+                // 💡 Da S5.3 la foto e' un file locale: niente token, niente
+                // 401 da mettere in cache, niente `FotoProtetta`. Il difetto
+                // G12 non e' stato corretto — e' sparita la condizione che lo
+                // rendeva possibile.
+                child: FotoLocale(file: foto.file),
               ),
             ),
           ),
         ),
         const SizedBox(height: Gap.xs),
         Text(
-          foto.takenOn == null ? '' : DateFormat('d MMM y', 'it').format(foto.takenOn!),
+          DateFormat('d MMM y', 'it').format(foto.takenOn),
           style: theme.textTheme.labelSmall,
         ),
       ],
@@ -112,7 +111,7 @@ class _Cella extends ConsumerWidget {
       insetPadding: const EdgeInsets.all(Gap.md),
       child: Consumer(
         builder: (context, ref, _) => InteractiveViewer(
-          child: FotoProtetta(url: foto.url, fit: BoxFit.contain),
+          child: FotoLocale(file: foto.file, fit: BoxFit.contain),
         ),
       ),
     ),

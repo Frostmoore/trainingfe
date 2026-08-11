@@ -26,7 +26,7 @@ part 'archivio_salute.g.dart';
 /// lascia rileggere solo ~30 giorni indietro. La media di riferimento su una
 /// finestra più lunga esiste **solo** se l'app accumula dal momento
 /// dell'installazione.
-@DriftDatabase(tables: [LettureSalute, CampioniSonno, MisureCorpo])
+@DriftDatabase(tables: [LettureSalute, CampioniSonno, MisureCorpo, FotoProgressi])
 class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute() : super(_apri());
 
@@ -34,13 +34,16 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, da, a) async {
           // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
           if (da < 2) await m.createTable(misureCorpo);
+
+          // v2 → v3 (S5.3): e le foto dei progressi con loro.
+          if (da < 3) await m.createTable(fotoProgressi);
         },
       );
 
@@ -247,6 +250,29 @@ class ArchivioSalute extends _$ArchivioSalute {
         .getSingleOrNull();
   }
 
+  // ─────────────────────────── foto (S5.3) ───────────────────────────
+
+  Future<int> registraFoto(FotoProgressiCompanion foto) => into(fotoProgressi).insert(foto);
+
+  /// La galleria, dalla più recente.
+  Future<List<FotoProgresso>> galleria() {
+    return (select(fotoProgressi)..orderBy([(t) => OrderingTerm.desc(t.scattataIl)])).get();
+  }
+
+  /// Le foto di una sessione di allenamento.
+  Future<List<FotoProgresso>> fotoDellaSessione(int sessioneId) {
+    return (select(fotoProgressi)
+          ..where((t) => t.sessioneId.equals(sessioneId))
+          ..orderBy([(t) => OrderingTerm.desc(t.scattataIl)]))
+        .get();
+  }
+
+  Future<FotoProgresso?> foto(int id) =>
+      (select(fotoProgressi)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<void> dimenticaFoto(int id) =>
+      (delete(fotoProgressi)..where((t) => t.id.equals(id))).go();
+
   // ─────────────────────────── cancellazione ───────────────────────────
 
   /// Cancella tutto.
@@ -260,10 +286,23 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// Dimenticarlo significa lasciare i dati sanitari di una persona sul
   /// telefono dopo che ha chiesto di sparire.
   Future<void> svuota() async {
+    /*
+     * ⚠️ **I FILE delle foto vanno cancellati a parte.**
+     *
+     * Qui spariscono solo le righe. Le immagini sono file su disco, e una
+     * `DELETE` sulla tabella li lascerebbe li' senza piu' niente che ne ricordi
+     * l'esistenza — il peggiore dei due esiti, perche' occupano spazio e
+     * contengono il corpo di una persona che ha chiesto di sparire.
+     *
+     * Se ne occupa `AzioniFoto.cancellaTutto()`, che passa di qui **dopo** aver
+     * cancellato i file. E' la stessa avvertenza che il backend aveva su
+     * `Media::delete()` in `AccountEraser::cancellaFoto()`.
+     */
     await batch((b) {
       b.deleteAll(lettureSalute);
       b.deleteAll(campioniSonno);
       b.deleteAll(misureCorpo);
+      b.deleteAll(fotoProgressi);
     });
   }
 
@@ -363,6 +402,37 @@ class MisureCorpo extends Table {
   RealColumn get cosciaCm => real().nullable()();
 
   TextColumn get note => text().nullable()();
+}
+
+/// Le foto dei progressi — S5.3.
+///
+/// 🚨 **Qui ci sta il PERCORSO, non l'immagine.** I file vivono in
+/// `Documents/foto/`, e questa tabella è solo l'indice: metterci i byte
+/// gonfierebbe il database e renderebbe lentissima ogni query che non c'entra.
+///
+/// ⚠️ **Sono l'unica cosa che il committente ha detto di poter perdere**
+/// (*«tanto gli utenti ne avranno a bizzeffe nei loro cellulari»*), ed è per
+/// questo che restano **fuori dal backup automatico**: Android Auto Backup ha un
+/// tetto di ~25 MB per app, e con le foto dentro lo si sfonda al primo utente
+/// facendo smettere di funzionare **anche il backup di tutto il resto**.
+/// Entrano solo nel file esportato di S6.6, con una spunta.
+@DataClassName('FotoProgresso')
+class FotoProgressi extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Il percorso del file, relativo alla cartella dei documenti.
+  ///
+  /// 🚨 **Relativo, non assoluto.** Su iOS il contenitore dell'app cambia
+  /// percorso a ogni aggiornamento: un percorso assoluto salvato oggi domani
+  /// punta a niente, e la galleria si svuota da sola senza che nessuno abbia
+  /// cancellato niente.
+  TextColumn get percorso => text()();
+
+  DateTimeColumn get scattataIl => dateTime()();
+
+  /// La sessione di allenamento a cui è legata, se è una foto di fine
+  /// allenamento (era `type = 'workout'` sul server).
+  IntColumn get sessioneId => integer().nullable()();
 }
 
 /// I minuti di un campione.

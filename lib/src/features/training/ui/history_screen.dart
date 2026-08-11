@@ -6,8 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/ui/foto_protetta.dart';
+import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
+import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 
@@ -116,8 +117,10 @@ class _CardSessione extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final foto = sessione.photos.isEmpty ? null : sessione.photos.first;
+    // 🚨 La miniatura viene dal TELEFONO — S5.3. `sessione.photos` arrivava
+    // dal server (C5) e da S5 non c'e' piu': le foto sono file locali.
+    final foto = ref.watch(fotoSessioneProvider(sessione.id)).valueOrNull;
+    final prima = (foto == null || foto.isEmpty) ? null : foto.first;
 
     return Card(
       margin: const EdgeInsets.only(bottom: Gap.sm),
@@ -127,22 +130,11 @@ class _CardSessione extends ConsumerWidget {
         leading: SizedBox(
           width: 52,
           height: 52,
-          child: foto == null
-              ? DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(Gap.radiusSm),
-                  ),
-                  child: Icon(
-                    Icons.fitness_center_rounded,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                )
+          child: prima == null
+              ? const RiquadroFotoAssente()
               : ClipRRect(
                   borderRadius: BorderRadius.circular(Gap.radiusSm),
-                  // 🚨 `FotoProtetta`: qui non c'era **nessuna** intestazione,
-                  // quindi la miniatura prendeva 401 e non si e' mai vista.
-                  child: FotoProtetta(url: foto.url),
+                  child: FotoLocale(file: prima.file),
                 ),
         ),
         title: Text(

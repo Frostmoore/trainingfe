@@ -1385,12 +1385,328 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
   }
 }
 
+class $FotoProgressiTable extends FotoProgressi
+    with TableInfo<$FotoProgressiTable, FotoProgresso> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FotoProgressiTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _percorsoMeta = const VerificationMeta(
+    'percorso',
+  );
+  @override
+  late final GeneratedColumn<String> percorso = GeneratedColumn<String>(
+    'percorso',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scattataIlMeta = const VerificationMeta(
+    'scattataIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> scattataIl = GeneratedColumn<DateTime>(
+    'scattata_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sessioneIdMeta = const VerificationMeta(
+    'sessioneId',
+  );
+  @override
+  late final GeneratedColumn<int> sessioneId = GeneratedColumn<int>(
+    'sessione_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, percorso, scattataIl, sessioneId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'foto_progressi';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FotoProgresso> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('percorso')) {
+      context.handle(
+        _percorsoMeta,
+        percorso.isAcceptableOrUnknown(data['percorso']!, _percorsoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_percorsoMeta);
+    }
+    if (data.containsKey('scattata_il')) {
+      context.handle(
+        _scattataIlMeta,
+        scattataIl.isAcceptableOrUnknown(data['scattata_il']!, _scattataIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scattataIlMeta);
+    }
+    if (data.containsKey('sessione_id')) {
+      context.handle(
+        _sessioneIdMeta,
+        sessioneId.isAcceptableOrUnknown(data['sessione_id']!, _sessioneIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FotoProgresso map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FotoProgresso(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      percorso: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}percorso'],
+      )!,
+      scattataIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}scattata_il'],
+      )!,
+      sessioneId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sessione_id'],
+      ),
+    );
+  }
+
+  @override
+  $FotoProgressiTable createAlias(String alias) {
+    return $FotoProgressiTable(attachedDatabase, alias);
+  }
+}
+
+class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
+  final int id;
+
+  /// Il percorso del file, relativo alla cartella dei documenti.
+  ///
+  /// 🚨 **Relativo, non assoluto.** Su iOS il contenitore dell'app cambia
+  /// percorso a ogni aggiornamento: un percorso assoluto salvato oggi domani
+  /// punta a niente, e la galleria si svuota da sola senza che nessuno abbia
+  /// cancellato niente.
+  final String percorso;
+  final DateTime scattataIl;
+
+  /// La sessione di allenamento a cui è legata, se è una foto di fine
+  /// allenamento (era `type = 'workout'` sul server).
+  final int? sessioneId;
+  const FotoProgresso({
+    required this.id,
+    required this.percorso,
+    required this.scattataIl,
+    this.sessioneId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['percorso'] = Variable<String>(percorso);
+    map['scattata_il'] = Variable<DateTime>(scattataIl);
+    if (!nullToAbsent || sessioneId != null) {
+      map['sessione_id'] = Variable<int>(sessioneId);
+    }
+    return map;
+  }
+
+  FotoProgressiCompanion toCompanion(bool nullToAbsent) {
+    return FotoProgressiCompanion(
+      id: Value(id),
+      percorso: Value(percorso),
+      scattataIl: Value(scattataIl),
+      sessioneId: sessioneId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessioneId),
+    );
+  }
+
+  factory FotoProgresso.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FotoProgresso(
+      id: serializer.fromJson<int>(json['id']),
+      percorso: serializer.fromJson<String>(json['percorso']),
+      scattataIl: serializer.fromJson<DateTime>(json['scattataIl']),
+      sessioneId: serializer.fromJson<int?>(json['sessioneId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'percorso': serializer.toJson<String>(percorso),
+      'scattataIl': serializer.toJson<DateTime>(scattataIl),
+      'sessioneId': serializer.toJson<int?>(sessioneId),
+    };
+  }
+
+  FotoProgresso copyWith({
+    int? id,
+    String? percorso,
+    DateTime? scattataIl,
+    Value<int?> sessioneId = const Value.absent(),
+  }) => FotoProgresso(
+    id: id ?? this.id,
+    percorso: percorso ?? this.percorso,
+    scattataIl: scattataIl ?? this.scattataIl,
+    sessioneId: sessioneId.present ? sessioneId.value : this.sessioneId,
+  );
+  FotoProgresso copyWithCompanion(FotoProgressiCompanion data) {
+    return FotoProgresso(
+      id: data.id.present ? data.id.value : this.id,
+      percorso: data.percorso.present ? data.percorso.value : this.percorso,
+      scattataIl: data.scattataIl.present
+          ? data.scattataIl.value
+          : this.scattataIl,
+      sessioneId: data.sessioneId.present
+          ? data.sessioneId.value
+          : this.sessioneId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FotoProgresso(')
+          ..write('id: $id, ')
+          ..write('percorso: $percorso, ')
+          ..write('scattataIl: $scattataIl, ')
+          ..write('sessioneId: $sessioneId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, percorso, scattataIl, sessioneId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FotoProgresso &&
+          other.id == this.id &&
+          other.percorso == this.percorso &&
+          other.scattataIl == this.scattataIl &&
+          other.sessioneId == this.sessioneId);
+}
+
+class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
+  final Value<int> id;
+  final Value<String> percorso;
+  final Value<DateTime> scattataIl;
+  final Value<int?> sessioneId;
+  const FotoProgressiCompanion({
+    this.id = const Value.absent(),
+    this.percorso = const Value.absent(),
+    this.scattataIl = const Value.absent(),
+    this.sessioneId = const Value.absent(),
+  });
+  FotoProgressiCompanion.insert({
+    this.id = const Value.absent(),
+    required String percorso,
+    required DateTime scattataIl,
+    this.sessioneId = const Value.absent(),
+  }) : percorso = Value(percorso),
+       scattataIl = Value(scattataIl);
+  static Insertable<FotoProgresso> custom({
+    Expression<int>? id,
+    Expression<String>? percorso,
+    Expression<DateTime>? scattataIl,
+    Expression<int>? sessioneId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (percorso != null) 'percorso': percorso,
+      if (scattataIl != null) 'scattata_il': scattataIl,
+      if (sessioneId != null) 'sessione_id': sessioneId,
+    });
+  }
+
+  FotoProgressiCompanion copyWith({
+    Value<int>? id,
+    Value<String>? percorso,
+    Value<DateTime>? scattataIl,
+    Value<int?>? sessioneId,
+  }) {
+    return FotoProgressiCompanion(
+      id: id ?? this.id,
+      percorso: percorso ?? this.percorso,
+      scattataIl: scattataIl ?? this.scattataIl,
+      sessioneId: sessioneId ?? this.sessioneId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (percorso.present) {
+      map['percorso'] = Variable<String>(percorso.value);
+    }
+    if (scattataIl.present) {
+      map['scattata_il'] = Variable<DateTime>(scattataIl.value);
+    }
+    if (sessioneId.present) {
+      map['sessione_id'] = Variable<int>(sessioneId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FotoProgressiCompanion(')
+          ..write('id: $id, ')
+          ..write('percorso: $percorso, ')
+          ..write('scattataIl: $scattataIl, ')
+          ..write('sessioneId: $sessioneId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
   late final $LettureSaluteTable lettureSalute = $LettureSaluteTable(this);
   late final $CampioniSonnoTable campioniSonno = $CampioniSonnoTable(this);
   late final $MisureCorpoTable misureCorpo = $MisureCorpoTable(this);
+  late final $FotoProgressiTable fotoProgressi = $FotoProgressiTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1399,6 +1715,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     lettureSalute,
     campioniSonno,
     misureCorpo,
+    fotoProgressi,
   ];
 }
 
@@ -2116,6 +2433,191 @@ typedef $$MisureCorpoTableProcessedTableManager =
       MisuraCorpo,
       PrefetchHooks Function()
     >;
+typedef $$FotoProgressiTableCreateCompanionBuilder =
+    FotoProgressiCompanion Function({
+      Value<int> id,
+      required String percorso,
+      required DateTime scattataIl,
+      Value<int?> sessioneId,
+    });
+typedef $$FotoProgressiTableUpdateCompanionBuilder =
+    FotoProgressiCompanion Function({
+      Value<int> id,
+      Value<String> percorso,
+      Value<DateTime> scattataIl,
+      Value<int?> sessioneId,
+    });
+
+class $$FotoProgressiTableFilterComposer
+    extends Composer<_$ArchivioSalute, $FotoProgressiTable> {
+  $$FotoProgressiTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get percorso => $composableBuilder(
+    column: $table.percorso,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get scattataIl => $composableBuilder(
+    column: $table.scattataIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sessioneId => $composableBuilder(
+    column: $table.sessioneId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FotoProgressiTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $FotoProgressiTable> {
+  $$FotoProgressiTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get percorso => $composableBuilder(
+    column: $table.percorso,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get scattataIl => $composableBuilder(
+    column: $table.scattataIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sessioneId => $composableBuilder(
+    column: $table.sessioneId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FotoProgressiTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $FotoProgressiTable> {
+  $$FotoProgressiTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get percorso =>
+      $composableBuilder(column: $table.percorso, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get scattataIl => $composableBuilder(
+    column: $table.scattataIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sessioneId => $composableBuilder(
+    column: $table.sessioneId,
+    builder: (column) => column,
+  );
+}
+
+class $$FotoProgressiTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $FotoProgressiTable,
+          FotoProgresso,
+          $$FotoProgressiTableFilterComposer,
+          $$FotoProgressiTableOrderingComposer,
+          $$FotoProgressiTableAnnotationComposer,
+          $$FotoProgressiTableCreateCompanionBuilder,
+          $$FotoProgressiTableUpdateCompanionBuilder,
+          (
+            FotoProgresso,
+            BaseReferences<
+              _$ArchivioSalute,
+              $FotoProgressiTable,
+              FotoProgresso
+            >,
+          ),
+          FotoProgresso,
+          PrefetchHooks Function()
+        > {
+  $$FotoProgressiTableTableManager(
+    _$ArchivioSalute db,
+    $FotoProgressiTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FotoProgressiTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FotoProgressiTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FotoProgressiTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> percorso = const Value.absent(),
+                Value<DateTime> scattataIl = const Value.absent(),
+                Value<int?> sessioneId = const Value.absent(),
+              }) => FotoProgressiCompanion(
+                id: id,
+                percorso: percorso,
+                scattataIl: scattataIl,
+                sessioneId: sessioneId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String percorso,
+                required DateTime scattataIl,
+                Value<int?> sessioneId = const Value.absent(),
+              }) => FotoProgressiCompanion.insert(
+                id: id,
+                percorso: percorso,
+                scattataIl: scattataIl,
+                sessioneId: sessioneId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FotoProgressiTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $FotoProgressiTable,
+      FotoProgresso,
+      $$FotoProgressiTableFilterComposer,
+      $$FotoProgressiTableOrderingComposer,
+      $$FotoProgressiTableAnnotationComposer,
+      $$FotoProgressiTableCreateCompanionBuilder,
+      $$FotoProgressiTableUpdateCompanionBuilder,
+      (
+        FotoProgresso,
+        BaseReferences<_$ArchivioSalute, $FotoProgressiTable, FotoProgresso>,
+      ),
+      FotoProgresso,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -2126,4 +2628,6 @@ class $ArchivioSaluteManager {
       $$CampioniSonnoTableTableManager(_db, _db.campioniSonno);
   $$MisureCorpoTableTableManager get misureCorpo =>
       $$MisureCorpoTableTableManager(_db, _db.misureCorpo);
+  $$FotoProgressiTableTableManager get fotoProgressi =>
+      $$FotoProgressiTableTableManager(_db, _db.fotoProgressi);
 }

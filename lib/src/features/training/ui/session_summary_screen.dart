@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/ui/foto_protetta.dart';
+import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
@@ -332,7 +332,9 @@ class _FotoState extends ConsumerState<_Foto> {
       // 🚨 Si ricarica la sessione, non solo la galleria: la foto va mostrata
       // **qui**, e senza questo resterebbe una schermata che dice «caricata»
       // senza far vedere niente.
-      ref.invalidate(sessionProvider(widget.sessione.id));
+      // ⚠️ Non serve piu' invalidare la sessione: la foto non arriva da li'.
+      // `progressActionsProvider.upload()` incrementa gia' la revisione, e
+      // `fotoSessioneProvider` si ricalcola da solo.
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -347,7 +349,9 @@ class _FotoState extends ConsumerState<_Foto> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final foto = widget.sessione.photos;
+    // 🚨 Le foto vengono dal TELEFONO — S5.3. `sessione.photos` arrivava dal
+    // server e da S5 non c'e' piu'.
+    final foto = ref.watch(fotoSessioneProvider(widget.sessione.id)).valueOrNull ?? const [];
 
     return Card(
       child: Padding(
@@ -373,13 +377,9 @@ class _FotoState extends ConsumerState<_Foto> {
                   separatorBuilder: (context, i) => const SizedBox(width: Gap.sm),
                   itemBuilder: (context, i) => ClipRRect(
                     borderRadius: BorderRadius.circular(Gap.radiusSm),
-                    // 🚨 `FotoProtetta` e non `CachedNetworkImage` a mano: il
-                    // token si legge dal Keychain in modo asincrono, e alla
-                    // prima costruzione non c'e'. Una richiesta senza
-                    // intestazione prende 401, e quell'errore resta in cache —
-                    // riquadro rotto permanente su un file perfettamente
-                    // presente sul server.
-                    child: FotoProtetta(url: foto[i].url, width: 130),
+                    // 💡 File locale da S5.3: niente token, niente 401 in
+                    // cache, niente `FotoProtetta`.
+                    child: FotoLocale(file: foto[i].file, width: 130),
                   ),
                 ),
               ),

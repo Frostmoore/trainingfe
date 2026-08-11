@@ -1,66 +1,87 @@
-import 'package:dio/dio.dart';
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/media/photo_picker.dart';
-import '../../core/providers.dart';
+import '../../core/storage/archivio_salute.dart';
+import '../health/health_controller.dart';
 
-/// Una foto dei progressi — C16.
+/// Una foto dei progressi — C16, **sul telefono** da S5.3.
+///
+/// 🚨 **Non c'è più nessun `url`.** Le foto non stanno sul server (decisione
+/// **D9-bis**): il campo che conta adesso è `file`, e si disegna con
+/// `Image.file`, non con `CachedNetworkImage`.
 class ProgressPhoto {
   const ProgressPhoto({
     required this.id,
-    required this.url,
-    required this.type,
-    this.takenOn,
+    required this.file,
+    required this.takenOn,
     this.workoutSessionId,
   });
 
-  factory ProgressPhoto.fromJson(Map<String, dynamic> j) => ProgressPhoto(
-    id: (j['id'] as num).toInt(),
-    url: j['url'].toString(),
-    type: j['type']?.toString() ?? 'progress',
-    takenOn: j['taken_on'] == null ? null : DateTime.tryParse(j['taken_on'].toString()),
-    workoutSessionId: (j['workout_session_id'] as num?)?.toInt(),
-  );
-
   final int id;
-  final String url;
-
-  /// `progress` o `workout`: la seconda è stata scattata a fine allenamento e
-  /// resta legata a quella sessione (C5).
-  final String type;
-
-  final DateTime? takenOn;
+  final File file;
+  final DateTime takenOn;
   final int? workoutSessionId;
 
-  bool get daAllenamento => type == 'workout';
+  bool get daAllenamento => workoutSessionId != null;
 }
 
-/// La galleria.
-///
-/// ⚠️ L'endpoint restituisce **tutte** le foto in una volta: sono righe leggere
-/// (id, url, data), non immagini. Il caricamento progressivo che serve davvero è
-/// quello dei **file**, e lo fa `CachedNetworkImage` scaricandoli solo quando la
-/// cella entra nello schermo. Paginare l'elenco complicherebbe il codice senza
-/// risparmiare quasi niente.
-final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/photos');
+/// Ogni scrittura incrementa questo contatore e i provider si ricalcolano.
+final revisioneFotoProvider = StateProvider<int>((ref) => 0);
 
-  return data
-      .map((e) => ProgressPhoto.fromJson((e as Map).cast<String, dynamic>()))
-      .toList();
+/// La cartella dove vivono i file.
+///
+/// 🚨 **`Documents`, non la cache.** La cache il sistema la svuota quando ha
+/// bisogno di spazio: le foto dei progressi sparirebbero da sole, e nessuno
+/// capirebbe perché. È la stessa ragione per cui ci sta il database (S3.1).
+Future<Directory> _cartellaFoto() async {
+  final base = await getApplicationDocumentsDirectory();
+  final dir = Directory(p.join(base.path, 'foto'));
+
+  if (!dir.existsSync()) await dir.create(recursive: true);
+
+  return dir;
+}
+
+/// Ricostruisce il percorso assoluto da quello relativo salvato a database.
+///
+/// ⚠️ **Su iOS il contenitore dell'app cambia percorso a ogni aggiornamento.**
+/// Salvare l'assoluto avrebbe fatto svuotare la galleria da sola dopo il primo
+/// aggiornamento dallo store, senza che nessuno avesse cancellato niente.
+Future<File> _fileDi(String relativo) async =>
+    File(p.join((await getApplicationDocumentsDirectory()).path, relativo));
+
+/// La galleria.
+final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((ref) async {
+  ref.watch(revisioneFotoProvider);
+
+  final righe = await ref.watch(archivioSaluteProvider).galleria();
+
+  return Future.wait(righe.map((r) async => ProgressPhoto(
+        id: r.id,
+        file: await _fileDi(r.percorso),
+        takenOn: r.scattataIl,
+        workoutSessionId: r.sessioneId,
+      )));
 });
 
-/// Le intestazioni con cui scaricare le immagini.
-///
-/// 🚨 **Le foto NON stanno su un URL pubblico**: l'endpoint controlla di chi
-/// sono prima di consegnarle, e senza il token risponde 401. `CachedNetworkImage`
-/// non passa dagli interceptor di `dio`, quindi l'intestazione va data a mano —
-/// è l'unico punto dell'app in cui succede, e senza si vedrebbe una griglia di
-/// riquadri rotti senza capire perché.
-final progressAuthHeaderProvider = FutureProvider<Map<String, String>>((ref) async {
-  final token = await ref.watch(tokenStoreProvider).read();
+/// Le foto di una sessione di allenamento.
+final fotoSessioneProvider =
+    FutureProvider.autoDispose.family<List<ProgressPhoto>, int>((ref, sessioneId) async {
+  ref.watch(revisioneFotoProvider);
 
-  return token == null ? const {} : {'Authorization': 'Bearer $token'};
+  final righe = await ref.watch(archivioSaluteProvider).fotoDellaSessione(sessioneId);
+
+  return Future.wait(righe.map((r) async => ProgressPhoto(
+        id: r.id,
+        file: await _fileDi(r.percorso),
+        takenOn: r.scattataIl,
+        workoutSessionId: r.sessioneId,
+      )));
 });
 
 class ProgressActions {
@@ -68,42 +89,77 @@ class ProgressActions {
 
   final Ref _ref;
 
-  /// Carica una foto scattata o scelta dalla galleria.
+  /// Scatta o sceglie una foto e la mette **sul telefono**.
   ///
-  /// 🚨 **Si comprime prima di caricare.** Una foto da fotocamera moderna sono
-  /// 8-12 MB: su rete mobile l'upload fallisce o impiega mezzo minuto, e il
-  /// server la ridimensiona comunque. Mandare l'originale è banda sprecata due
-  /// volte.
-  /// `workoutSessionId` lega la foto a quell'allenamento — C5.
+  /// 🚨 **Si comprime lo stesso, anche senza upload.** Prima serviva a non
+  /// sprecare banda; adesso serve a non riempire il telefono: una foto da
+  /// fotocamera moderna sono 8-12 MB, e venti foto di progressi non compresse
+  /// sono un quarto di giga per una funzione che si guarda una volta al mese.
   ///
-  /// ⚠️ Restituisce `false` se la persona **annulla** la scelta della foto:
-  /// non è un errore, e chi chiama non deve mostrarlo come tale. È il motivo
-  /// per cui non basta un `Future<void>`: a fine allenamento la foto è
-  /// facoltativa, e «ho cambiato idea» dev'essere distinguibile da «non è
-  /// riuscito a caricarla».
+  /// ⚠️ Restituisce `false` se la persona **annulla**: non è un errore, e chi
+  /// chiama non deve mostrarlo come tale. È il motivo per cui non basta un
+  /// `Future<void>` — a fine allenamento la foto è facoltativa, e «ho cambiato
+  /// idea» dev'essere distinguibile da «non è riuscita».
   Future<bool> upload({required bool daFotocamera, int? workoutSessionId}) async {
-    final percorso = daFotocamera
+    final scelta = daFotocamera
         ? await PhotoPicker.dallaFotocamera()
         : await PhotoPicker.dallaGalleria();
 
-    if (percorso == null) return false;
+    if (scelta == null) return false;
 
-    final form = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(percorso),
-      'workout_session_id': ?workoutSessionId,
-    });
+    final cartella = await _cartellaFoto();
+    final nome = '${DateTime.now().microsecondsSinceEpoch}${p.extension(scelta)}';
+    final destinazione = File(p.join(cartella.path, nome));
 
-    await _ref.read(apiClientProvider).upload<dynamic>('/photos', form);
+    // ⚠️ `copy`, non `rename`: l'originale sta nella cartella temporanea di
+    // `image_picker`, e su Android puo' essere su un volume diverso — dove
+    // `rename` fallisce con un errore che non dice perche'.
+    await File(scelta).copy(destinazione.path);
 
-    _ref.invalidate(progressPhotosProvider);
+    await _ref.read(archivioSaluteProvider).registraFoto(
+          FotoProgressiCompanion.insert(
+            percorso: p.join('foto', nome),
+            scattataIl: DateTime.now(),
+            sessioneId: Value(workoutSessionId),
+          ),
+        );
+
+    _ref.read(revisioneFotoProvider.notifier).state++;
 
     return true;
   }
 
+  /// Cancella una foto, **file compreso**.
+  ///
+  /// 🚨 Prima la riga, poi il file — e il file anche se la riga non c'era.
+  /// Cancellare solo la riga lascerebbe l'immagine sul disco senza più niente
+  /// che ne ricordi l'esistenza: occupa spazio e contiene il corpo di una
+  /// persona che ha chiesto di toglierla.
   Future<void> delete(int id) async {
-    await _ref.read(apiClientProvider).delete('/photos/$id');
+    final archivio = _ref.read(archivioSaluteProvider);
+    final riga = await archivio.foto(id);
 
-    _ref.invalidate(progressPhotosProvider);
+    if (riga != null) {
+      final file = await _fileDi(riga.percorso);
+
+      if (file.existsSync()) await file.delete();
+    }
+
+    await archivio.dimenticaFoto(id);
+
+    _ref.read(revisioneFotoProvider.notifier).state++;
+  }
+
+  /// Cancella tutte le foto e i loro file.
+  ///
+  /// Serve alla cancellazione dell'account e al logout (S9.3): il server non
+  /// può cancellare ciò che non ha mai avuto.
+  Future<void> cancellaTutto() async {
+    final cartella = await _cartellaFoto();
+
+    if (cartella.existsSync()) await cartella.delete(recursive: true);
+
+    _ref.read(revisioneFotoProvider.notifier).state++;
   }
 }
 

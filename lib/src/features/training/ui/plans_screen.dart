@@ -34,7 +34,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final schede = ref.watch(plansProvider);
+    final schede = ref.watch(schedeUniteProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -93,7 +93,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   Widget _corpo(BuildContext context, WidgetRef ref, AsyncValue<List<WorkoutPlan>> schede) {
     return schede.when(
         loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(plansProvider)),
+        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(schedeUniteProvider)),
         data: (elenco) => elenco.isEmpty
             // 🚨 Il vuoto dice **di chi è la palla**: l'iscritto non può darsi
             // una scheda da solo, e un «nessuna scheda» senza spiegazione lo
@@ -113,7 +113,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(plansProvider),
+                onRefresh: () async => ref.invalidate(schedeUniteProvider),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
                   itemCount: elenco.length + 1,
@@ -344,7 +344,7 @@ class _AvviaAllenamento extends ConsumerWidget {
       return;
     }
 
-    final schede = ref.read(plansProvider).valueOrNull ?? const <WorkoutPlan>[];
+    final schede = ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[];
 
     int? scelta;
 

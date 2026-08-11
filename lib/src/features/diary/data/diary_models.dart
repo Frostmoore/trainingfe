@@ -111,6 +111,7 @@ class DiaryDay {
     this.targetProtein,
     this.targetCarbs,
     this.targetFat,
+    this.targetDaPiano = false,
   });
 
   factory DiaryDay.fromJson(Map<String, dynamic> j) {
@@ -132,6 +133,7 @@ class DiaryDay {
       targetProtein: _num(targets?['protein_g']),
       targetCarbs: _num(targets?['carbs_g']),
       targetFat: _num(targets?['fat_g']),
+      targetDaPiano: targets?['source'] == 'plan',
     );
   }
 
@@ -144,6 +146,19 @@ class DiaryDay {
   /// profilo o il piano. **Non si inventa**, perché l'utente ci costruirebbe
   /// sopra una dieta.
   final double? targetKcal, targetProtein, targetCarbs, targetFat;
+
+  /// Se l'obiettivo viene dal **piano del trainer** e non dalla formula — S7.5.
+  ///
+  /// 🚨 **Quando c'è un piano, il numero calcolato non si mostra affatto.** Il
+  /// backend ne restituisce già uno solo (`targetsFor()` sceglie il piano), e
+  /// va lasciato così: due numeri diversi nella stessa schermata sono un invito
+  /// a non fidarsi di nessuno dei due, e chi paga un trainer vuole seguire il
+  /// trainer.
+  ///
+  /// ⚠️ **La formula resta e continua a girare**: serve quando il piano scade,
+  /// e per chi un trainer non ce l'ha. È la *visualizzazione* che cede il posto,
+  /// non il calcolo che si spegne.
+  final bool targetDaPiano;
 
   bool get hasTarget => targetKcal != null && targetKcal! > 0;
 

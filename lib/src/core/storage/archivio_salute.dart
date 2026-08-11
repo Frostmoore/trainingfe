@@ -26,7 +26,15 @@ part 'archivio_salute.g.dart';
 /// lascia rileggere solo ~30 giorni indietro. La media di riferimento su una
 /// finestra più lunga esiste **solo** se l'app accumula dal momento
 /// dell'installazione.
-@DriftDatabase(tables: [LettureSalute, CampioniSonno, MisureCorpo, FotoProgressi])
+@DriftDatabase(
+  tables: [
+    LettureSalute,
+    CampioniSonno,
+    MisureCorpo,
+    FotoProgressi,
+    SchedeRicevute,
+  ],
+)
 class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute() : super(_apri());
 
@@ -34,7 +42,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -44,6 +52,9 @@ class ArchivioSalute extends _$ArchivioSalute {
 
           // v2 → v3 (S5.3): e le foto dei progressi con loro.
           if (da < 3) await m.createTable(fotoProgressi);
+
+          // v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
+          if (da < 4) await m.createTable(schedeRicevute);
         },
       );
 
@@ -303,8 +314,57 @@ class ArchivioSalute extends _$ArchivioSalute {
       b.deleteAll(campioniSonno);
       b.deleteAll(misureCorpo);
       b.deleteAll(fotoProgressi);
+      b.deleteAll(schedeRicevute);
     });
   }
+
+  // ───────────────── le schede ricevute dal trainer (S7.4) ─────────────────
+
+  /// Salva una scheda arrivata via chat.
+  ///
+  /// 🚨 **La chiave è l'id del messaggio, non quello della scheda.** Lo stesso
+  /// modello può arrivare due volte — il trainer lo rimanda dopo averlo
+  /// corretto — e sono **due schede diverse** nella vita di chi le riceve: la
+  /// vecchia va tenuta finché non la si butta, o sparirebbe lo storico di cosa
+  /// si stava facendo il mese scorso.
+  ///
+  /// ⚠️ Toccare due volte «aggiungi» sullo stesso messaggio invece non deve
+  /// produrre due copie: da qui `insertOrIgnore` sull'unique di `messaggioId`.
+  Future<void> salvaScheda({
+    required int messaggioId,
+    required int mittenteId,
+    required String nome,
+    required String scheda,
+  }) async {
+    await into(schedeRicevute).insert(
+      SchedeRicevuteCompanion.insert(
+        messaggioId: messaggioId,
+        mittenteId: mittenteId,
+        nome: nome,
+        scheda: scheda,
+        ricevutaIl: DateTime.now(),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
+  }
+
+  Future<List<SchedaRicevuta>> schede() {
+    return (select(schedeRicevute)
+          ..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
+        .get();
+  }
+
+  /// C'è già? Serve alla chat per dire «aggiunta» invece di «aggiungi».
+  Future<bool> schedaGiaSalvata(int messaggioId) async {
+    final riga = await (select(schedeRicevute)
+          ..where((t) => t.messaggioId.equals(messaggioId)))
+        .getSingleOrNull();
+
+    return riga != null;
+  }
+
+  Future<void> dimenticaScheda(int id) =>
+      (delete(schedeRicevute)..where((t) => t.id.equals(id))).go();
 
   static DateTime _soloGiorno(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -442,4 +502,38 @@ extension MinutiDelCampione on CampioneSonno {
 
     return s <= 0 ? 0 : (s / 60).round();
   }
+}
+
+/// Le schede arrivate dal trainer via chat — S7.4.
+///
+/// 🚨 **Stanno qui e non sul server, ed è il punto dell'intera fase.** Una
+/// scheda assegnata dice *«questa persona segue questo programma»*, e da un
+/// programma post-infortunio si capisce cos'è successo a chi lo esegue. Il
+/// modello resta sul server — è il patrimonio della palestra e non parla di
+/// nessuno — ma **il legame fra la persona e il programma non ci arriva mai**.
+///
+/// 💡 La scheda si conserva **per intero**, come JSON, non come riferimento:
+/// chi la riceve la tiene anche se domani cambia palestra, e un elenco di id
+/// non gli servirebbe a niente.
+@DataClassName('SchedaRicevuta')
+class SchedeRicevute extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 🚨 **L'id del messaggio, unico.** È ciò che impedisce che toccare due
+  /// volte «aggiungi» produca due copie della stessa scheda.
+  ///
+  /// ⚠️ Non è l'id della *scheda*: lo stesso modello può arrivare due volte —
+  /// il trainer lo rimanda dopo averlo corretto — e sono **due schede diverse**
+  /// nella vita di chi le riceve.
+  IntColumn get messaggioId => integer().unique()();
+
+  IntColumn get mittenteId => integer()();
+
+  /// Il nome, estratto per poterlo mostrare senza aprire il JSON a ogni riga.
+  TextColumn get nome => text()();
+
+  /// La scheda intera, serializzata.
+  TextColumn get scheda => text()();
+
+  DateTimeColumn get ricevutaIl => dateTime()();
 }

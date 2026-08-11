@@ -88,6 +88,7 @@ class NutritionToday {
     this.targetProtein,
     this.targetCarbs,
     this.targetFat,
+    this.targetDaPiano = false,
   });
 
   factory NutritionToday.fromJson(Map<String, dynamic> j) {
@@ -108,6 +109,7 @@ class NutritionToday {
       targetProtein: (target?['protein_g'] as num?)?.toDouble(),
       targetCarbs: (target?['carbs_g'] as num?)?.toDouble(),
       targetFat: (target?['fat_g'] as num?)?.toDouble(),
+      targetDaPiano: target?['source'] == 'plan',
     );
   }
 
@@ -115,6 +117,13 @@ class NutritionToday {
   final int burnedKcal;
   final int entriesCount;
   final double? targetKcal, targetProtein, targetCarbs, targetFat;
+
+  /// Se l'obiettivo viene dal piano del trainer e non dalla formula — S7.5.
+  ///
+  /// 🚨 Il backend ne restituisce **uno solo**, e va lasciato così: due numeri
+  /// diversi nella stessa schermata sono un invito a non fidarsi di nessuno dei
+  /// due, e chi paga un trainer vuole seguire il trainer.
+  final bool targetDaPiano;
 
   bool get haTarget => targetKcal != null && targetKcal! > 0;
 

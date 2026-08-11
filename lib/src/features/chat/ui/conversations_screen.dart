@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/crypto/contenuto_messaggio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 
 /// L'elenco delle conversazioni — A7.1.
@@ -214,6 +216,38 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     }
   }
 
+  /// «Manda una scheda» — S7.3.
+  ///
+  /// 🎯 Non c'è nessun endpoint di assegnazione, nessun caricamento a parte,
+  /// nessun permesso in più: la scheda entra **dentro la busta** come farebbe
+  /// una frase, e il server la instrada senza sapere cos'è.
+  Future<void> _allega() async {
+    final modelli = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _SceltaModello(),
+    );
+
+    if (modelli == null || !mounted) return;
+
+    setState(() => _inCorso = true);
+
+    try {
+      await ref
+          .read(threadProvider(widget.id).notifier)
+          .inviaContenuto(ContenutoScheda(modelli));
+      _inFondo();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Scheda non inviata. Riprova.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
   void _inFondo() {
     if (!_scroll.hasClients) return;
 
@@ -252,10 +286,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 controller: _scroll,
                 padding: const EdgeInsets.all(Gap.md),
                 itemCount: elenco.length,
-                itemBuilder: (context, index) => _Bolla(
-                  messaggio: elenco[index],
-                  mio: elenco[index].senderId == mioId,
-                ),
+                itemBuilder: (context, index) {
+                  final m = elenco[index];
+                  final contenuto = m.contenuto;
+
+                  // 🚨 S7 — una scheda si disegna come una scheda, non come una
+                  // nuvoletta con dentro un titolo: ha un pulsante, e quel
+                  // pulsante è tutto il punto della fase.
+                  if (contenuto is ContenutoScheda) {
+                    return _SchedaInChat(messaggio: m, contenuto: contenuto);
+                  }
+
+                  return _Bolla(messaggio: m, mio: m.senderId == mioId);
+                },
               ),
             ),
           ),
@@ -265,6 +308,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               padding: const EdgeInsets.all(Gap.sm),
               child: Row(
                 children: [
+                  // 🚨 S7 — «allega una scheda». Compare **solo a chi allena**:
+                  // l'endpoint dei modelli risponde 403 a un iscritto, e un
+                  // pulsante che dà sempre errore fa sembrare rotta tutta
+                  // l'applicazione, non solo quel pulsante.
+                  if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+                    IconButton(
+                      onPressed: _inCorso ? null : _allega,
+                      icon: const Icon(Icons.assignment_outlined),
+                      tooltip: 'Manda una scheda',
+                    ),
                   Expanded(
                     child: TextField(
                       controller: _testo,
@@ -333,6 +386,131 @@ class _Bolla extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// L'elenco dei modelli della palestra, da cui il trainer sceglie — S7.3.
+class _SceltaModello extends ConsumerWidget {
+  const _SceltaModello();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final modelli = ref.watch(modelliPalestraProvider);
+
+    return SafeArea(
+      child: modelli.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(Gap.lg),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.all(Gap.lg),
+          child: Text('Non riesco a leggere i modelli.\n$e'),
+        ),
+        data: (elenco) => elenco.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(Gap.lg),
+                child: Text(
+                  'Non ci sono modelli pubblicati. Creali dal pannello della '
+                  'palestra, poi da qui li mandi a chi vuoi.',
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: elenco.length,
+                itemBuilder: (context, i) {
+                  final m = elenco[i];
+                  final esercizi = (m['exercises'] as List?)?.length ?? 0;
+
+                  return ListTile(
+                    leading: const Icon(Icons.assignment_outlined),
+                    title: Text(m['name']?.toString() ?? 'Scheda'),
+                    subtitle: Text(
+                      esercizi == 1 ? '1 esercizio' : '$esercizi esercizi',
+                    ),
+                    onTap: () => Navigator.of(context).pop(m),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+}
+
+/// La scheda dentro la conversazione, con «Aggiungi alle mie schede» — S7.4.
+///
+/// 🚨 **L'importazione è un gesto, non un automatismo.** Una scheda che si
+/// aggiunge da sola all'elenco sostituirebbe in silenzio quella che si sta
+/// seguendo — e chi si allena vuole sapere **quando** cambia programma.
+class _SchedaInChat extends ConsumerWidget {
+  const _SchedaInChat({required this.messaggio, required this.contenuto});
+
+  final ChatMessage messaggio;
+  final ContenutoScheda contenuto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final gia = ref.watch(schedaGiaSalvataProvider(messaggio.id));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: Gap.sm),
+      padding: const EdgeInsets.all(Gap.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(Gap.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_outlined),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text(
+                  contenuto.titolo,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Gap.xs),
+          Text(
+            contenuto.numeroEsercizi == 1
+                ? '1 esercizio'
+                : '${contenuto.numeroEsercizi} esercizi',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Gap.sm),
+          gia.when(
+            loading: () => const SizedBox(height: 36),
+            error: (_, _) => const SizedBox(height: 36),
+            data: (salvata) => salvata
+                ? Row(
+                    children: [
+                      const Icon(Icons.check_rounded, size: 18),
+                      const SizedBox(width: Gap.xs),
+                      Text(
+                        'Nelle tue schede',
+                        style: theme.textTheme.labelLarge,
+                      ),
+                    ],
+                  )
+                : FilledButton.tonal(
+                    onPressed: () => ref.read(azioniSchedeProvider).importa(
+                      messaggioId: messaggio.id,
+                      mittenteId: messaggio.senderId,
+                      contenuto: contenuto,
+                    ),
+                    child: const Text('Aggiungi alle mie schede'),
+                  ),
+          ),
+        ],
       ),
     );
   }

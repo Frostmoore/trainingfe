@@ -79,6 +79,22 @@ class CaloriesCard extends StatelessWidget {
                 _frase(scostamento, n.residuo!, riepilogo.dayProgressPct),
                 style: theme.textTheme.bodySmall,
               ),
+
+              // 🚨 S7.5 — se l'obiettivo viene dal piano del trainer, si dice.
+              //
+              // ⚠️ **Il numero calcolato non compare affatto**, e non è una
+              // dimenticanza: due numeri diversi nella stessa schermata sono un
+              // invito a non fidarsi di nessuno dei due, e chi paga un trainer
+              // vuole seguire il trainer. La formula però continua a girare —
+              // serve quando il piano scade, e per chi un trainer non ce l'ha.
+              if (n.targetDaPiano)
+                Padding(
+                  padding: const EdgeInsets.only(top: Gap.xs),
+                  child: Text(
+                    'Dal piano del tuo trainer',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ),
             ] else ...[
               const SizedBox(height: Gap.sm),
               Text(

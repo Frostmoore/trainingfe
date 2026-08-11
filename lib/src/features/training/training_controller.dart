@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
+import 'schede_ricevute_controller.dart';
 
 /// Una scheda assegnata — A5.1.
 class WorkoutPlan {
@@ -100,8 +103,59 @@ final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) async 
   return data.map((e) => WorkoutPlan.fromJson((e as Map).cast<String, dynamic>())).toList();
 });
 
+/// Tutte le schede: quelle sul server **più quelle ricevute in chat** — S7.4.
+///
+/// 🚨 **Le due sorgenti non sono un'anomalia: sono il risultato della fase.**
+/// Le schede che l'iscritto si scrive da sé restano sul server — sono sue e non
+/// dicono niente a nessuno. Quelle **prescritte dal trainer** non ci arrivano
+/// mai: dire *«questa persona segue questo programma»* è l'informazione che
+/// questa fase esiste per non far scrivere da nessuna parte.
+///
+/// ⚠️ **Se il server non risponde, le schede ricevute si vedono lo stesso.** È
+/// la conseguenza pratica più visibile di averle in locale, e non va persa
+/// dietro un `Future.wait` che fallisce insieme.
+final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) async {
+  final locali = await ref.watch(schedeRicevuteProvider.future);
+
+  final dalServer = await ref
+      .watch(plansProvider.future)
+      .catchError((Object _) => const <WorkoutPlan>[]);
+
+  return [
+    ...locali.map(
+      (r) => WorkoutPlan.fromJson({
+        ...(json.decode(r.scheda) as Map).cast<String, dynamic>(),
+
+        // 🚨 **Id negativo, e non è un trucco sporco: è l'unico modo di
+        // distinguerle.** L'id dentro il JSON è quello del **modello sul
+        // server**, e collide allegramente con quello di una scheda scritta
+        // dall'iscritto. Il segno dice a `planDetailProvider` dove andare a
+        // cercare — e sbagliare strada vorrebbe dire chiedere al server una
+        // scheda che non ha, cioè un 404 su una scheda che si sta guardando.
+        'id': -r.id,
+        'editable': false,
+      }),
+    ),
+    ...dalServer,
+  ];
+});
+
 /// Il dettaglio di una scheda, con gli esercizi.
+///
+/// ⚠️ **Id negativo = scheda ricevuta in chat**, che vive nell'archivio locale.
+/// Vedi `schedeUniteProvider` per il perché del segno.
 final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((ref, id) async {
+  if (id < 0) {
+    final locali = await ref.watch(schedeRicevuteProvider.future);
+    final riga = locali.firstWhere((r) => -r.id == id);
+
+    return WorkoutPlan.fromJson({
+      ...(json.decode(riga.scheda) as Map).cast<String, dynamic>(),
+      'id': id,
+      'editable': false,
+    });
+  }
+
   final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/workout-plans/$id');
 
   return WorkoutPlan.fromJson(data);

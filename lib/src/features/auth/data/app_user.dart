@@ -15,6 +15,7 @@ class AppUser {
     this.tenantName,
     this.passwordIsSet = true,
     this.social = const [],
+    this.isTrainer = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -24,6 +25,9 @@ class AppUser {
     username: json['username']?.toString(),
     avatarUrl: json['avatar_url']?.toString(),
     passwordIsSet: json['password_is_set'] != false,
+    // 💡 Si ricava da `roles`, che il server manda già: nessun campo nuovo da
+    // aggiungere, nessuna versione di backend da aspettare.
+    isTrainer: ((json['roles'] as List?) ?? const []).contains('trainer'),
     social: ((json['social'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList(growable: false),
@@ -38,6 +42,20 @@ class AppUser {
   final String? username;
   final String? avatarUrl;
   final String? tenantName;
+
+  /// Se questa persona **allena** — S7.
+  ///
+  /// ⚠️ **È l'unico ruolo che l'app conosce, e c'è una ragione precisa.** Il
+  /// commento in cima dice che portarsi dietro i ruoli invita a duplicare lato
+  /// client decisioni che il backend prende già, e resta vero. Ma qui non si sta
+  /// decidendo un permesso: si sta decidendo **se disegnare un pulsante**.
+  ///
+  /// 🚨 Il permesso lo decide comunque il server — `GET /workout-plans/templates`
+  /// risponde 403 a un iscritto anche se qualcuno gli mettesse il pulsante
+  /// davanti. Questo campo serve a non mostrare un pulsante che darebbe sempre
+  /// errore: un pulsante rotto fa sembrare rotta tutta l'applicazione, non solo
+  /// se stesso.
+  final bool isTrainer;
 
   /// Se questa persona ha una password **che conosce** — G8.
   ///

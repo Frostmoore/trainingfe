@@ -7,8 +7,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
 import '../profile_controller.dart';
+import '../target_locale_controller.dart';
+import 'widgets/manca_per_il_target.dart';
 import 'widgets/meal_hours_editor.dart';
-import 'widgets/weight_sheet.dart';
 
 /// Modifica del profilo — C8.
 ///
@@ -110,9 +111,26 @@ class _ModuloState extends ConsumerState<_Modulo> {
     return ListView(
       padding: const EdgeInsets.all(Gap.md),
       children: [
-        if (!p.isComplete) _CosaManca(profilo: p),
-
-        if (p.derived != null) _Derivati(d: p.derived!),
+        /*
+         * 🚨 **Non si chiede al server cosa manca** — difetto riferito il
+         * 12/08/2026: *«nel profilo mi dice ancora che non ho inserito il
+         * peso»*.
+         *
+         * Qui c'era `if (!p.isComplete) _CosaManca(profilo: p)`, e
+         * `_CosaManca` guardava `profilo.missing` — che arriva **dal server**.
+         * Ma `ProfileController::rappresenta()` mette `weight_kg` in `missing`
+         * **SEMPRE**, e lo dichiara nel proprio commento: dopo D9-bis il peso
+         * sta sul telefono, quindi il server non ce l'ha e non ce l'avrà mai.
+         *
+         * ⚠️ Risultato: la schermata diceva «manca il peso» **per sempre**,
+         * qualunque cosa si registrasse. Non era il salvataggio a non
+         * funzionare — era la domanda, fatta a chi non poteva rispondere.
+         *
+         * 💡 `targetLocaleProvider` risponde alla stessa domanda guardando
+         * dove il peso vive davvero, ed è già l'unico punto che sa quali pezzi
+         * servono per il calcolo.
+         */
+        const _ObiettivoCalcolato(),
 
         const SizedBox(height: Gap.md),
         Text('Chi sei', style: theme.textTheme.titleMedium),
@@ -240,116 +258,99 @@ class _ModuloState extends ConsumerState<_Modulo> {
     if (scelta != null) setState(() => _nascita = scelta);
   }
 }
-
-/// Cosa manca per avere un fabbisogno — con i nomi delle cose, non delle colonne.
+/// L'obiettivo calcolato — oppure cosa manca per calcolarlo.
 ///
-/// 🚨 **E con il modo di rimediare lì dentro.** Dire «manca il tuo peso» e
-/// lasciare la persona a cercare dove si registra è la stessa cosa che dire
-/// «manca qualcosa»: sa cosa fare e non sa dove. Il peso non sta fra i campi di
-/// questo modulo — è una serie storica, non un dato del profilo — quindi il
-/// pulsante deve portarcelo da qui.
-class _CosaManca extends ConsumerWidget {
-  const _CosaManca({required this.profilo});
-
-  final UserProfile profilo;
+/// ── 🚨 Perché ha preso il posto di due schede ────────────────────────────
+///
+/// Qui c'erano `_CosaManca`, che leggeva `profilo.missing` **dal server**, e
+/// `_Derivati`, che disegnava `profilo.derived` — sempre **dal server**.
+///
+/// ⚠️ Dopo D9-bis il server **non ha il peso**, quindi `missing` contiene
+/// `weight_kg` per sempre e `derived` è `null` per sempre. Il risultato era una
+/// schermata che diceva «manca il tuo peso» a chi lo aveva appena registrato, e
+/// che non mostrava **mai** il fabbisogno — perché aspettava un calcolo che
+/// nessuno poteva più fare.
+///
+/// 💡 Le due domande — «cosa manca?» e «quanto mi serve?» — hanno la stessa
+/// risposta e una sola fonte: `targetLocaleProvider`, che il peso lo prende
+/// dove vive, cioè **su questo telefono**.
+class _ObiettivoCalcolato extends ConsumerWidget {
+  const _ObiettivoCalcolato();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final mancanti = profilo.missing.map(UserProfile.labelFor).toList();
-    final mancaIlPeso = profilo.missing.contains('weight_kg');
+    final esito = ref.watch(targetLocaleProvider);
 
-    return Card(
-      color: theme.colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return esito.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (e) {
+        final t = e.target;
+
+        if (t == null) {
+          return Card(
+            color: theme.colorScheme.secondaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(Gap.md),
+              child: MancaPerIlTarget(esito: e),
+            ),
+          );
+        }
+
+        Widget cella(String valore, String etichetta) => Expanded(
+          child: Column(
+            children: [
+              Text(
+                valore,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              Text(
+                etichetta,
+                style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Gap.md),
+            child: Column(
               children: [
-                Icon(Icons.info_outline_rounded, color: theme.colorScheme.onSecondaryContainer),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Text(
-                    // 🚨 Si dice **quale** campo manca. «Manca qualcosa» lascia
-                    // la persona a indovinare, ed è il modo più rapido per
-                    // farle chiudere la schermata senza completarla.
-                    mancanti.length == 1
-                        ? 'Per calcolare il tuo fabbisogno manca ${mancanti.first}.'
-                        : 'Per calcolare il tuo fabbisogno mancano: ${mancanti.join(', ')}.',
-                    style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                Row(
+                  children: [
+                    cella('${t.kcal}', 'kcal al giorno'),
+                    cella('${t.bmr.round()}', 'metabolismo basale'),
+                    cella('${t.tdee.round()}', 'consumo stimato'),
+                  ],
+                ),
+                const Divider(height: Gap.lg),
+                Row(
+                  children: [
+                    cella('${t.macro.proteineG} g', 'proteine'),
+                    cella('${t.macro.carboidratiG} g', 'carboidrati'),
+                    cella('${t.macro.grassiG} g', 'grassi'),
+                  ],
+                ),
+                const SizedBox(height: Gap.sm),
+
+                // 💡 Da dove viene il numero: senza, sembra deciso dall'app.
+                Text(
+                  'Calcolato sul tuo peso più recente, con Mifflin-St Jeor.',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
                   ),
                 ),
               ],
             ),
-            if (mancaIlPeso) ...[
-              const SizedBox(height: Gap.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonalIcon(
-                  onPressed: () => WeightSheet.mostra(context),
-                  icon: const Icon(Icons.monitor_weight_outlined, size: 18),
-                  label: const Text('Registra il peso'),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// I numeri calcolati dal server.
-class _Derivati extends StatelessWidget {
-  const _Derivati({required this.d});
-
-  final DerivedTargets d;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    Widget cella(String valore, String etichetta) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            valore,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.primary,
-            ),
           ),
-          Text(etichetta, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                cella('${d.targetKcal}', 'kcal al giorno'),
-                cella(d.bmi.toStringAsFixed(1), 'BMI'),
-                cella('${d.tdee.round()}', 'consumo stimato'),
-              ],
-            ),
-            const Divider(height: Gap.lg),
-            Row(
-              children: [
-                cella('${d.proteinG} g', 'proteine'),
-                cella('${d.carbsG} g', 'carboidrati'),
-                cella('${d.fatG} g', 'grassi'),
-              ],
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

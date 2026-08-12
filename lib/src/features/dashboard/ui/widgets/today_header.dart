@@ -8,6 +8,7 @@ import '../../../auth/auth_controller.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
+import '../../../profile/corpo_controller.dart';
 import '../../data/dashboard_models.dart';
 
 /// L'intestazione di «Oggi»: la palestra e i numeri della giornata.
@@ -132,10 +133,31 @@ class TodayHeader extends ConsumerWidget {
                       etichetta: 'bruciate',
                       icona: Icons.local_fire_department_rounded,
                     ),
+                    /*
+                     * 🚨 **Il peso arriva dal TELEFONO, non dal riepilogo del
+                     * server** — difetto riferito il 12/08/2026: *«nella
+                     * top-bar peso ancora me lo mostra come —»*.
+                     *
+                     * Dopo S5 `DashboardService::corpo()` restituisce **solo**
+                     * `target_weight_kg`: il peso vero non sta più sul server
+                     * (decisione D9-bis). Ma questa riga continuava a chiederlo
+                     * a `riepilogo.body.weightKg`, che è quindi **sempre
+                     * `null`** — cioè un trattino per sempre, qualunque cosa si
+                     * registrasse.
+                     *
+                     * ⚠️ È la stessa svista già corretta per il sonno in
+                     * `RecoveryCard`, rimasta qui perché il campo nel modello
+                     * **esiste ancora** e quindi il codice compilava benissimo.
+                     * Un `null` che non arriva mai non fa rumore.
+                     */
                     _Valore(
-                      valore: riepilogo.body.weightKg == null
-                          ? '—'
-                          : riepilogo.body.weightKg!.toStringAsFixed(1),
+                      valore:
+                          ref
+                              .watch(corpoOggiProvider)
+                              .valueOrNull
+                              ?.weightKg
+                              ?.toStringAsFixed(1) ??
+                          '—',
                       etichetta: 'kg',
                       icona: Icons.monitor_weight_outlined,
                     ),

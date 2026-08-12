@@ -163,20 +163,37 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((ref) async
 
   const calcolatore = CalcolatoreCalorie();
 
+  /*
+   * 🚨 **I valori vanno TRADOTTI, non passati così come sono.**
+   *
+   * Il profilo salva `m`, `lose_weight`, `very_active`; il calcolatore parla di
+   * `male`, `lose`, `athlete`. Lato server la traduzione esiste da sempre in
+   * `Profile::goalForFormula()` e compagni — ⚠️ **portando il calcolatore in
+   * Dart erano stati portati i numeri e non lei**.
+   *
+   * Il risultato, trovato il 12/08/2026 rispondendo a *«secondo te il target è
+   * adeguato per il dimagrimento?»*: `'lose_weight'` non è una chiave di
+   * `deltaObiettivo`, quindi il deficit era **0%** — un target di
+   * **mantenimento** a chi ha scritto «voglio dimagrire». E `'m'` non è
+   * `'male'`, quindi il metabolismo basale usava la costante **femminile**:
+   * 166 kcal in meno.
+   *
+   * 💡 Nessuno dei due dà errore. Producono un numero plausibile e sbagliato.
+   */
   final bmr = calcolatore.bmr(
     kg: kg!,
     cm: cm!,
     eta: calcolatore.etaDa(nascita!),
-    sesso: sesso!,
+    sesso: profilo.sessoPerFormula,
   );
 
-  final tdee = calcolatore.tdee(bmr, profilo.activityLevel ?? 'sedentary');
-  final kcal = calcolatore.targetCalorico(tdee, profilo.goal ?? 'maintain');
+  final tdee = calcolatore.tdee(bmr, profilo.attivitaPerFormula);
+  final kcal = calcolatore.targetCalorico(tdee, profilo.obiettivoPerFormula);
 
   return EsitoTarget.calcolato(
     TargetLocale(
       kcal: kcal,
-      macro: calcolatore.macro(kcal, profilo.goal ?? 'maintain'),
+      macro: calcolatore.macro(kcal, profilo.obiettivoPerFormula),
       bmr: bmr,
       tdee: tdee,
     ),

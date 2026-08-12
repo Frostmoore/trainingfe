@@ -80,6 +80,53 @@ class UserProfile {
 
   bool get isComplete => missing.isEmpty && derived != null;
 
+  // ───────────────────── traduzione verso le formule ─────────────────────
+  //
+  // 🚨 **I valori salvati nel profilo e quelli attesi da `CalcolatoreCalorie`
+  // NON coincidono**, ed è un fatto storico: la tabella nasce in B1.4, il
+  // calcolatore è il port di un'app precedente con il proprio vocabolario.
+  //
+  // ⚠️ **Lato server questa traduzione ESISTE GIÀ** — `Profile::sexForFormula()`,
+  // `activityForFormula()`, `goalForFormula()` — con sopra scritto: *«chi
+  // aggiunge un livello o un obiettivo deve aggiornare questi tre metodi»*.
+  //
+  // 🚨 **Portando il calcolatore in Dart (S5.1) sono stati portati i numeri e
+  // NON la traduzione.** Il difetto che ne è uscito è il peggiore possibile,
+  // perché è silenzioso e plausibile:
+  //
+  // | Valore salvato | Cosa succedeva |
+  // |---|---|
+  // | `sex = 'm'` | il confronto era con `'male'` ⇒ usava la costante **femminile**: −161 invece di +5, cioè **166 kcal in meno** |
+  // | `goal = 'lose_weight'` | non è una chiave di `deltaObiettivo` ⇒ deficit **0%**: un target di MANTENIMENTO a chi vuole dimagrire |
+  // | `activity = 'very_active'` | non è una chiave di `attivita` ⇒ ripiego su `sedentary`: 1.2 invece di 1.9 |
+  //
+  // 💡 Nessuno di questi dà errore: producono tutti un numero **plausibile e
+  // sbagliato**, che è esattamente il tipo di numero che nessuno controlla più.
+  // È stato trovato solo perché il committente ha chiesto «secondo te il target
+  // è adeguato per il dimagrimento?».
+
+  /// `m`/`f` → il vocabolario di Mifflin-St Jeor.
+  String get sessoPerFormula => sex == 'm' ? 'male' : 'female';
+
+  /// ⚠️ `very_active` qui è `athlete` nel calcolatore.
+  String get attivitaPerFormula => switch (activityLevel) {
+    'light' => 'light',
+    'moderate' => 'moderate',
+    'active' => 'active',
+    'very_active' => 'athlete',
+    _ => 'sedentary',
+  };
+
+  /// `lose_weight`/`gain_muscle` → `lose`/`bulk`.
+  ///
+  /// 💡 `cut` non ha corrispondente nel profilo: è un obiettivo che si imposta
+  /// dal piano alimentare del trainer, non da qui.
+  String get obiettivoPerFormula => switch (goal) {
+    'lose_weight' => 'lose',
+    'gain_muscle' => 'bulk',
+    _ => 'maintain',
+  };
+
   /// L'etichetta italiana del campo mancante, per dirlo invece di elencare
   /// nomi di colonne.
   static String labelFor(String campo) => switch (campo) {

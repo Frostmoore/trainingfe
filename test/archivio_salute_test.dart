@@ -119,10 +119,13 @@ void main() {
   });
 
   group('i campioni del sonno', () {
-    /// 🚨 Un campione delle 02:00 appartiene alla notte del giorno **prima**.
+    /// 🚨 Il riposo si accredita **al giorno in cui ci si sveglia** — regola
+    /// cambiata il 12/08/2026 dopo la prova su telefono.
     ///
-    /// Senza questa regola chi va a letto alle 23:30 avrebbe il sonno spezzato
-    /// su due giorni e nessuna delle due notti risulterebbe sufficiente.
+    /// ⚠️ Questi test dicevano il contrario, e passavano: chi andava a letto il
+    /// 10 alle 23:30 finiva accreditato al **10**, e il sintomo riferito era
+    /// *«mi mostra il sonno di questa notte come attribuito a ieri»*. La
+    /// convenzione è stata cambiata, non aggirata.
     test('una notte a cavallo di mezzanotte resta una notte sola', () async {
       await archivio.scriviCampioniSonno([
         campione(DateTime(2026, 8, 10, 23, 30), DateTime(2026, 8, 11, 0, 30), FaseSonno.leggero),
@@ -130,7 +133,7 @@ void main() {
         campione(DateTime(2026, 8, 11, 2, 0), DateTime(2026, 8, 11, 6, 30), FaseSonno.rem),
       ]);
 
-      final notte = await archivio.campioniDellaNotte(DateTime(2026, 8, 10));
+      final notte = await archivio.campioniDellaNotte(DateTime(2026, 8, 11));
 
       expect(notte, hasLength(3));
       expect(notte.first.iniziatoIl.hour, 23);
@@ -146,7 +149,7 @@ void main() {
       await archivio.scriviCampioniSonno([c]);
       await archivio.scriviCampioniSonno([c]);
 
-      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 10)), hasLength(1));
+      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 11)), hasLength(1));
     });
 
     test('i minuti si contano dagli estremi, e non vanno mai sotto zero', () {
@@ -175,7 +178,70 @@ void main() {
         campione(DateTime(2026, 8, 10, 23, 0), DateTime(2026, 8, 11, 6, 0), FaseSonno.leggero),
       ]);
 
-      expect(await archivio.ultimaNotteConDati(), DateTime(2026, 8, 10));
+      expect(await archivio.ultimaNotteConDati(), DateTime(2026, 8, 11));
+    });
+  });
+
+  /// La regola dettata il 12/08/2026, provando l'app sul telefono:
+  ///
+  /// *«Il sonno deve cominciare quando mi sono addormentato e finire quando mi
+  /// sono svegliato. Se vado a letto alle 21:00 e mi sveglio alle 08:00 me lo
+  /// deve considerare tutto come questa notte; poi magari mi faccio una pennica
+  /// dalle 15:00 alle 16:30, si deve aggiungere alla giornata di oggi.»*
+  group('a quale giornata si accredita il riposo', () {
+    test('chi va a letto la sera dorme per il giorno DOPO', () {
+      expect(notteDi(DateTime(2026, 8, 12, 21, 0)), DateTime(2026, 8, 13));
+      expect(notteDi(DateTime(2026, 8, 12, 23, 30)), DateTime(2026, 8, 13));
+    });
+
+    test('le ore piccole sono la stessa dormita, non un\'altra', () {
+      expect(notteDi(DateTime(2026, 8, 13, 2, 0)), DateTime(2026, 8, 13));
+      expect(notteDi(DateTime(2026, 8, 13, 7, 59)), DateTime(2026, 8, 13));
+    });
+
+    /// 🚨 **Il caso che boccia la correzione ovvia.**
+    ///
+    /// Tenere lo spartiacque a mezzogiorno e spostare l'etichetta di un giorno
+    /// sistemerebbe la notte e manderebbe la pennica delle 15:00 a **domani**.
+    /// Servono due soglie diverse perché sono due cose diverse.
+    test('la pennica del pomeriggio si somma a OGGI', () {
+      expect(notteDi(DateTime(2026, 8, 13, 15, 0)), DateTime(2026, 8, 13));
+      expect(notteDi(DateTime(2026, 8, 13, 16, 30)), DateTime(2026, 8, 13));
+    });
+
+    test('la notte e la pennica dello stesso giorno finiscono insieme', () async {
+      // Dorme dalle 21:00 del 12 alle 08:00 del 13.
+      await archivio.scriviCampioniSonno([
+        campione(
+          DateTime(2026, 8, 12, 21, 0),
+          DateTime(2026, 8, 13, 8, 0),
+          FaseSonno.leggero,
+        ),
+        // E si fa una pennica il pomeriggio del 13.
+        campione(
+          DateTime(2026, 8, 13, 15, 0),
+          DateTime(2026, 8, 13, 16, 30),
+          FaseSonno.leggero,
+        ),
+      ]);
+
+      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 13)), hasLength(2));
+      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 12)), isEmpty);
+    });
+
+    /// ⚠️ `DateTime(y, m, d + 1)` e non `add(Duration(days: 1))`.
+    ///
+    /// Il 25 ottobre 2026 a Roma dura **25 ore**: sommare 86.400 secondi a
+    /// mezzanotte cade alle 23:00 dello stesso giorno, e il riposo di quella
+    /// notte finirebbe nel giorno sbagliato — una volta l'anno, senza che
+    /// nessuno colleghi le due cose.
+    test('la sera del cambio d\'ora accredita comunque al giorno dopo', () {
+      expect(notteDi(DateTime(2026, 10, 24, 23, 0)), DateTime(2026, 10, 25));
+      expect(notteDi(DateTime(2026, 10, 25, 23, 0)), DateTime(2026, 10, 26));
+    });
+
+    test('la mezzanotte esatta appartiene al giorno che comincia', () {
+      expect(notteDi(DateTime(2026, 8, 13, 0, 0)), DateTime(2026, 8, 13));
     });
   });
 
@@ -190,7 +256,7 @@ void main() {
     await archivio.svuota();
 
     expect(await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 3650), isEmpty);
-    expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 10)), isEmpty);
+    expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 11)), isEmpty);
   });
 
   group('il corpo — S5.2', () {

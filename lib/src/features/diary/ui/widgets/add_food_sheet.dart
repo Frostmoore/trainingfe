@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/media/photo_picker.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../privacy/consensi_controller.dart';
 import '../../diary_controller.dart';
 
 /// I tre modi di aggiungere qualcosa al diario — A4.2 / A4.3 / A4.4.
@@ -101,9 +104,47 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
     }
   }
 
+  /// 🔒 L'AI si può usare? — S9 / difetto trovato provando l'app il 12/08.
+  ///
+  /// ── 🚨 Il server rifiutava già, l'app continuava a offrirla ────────────
+  ///
+  /// Le rotte `ai/food/*` hanno il middleware `ai.consent` e rispondono **403**
+  /// senza consenso: da quel lato non è mai uscito niente verso Anthropic. Ma
+  /// l'app mostrava lo stesso le schede «Scrivi» e «Foto», e chi aveva revocato
+  /// il consenso le trovava lì, apparentemente funzionanti, per scoprire solo
+  /// **dopo aver scritto** che non andavano.
+  ///
+  /// ⚠️ **Non basta che il server dica di no.** Un'interfaccia che offre una
+  /// cosa vietata non è un problema di sicurezza — è un problema di fiducia:
+  /// chi ha appena revocato un consenso e ritrova il pulsante pensa che la
+  /// revoca non abbia funzionato.
+  ///
+  /// 💡 **Si spiega invece di nascondere.** Togliere le schede farebbe credere
+  /// che la funzione non esista; così si vede che c'è, perché non è
+  /// disponibile, e come riattivarla.
+  ///
+  /// 🚨 In dubbio si risponde **`false`** — errore di rete compreso: come per
+  /// il consenso sanitario, non poter verificare vale quanto un no.
+  bool _aiPermessa(AsyncValue<Consensi> consensi) =>
+      consensi.valueOrNull?.aiDato ?? false;
+
   @override
   Widget build(BuildContext context) {
     final azioni = ref.read(diaryActionsProvider);
+    final consensi = ref.watch(consensiProvider);
+    final aiOk = _aiPermessa(consensi);
+
+    /*
+     * ⚠️ Se l'AI non c'è, si parte da «A mano» invece che dalla scheda
+     * bloccata: aprire il foglio su un pannello che dice «non puoi» sarebbe
+     * corretto e inutile — quello che la persona vuole fare è comunque
+     * registrare quel che ha mangiato.
+     */
+    if (!aiOk && !consensi.isLoading && _tabs.index < 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tabs.index < 2) _tabs.animateTo(2);
+      });
+    }
 
     return Padding(
       // Alza il foglio sopra la tastiera: senza, il campo su cui si scrive
@@ -136,15 +177,26 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
             child: TabBarView(
               controller: _tabs,
               children: [
-                _Testo(
-                  controller: _testo,
-                  inCorso: _inCorso,
-                  onInvia: () => _esegui(() => azioni.addFromText(_testo.text, widget.meal)),
-                ),
-                _Foto(
-                  inCorso: _inCorso,
-                  onScelta: (path) => _esegui(() => azioni.addFromPhoto(path, widget.meal)),
-                ),
+                if (consensi.isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (!aiOk)
+                  const _SenzaConsensoAi()
+                else
+                  _Testo(
+                    controller: _testo,
+                    inCorso: _inCorso,
+                    onInvia: () => _esegui(() => azioni.addFromText(_testo.text, widget.meal)),
+                  ),
+
+                if (consensi.isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (!aiOk)
+                  const _SenzaConsensoAi()
+                else
+                  _Foto(
+                    inCorso: _inCorso,
+                    onScelta: (path) => _esegui(() => azioni.addFromPhoto(path, widget.meal)),
+                  ),
                 _Manuale(
                   descrizione: _descrizione,
                   quantita: _quantita,
@@ -164,6 +216,69 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Il pannello che prende il posto delle schede AI quando manca il consenso.
+///
+/// 🚨 **Spiega invece di sparire.** Togliere le schede farebbe credere che la
+/// funzione non esista; così si vede che c'è, **perché** non è disponibile, e
+/// come riattivarla — che è l'unica cosa che la persona può fare.
+///
+/// ⚠️ Il pulsante porta ai consensi e **non** accende niente da qui: il
+/// consenso si concede dalla schermata che lo spiega, non da un foglio in cui
+/// si stava facendo altro. Un consenso raccolto di sfuggita non è «informato».
+class _SenzaConsensoAi extends StatelessWidget {
+  const _SenzaConsensoAi();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(Gap.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.privacy_tip_outlined,
+            size: 40,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: Gap.md),
+          Text(
+            'Serve il tuo consenso',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(
+            'Per stimare un pasto da una frase o da una foto, il testo o '
+            'l\'immagine devono uscire da qui e raggiungere il fornitore '
+            'dell\'AI. Senza il tuo consenso non parte niente.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Gap.md),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push(AppRoutes.consensi);
+            },
+            icon: const Icon(Icons.tune_rounded),
+            label: const Text('Privacy e consensi'),
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(
+            'Nel frattempo puoi inserire a mano.',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.outline,
             ),
           ),
         ],

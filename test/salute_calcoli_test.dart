@@ -155,7 +155,7 @@ void main() {
       await dormi(FaseSonno.leggero, da: sera, minuti: 460);
       await dormi(FaseSonno.rem, da: sera.add(const Duration(minutes: 460)), minuti: 20);
 
-      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10));
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
       expect(g!.minutiDormiti, 480);
       // I minuti dormiti da soli direbbero «ok»…
@@ -174,7 +174,7 @@ void main() {
       await dormi(FaseSonno.rem, da: sera.add(const Duration(minutes: 384)), minuti: 96);
       await dormi(FaseSonno.sveglio, da: sera.add(const Duration(minutes: 480)), minuti: 15);
 
-      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10));
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
       expect(g!.minutiDormiti, 480);
       expect(g.minutiSvegli, 15);
@@ -192,7 +192,7 @@ void main() {
       await dormi(FaseSonno.leggero, da: sera, minuti: 300);
       await dormi(FaseSonno.sveglio, da: sera.add(const Duration(minutes: 300)), minuti: 90);
 
-      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10));
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
       expect(g!.minutiDormiti, 300);
       expect(g.minutiSvegli, 90);
@@ -205,7 +205,7 @@ void main() {
       await dormi(FaseSonno.leggero, da: DateTime(2026, 8, 10, 23, 30), minuti: 60);
       await dormi(FaseSonno.profondo, da: DateTime(2026, 8, 11, 0, 30), minuti: 120);
 
-      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10));
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
       expect(g, isNotNull);
       expect(g!.minutiDormiti, 180);
@@ -213,13 +213,13 @@ void main() {
     });
 
     test('senza campioni si torna null, non una notte di zeri', () async {
-      expect(await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10)), isNull);
+      expect(await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)), isNull);
     });
 
     test('la durata si legge in ore e minuti', () async {
       await dormi(FaseSonno.leggero, da: DateTime(2026, 8, 10, 23), minuti: 425);
 
-      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 10));
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
       expect(g!.durata, '7h 05m');
     });

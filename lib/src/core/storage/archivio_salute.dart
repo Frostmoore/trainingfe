@@ -42,7 +42,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,8 +55,49 @@ class ArchivioSalute extends _$ArchivioSalute {
 
           // v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
           if (da < 4) await m.createTable(schedeRicevute);
+
+          // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
+          if (da < 5) await _riaccreditaLeNotti();
         },
       );
+
+  /// Ricalcola `notte` su tutti i campioni già salvati — migrazione v4 → v5.
+  ///
+  /// ── 🚨 Perché una migrazione, e non «si sistema alla prossima lettura» ──
+  ///
+  /// Il ponte scrive con `InsertMode.insertOrIgnore` su `(fonte, iniziatoIl)`:
+  /// rileggendo la stessa finestra da Health Connect, le righe già presenti
+  /// vengono **ignorate**, non aggiornate. Senza questa migrazione le notti
+  /// vecchie resterebbero accreditate al giorno sbagliato **per sempre**, e
+  /// l'archivio conterrebbe due convenzioni mescolate — che è peggio di una
+  /// convenzione sbagliata, perché non si può nemmeno correggere a mente.
+  ///
+  /// ── 💡 Perché si ricalcola invece di sommare un giorno ─────────────────
+  ///
+  /// `notte = notte + 1` sarebbe giusto per il sonno notturno e **sbagliato per
+  /// i riposini**, che con la regola nuova non si spostano. L'unica cosa che
+  /// non mente è rifare il conto da `iniziatoIl`, che è il dato di partenza.
+  ///
+  /// ⚠️ Nessun dato si perde e niente si cancella: si riscrive una colonna
+  /// derivata. `notte` non fa parte di nessun vincolo di unicità — quello è su
+  /// `(fonte, iniziatoIl)` — quindi non ci sono collisioni possibili.
+  Future<void> _riaccreditaLeNotti() async {
+    final righe = await select(campioniSonno).get();
+
+    await batch((b) {
+      for (final riga in righe) {
+        final giusta = _soloGiorno(notteDi(riga.iniziatoIl));
+
+        if (giusta == riga.notte) continue;
+
+        b.update(
+          campioniSonno,
+          CampioniSonnoCompanion(notte: Value(giusta)),
+          where: (t) => t.id.equals(riga.id),
+        );
+      }
+    });
+  }
 
   // ─────────────────────────── scrittura ───────────────────────────
 
@@ -147,6 +188,50 @@ class ArchivioSalute extends _$ArchivioSalute {
           ..where((t) => t.metrica.equals(metrica.codice) & t.misurataIl.isBiggerOrEqualValue(da))
           ..orderBy([(t) => OrderingTerm.desc(t.misurataIl)]))
         .get();
+  }
+
+  /// Una media **per giorno**, per disegnare un grafico.
+  ///
+  /// ── 🚨 Perché aggregato e non grezzo ──────────────────────────────────
+  ///
+  /// Un orologio manda l'HRV in continuazione: sul telefono del committente
+  /// sono **8.557 letture in trenta giorni**, contro 104 di battito a riposo.
+  /// Disegnarle tutte darebbe una linea che oscilla dieci volte al minuto —
+  /// cioè rumore del sensore, non un andamento.
+  ///
+  /// 💡 Ed è anche la stessa scala con cui si legge il dato: `MediaDiRiferimento`
+  /// confronta il valore di **oggi** con la media dei giorni prima. Un grafico a
+  /// granularità diversa dal giudizio racconterebbe un'altra storia.
+  ///
+  /// ⚠️ I giorni senza letture **non compaiono**: non si riempiono i buchi. Un
+  /// valore inventato per un giorno in cui l'orologio era scarico è
+  /// indistinguibile da una misura vera.
+  Future<List<MediaGiornaliera>> mediePerGiorno(
+    MetricaSalute metrica, {
+    int giorni = 30,
+  }) async {
+    final da = _soloGiorno(DateTime.now().subtract(Duration(days: giorni)));
+
+    final righe = await customSelect(
+      'SELECT giorno, AVG(valore) AS media, MIN(valore) AS minimo, '
+      'MAX(valore) AS massimo, COUNT(*) AS quante '
+      'FROM letture_salute WHERE metrica = ?1 AND giorno >= ?2 '
+      'GROUP BY giorno ORDER BY giorno ASC',
+      variables: [Variable.withString(metrica.codice), Variable.withDateTime(da)],
+      readsFrom: {lettureSalute},
+    ).get();
+
+    return righe
+        .map(
+          (r) => MediaGiornaliera(
+            giorno: r.read<DateTime>('giorno'),
+            media: r.read<double>('media'),
+            minimo: r.read<double>('minimo'),
+            massimo: r.read<double>('massimo'),
+            quante: r.read<int>('quante'),
+          ),
+        )
+        .toList();
   }
 
   /// L'ultima lettura di una metrica, se c'è.

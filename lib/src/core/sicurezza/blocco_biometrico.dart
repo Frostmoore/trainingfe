@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -48,6 +49,13 @@ class BloccoBiometrico {
   /// al filesystem può spegnere: il blocco si aggirerebbe senza toccare né il
   /// token né l'impronta, cioè sarebbe teatro invece che una difesa.
   static const _chiave = 'blocco_biometrico_attivo';
+
+  /// Se lo sblocco è già stato **proposto** su questo dispositivo.
+  ///
+  /// 🚨 È una cosa diversa da «attivo»: serve a chiedere **una volta sola**.
+  /// Ripresentare la proposta a ogni avvio a chi ha detto di no è il modo più
+  /// rapido per far disattivare le notifiche e disinstallare l'app.
+  static const _chiaveProposto = 'blocco_biometrico_proposto';
 
   /// Il telefono sa fare il riconoscimento?
   ///
@@ -126,12 +134,58 @@ class BloccoBiometrico {
         // stava dentro `AuthenticationOptions`, che nella 3.x non esiste più.)
         persistAcrossBackgrounding: false,
       );
-    } on Object {
-      // 🚨 `authenticate()` restituisce `false` sul fallimento pulito ma
-      // **lancia `LocalAuthException`** su tutto il resto — lettore occupato,
-      // troppi tentativi, biometria disattivata mentre l'app era aperta. Per
-      // chi chiama sono la stessa cosa: non si è sbloccato.
+    } on Object catch (errore) {
+      /*
+       * 🚨 `authenticate()` restituisce `false` sul fallimento pulito ma
+       * **lancia** su tutto il resto — lettore occupato, troppi tentativi,
+       * biometria disattivata mentre l'app era aperta. Per chi usa l'app sono
+       * la stessa cosa: non si è sbloccato.
+       *
+       * ⚠️ **Ma NON sono la stessa cosa per chi sviluppa, e questo `catch` l'ha
+       * già nascosto una volta.** Con `MainActivity : FlutterActivity()` il
+       * plugin lancia `no_fragment_activity` a **ogni** tentativo: il sintomo
+       * era un interruttore che si toccava e non si accendeva, senza un
+       * messaggio da nessuna parte. Ci è voluta una prova su telefono vero per
+       * accorgersene.
+       *
+       * 💡 In debug si stampa, in release resta muto: l'utente non deve leggere
+       * il nome di una classe Android, ma il prossimo che rompe la
+       * configurazione deve trovarlo scritto invece di doverlo dedurre.
+       */
+      if (kDebugMode) debugPrint('BloccoBiometrico.sblocca: $errore');
+
       return false;
+    }
+  }
+
+  /// Va proposto adesso? — la richiesta al primo accesso su un dispositivo.
+  ///
+  /// Tre condizioni, e servono tutte e tre:
+  /// 1. il telefono sa farlo **e ha un'impronta registrata**;
+  /// 2. non è già acceso;
+  /// 3. non è già stato chiesto su questo dispositivo.
+  ///
+  /// ⚠️ La terza è quella che rende la funzione sopportabile: senza, chi dice
+  /// di no se lo ritrova davanti a ogni avvio.
+  Future<bool> daProporre() async {
+    if (!await disponibile()) return false;
+    if (await attivo()) return false;
+
+    try {
+      return await _storage.read(key: _chiaveProposto) != '1';
+    } on Object {
+      // In dubbio non si propone: una proposta di troppo è fastidio, una in
+      // meno è solo un'opzione che resta nel profilo.
+      return false;
+    }
+  }
+
+  /// Segna che è stato chiesto — ⚠️ **anche quando la risposta è no**.
+  Future<void> segnaProposto() async {
+    try {
+      await _storage.write(key: _chiaveProposto, value: '1');
+    } on Object {
+      // Al peggio si riproporrà: non vale un errore a schermo.
     }
   }
 
@@ -143,6 +197,20 @@ class BloccoBiometrico {
   Future<void> azzera() async {
     try {
       await _storage.delete(key: _chiave);
+
+      /*
+       * ⚠️ Si dimentica **anche di aver chiesto**.
+       *
+       * Un telefono può passare di mano — quello di casa, la tavoletta della
+       * reception — e la persona che accede dopo non ha mai visto nessuna
+       * proposta. Tenendo il flag, si ritroverebbe una funzione mai offerta e
+       * nessun modo di scoprirla se non frugando nel profilo.
+       *
+       * 💡 Il costo è nullo: chi esce e rientra sullo stesso telefono si
+       * rivede la domanda **una volta**, subito dopo aver ridigitato la
+       * password — cioè nel momento in cui è più evidente a cosa serve.
+       */
+      await _storage.delete(key: _chiaveProposto);
     } on Object {
       // Non c'è niente di utile da fare: si sta già uscendo.
     }

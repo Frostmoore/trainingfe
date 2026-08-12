@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/ui/widgets/proposta_sblocco.dart';
+
 /// La shell con la barra di navigazione — A3.3.
 ///
 /// `StatefulShellRoute` e non un `IndexedStack` fatto a mano: **ogni scheda
@@ -43,7 +45,16 @@ class HomeShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: shell,
+    /*
+     * 🔒 `PropostaSblocco` sta qui e non in una schermata — A1.
+     *
+     * È un widget **invisibile** (`SizedBox.shrink`) che al primo frame decide
+     * se proporre lo sblocco con l'impronta. Sta nella shell perché è l'unico
+     * punto che esiste **subito dopo l'accesso** e **sopravvive al cambio di
+     * scheda**: dentro «Oggi» la proposta ricomparirebbe ogni volta che si
+     * torna su quella scheda.
+     */
+    body: Stack(children: [shell, const PropostaSblocco()]),
     bottomNavigationBar: NavigationBar(
       selectedIndex: shell.currentIndex,
       destinations: _destinazioni,

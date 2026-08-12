@@ -156,51 +156,172 @@ class _Notte extends StatelessWidget {
 /// 🚨 La larghezza di ogni blocco è **proporzionale alla sua durata reale**, non
 /// al numero di blocchi: un risveglio di due minuti e uno di quaranta devono
 /// vedersi diversi, o il grafico racconta una notte che non c'è stata.
-class _Ipnogramma extends StatelessWidget {
+class _Ipnogramma extends StatefulWidget {
   const _Ipnogramma({required this.notte});
 
   final SleepNight notte;
 
+  @override
+  State<_Ipnogramma> createState() => _IpnogrammaState();
+}
+
+class _IpnogrammaState extends State<_Ipnogramma> {
   static const _altezzaBanda = 22.0;
 
   /// L'ordine verticale: sveglio in alto, profondo in basso, come su ogni
   /// dispositivo che disegna il sonno.
   static const _riga = {1: 0, 4: 1, 2: 2, 3: 3};
 
+  /// Dove sta il dito, in frazione della larghezza. `null` = non lo si sta
+  /// toccando.
+  double? _dito;
+
+  SleepNight get _notte => widget.notte;
+
+  /// L'istante sotto il dito.
+  ///
+  /// 💡 Si interpola sulla **durata reale** della notte, non sul numero di
+  /// blocchi: è la stessa proporzione con cui sono disegnati, quindi l'ora che
+  /// si legge è esattamente quella del punto che si sta guardando.
+  DateTime _istanteA(double frazione) => _notte.from.add(
+    Duration(
+      seconds:
+          (_notte.to.difference(_notte.from).inSeconds * frazione.clamp(0.0, 1.0))
+              .round(),
+    ),
+  );
+
+  SleepBlock? _bloccoA(DateTime istante) {
+    for (final b in _notte.hypnogram) {
+      if (!istante.isBefore(b.from) && istante.isBefore(b.to)) return b;
+    }
+
+    return _notte.hypnogram.isEmpty ? null : _notte.hypnogram.last;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (notte.hypnogram.isEmpty) {
+    final theme = Theme.of(context);
+
+    if (_notte.hypnogram.isEmpty) {
       return Text(
         'Questa notte non ha il dettaglio delle fasi.',
-        style: Theme.of(context).textTheme.bodySmall,
+        style: theme.textTheme.bodySmall,
       );
     }
 
-    final totale = notte.to.difference(notte.from).inSeconds;
+    final totale = _notte.to.difference(_notte.from).inSeconds;
 
     if (totale <= 0) return const SizedBox.shrink();
 
-    return SizedBox(
-      height: _altezzaBanda * 4,
-      child: LayoutBuilder(
-        builder: (context, vincoli) => Stack(
-          children: [
-            for (final blocco in notte.hypnogram)
-              Positioned(
-                left:
-                    blocco.from.difference(notte.from).inSeconds / totale * vincoli.maxWidth,
-                top: (_riga[blocco.stage] ?? 2) * _altezzaBanda,
-                width: (blocco.to.difference(blocco.from).inSeconds / totale * vincoli.maxWidth)
-                    .clamp(1.0, vincoli.maxWidth),
-                height: _altezzaBanda,
-                child: ColoredBox(
-                  color: SleepScreen._colori[blocco.stage] ?? Colors.grey,
+    final istante = _dito == null ? null : _istanteA(_dito!);
+    final blocco = istante == null ? null : _bloccoA(istante);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        /*
+         * 🚨 L'etichetta sta **sopra** il grafico e occupa sempre la sua riga.
+         *
+         * Mettendola sotto, o facendola comparire solo al tocco, il grafico si
+         * sposterebbe sotto il dito mentre lo si trascina — e si finirebbe a
+         * leggere l'ora di un punto diverso da quello che si sta toccando.
+         */
+        SizedBox(
+          height: 20,
+          child: blocco == null
+              ? Text(
+                  'Trascina il dito sul grafico per vedere l\'ora',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                )
+              : Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: SleepScreen._colori[blocco.stage] ?? Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: Gap.xs),
+                    Text(
+                      '${DateFormat('HH:mm').format(istante!)} · ${blocco.label}',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-          ],
         ),
-      ),
+
+        const SizedBox(height: Gap.xs),
+
+        SizedBox(
+          height: _altezzaBanda * 4,
+          child: LayoutBuilder(
+            builder: (context, vincoli) => GestureDetector(
+              // ⚠️ `opaque`: senza, il tocco passa attraverso gli spazi vuoti
+              // fra le bande e il trascinamento si interrompe da solo appena il
+              // dito attraversa una riga senza blocco.
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: (d) =>
+                  _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+              onHorizontalDragUpdate: (d) =>
+                  _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+              onHorizontalDragEnd: (_) => setState(() => _dito = null),
+              onHorizontalDragCancel: () => setState(() => _dito = null),
+              onTapDown: (d) => _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+              onTapUp: (_) => setState(() => _dito = null),
+              onTapCancel: () => setState(() => _dito = null),
+              child: Stack(
+                children: [
+                  for (final b in _notte.hypnogram)
+                    Positioned(
+                      left:
+                          b.from.difference(_notte.from).inSeconds /
+                          totale *
+                          vincoli.maxWidth,
+                      top: (_riga[b.stage] ?? 2) * _altezzaBanda,
+                      width:
+                          (b.to.difference(b.from).inSeconds /
+                                  totale *
+                                  vincoli.maxWidth)
+                              .clamp(1.0, vincoli.maxWidth),
+                      height: _altezzaBanda,
+                      child: ColoredBox(
+                        color: SleepScreen._colori[b.stage] ?? Colors.grey,
+                      ),
+                    ),
+
+                  // La linea che segue il dito: senza, si legge un'ora e non si
+                  // sa a quale punto del grafico appartenga.
+                  if (_dito != null)
+                    Positioned(
+                      left: (_dito! * vincoli.maxWidth).clamp(
+                        0.0,
+                        vincoli.maxWidth - 2,
+                      ),
+                      top: 0,
+                      width: 2,
+                      height: _altezzaBanda * 4,
+                      child: ColoredBox(color: theme.colorScheme.onSurface),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  void _aggiorna(double dx, double larghezza) {
+    if (larghezza <= 0) return;
+
+    setState(() => _dito = (dx / larghezza).clamp(0.0, 1.0));
   }
 }
 

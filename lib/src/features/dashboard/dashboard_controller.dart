@@ -169,7 +169,7 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
    * il consiglio esce come può. Meglio un consiglio generico che uno costruito
    * su un numero inventato.
    */
-  final locale = await ref.watch(targetLocaleProvider.future);
+  final locale = (await ref.watch(targetLocaleProvider.future)).target;
 
   try {
     final data = await ref

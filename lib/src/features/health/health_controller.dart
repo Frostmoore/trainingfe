@@ -202,24 +202,15 @@ final healthControllerProvider =
     ref.watch(archivioSaluteProvider),
 
     /*
-     * Il consenso si **rilegge** a ogni gesto, e non si cattura una volta.
+     * Il consenso si **rilegge** a ogni gesto, e non si cattura una volta: si
+     * revoca da un'altra schermata, e una copia presa all'avvio direbbe «sì» a
+     * chi ha appena detto di no.
      *
-     * ⚠️ `consensiProvider` è una `FutureProvider` non `autoDispose`: la
-     * chiamata al server avviene una volta e poi risponde dalla cache, finché
-     * `cambiaConsensoProvider` non la invalida — cioè esattamente quando la
-     * persona cambia idea.
-     *
-     * 🚨 In caso di errore di rete si risponde **`false`**: senza poter
-     * verificare il consenso non si leggono dati sanitari. Il contrario
-     * significherebbe che un server irraggiungibile apre il cancello.
+     * 💡 La regola vive tutta in `consensoSaluteProvider` — compreso il
+     * «in dubbio è no» — perché la stessa domanda se la fa anche
+     * `recuperoProvider`, e due implementazioni divergono sempre.
      */
-    () async {
-      try {
-        return (await ref.read(consensiProvider.future)).saluteDato;
-      } on Object {
-        return false;
-      }
-    },
+    () => ref.read(consensoSaluteProvider.future),
   ),
 );
 

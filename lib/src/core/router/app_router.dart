@@ -44,9 +44,12 @@ import '../../features/training/ui/session_summary_screen.dart';
 ///     login lo farebbe riprovare all'infinito con la password corretta;
 ///  3. 🔒 **sessione bloccata** (A1) → schermata di blocco. Stessa logica del
 ///     punto 2: la sessione **esiste**, manca solo il permesso di usarla;
-///  4. **nessuna palestra scelta** → codice d'invito;
-///  5. **non autenticato** → accesso;
-///  6. **autenticato su una schermata di accesso** → dentro.
+///  4. 🚨 **sbloccata ma ancora sulla schermata di blocco** → dentro. ⚠️ Serve
+///     una regola sua: `/bloccata` non è pubblica, quindi il punto 7 non la
+///     riconosce — e senza, l'impronta funzionava e non succedeva niente;
+///  5. **nessuna palestra scelta** → codice d'invito;
+///  6. **non autenticato** → accesso;
+///  7. **autenticato su una schermata di accesso** → dentro.
 class AppRoutes {
   const AppRoutes._();
 
@@ -107,6 +110,99 @@ class AppRoutes {
   static bool isPublic(String location) => _public.contains(location);
 }
 
+/// **Dove si può stare**, come funzione pura — l'unico punto che lo decide.
+///
+/// ── 🚨 Perché è una funzione e non una closure dentro `GoRouter` ──────────
+///
+/// Perché è il pezzo di codice **più facile da sbagliare e più difficile da
+/// provare** dell'intera app: sette regole in cascata, dove l'ordine conta e
+/// dove «nessuna regola si applica» significa **resta dove sei**, cioè il modo
+/// più silenzioso di lasciare qualcuno in un vicolo cieco.
+///
+/// ⚠️ È successo davvero, il 12/08/2026: l'impronta sbloccava, e l'app restava
+/// sulla pagina «App bloccata». Nessun errore, nessun log, niente da cercare.
+/// Estratta di qui, quella cascata si prova in venti righe di test.
+///
+/// `null` = «va bene dove sei». Qualunque altra stringa è la rotta da imporre.
+///
+/// L'ordine dei controlli **non è casuale**:
+///  1. si sta ancora leggendo il token → si resta, e l'app mostra lo splash;
+///  2. palestra sospesa, prima di tutto il resto;
+///  3. 🔒 sessione bloccata;
+///  4. 🚨 sbloccata ma ancora sulla schermata di blocco;
+///  5. nessuna palestra scelta;
+///  6. sessione assente;
+///  7. autenticato su una schermata d'accesso.
+String? destinazione({
+  required AuthStatus stato,
+  required bool haPalestra,
+  required String posizione,
+}) {
+  final autenticato = stato == AuthStatus.loggedIn;
+
+  // 1. Non si sa ancora niente: si resta dove si è, lo splash è mostrato
+  //    dall'app stessa. Decidere adesso significherebbe mandare al login
+  //    ogni utente a ogni avvio, per la frazione di secondo che serve a
+  //    leggere il Keychain — e quel salto si vede.
+  if (stato == AuthStatus.unknown) return null;
+
+  // 2. Palestra sospesa: prima di tutto il resto.
+  if (stato == AuthStatus.gymInactive) {
+    return posizione == AppRoutes.gymInactive ? null : AppRoutes.gymInactive;
+  }
+
+  /*
+   * 3. 🔒 Sessione bloccata — A1.
+   *
+   * ⚠️ **Prima del controllo sulla palestra**, e non è un dettaglio: il
+   * branding si legge dalla cache locale, quindi anche a schermo bloccato
+   * l'app saprebbe di che colore essere e passerebbe oltre. Ma mostrare il
+   * codice palestra o qualunque altra schermata a chi non ha ancora
+   * sbloccato vorrebbe dire che il blocco non blocca niente.
+   */
+  if (stato == AuthStatus.locked) {
+    return posizione == AppRoutes.bloccata ? null : AppRoutes.bloccata;
+  }
+
+  /*
+   * 4. 🚨 **Sbloccata: si esce dalla schermata di blocco.**
+   *
+   * ⚠️ Senza questa riga l'impronta funzionava e **non succedeva niente**: si
+   * restava sulla pagina «App bloccata». È il difetto riferito provando l'app
+   * il 12/08/2026.
+   *
+   * Il motivo è che `/bloccata` **non è** in `_public`, quindi la regola 7 —
+   * «autenticato su una schermata di accesso → dentro» — non la riconosceva, e
+   * nessuna regola successiva spostava: la cascata arrivava in fondo e tornava
+   * `null`, cioè «resta dove sei».
+   *
+   * 🚨 **E `/bloccata` NON va aggiunta a `_public` per rimediare.** Quella
+   * lista significa «raggiungibile senza sessione», ed è usata anche dalla
+   * regola 6: chi tocca «Entra con la password» finisce `loggedOut`, e con
+   * `/bloccata` fra le pubbliche resterebbe **inchiodato lì** invece di andare
+   * al login. Si sarebbe scambiato un vicolo cieco con un altro.
+   *
+   * 💡 Qui basta il caso autenticato: quando non lo è, ci pensa la regola 6
+   * proprio perché `/bloccata` non è pubblica.
+   */
+  if (posizione == AppRoutes.bloccata && autenticato) return AppRoutes.home;
+
+  // 5. Nessuna palestra scelta: l'app non sa nemmeno di che colore essere.
+  if (!haPalestra) {
+    return posizione == AppRoutes.gymCode ? null : AppRoutes.gymCode;
+  }
+
+  // 6. Sessione assente.
+  if (!autenticato) {
+    return AppRoutes.isPublic(posizione) ? null : AppRoutes.login;
+  }
+
+  // 7. Autenticato ma fermo su una schermata di accesso.
+  if (AppRoutes.isPublic(posizione)) return AppRoutes.home;
+
+  return null;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   // `Listenable` costruito dai due controller: go_router rivaluta il
   // `redirect` quando cambia la sessione **o** quando cambia la palestra.
@@ -118,50 +214,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.home,
     refreshListenable: refresh,
-    redirect: (context, state) {
-      final auth = ref.read(authControllerProvider);
-      final branding = ref.read(brandingControllerProvider);
-      final location = state.matchedLocation;
-
-      // 1. Non si sa ancora niente: si resta dove si è, lo splash è mostrato
-      //    dall'app stessa. Decidere adesso significherebbe mandare al login
-      //    ogni utente a ogni avvio, per la frazione di secondo che serve a
-      //    leggere il Keychain — e quel salto si vede.
-      if (auth.status == AuthStatus.unknown) return null;
-
-      // 2. Palestra sospesa: prima di tutto il resto.
-      if (auth.status == AuthStatus.gymInactive) {
-        return location == AppRoutes.gymInactive ? null : AppRoutes.gymInactive;
-      }
-
-      /*
-       * 3. 🔒 Sessione bloccata — A1.
-       *
-       * ⚠️ **Prima del controllo sulla palestra**, e non è un dettaglio: il
-       * branding si legge dalla cache locale, quindi anche a schermo bloccato
-       * l'app saprebbe di che colore essere e passerebbe oltre. Ma mostrare il
-       * codice palestra o qualunque altra schermata a chi non ha ancora
-       * sbloccato vorrebbe dire che il blocco non blocca niente.
-       */
-      if (auth.status == AuthStatus.locked) {
-        return location == AppRoutes.bloccata ? null : AppRoutes.bloccata;
-      }
-
-      // 3. Nessuna palestra scelta: l'app non sa nemmeno di che colore essere.
-      if (!branding.hasGym) {
-        return location == AppRoutes.gymCode ? null : AppRoutes.gymCode;
-      }
-
-      // 4. Sessione assente.
-      if (!auth.isAuthenticated) {
-        return AppRoutes.isPublic(location) ? null : AppRoutes.login;
-      }
-
-      // 5. Autenticato ma fermo su una schermata di accesso.
-      if (AppRoutes.isPublic(location)) return AppRoutes.home;
-
-      return null;
-    },
+    redirect: (context, state) => destinazione(
+      stato: ref.read(authControllerProvider).status,
+      haPalestra: ref.read(brandingControllerProvider).hasGym,
+      posizione: state.matchedLocation,
+    ),
     routes: [
       GoRoute(
         path: AppRoutes.gymCode,

@@ -82,22 +82,82 @@ enum FaseSonno {
   };
 }
 
-/// A quale notte appartiene un istante.
+/// Un punto del grafico: la media di una metrica in un giorno.
 ///
-/// 🚨 **Un campione delle 02:00 appartiene alla notte del giorno PRECEDENTE.**
-/// Senza questa regola, chi va a letto alle 23:30 avrebbe il sonno spezzato su
-/// due giorni e **nessuna delle due notti risulterebbe sufficiente**.
+/// 💡 Porta anche **minimo e massimo**: su una metrica che l'orologio campiona
+/// centinaia di volte al giorno, la sola media nasconde quanto è ballerina —
+/// e una giornata con HRV fra 20 e 90 non è la stessa cosa di una stabile a 55,
+/// anche quando la media coincide.
+class MediaGiornaliera {
+  const MediaGiornaliera({
+    required this.giorno,
+    required this.media,
+    required this.minimo,
+    required this.massimo,
+    required this.quante,
+  });
+
+  final DateTime giorno;
+  final double media;
+  final double minimo;
+  final double massimo;
+
+  /// Quante letture ci sono dietro. ⚠️ Un giorno con **una** lettura non è una
+  /// media: l'interfaccia deve poterlo distinguere.
+  final int quante;
+}
+
+/// L'ora dopo la quale un sonno che comincia **appartiene al giorno dopo**.
 ///
-/// Lo spartiacque è **mezzogiorno**: chi dorme a cavallo di mezzogiorno sta
-/// facendo qualcosa che questo sistema non saprebbe interpretare comunque.
+/// ⚠️ È una convenzione, non una verità: chi va a dormire alle 17:30 la vedrà
+/// contata come riposino del giorno stesso. Diciotto è il compromesso che tiene
+/// insieme «vado a letto presto, alle 21» e «schiaccio un pisolino alle 17».
+const int oraCheChiudeLaGiornata = 18;
+
+/// A quale **giornata di riposo** appartiene un istante.
 ///
-/// ⚠️ È il ritratto di `HealthSample::nightOf()`. Sbagliarlo sposta tutto di un
-/// giorno, e il sintomo — «l'ipnogramma è vuoto» — fa cercare il difetto nella
-/// lettura dei dati invece che qui.
+/// ── 🚨 La regola, dettata il 12/08/2026 dopo la prova su telefono ─────────
+///
+/// *«Il sonno deve cominciare quando mi sono addormentato e finire quando mi
+/// sono svegliato. Se vado a letto alle 21:00 e mi sveglio alle 08:00 me lo
+/// deve considerare tutto come questa notte; poi magari mi faccio una pennica
+/// dalle 15:00 alle 16:30, si deve aggiungere alla giornata di oggi.»*
+///
+/// Cioè: **il riposo si accredita al giorno in cui ci si sveglia**, e i
+/// riposini del pomeriggio si sommano a quello stesso giorno.
+///
+/// | Quando cominci | Giornata |
+/// |---|---|
+/// | 21:00 del 12 | **13** — ti sveglierai domani |
+/// | 02:00 del 13 | **13** — stessa dormita, stesso mucchio |
+/// | 07:30 del 13 | **13** — ancora la stessa |
+/// | 15:00 del 13 *(pennica)* | **13** — si somma a oggi |
+///
+/// ── ⚠️ Perché lo spartiacque NON è mezzogiorno ────────────────────────────
+///
+/// Prima la regola era «prima di mezzogiorno = notte precedente», e il sintomo
+/// era quello riferito provando l'app: **il sonno di stanotte compariva sotto
+/// ieri**. Il rimedio ovvio — tenere mezzogiorno e spostare l'etichetta di un
+/// giorno — sembra funzionare e **rompe i riposini**: la pennica delle 15:00
+/// finirebbe accreditata a **domani**.
+///
+/// 🚨 Ci vogliono due soglie diverse perché le due cose sono diverse: la sera
+/// apre la notte **del giorno dopo**, il pomeriggio appartiene al giorno
+/// stesso.
+///
+/// ── ⚠️ `DateTime(y, m, d + 1)`, mai `add(Duration(days: 1))` ─────────────
+///
+/// Il costruttore normalizza sull'**orologio da parete** e regge l'ora legale;
+/// sommare 86.400 secondi no. Il 25 ottobre a Roma dura 25 ore, e `+24h` da
+/// mezzanotte cade alle 23:00 dello stesso giorno — cioè il riposo di quella
+/// notte sparirebbe nel giorno sbagliato una volta l'anno. È la stessa
+/// trappola di `GiornoLocale::piuGiorni()` lato server.
 DateTime notteDi(DateTime istante) {
   final giorno = DateTime(istante.year, istante.month, istante.day);
 
-  return istante.hour < 12 ? giorno.subtract(const Duration(days: 1)) : giorno;
+  return istante.hour >= oraCheChiudeLaGiornata
+      ? DateTime(giorno.year, giorno.month, giorno.day + 1)
+      : giorno;
 }
 
 /// Il giudizio su un indicatore: `ok`, `warn` o `bad`.

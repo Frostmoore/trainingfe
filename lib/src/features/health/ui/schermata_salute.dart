@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../dati_salute.dart';
 import '../health_controller.dart';
+import 'widgets/grafico_metrica.dart';
 
 /// La schermata che spiega **cosa leggiamo e dove finisce** — S3.4.
 ///
@@ -34,6 +36,23 @@ class SchermataSalute extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
+          /*
+           * 🚨 **I dati stanno in cima, la spiegazione sotto** — richiesta del
+           * 12/08/2026.
+           *
+           * Prima questa schermata era **solo testo**: cosa leggiamo, dove
+           * resta, e due pulsanti. Chi ci arrivava dalla scheda Recupero per
+           * guardare il proprio HRV trovava un'informativa sulla privacy.
+           *
+           * ⚠️ La spiegazione resta e non si accorcia — Health Connect la
+           * pretende, ed è la promessa su cui si regge tutta la fase S1. Ma
+           * viene **dopo** la cosa per cui si è aperta la schermata.
+           */
+          const GraficoMetrica(metrica: MetricaSalute.hrv),
+          const SizedBox(height: Gap.md),
+          const GraficoMetrica(metrica: MetricaSalute.battitoARiposo),
+          const SizedBox(height: Gap.lg),
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(Gap.md),

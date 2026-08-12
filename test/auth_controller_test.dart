@@ -346,7 +346,21 @@ class _BloccoFinto implements BloccoBiometrico {
   Future<bool> sblocca({required String motivo}) async => apre;
 
   @override
-  Future<void> azzera() async => acceso = false;
+  Future<bool> daProporre() async => !acceso && !proposto;
+
+  @override
+  Future<void> segnaProposto() async => proposto = true;
+
+  /// Se la proposta di attivare lo sblocco è già stata mostrata — A1.
+  bool proposto = false;
+
+  @override
+  Future<void> azzera() async {
+    acceso = false;
+    // ⚠️ Anche il «gliel'ho già chiesto» si dimentica: un telefono può passare
+    // di mano, e chi accede dopo non ha mai visto nessuna proposta.
+    proposto = false;
+  }
 }
 
 class _TokenStoreFinto implements TokenStore {

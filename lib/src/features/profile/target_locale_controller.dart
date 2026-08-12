@@ -40,7 +40,69 @@ class TargetLocale {
   final double tdee;
 }
 
-/// `null` quando manca un pezzo, e **non si inventa niente**.
+/// Il pezzo che manca per poter calcolare.
+///
+/// 🚨 **Esiste perché «non si può calcolare» e «non so cosa ti manca» sono due
+/// cose diverse**, e la seconda è quella che fa arrabbiare.
+///
+/// Provando l'app il 12/08/2026 il committente ha riferito: *«Non mi calcola
+/// più i valori che inserisco di peso, altezza eccetera»*. ⚠️ Il profilo era
+/// compilato; a mancare era **solo la pesata**, che vive nell'archivio locale e
+/// si registra da un'altra parte. La card diceva «Compila i tuoi dati» — cioè
+/// mandava a rifare una cosa già fatta, per una che non era mai stata offerta.
+enum PezzoMancante {
+  peso('il tuo peso'),
+  altezza('la tua altezza'),
+  dataDiNascita('la tua data di nascita'),
+  sesso('il sesso');
+
+  const PezzoMancante(this.etichetta);
+
+  /// Come si nomina in una frase: *«Manca ancora `<etichetta>`»*.
+  final String etichetta;
+
+  /// 🚨 Il peso si registra da un'**altra schermata** rispetto agli altri tre:
+  /// sta nell'archivio locale (S5), non nel profilo sul server. È la ragione
+  /// per cui l'interfaccia deve mandare in due posti diversi.
+  bool get staNelProfilo => this != PezzoMancante.peso;
+}
+
+/// L'esito del calcolo: il numero, **oppure il motivo per cui non c'è**.
+class EsitoTarget {
+  const EsitoTarget.calcolato(TargetLocale questo)
+    : target = questo,
+      mancano = const {};
+
+  const EsitoTarget.incompleto(this.mancano) : target = null;
+
+  final TargetLocale? target;
+
+  /// Vuoto quando il calcolo è riuscito.
+  final Set<PezzoMancante> mancano;
+
+  bool get riuscito => target != null;
+
+  /// La frase da mostrare, già montata: *«Manca ancora il tuo peso.»*
+  ///
+  /// 💡 Elencare **tutto** quello che manca invece del primo pezzo evita il
+  /// giro dell'oca — compili una cosa, torni, e ne scopri un'altra.
+  String get spiegazione {
+    if (mancano.isEmpty) return '';
+
+    final pezzi = mancano.map((p) => p.etichetta).toList();
+
+    if (pezzi.length == 1) return 'Manca ancora ${pezzi.first}.';
+
+    return 'Mancano ancora ${pezzi.sublist(0, pezzi.length - 1).join(', ')} '
+        'e ${pezzi.last}.';
+  }
+
+  /// Se **l'unica** cosa che manca è la pesata: si manda dritti lì.
+  bool get soloIlPeso =>
+      mancano.length == 1 && mancano.first == PezzoMancante.peso;
+}
+
+/// Il fabbisogno, oppure l'elenco di ciò che serve per calcolarlo.
 ///
 /// 🚨 Servono tutti e quattro: sesso, data di nascita, altezza e **peso**. Senza
 /// uno solo, Mifflin-St Jeor non si applica — e un obiettivo calorico
@@ -49,7 +111,7 @@ class TargetLocale {
 ///
 /// ⚠️ Il peso arriva dall'**archivio locale**, non dal server: dopo S5 il server
 /// non ce l'ha, e chiederglielo restituirebbe sempre niente.
-final targetLocaleProvider = FutureProvider.autoDispose<TargetLocale?>((ref) async {
+final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((ref) async {
   final profilo = await ref.watch(profileProvider.future);
   final pesata = await ref.watch(archivioSaluteProvider).ultimoPeso();
 
@@ -62,24 +124,33 @@ final targetLocaleProvider = FutureProvider.autoDispose<TargetLocale?>((ref) asy
   final nascita = profilo.birthdate;
   final sesso = profilo.sex;
 
-  if (kg == null || cm == null || nascita == null || sesso == null) return null;
+  final mancano = <PezzoMancante>{
+    if (kg == null) PezzoMancante.peso,
+    if (cm == null) PezzoMancante.altezza,
+    if (nascita == null) PezzoMancante.dataDiNascita,
+    if (sesso == null) PezzoMancante.sesso,
+  };
+
+  if (mancano.isNotEmpty) return EsitoTarget.incompleto(mancano);
 
   const calcolatore = CalcolatoreCalorie();
 
   final bmr = calcolatore.bmr(
-    kg: kg,
-    cm: cm,
-    eta: calcolatore.etaDa(nascita),
-    sesso: sesso,
+    kg: kg!,
+    cm: cm!,
+    eta: calcolatore.etaDa(nascita!),
+    sesso: sesso!,
   );
 
   final tdee = calcolatore.tdee(bmr, profilo.activityLevel ?? 'sedentary');
   final kcal = calcolatore.targetCalorico(tdee, profilo.goal ?? 'maintain');
 
-  return TargetLocale(
-    kcal: kcal,
-    macro: calcolatore.macro(kcal, profilo.goal ?? 'maintain'),
-    bmr: bmr,
-    tdee: tdee,
+  return EsitoTarget.calcolato(
+    TargetLocale(
+      kcal: kcal,
+      macro: calcolatore.macro(kcal, profilo.goal ?? 'maintain'),
+      bmr: bmr,
+      tdee: tdee,
+    ),
   );
 });

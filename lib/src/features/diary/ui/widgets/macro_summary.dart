@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../profile/target_locale_controller.dart';
+import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../data/diary_models.dart';
 import '../../diary_controller.dart';
 
@@ -21,7 +21,34 @@ class MacroSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final sforato = day.hasTarget && day.kcal > day.targetKcal!;
+
+    /*
+     * 🚨 **Il diario non guardava affatto il calcolo locale** — difetto riferito
+     * il 12/08/2026: *«Non mi mostra il mio obiettivo calorico né in cibo né in
+     * Oggi»*.
+     *
+     * Su «Oggi» il ripiego c'era già (correzione di S7); qui no, e il risultato
+     * era che il diario diceva «Nessun obiettivo impostato» **anche a chi
+     * l'obiettivo ce l'aveva**, calcolato e mostrato nella schermata accanto.
+     *
+     * 💡 La precedenza è la stessa di sempre: **il piano del trainer vince sul
+     * calcolo**, e il calcolo vince sul nulla (D8).
+     */
+    final esito = day.hasTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
+    final locale = esito?.target;
+
+    final targetKcal = day.hasTarget
+        ? day.targetKcal
+        : locale?.kcal.toDouble();
+
+    final haTarget = targetKcal != null && targetKcal > 0;
+    final sforato = haTarget && day.kcal > targetKcal;
+
+    // ⚠️ Ricalcolati sull'obiettivo **che si sta mostrando**: `day.progresso` e
+    // `day.residuoKcal` guardano quello del server, che quando si usa il calcolo
+    // locale non c'è — e darebbero una barra che non c'entra col numero sopra.
+    final progresso = haTarget ? day.kcal / targetKcal : 0.0;
+    final residuo = haTarget ? targetKcal - day.kcal : 0.0;
 
     return Card(
       child: Padding(
@@ -43,7 +70,7 @@ class MacroSummary extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
-                    day.hasTarget ? '/ ${day.targetKcal!.round()} kcal' : 'kcal',
+                    haTarget ? '/ ${targetKcal.round()} kcal' : 'kcal',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -66,59 +93,95 @@ class MacroSummary extends ConsumerWidget {
               ],
             ),
 
-            if (day.hasTarget) ...[
+            if (haTarget) ...[
               const SizedBox(height: Gap.sm),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
                   // `clamp` a 1 solo per il disegno: il colore dice il resto.
-                  value: day.progresso.clamp(0.0, 1.0),
+                  value: progresso.clamp(0.0, 1.0),
                   minHeight: 10,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   color: sforato ? theme.colorScheme.error : theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(height: Gap.xs),
-              Text(
-                sforato
-                    ? 'Hai superato di ${(-day.residuoKcal).round()} kcal'
-                    : 'Ti restano ${day.residuoKcal.round()} kcal',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: sforato ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      sforato
+                          ? 'Hai superato di ${(-residuo).round()} kcal'
+                          : 'Ti restano ${residuo.round()} kcal',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: sforato
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+
+                  // 🚨 D8 / S7.5 — da dove viene il numero. «Calcolato sui tuoi
+                  // dati» e «prescritto dal tuo trainer» meritano fiducia
+                  // diversa, e il secondo non si discute.
+                  Text(
+                    day.hasTarget ? 'Dal tuo piano' : 'Calcolato sui tuoi dati',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
               ),
             ] else ...[
               const SizedBox(height: Gap.sm),
-              Text(
-                // 🚨 Si dice **perché** manca il target invece di mostrarne uno
-                // inventato: un numero inventato diventerebbe la dieta di
-                // qualcuno.
-                'Nessun obiettivo impostato. Compila i tuoi dati, oppure '
-                'chiedi al tuo trainer un piano alimentare.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+
+              /*
+               * 🚨 Si dice **cosa** manca invece di mostrare un numero
+               * inventato — che diventerebbe la dieta di qualcuno — e invece di
+               * mandare genericamente «a compilare i dati».
+               */
+              if (esito != null && !esito.riuscito)
+                MancaPerIlTarget(esito: esito, compatto: true)
+              else
+                Text(
+                  'Nessun obiettivo impostato. Chiedi al tuo trainer un piano '
+                  'alimentare.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              // 🚨 Con un pulsante, non solo con una spiegazione. Dire cosa fare
-              // e non dare il modo di farlo è la stessa cosa che non dirlo:
-              // dalla fase C il profilo si compila dall'app, e questo messaggio
-              // deve portarci.
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => context.push(AppRoutes.profileEdit),
-                  icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: const Text('Compila i tuoi dati'),
-                ),
-              ),
             ],
 
             const SizedBox(height: Gap.md),
+
+            /*
+             * ⚠️ **Anche i macro seguono la stessa precedenza del totale.**
+             *
+             * Il committente li ha chiesti esplicitamente: *«in cibo,
+             * l'obiettivo calorico deve essere anche diviso in
+             * macronutrienti»*. Prima venivano **solo** dal server, quindi
+             * sparivano insieme al totale per chiunque non avesse un piano.
+             *
+             * 🚨 Mostrarne uno calcolato accanto a un totale che viene dal
+             * piano — o viceversa — darebbe una scheda che si contraddice.
+             */
             Row(
               children: [
-                _Macro(nome: 'Proteine', valore: day.protein, target: day.targetProtein),
-                _Macro(nome: 'Carboidrati', valore: day.carbs, target: day.targetCarbs),
-                _Macro(nome: 'Grassi', valore: day.fat, target: day.targetFat),
+                _Macro(
+                  nome: 'Proteine',
+                  valore: day.protein,
+                  target: day.targetProtein ?? locale?.macro.proteineG.toDouble(),
+                ),
+                _Macro(
+                  nome: 'Carboidrati',
+                  valore: day.carbs,
+                  target: day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+                ),
+                _Macro(
+                  nome: 'Grassi',
+                  valore: day.fat,
+                  target: day.targetFat ?? locale?.macro.grassiG.toDouble(),
+                ),
               ],
             ),
           ],

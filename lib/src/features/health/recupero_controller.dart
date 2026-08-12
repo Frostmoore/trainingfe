@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../privacy/consensi_controller.dart';
 import 'analizzatore_sonno.dart';
 import 'dati_salute.dart';
 import 'health_controller.dart';
@@ -53,6 +54,29 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
    * `avvioSaluteProvider` gira **una volta per avvio**.
    */
   await ref.watch(avvioSaluteProvider.future);
+
+  /*
+   * 🚨 **Revocare il consenso spegne il recupero, subito** — difetto trovato
+   * provando l'app il 12/08.
+   *
+   * Prima la revoca fermava la **lettura** da Health Connect
+   * (`aggiornaInSilenzio()`), ⚠️ ma non toccava quello che era già
+   * nell'archivio: la scheda del sonno in cima a «Oggi» e la sezione recupero
+   * restavano lì con i dati di prima. Per chi aveva appena revocato sembrava
+   * — a ragione — che la revoca non avesse funzionato.
+   *
+   * 💡 **Si smette di mostrare, NON si cancella.** I dati sono sul telefono e
+   * sono suoi: buttarli via a un tocco su un interruttore sarebbe una perdita
+   * irreversibile decisa al posto suo. Per cancellarli davvero c'è
+   * «Cancella tutto» in Sonno e recupero, che chiede conferma.
+   *
+   * 🚨 In dubbio si spegne: un errore di rete sui consensi non deve poter
+   * **mostrare** dati sanitari. È la stessa regola del cancello di A5, e vale
+   * nello stesso verso.
+   */
+  final consentito = await ref.watch(consensoSaluteProvider.future);
+
+  if (!consentito) return const Recupero();
 
   final ultima = await archivio.ultimaNotteConDati();
 

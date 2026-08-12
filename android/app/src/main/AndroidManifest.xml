@@ -17,6 +17,19 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
 
     <!--
+      Lo sblocco rapido — A1.
+
+      🚨 Serve a `local_auth`. ⚠️ E va insieme a `MainActivity : FlutterFragmentActivity()`:
+      il permesso da solo non basta, perché `BiometricPrompt` ha bisogno di una
+      `FragmentActivity` su cui attaccare il proprio dialogo.
+
+      💡 `USE_BIOMETRIC` è di livello «normal»: non compare in nessuna schermata
+      di consenso e non va chiesto a runtime. L'unica cosa che l'utente vede è la
+      richiesta dell'impronta quando accende l'interruttore.
+    -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+
+    <!--
       ⚠️ Serve a sapere SE Health Connect esiste su questo telefono.
       Senza, su un dispositivo che non ce l'ha l'app non riesce nemmeno a
       distinguere «l'utente ha detto di no» da «qui non c'è niente da chiedere»,

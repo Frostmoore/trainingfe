@@ -10,6 +10,7 @@ import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
+import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../data/dashboard_models.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -44,9 +45,8 @@ class CaloriesCard extends ConsumerWidget {
      * 💡 L'ordine di precedenza è quello di sempre: **il piano del trainer
      * vince sul calcolo**, e il calcolo vince sul nulla.
      */
-    final locale = n.haTarget
-        ? null
-        : ref.watch(targetLocaleProvider).valueOrNull;
+    final esito = n.haTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
+    final locale = esito?.target;
 
     final target = n.haTarget ? n.targetKcal : locale?.kcal.toDouble();
     final haObiettivo = target != null && target > 0;
@@ -126,17 +126,22 @@ class CaloriesCard extends ConsumerWidget {
                 ),
             ] else ...[
               const SizedBox(height: Gap.sm),
-              Text(
-                'Nessun obiettivo impostato.',
-                style: theme.textTheme.bodySmall,
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => context.push(AppRoutes.profileEdit),
-                  child: const Text('Compila i tuoi dati'),
+
+              /*
+               * ⚠️ Si dice **cosa** manca, non «compila i tuoi dati».
+               *
+               * Il peso non sta nel profilo: vive nell'archivio locale (S5) e si
+               * registra da un altro foglio. Mandare al profilo chi ha già
+               * compilato tutto tranne la pesata è un giro a vuoto — ed è
+               * esattamente com'è stato riferito provando l'app.
+               */
+              if (esito != null && !esito.riuscito)
+                MancaPerIlTarget(esito: esito)
+              else
+                Text(
+                  'Nessun obiettivo impostato.',
+                  style: theme.textTheme.bodySmall,
                 ),
-              ),
             ],
 
             const SizedBox(height: Gap.sm),

@@ -33,6 +33,28 @@ final consensiProvider = FutureProvider<Consensi>((ref) async {
   return Consensi.fromJson(data);
 });
 
+/// Il consenso sanitario, ridotto a una domanda secca — S9 / A5.
+///
+/// 🚨 **Esiste perché la stessa domanda si fa da due posti**: il cancello che
+/// impedisce di collegare Health Connect, e il recupero che smette di mostrarsi
+/// quando il consenso viene revocato. Scriverla due volte significa che un
+/// giorno una delle due dirà `true` e l'altra `false`.
+///
+/// 💡 **Ed è ciò che rende la revoca istantanea**: `cambiaConsensoProvider`
+/// invalida `consensiProvider`, questo si ricalcola, e tutto quello che lo
+/// guarda si spegne da solo. Senza, la sezione recupero resterebbe visibile
+/// fino al riavvio dell'app — che è esattamente il difetto trovato provandola.
+///
+/// ⚠️ **In dubbio risponde `false`**, errore di rete compreso: non poter
+/// verificare un consenso vale quanto non averlo.
+final consensoSaluteProvider = FutureProvider<bool>((ref) async {
+  try {
+    return (await ref.watch(consensiProvider.future)).saluteDato;
+  } on Object {
+    return false;
+  }
+});
+
 /// Concede o revoca.
 ///
 /// 🚨 **Revocare costa esattamente quanto concedere** (art. 7(3)): la stessa

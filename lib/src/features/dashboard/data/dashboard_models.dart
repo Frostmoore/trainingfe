@@ -170,7 +170,9 @@ class RecentWorkout {
   factory RecentWorkout.fromJson(Map<String, dynamic> j) => RecentWorkout(
     id: (j['id'] as num).toInt(),
     name: j['name']?.toString() ?? 'Sessione libera',
-    startedAt: DateTime.parse(j['started_at'].toString()),
+    // A3: istante con offset → `DateTime` in UTC. Va riportato in locale prima
+    // che qualcuno lo formatti, o l'orario mostrato e' quello di Greenwich.
+    startedAt: DateTime.parse(j['started_at'].toString()).toLocal(),
     durationMinutes: (j['duration_minutes'] as num?)?.toInt(),
     setsCount: (j['sets_count'] as num?)?.toInt() ?? 0,
     kcal: (j['kcal'] as num?)?.toInt(),

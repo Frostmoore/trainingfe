@@ -66,6 +66,14 @@ class _PerSettimana extends StatelessWidget {
   final List<WorkoutSession> sessioni;
 
   /// Il lunedì della settimana di una data.
+  ///
+  /// 🚨 **`d` dev'essere già locale** — A3. `DateTime(y, m, d)` costruisce una
+  /// data nel fuso del telefono, ma legge `year`/`month`/`day` **dall'oggetto
+  /// che riceve**: su un `DateTime` in UTC quei campi sono i componenti UTC, e
+  /// una seduta di lunedì alle 00:30 finiva raggruppata nella settimana prima.
+  ///
+  /// ⚠️ Il `.toLocal()` sta a monte, in `WorkoutSession.fromJson`: qui non si
+  /// rimedia, perché rimediare due volte nasconde dove sta la regola.
   static DateTime _lunedi(DateTime d) =>
       DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
 

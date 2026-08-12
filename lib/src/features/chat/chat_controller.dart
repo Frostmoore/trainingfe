@@ -35,7 +35,10 @@ class Conversation {
     id: (j['id'] as num).toInt(),
     withName: (j['with'] as Map?)?['name']?.toString() ?? '—',
     unread: (j['unread'] as num?)?.toInt() ?? 0,
-    lastMessageAt: DateTime.tryParse(j['last_message_at']?.toString() ?? ''),
+    // A3: l'ora dell'ultimo messaggio va mostrata nel fuso di chi legge.
+    lastMessageAt: DateTime.tryParse(
+      j['last_message_at']?.toString() ?? '',
+    )?.toLocal(),
   );
 
   final int id;
@@ -221,7 +224,8 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   ChatMessage _apri(Map<String, dynamic> j) {
     final id = (j['id'] as num).toInt();
     final mittente = (j['sender_id'] as num).toInt();
-    final quando = DateTime.tryParse(j['created_at']?.toString() ?? '');
+    // A3: l'orario sotto la nuvoletta e' quello dell'orologio di chi legge.
+    final quando = DateTime.tryParse(j['created_at']?.toString() ?? '')?.toLocal();
 
     if (_sua == null) {
       return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);

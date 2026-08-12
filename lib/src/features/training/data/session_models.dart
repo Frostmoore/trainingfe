@@ -24,8 +24,15 @@ class WorkoutSession {
       id: (j['id'] as num).toInt(),
       planId: (piano?['id'] as num?)?.toInt(),
       planName: piano?['name']?.toString(),
-      startedAt: DateTime.parse(j['started_at'].toString()),
-      endedAt: j['ended_at'] == null ? null : DateTime.parse(j['ended_at'].toString()),
+      // 🚨 `.toLocal()` — A3. Il server manda un ISO8601 con l'offset, e
+      // `DateTime.parse` restituisce percio' un `DateTime` **in UTC**: ogni
+      // `DateFormat(...).format()` su quello scriveva l'ora di Greenwich.
+      // L'allenamento delle 20:00 compariva come «18:00», e quello di mezzanotte
+      // e mezza finiva nel giorno prima.
+      startedAt: DateTime.parse(j['started_at'].toString()).toLocal(),
+      endedAt: j['ended_at'] == null
+          ? null
+          : DateTime.parse(j['ended_at'].toString()).toLocal(),
       durationMinutes: (j['duration_minutes'] as num?)?.toInt(),
       isOpen: j['is_open'] == true,
       kcal: (j['kcal'] as num?)?.toInt(),

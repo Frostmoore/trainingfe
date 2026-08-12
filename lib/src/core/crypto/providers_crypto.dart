@@ -23,11 +23,22 @@ final portachiaviProvider = Provider<Portachiavi>((ref) => Portachiavi());
 
 /// Il servizio che tiene insieme chiave maestra, ripristino e cifratura.
 final servizioChiaviProvider = FutureProvider<ServizioChiavi>((ref) async {
-  return ServizioChiavi(
-    sodium: await ref.watch(sodiumProvider.future),
-    api: ref.watch(apiClientProvider),
-    portachiavi: ref.watch(portachiaviProvider),
-  );
+  /*
+   * ⚠️ **Le `ref.watch` prima dell'`await`, anche qui.**
+   *
+   * Gli argomenti si valutano in ordine: con `await ref.watch(sodium…)` come
+   * primo, `api` e `portachiavi` venivano osservati **dopo una pausa
+   * asincrona**, e in Riverpod lì `ref.watch` non registra più la dipendenza.
+   *
+   * 💡 Oggi non fa danni — sono due singleton che non cambiano mai — ma è lo
+   * stesso errore che sul target calorico è costato una serata di prove. Un
+   * difetto latente in un file di crittografia non è il posto dove lasciarlo.
+   */
+  final api = ref.watch(apiClientProvider);
+  final portachiavi = ref.watch(portachiaviProvider);
+  final sodium = await ref.watch(sodiumProvider.future);
+
+  return ServizioChiavi(sodium: sodium, api: api, portachiavi: portachiavi);
 });
 
 /// Cosa deve fare l'app adesso: creare la password, ripristinare, o niente.

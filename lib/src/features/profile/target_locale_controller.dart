@@ -112,12 +112,40 @@ class EsitoTarget {
 /// ⚠️ Il peso arriva dall'**archivio locale**, non dal server: dopo S5 il server
 /// non ce l'ha, e chiederglielo restituirebbe sempre niente.
 final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((ref) async {
-  final profilo = await ref.watch(profileProvider.future);
-  final pesata = await ref.watch(archivioSaluteProvider).ultimoPeso();
+  /*
+   * 🚨 **TUTTE le `ref.watch` PRIMA del primo `await`.**
+   *
+   * ── Il difetto, riferito il 12/08/2026 ──────────────────────────────────
+   *
+   * *«Mi ha calcolato i target solo dopo che ho inserito una seconda pesata a
+   * ieri.»*
+   *
+   * ⚠️ E la seconda pesata **non c'entrava niente**: nell'archivio la prima era
+   * salvata correttamente, e `ultimoPeso()` l'avrebbe restituita da subito. A
+   * non aggiornarsi era l'interfaccia — a farla ripartire è stato uscire e
+   * rientrare dalla schermata, che con un provider `autoDispose` lo ricostruisce
+   * da zero. Le due cose sono successe vicine e sembravano legate.
+   *
+   * La causa vera: `ref.watch(revisioneCorpoProvider)` stava **dopo due
+   * `await`**. In Riverpod le dipendenze si registrano durante la costruzione
+   * **sincrona**: dopo una pausa asincrona `ref.watch` si comporta come
+   * `ref.read`, cioè legge il valore e **non si iscrive**. Il contatore si
+   * incrementava a ogni pesata e questo provider non se ne accorgeva mai.
+   *
+   * 💡 Non dà nessun errore, nessun avviso e nessun log: si manifesta solo come
+   * «l'app non si aggiorna finché non cambio schermata», che si scambia per
+   * lentezza.
+   */
+  final revisione = ref.watch(revisioneCorpoProvider);
+  final archivio = ref.watch(archivioSaluteProvider);
+  final profiloFuturo = ref.watch(profileProvider.future);
 
-  // Si rilegge quando l'utente si pesa: senza, l'obiettivo resterebbe quello di
-  // stamattina fino al riavvio dell'app.
-  ref.watch(revisioneCorpoProvider);
+  // ⚠️ Letta apposta, o l'analizzatore la segnerebbe come inutilizzata e
+  // qualcuno la toglierebbe insieme alla dipendenza.
+  assert(revisione >= 0, 'la revisione del corpo non è mai negativa');
+
+  final profilo = await profiloFuturo;
+  final pesata = await archivio.ultimoPeso();
 
   final kg = pesata?.pesoKg;
   final cm = profilo.heightCm?.toDouble();

@@ -35,11 +35,28 @@ class Recupero {
 /// giornata senza sincronizzazione vedrebbe altrimenti una scheda vuota pur
 /// avendo dormito: il dato c'è, è solo di ieri.
 final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
+  /*
+   * 🚨 **TUTTE le `ref.watch` qui, PRIMA di qualunque `await`.**
+   *
+   * In Riverpod le dipendenze si registrano durante la costruzione **sincrona**:
+   * dopo una pausa asincrona `ref.watch` si comporta come `ref.read` e **non si
+   * iscrive**. Il difetto non dà errori — si manifesta come «l'app non si
+   * aggiorna finché non cambio schermata», ed è costato una serata di prove
+   * sul target calorico (vedi `targetLocaleProvider`).
+   *
+   * ⚠️ Qui il prezzo sarebbe stato peggiore: `consensoSaluteProvider` era
+   * osservato **dopo** un `await`, quindi **revocare il consenso non avrebbe
+   * spento il recupero** finché non si cambiava schermata — cioè proprio il
+   * difetto che quella riga era stata scritta per chiudere.
+   */
   final archivio = ref.watch(archivioSaluteProvider);
 
   // Si ricalcola quando il ponte scrive: senza questa dipendenza, collegare
   // Health Connect non aggiornerebbe la dashboard fino al riavvio dell'app.
   ref.watch(healthControllerProvider);
+
+  final consenso = ref.watch(consensoSaluteProvider.future);
+  final avvio = ref.watch(avvioSaluteProvider.future);
 
   /*
    * 🚨 **Si aspetta la risincronizzazione d'avvio prima di leggere** — A5.
@@ -53,7 +70,7 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
    * esce subito se il consenso manca o se il permesso di sistema non c'è, e
    * `avvioSaluteProvider` gira **una volta per avvio**.
    */
-  await ref.watch(avvioSaluteProvider.future);
+  await avvio;
 
   /*
    * 🚨 **Revocare il consenso spegne il recupero, subito** — difetto trovato
@@ -74,9 +91,7 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
    * **mostrare** dati sanitari. È la stessa regola del cancello di A5, e vale
    * nello stesso verso.
    */
-  final consentito = await ref.watch(consensoSaluteProvider.future);
-
-  if (!consentito) return const Recupero();
+  if (!await consenso) return const Recupero();
 
   final ultima = await archivio.ultimaNotteConDati();
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -32,99 +33,159 @@ class TodayHeader extends ConsumerWidget {
     final utente = ref.watch(authControllerProvider).user;
     final n = riepilogo.nutrition;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.lg),
-      decoration: BoxDecoration(
-        // Il colore della palestra, sfumato: pieno sarebbe una fascia colorata
-        // che schiaccia tutto il resto, e con un logo acceso diventerebbe
-        // illeggibile.
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            theme.colorScheme.primaryContainer,
-            theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-          ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // 🚨 A2 — le icone di sistema sopra il gradiente della palestra.
+      //
+      // Ora, batteria e segnale li disegna Android, non noi, e di serie li fa
+      // scuri. Su una palestra con il colore acceso diventano illeggibili — e
+      // non è un caso raro: `primaryContainer` nasce dal colore scelto dal
+      // cliente, quindi può essere qualunque cosa.
+      //
+      // ⚠️ Si decide dalla **luminanza** e non da una preferenza: è l'unico modo
+      // che regge sia il tema chiaro sia quello scuro sia la palestra nera.
+      value: _stileBarraDiSistema(theme.colorScheme.primaryContainer),
+      child: Container(
+        decoration: BoxDecoration(
+          // Il colore della palestra, sfumato: pieno sarebbe una fascia colorata
+          // che schiaccia tutto il resto, e con un logo acceso diventerebbe
+          // illeggibile.
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              theme.colorScheme.primaryContainer,
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+            ],
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _Logo(palestra: palestra),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+
+        /*
+         * 🚨 **`SafeArea` DENTRO il `Container`, non intorno** — A2.
+         *
+         * Intorno, il gradiente comincerebbe **sotto** la barra di sistema e
+         * dietro l'orologio resterebbe una striscia del colore dello sfondo:
+         * sembra un errore di disegno. Qui invece il colore riempie fino in
+         * cima e a scendere è solo il **contenuto**.
+         *
+         * ⚠️ E non un padding fisso: la barra di sistema è alta in modo diverso
+         * su ogni telefono, e sui modelli con l'isola è il doppio. Un numero
+         * scritto a mano è giusto su un telefono e sbagliato su tutti gli altri.
+         *
+         * `bottom: false` perché sotto ci pensa lo scorrimento della schermata:
+         * riservare spazio anche lì lascerebbe un buco in mezzo alla pagina.
+         */
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      palestra.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onPrimaryContainer,
+                    _Logo(palestra: palestra),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            palestra.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            // Il saluto con il nome e la data: dice a colpo d'occhio
+                            // che si sta guardando **oggi**, che è la domanda a cui
+                            // tutto il resto della schermata risponde.
+                            utente == null
+                                ? _dataDiOggi()
+                                : 'Ciao ${utente.name.split(' ').first} · ${_dataDiOggi()}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      // Il saluto con il nome e la data: dice a colpo d'occhio
-                      // che si sta guardando **oggi**, che è la domanda a cui
-                      // tutto il resto della schermata risponde.
-                      utente == null
-                          ? _dataDiOggi()
-                          : 'Ciao ${utente.name.split(' ').first} · ${_dataDiOggi()}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
 
-          const SizedBox(height: Gap.md),
+                const SizedBox(height: Gap.md),
 
-          Row(
-            children: [
-              _Valore(
-                valore: n.kcal.round().toString(),
-                etichetta: n.haTarget ? 'di ${n.targetKcal!.round()} kcal' : 'kcal',
-              ),
-              _Valore(
-                valore: n.burnedKcal.toString(),
-                etichetta: 'bruciate',
-                icona: Icons.local_fire_department_rounded,
-              ),
-              _Valore(
-                valore: riepilogo.body.weightKg == null
-                    ? '—'
-                    : riepilogo.body.weightKg!.toStringAsFixed(1),
-                etichetta: 'kg',
-                icona: Icons.monitor_weight_outlined,
-              ),
-              /*
-               * ⚠️ Il sonno arriva dal TELEFONO, non dal riepilogo del server —
-               * S4.3. `riepilogo.sleep` dopo S1 e' sempre `null`, e lasciarlo
-               * qui avrebbe mostrato un trattino per sempre.
-               */
-              _Valore(
-                valore: ref.watch(recuperoProvider).valueOrNull?.notte?.durata ?? '—',
-                etichetta: 'sonno',
-                icona: Icons.bedtime_outlined,
-              ),
-            ],
+                Row(
+                  children: [
+                    _Valore(
+                      valore: n.kcal.round().toString(),
+                      etichetta: n.haTarget
+                          ? 'di ${n.targetKcal!.round()} kcal'
+                          : 'kcal',
+                    ),
+                    _Valore(
+                      valore: n.burnedKcal.toString(),
+                      etichetta: 'bruciate',
+                      icona: Icons.local_fire_department_rounded,
+                    ),
+                    _Valore(
+                      valore: riepilogo.body.weightKg == null
+                          ? '—'
+                          : riepilogo.body.weightKg!.toStringAsFixed(1),
+                      etichetta: 'kg',
+                      icona: Icons.monitor_weight_outlined,
+                    ),
+                    /*
+                     * ⚠️ Il sonno arriva dal TELEFONO, non dal riepilogo del
+                     * server — S4.3. `riepilogo.sleep` dopo S1 e' sempre
+                     * `null`, e lasciarlo qui avrebbe mostrato un trattino per
+                     * sempre.
+                     */
+                    _Valore(
+                      valore:
+                          ref
+                              .watch(recuperoProvider)
+                              .valueOrNull
+                              ?.notte
+                              ?.durata ??
+                          '—',
+                      etichetta: 'sonno',
+                      icona: Icons.bedtime_outlined,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   static String _dataDiOggi() =>
       DateFormat('EEEE d MMMM', 'it').format(DateTime.now());
+
+  /// Icone di sistema chiare o scure, decise dal colore che ci sta sotto.
+  ///
+  /// ⚠️ **`Brightness` qui è quella dello SFONDO, e le icone escono al
+  /// contrario.** È il punto in cui ci si sbaglia: `statusBarIconBrightness`
+  /// vuole la luminosità *delle icone*, mentre `statusBarBrightness` (iOS) vuole
+  /// quella *dello sfondo*. Scriverle uguali fa icone bianche su fondo bianco su
+  /// una delle due piattaforme, e la si scopre solo sull'altra.
+  static SystemUiOverlayStyle _stileBarraDiSistema(Color sfondo) {
+    final chiaro =
+        ThemeData.estimateBrightnessForColor(sfondo) == Brightness.light;
+
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: chiaro ? Brightness.dark : Brightness.light,
+      statusBarBrightness: chiaro ? Brightness.light : Brightness.dark,
+    );
+  }
 }
 
 class _Logo extends StatelessWidget {
@@ -144,7 +205,9 @@ class _Logo extends StatelessWidget {
         radius: 22,
         backgroundColor: palestra.primary,
         child: Text(
-          palestra.name.isEmpty ? '?' : palestra.name.characters.first.toUpperCase(),
+          palestra.name.isEmpty
+              ? '?'
+              : palestra.name.characters.first.toUpperCase(),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,

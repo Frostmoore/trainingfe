@@ -6,6 +6,7 @@ import '../../features/auth/auth_controller.dart';
 import '../../features/auth/ui/gym_inactive_screen.dart';
 import '../../features/auth/ui/login_screen.dart';
 import '../../features/auth/ui/register_screen.dart';
+import '../../features/auth/ui/schermata_di_blocco.dart';
 import '../../features/calendar/ui/calendar_screen.dart';
 import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
@@ -41,9 +42,11 @@ import '../../features/training/ui/session_summary_screen.dart';
 ///  2. **palestra sospesa** → schermata dedicata, *prima* del controllo di
 ///     sessione: chi è in questo stato ha le credenziali giuste, e mandarlo al
 ///     login lo farebbe riprovare all'infinito con la password corretta;
-///  3. **nessuna palestra scelta** → codice d'invito;
-///  4. **non autenticato** → accesso;
-///  5. **autenticato su una schermata di accesso** → dentro.
+///  3. 🔒 **sessione bloccata** (A1) → schermata di blocco. Stessa logica del
+///     punto 2: la sessione **esiste**, manca solo il permesso di usarla;
+///  4. **nessuna palestra scelta** → codice d'invito;
+///  5. **non autenticato** → accesso;
+///  6. **autenticato su una schermata di accesso** → dentro.
 class AppRoutes {
   const AppRoutes._();
 
@@ -51,6 +54,7 @@ class AppRoutes {
   static const login = '/accedi';
   static const register = '/registrati';
   static const gymInactive = '/palestra-sospesa';
+  static const bloccata = '/bloccata';
 
   static const home = '/';
   static const diary = '/diario';
@@ -130,6 +134,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         return location == AppRoutes.gymInactive ? null : AppRoutes.gymInactive;
       }
 
+      /*
+       * 3. 🔒 Sessione bloccata — A1.
+       *
+       * ⚠️ **Prima del controllo sulla palestra**, e non è un dettaglio: il
+       * branding si legge dalla cache locale, quindi anche a schermo bloccato
+       * l'app saprebbe di che colore essere e passerebbe oltre. Ma mostrare il
+       * codice palestra o qualunque altra schermata a chi non ha ancora
+       * sbloccato vorrebbe dire che il blocco non blocca niente.
+       */
+      if (auth.status == AuthStatus.locked) {
+        return location == AppRoutes.bloccata ? null : AppRoutes.bloccata;
+      }
+
       // 3. Nessuna palestra scelta: l'app non sa nemmeno di che colore essere.
       if (!branding.hasGym) {
         return location == AppRoutes.gymCode ? null : AppRoutes.gymCode;
@@ -146,22 +163,62 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: AppRoutes.gymCode, builder: (_, _) => const GymCodeScreen()),
+      GoRoute(
+        path: AppRoutes.gymCode,
+        builder: (_, _) => const GymCodeScreen(),
+      ),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register, builder: (_, _) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.gymInactive, builder: (_, _) => const GymInactiveScreen()),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (_, _) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.gymInactive,
+        builder: (_, _) => const GymInactiveScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bloccata,
+        builder: (_, _) => const SchermataDiBlocco(),
+      ),
 
       // ── Fase C ────────────────────────────────────────────────────────
-      GoRoute(path: AppRoutes.profileEdit, builder: (_, _) => const EditProfileScreen()),
-      GoRoute(path: AppRoutes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
-      GoRoute(path: AppRoutes.credentials, builder: (_, _) => const CredentialsScreen()),
-      GoRoute(path: AppRoutes.consensi, builder: (_, _) => const SchermataConsensi()),
+      GoRoute(
+        path: AppRoutes.profileEdit,
+        builder: (_, _) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        builder: (_, _) => const DeleteAccountScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.credentials,
+        builder: (_, _) => const CredentialsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.consensi,
+        builder: (_, _) => const SchermataConsensi(),
+      ),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
-      GoRoute(path: AppRoutes.salute, builder: (_, _) => const SchermataSalute()),
-      GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarScreen()),
-      GoRoute(path: AppRoutes.progress, builder: (_, _) => const ProgressScreen()),
-      GoRoute(path: AppRoutes.history, builder: (_, _) => const HistoryScreen()),
-      GoRoute(path: AppRoutes.planNew, builder: (_, _) => const PlanEditorScreen()),
+      GoRoute(
+        path: AppRoutes.salute,
+        builder: (_, _) => const SchermataSalute(),
+      ),
+      GoRoute(
+        path: AppRoutes.calendar,
+        builder: (_, _) => const CalendarScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.progress,
+        builder: (_, _) => const ProgressScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.history,
+        builder: (_, _) => const HistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.planNew,
+        builder: (_, _) => const PlanEditorScreen(),
+      ),
       GoRoute(
         path: '/schede/:id/modifica',
         builder: (_, state) =>
@@ -173,8 +230,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/allenamento/:id/riepilogo',
-        builder: (_, state) =>
-            SessionSummaryScreen(sessionId: int.parse(state.pathParameters['id']!)),
+        builder: (_, state) => SessionSummaryScreen(
+          sessionId: int.parse(state.pathParameters['id']!),
+        ),
       ),
       // ⚠️ Questa DOPO `/allenamento/storico`: go_router prova le rotte
       // nell'ordine, e `:id` intercetterebbe anche «storico» facendo fallire
@@ -195,13 +253,28 @@ final routerProvider = Provider<GoRouter>((ref) {
             // D5 — la prima scheda è il riepilogo di oggi, non la galleria:
             // aprendo l'app la domanda è «come sto andando», non «che foto ho
             // fatto». I progressi restano raggiungibili dal profilo.
-            routes: [GoRoute(path: AppRoutes.home, builder: (_, _) => const DashboardScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                builder: (_, _) => const DashboardScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.diary, builder: (_, _) => const DiaryScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.diary,
+                builder: (_, _) => const DiaryScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.training, builder: (_, _) => const PlansScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.training,
+                builder: (_, _) => const PlansScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
             // 🚨 La chat passa dalla porta delle chiavi (S6.7): senza chiave
@@ -218,7 +291,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfileScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (_, _) => const ProfileScreen(),
+              ),
+            ],
           ),
         ],
       ),

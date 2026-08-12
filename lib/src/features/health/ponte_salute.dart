@@ -51,9 +51,34 @@ class PonteSalute {
   /// abbia capito a cosa serve è il modo più rapido per farselo negare **per
   /// sempre**: su Android un rifiuto ripetuto rende il dialogo non più
   /// riproponibile. Si chiama dalla schermata che lo spiega (S3.4).
+  /// Il permesso c'è **già**? — A5.
+  ///
+  /// 🚨 **Non apre nessun dialogo, ed è tutto il punto.** Serve alla
+  /// risincronizzazione silenziosa all'avvio, che deve poter chiedersi «posso
+  /// leggere?» senza disturbare nessuno. Usare `chiediPermessi()` lì
+  /// aprirebbe la finestra di sistema a ogni apertura dell'app — e su Android
+  /// un rifiuto ripetuto la rende **non più riproponibile**, cioè si
+  /// brucerebbe la funzione a forza di offrirla.
+  Future<bool> permessiGiaConcessi() async {
+    try {
+      await _salute.configure();
+
+      return await _salute.hasPermissions(_tipi, permissions: _permessi) ??
+          false;
+    } on Object {
+      // Un telefono senza Health Connect: non è un errore, è una funzione che
+      // quel telefono non ha.
+      return false;
+    }
+  }
+
   Future<bool> chiediPermessi() async {
     try {
-      await Health().configure();
+      // ⚠️ `_salute.configure()`, non `Health().configure()`: quella creava
+      // un'istanza NUOVA e configurava quella, lasciando non configurata
+      // l'unica che poi legge davvero. Con il doppio iniettato dai test era
+      // anche peggio — si toccava il pacchetto vero.
+      await _salute.configure();
 
       final gia = await _salute.hasPermissions(_tipi, permissions: _permessi);
 

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../onboarding/branding_controller.dart';
 import '../profile_controller.dart';
+import 'widgets/riga_blocco_biometrico.dart';
 import 'widgets/weight_sheet.dart';
 
 /// Il profilo — A8.
@@ -47,9 +48,8 @@ class ProfileScreen extends ConsumerWidget {
                       children: [
                         Text(
                           utente?.name ?? '—',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         Text(
                           utente?.email ?? '',
@@ -131,7 +131,9 @@ class ProfileScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.monitor_heart_outlined),
                   title: const Text('Sonno e recupero'),
-                  subtitle: const Text('Collega Health Connect · i dati restano sul telefono'),
+                  subtitle: const Text(
+                    'Collega Health Connect · i dati restano sul telefono',
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(AppRoutes.salute),
                 ),
@@ -165,12 +167,18 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.consensi),
                 ),
 
+                // 🔒 A1 — si disegna da solo, e **sparisce** sui telefoni che
+                // non sanno fare il riconoscimento.
+                const RigaBloccoBiometrico(),
+
                 if (utente?.passwordIsSet ?? true) ...[
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.key_outlined),
                     title: const Text('Email e password'),
-                    subtitle: const Text('Cambia le tue credenziali di accesso'),
+                    subtitle: const Text(
+                      'Cambia le tue credenziali di accesso',
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.credentials),
                   ),

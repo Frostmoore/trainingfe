@@ -40,6 +40,20 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
   // Health Connect non aggiornerebbe la dashboard fino al riavvio dell'app.
   ref.watch(healthControllerProvider);
 
+  /*
+   * 🚨 **Si aspetta la risincronizzazione d'avvio prima di leggere** — A5.
+   *
+   * Senza, la scheda in cima a «Oggi» mostrerebbe i dati vecchi dell'archivio e
+   * poi, mezzo secondo dopo, salterebbe a quelli nuovi. ⚠️ Un numero che cambia
+   * da solo sotto gli occhi è peggio di un numero che tarda: fa dubitare di
+   * entrambi i valori.
+   *
+   * 💡 Non costa niente quando non c'è niente da fare: `aggiornaInSilenzio()`
+   * esce subito se il consenso manca o se il permesso di sistema non c'è, e
+   * `avvioSaluteProvider` gira **una volta per avvio**.
+   */
+  await ref.watch(avvioSaluteProvider.future);
+
   final ultima = await archivio.ultimaNotteConDati();
 
   return Recupero(

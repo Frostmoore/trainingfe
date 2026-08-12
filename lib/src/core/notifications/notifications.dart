@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../tempo/fuso_del_dispositivo.dart';
+
 /// L'avvio delle notifiche locali — C9.3.
 ///
 /// 🚨 **Va chiamato in `main()`, prima di disegnare.** `tz.local` senza
@@ -17,13 +19,30 @@ import 'package:timezone/timezone.dart' as tz;
 Future<void> initNotifications() async {
   tzdata.initializeTimeZones();
 
-  try {
-    // Il fuso del telefono. Se non si riesce a determinarlo si resta su UTC:
-    // un recupero di 90 secondi dura 90 secondi in qualunque fuso, quindi il
-    // danno è nullo — a differenza di un'eccezione all'avvio.
-    tz.setLocalLocation(tz.getLocation(DateTime.now().timeZoneName));
-  } on Object catch (_) {
-    // Silenzio voluto: vedi sopra.
+  /*
+   * 🚨 **Qui c'era `tz.getLocation(DateTime.now().timeZoneName)`, e non ha mai
+   * funzionato.**
+   *
+   * `timeZoneName` restituisce l'**abbreviazione** (`CEST`), non un
+   * identificativo IANA: `getLocation('CEST')` lancia sempre, il `catch`
+   * inghiottiva, e l'app restava su UTC — non «se non si riesce a
+   * determinarlo», come diceva il commento, ma **a ogni avvio**.
+   *
+   * ⚠️ Il danno era davvero contenuto — un recupero di 90 secondi dura 90
+   * secondi in qualunque fuso — ed è proprio per questo che era sopravvissuto:
+   * un difetto che non fa male non si cerca. Ma il ripiego silenzioso era
+   * diventato **la strada normale**, e il commento diceva il contrario.
+   */
+  final fuso = await FusoDelDispositivo.leggi();
+
+  if (fuso != null) {
+    try {
+      tz.setLocalLocation(tz.getLocation(fuso));
+    } on Object catch (_) {
+      // Resta UTC: un fuso che il pacchetto conosce e il database delle zone
+      // no è possibile dopo un aggiornamento di sistema, e non vale un avvio
+      // fallito.
+    }
   }
 
   const impostazioni = InitializationSettings(
@@ -54,7 +73,9 @@ Future<bool> requestNotificationPermission() async {
 
   try {
     final android = plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     if (android != null) {
       final concesso = await android.requestNotificationsPermission();
@@ -81,7 +102,9 @@ Future<bool> requestNotificationPermission() async {
     }
 
     final ios = plugin
-        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
 
     return await ios?.requestPermissions(alert: true, sound: true) ?? false;
   } on Object {

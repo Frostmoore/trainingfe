@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/storage/archivio_salute.dart';
+import '../privacy/consensi_controller.dart';
 import 'ponte_salute.dart';
 
 /// L'archivio locale, uno solo per tutta l'app.
@@ -49,12 +50,20 @@ class StatoSalute {
   );
 }
 
-/// Chi governa il collegamento e la sincronizzazione — S3.4.
+/// Chi governa il collegamento e la sincronizzazione — S3.4 / A5.
 class HealthController extends StateNotifier<StatoSalute> {
-  HealthController(this._ponte, this._archivio) : super(const StatoSalute());
+  HealthController(this._ponte, this._archivio, this._consensoSanitario)
+    : super(const StatoSalute());
 
   final PonteSalute _ponte;
   final ArchivioSalute _archivio;
+
+  /// Se la persona ha dato il consenso al trattamento dei dati sanitari — S9.
+  ///
+  /// 🚨 **È una funzione e non un `bool`** perché va riletta al momento del
+  /// gesto: il consenso si revoca da un'altra schermata, e una copia presa
+  /// all'avvio direbbe «sì» a chi ha appena detto di no.
+  final Future<bool> Function() _consensoSanitario;
 
   /// Chiede il permesso e, se c'è, sincronizza subito.
   ///
@@ -63,6 +72,31 @@ class HealthController extends StateNotifier<StatoSalute> {
   /// sia successo niente, e la persona lo revoca.
   Future<void> collega() async {
     state = state.copyWith(inCorso: true, azzeraErrore: true);
+
+    /*
+     * 🚨 **Il consenso sanitario viene PRIMA del permesso di sistema** — A5/S9.
+     *
+     * `ConsentController` lo dichiarava già («senza il consenso sanitario non
+     * si collega Health Connect») ⚠️ **e nessuno lo verificava**: la
+     * dichiarazione stava nel dartdoc del server e il cancello non esisteva da
+     * nessuna parte.
+     *
+     * L'ordine conta. Chiedere prima il permesso di Android e poi accorgersi
+     * che manca il consenso significherebbe aver già aperto il dialogo di
+     * sistema — che su Android, se rifiutato due volte, **non si ripropone
+     * più**. Si sarebbe bruciata l'unica occasione per una verifica che si
+     * poteva fare senza disturbare nessuno.
+     */
+    if (!await _consensoSanitario()) {
+      state = state.copyWith(
+        inCorso: false,
+        collegato: false,
+        errore: 'Prima serve il tuo consenso al trattamento dei dati sanitari: '
+            'lo trovi in Profilo → Privacy e consensi.',
+      );
+
+      return;
+    }
 
     final concesso = await _ponte.chiediPermessi();
 
@@ -104,6 +138,49 @@ class HealthController extends StateNotifier<StatoSalute> {
     );
   }
 
+  /// Riprende i dati nuovi **senza chiedere niente a nessuno** — A5.
+  ///
+  /// ── 🚨 Il difetto che chiude ──────────────────────────────────────────
+  ///
+  /// Prima l'unico modo di aggiornare i dati era tornare su «Sonno e recupero»
+  /// e ritoccare *Collega*. Chi lo faceva il primo giorno e non ci tornava più
+  /// vedeva **per sempre** il sonno di quella notte: la scheda in cima a «Oggi»
+  /// mostrava un dato vecchio senza dire che era vecchio, ed è il modo più
+  /// rapido per far smettere di fidarsi di un numero.
+  ///
+  /// ── ⚠️ Perché non chiede il permesso ──────────────────────────────────
+  ///
+  /// `chiediPermessi()` apre il dialogo di sistema, e questo metodo gira
+  /// all'avvio: aprirlo lì sarebbe la cosa che il dartdoc di `PonteSalute`
+  /// vieta esplicitamente — un permesso chiesto prima che si capisca a cosa
+  /// serve viene negato, e su Android un rifiuto ripetuto **non si ripropone
+  /// più**.
+  ///
+  /// Perciò qui si guarda solo se il permesso **c'è già**: se manca, non
+  /// succede niente e la persona lo concederà dalla schermata che glielo
+  /// spiega.
+  ///
+  /// 💡 Sette giorni e non trenta: è la finestra della media di riferimento, e
+  /// riprendere un mese a ogni avvio costerebbe tempo per dati che l'archivio
+  /// ha già.
+  Future<void> aggiornaInSilenzio() async {
+    // Anche qui il consenso viene prima: se è stato revocato, l'app smette di
+    // leggere subito, non alla prossima volta che qualcuno tocca «collega».
+    if (!await _consensoSanitario()) return;
+    if (!await _ponte.permessiGiaConcessi()) return;
+
+    final quanti = await _ponte.sincronizza();
+
+    if (!mounted) return;
+
+    state = state.copyWith(
+      collegato: true,
+      ultimaSincronizzazione: quanti > 0
+          ? DateFormat('d MMM, HH:mm', 'it').format(DateTime.now())
+          : state.ultimaSincronizzazione,
+    );
+  }
+
   /// Cancella tutto quello che c'è sul telefono.
   ///
   /// 🚨 Con i dati in locale il server non può cancellarli per conto di
@@ -123,5 +200,35 @@ final healthControllerProvider =
   (ref) => HealthController(
     ref.watch(ponteSaluteProvider),
     ref.watch(archivioSaluteProvider),
+
+    /*
+     * Il consenso si **rilegge** a ogni gesto, e non si cattura una volta.
+     *
+     * ⚠️ `consensiProvider` è una `FutureProvider` non `autoDispose`: la
+     * chiamata al server avviene una volta e poi risponde dalla cache, finché
+     * `cambiaConsensoProvider` non la invalida — cioè esattamente quando la
+     * persona cambia idea.
+     *
+     * 🚨 In caso di errore di rete si risponde **`false`**: senza poter
+     * verificare il consenso non si leggono dati sanitari. Il contrario
+     * significherebbe che un server irraggiungibile apre il cancello.
+     */
+    () async {
+      try {
+        return (await ref.read(consensiProvider.future)).saluteDato;
+      } on Object {
+        return false;
+      }
+    },
   ),
+);
+
+/// La risincronizzazione d'avvio — A5.
+///
+/// 🚨 **Non è `autoDispose`, ed è il motivo per cui gira una volta sola** per
+/// vita dell'app: se lo fosse, ogni volta che l'ultima schermata interessata
+/// sparisce il provider morirebbe e la sincronizzazione ripartirebbe al
+/// ritorno — cioè a ogni cambio di scheda.
+final avvioSaluteProvider = FutureProvider<void>(
+  (ref) => ref.read(healthControllerProvider.notifier).aggiornaInSilenzio(),
 );

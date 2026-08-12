@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
+import '../../core/sicurezza/blocco_biometrico.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../../core/storage/token_store.dart';
+import '../../core/tempo/fuso_del_dispositivo.dart';
 import '../health/health_controller.dart';
 import 'data/app_user.dart';
 import 'data/social_sign_in.dart';
@@ -29,13 +31,25 @@ enum AuthStatus {
   /// password corretta, convinto di sbagliarla. Serve una schermata che dica
   /// cosa è successo.
   gymInactive,
+
+  /// 🔒 Il token c'è, ma è **chiuso a chiave** — A1.
+  ///
+  /// ⚠️ **Non è «disconnesso»**, e la differenza è tutto il senso della
+  /// funzione: la sessione esiste, il token è valido, e basta un dito per
+  /// riaprirla. Trattarlo come un logout vorrebbe dire cancellare il token e
+  /// far ridigitare la password — cioè rendere l'impronta un peso invece di una
+  /// scorciatoia.
+  locked,
 }
 
 /// Lo stato della sessione.
 class AuthState {
   const AuthState({required this.status, this.user, this.message});
 
-  const AuthState.unknown() : status = AuthStatus.unknown, user = null, message = null;
+  const AuthState.unknown()
+    : status = AuthStatus.unknown,
+      user = null,
+      message = null;
 
   final AuthStatus status;
   final AppUser? user;
@@ -46,7 +60,7 @@ class AuthState {
 
 /// Chi è l'utente, e cosa succede quando smette di esserlo — A2.3 / A2.4.
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._api, this._tokens, [this._archivio])
+  AuthController(this._api, this._tokens, [this._archivio, this._blocco])
     : super(const AuthState.unknown()) {
     // 🚨 Il 401 arriva da **qualunque** richiesta, non solo da quelle di
     // autenticazione: una schermata qualsiasi può essere la prima ad accorgersi
@@ -65,6 +79,15 @@ class AuthController extends StateNotifier<AuthState> {
   final ArchivioSalute? _archivio;
   final TokenStore _tokens;
 
+  /// Il blocco con l'impronta — A1.
+  ///
+  /// ⚠️ **Facoltativo per la stessa ragione dell'archivio**: i test del
+  /// controller non hanno un canale di piattaforma sotto, e pretenderlo li
+  /// costringerebbe a mockare `local_auth` per verificare cose che con
+  /// l'impronta non c'entrano niente. `null` = nessun blocco, cioè il
+  /// comportamento di prima di A1.
+  final BloccoBiometrico? _blocco;
+
   StreamSubscription<void>? _sessionSub;
 
   /// Legge il token salvato e chiede al server chi siamo.
@@ -81,8 +104,52 @@ class AuthController extends StateNotifier<AuthState> {
       return;
     }
 
+    /*
+     * 🔒 A1 — il blocco sta **davanti alla lettura del token**, non intorno al
+     * login.
+     *
+     * Il token è già in mano: quello che manca è il permesso di usarlo. Perciò
+     * qui non si chiede l'impronta e basta — si va in `locked` e la si chiede
+     * dalla schermata di blocco, che ha anche la via d'uscita con la password.
+     *
+     * ⚠️ Chiederla direttamente da qui sembrerebbe più diretto e sarebbe una
+     * trappola: se l'utente annulla, l'app resterebbe su uno stato senza
+     * schermata, cioè bloccata davvero.
+     */
+    if (_blocco != null && await _blocco.attivo()) {
+      state = const AuthState(status: AuthStatus.locked);
+
+      return;
+    }
+
     await _loadMe();
   }
+
+  /// Prova a sbloccare. `false` se non è andata — annullo, dito bagnato, o
+  /// lettore che non legge.
+  ///
+  /// ⚠️ Non cancella niente quando fallisce: si resta in `locked` e si riprova.
+  /// Chi non ci riesce ha `entraConLaPassword()`.
+  Future<bool> sbloccaConImpronta() async {
+    if (_blocco == null) return false;
+
+    final aperto = await _blocco.sblocca(motivo: 'Sblocca Training Companion');
+
+    if (!aperto) return false;
+
+    state = const AuthState.unknown();
+    await _loadMe();
+
+    return true;
+  }
+
+  /// La via d'uscita: si rinuncia alla scorciatoia e si rifà l'accesso.
+  ///
+  /// 🚨 **Spegne anche il blocco** — lo fa `_forgetSession()`. Chi arriva qui è
+  /// arrivato perché l'impronta non funziona: lasciarlo acceso lo rimetterebbe
+  /// davanti allo stesso muro al riavvio successivo, e stavolta senza aver
+  /// capito perché.
+  Future<void> entraConLaPassword() => _forgetSession();
 
   /// Accesso con **email o nome utente**.
   ///
@@ -264,7 +331,10 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _loadMe() async {
     try {
       // Anche qui l'inviluppo non c'è: `/auth/me` risponde `{data, branding}`.
-      final risposta = await _api.get<Map<String, dynamic>>('/auth/me', unwrap: false);
+      final risposta = await _api.get<Map<String, dynamic>>(
+        '/auth/me',
+        unwrap: false,
+      );
 
       final utente = risposta['data'];
 
@@ -272,6 +342,8 @@ class AuthController extends StateNotifier<AuthState> {
         status: AuthStatus.loggedIn,
         user: utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null,
       );
+
+      unawaited(_sincronizzaFuso());
     } on Object catch (error) {
       // 🚨 Sul **tipo**, non sul messaggio. Riconoscere un errore dal testo
       // significa che il giorno in cui qualcuno riformula una frase l'app
@@ -280,7 +352,10 @@ class AuthController extends StateNotifier<AuthState> {
       final tradotto = ApiClient.unwrapError(error);
 
       if (tradotto is GymInactiveException) {
-        state = AuthState(status: AuthStatus.gymInactive, message: tradotto.message);
+        state = AuthState(
+          status: AuthStatus.gymInactive,
+          message: tradotto.message,
+        );
 
         return;
       }
@@ -289,6 +364,36 @@ class AuthController extends StateNotifier<AuthState> {
       if (state.status == AuthStatus.unknown) {
         state = const AuthState(status: AuthStatus.loggedOut);
       }
+    }
+  }
+
+  /// Dice al server in che fuso vive questa persona — A3.
+  ///
+  /// ── 🚨 Perché parte da qui, e perché non si aspetta ───────────────────
+  ///
+  /// Il server **non può indovinarlo**: l'IP dice dov'è la rete e sbaglia su
+  /// ogni VPN, l'offset non distingue Roma d'estate da Helsinki d'inverno. Lo
+  /// sa solo il telefono. Senza questa chiamata `users.timezone` resta `null`
+  /// per sempre e tutti ricadono sul fuso della palestra — che per chi vive
+  /// altrove è il difetto A3 daccapo.
+  ///
+  /// ⚠️ **`unawaited` è deliberato.** È una sincronizzazione di sfondo: farci
+  /// aspettare l'avvio significherebbe che un server lento tiene la persona
+  /// davanti a uno spinner per un dato che non le serve *adesso*. Al massimo la
+  /// prima schermata mostra il giorno vecchio, e la successiva quello giusto.
+  ///
+  /// 💡 Il costo è trascurabile anche a ogni avvio: il server scrive **solo se
+  /// è cambiato**, quindi la chiamata normale non tocca nemmeno la riga.
+  Future<void> _sincronizzaFuso() async {
+    final fuso = await FusoDelDispositivo.leggi();
+
+    if (fuso == null) return;
+
+    try {
+      await _api.put<dynamic>('/account/timezone', body: {'timezone': fuso});
+    } on Object {
+      // Silenzio voluto: il server ha la sua catena di ripiego, e un errore qui
+      // non è una cosa su cui l'utente possa fare niente.
     }
   }
 
@@ -321,6 +426,17 @@ class AuthController extends StateNotifier<AuthState> {
       // Volutamente silenzioso: vedi sopra.
     }
 
+    /*
+     * 🔒 Il blocco si spegne a **ogni** uscita, non solo quando lo si sceglie —
+     * A1.
+     *
+     * Restando acceso su un account che non c'è più, il riavvio successivo
+     * chiederebbe l'impronta per sbloccare **il nulla**, e subito dopo
+     * manderebbe comunque al login. È l'attrito peggiore possibile: costa un
+     * gesto e non protegge niente.
+     */
+    await _blocco?.azzera();
+
     state = const AuthState(status: AuthStatus.loggedOut);
   }
 
@@ -336,5 +452,10 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     ref.watch(apiClientProvider),
     ref.watch(tokenStoreProvider),
     ref.watch(archivioSaluteProvider),
+    ref.watch(bloccoBiometricoProvider),
   ),
+);
+
+final bloccoBiometricoProvider = Provider<BloccoBiometrico>(
+  (ref) => BloccoBiometrico(),
 );

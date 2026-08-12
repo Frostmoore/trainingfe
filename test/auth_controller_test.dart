@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:training_companion/src/core/api/api_client.dart';
 import 'package:training_companion/src/core/config/app_config.dart';
+import 'package:training_companion/src/core/sicurezza/blocco_biometrico.dart';
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/auth/auth_controller.dart';
 
@@ -217,6 +218,135 @@ void main() {
     expect(auth.state.user, isNull);
     expect(token.salvato, isNull);
   });
+
+  // ───────────────────────── A1 — lo sblocco rapido ─────────────────────────
+
+  group('blocco biometrico', () {
+    late _BloccoFinto blocco;
+
+    setUp(() {
+      blocco = _BloccoFinto();
+      token.salvato = '1|abcdef';
+
+      adapter.onGet(
+        '/auth/me',
+        (s) => s.reply(200, {
+          'data': {'id': 7, 'name': 'Mario Rossi', 'email': 'mario@esempio.test'},
+          'branding': {'name': 'Palestra Demo'},
+        }),
+      );
+    });
+
+    /// 🚨 Il blocco sta **davanti alla lettura del token**: se scattasse dopo,
+    /// l'app avrebbe già chiesto al server chi siamo — cioè avrebbe già usato
+    /// la credenziale che il blocco dovrebbe proteggere.
+    test('con il blocco acceso si parte bloccati, senza chiamare il server', () async {
+      blocco.acceso = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(auth.state.status, AuthStatus.locked);
+      expect(auth.state.user, isNull, reason: '/auth/me non deve essere stata chiamata');
+      expect(token.salvato, '1|abcdef', reason: 'il token NON si cancella: la sessione esiste');
+    });
+
+    test('con il blocco spento si entra come prima', () async {
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(auth.state.status, AuthStatus.loggedIn);
+    });
+
+    test('sbloccando si entra', () async {
+      blocco
+        ..acceso = true
+        ..apre = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(await auth.sbloccaConImpronta(), isTrue);
+      expect(auth.state.status, AuthStatus.loggedIn);
+      expect(auth.state.user?.id, 7);
+    });
+
+    /// ⚠️ Dito bagnato, lettore che non legge, richiesta annullata: si resta
+    /// bloccati e si **riprova**. Cancellare il token qui trasformerebbe un
+    /// tentativo andato male in un logout.
+    test('un tentativo fallito lascia bloccati, non disconnessi', () async {
+      blocco
+        ..acceso = true
+        ..apre = false;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(await auth.sbloccaConImpronta(), isFalse);
+      expect(auth.state.status, AuthStatus.locked);
+      expect(token.salvato, isNotNull);
+    });
+
+    /// 🚨 La via d'uscita **spegne il blocco**: chi ci arriva ci arriva perché
+    /// l'impronta non funziona, e lasciarlo acceso lo rimetterebbe davanti allo
+    /// stesso muro al riavvio successivo.
+    test('«entra con la password» disconnette e spegne il blocco', () async {
+      blocco.acceso = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+      await auth.entraConLaPassword();
+
+      expect(auth.state.status, AuthStatus.loggedOut);
+      expect(token.salvato, isNull);
+      expect(blocco.acceso, isFalse);
+    });
+
+    /// 💡 Un blocco rimasto acceso su un account che non c'è più chiederebbe
+    /// l'impronta per sbloccare il nulla, subito prima di mandare al login.
+    test('anche l\'uscita normale spegne il blocco', () async {
+      blocco.acceso = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.forgetSession();
+
+      expect(blocco.acceso, isFalse);
+    });
+  });
+}
+
+/// Il doppio del blocco: `local_auth` parla con un canale di piattaforma che
+/// nei test non esiste.
+class _BloccoFinto implements BloccoBiometrico {
+  bool acceso = false;
+
+  /// Cosa risponde il lettore.
+  bool apre = true;
+
+  @override
+  Future<bool> disponibile() async => true;
+
+  @override
+  Future<bool> attivo() async => acceso;
+
+  @override
+  Future<bool> imposta({required bool acceso}) async {
+    this.acceso = acceso;
+
+    return true;
+  }
+
+  @override
+  Future<bool> sblocca({required String motivo}) async => apre;
+
+  @override
+  Future<void> azzera() async => acceso = false;
 }
 
 class _TokenStoreFinto implements TokenStore {

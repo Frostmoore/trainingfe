@@ -116,6 +116,27 @@ dependencies:
   sodium: 3.2.0
   sodium_libs: 3.2.0
 
+  # 🚨 L'identificativo IANA del telefono (`Europe/Rome`), che Dart da solo NON
+  # sa dare: `DateTime.now().timeZoneName` restituisce l'abbreviazione — `CEST`,
+  # o su certi Android `GMT+02:00` — che non è un fuso ma un offset, e da un
+  # offset non si risale alla regola di ora legale.
+  #
+  # Serve a due cose: dire al server dove comincia «oggi» per questa persona
+  # (A3), e far funzionare davvero `tz.setLocalLocation()`, che con
+  # l'abbreviazione lanciava e ricadeva in silenzio su UTC.
+  flutter_timezone: ^5.1.0
+
+  # 🚨 L'impronta NON è un secondo fattore — A1.
+  #
+  # È una scorciatoia per **riaprire una sessione che esiste già**: il token di
+  # Sanctum resta nel Keychain e l'impronta ne sblocca l'uso, non lo ottiene dal
+  # server. Trattarla come un accesso porterebbe a conservare la password sul
+  # telefono, che è esattamente ciò che non si deve fare.
+  #
+  # ⚠️ Serve solo a **disegnare la richiesta**: la verifica avviene nel chip
+  # sicuro del telefono, e nessun dato biometrico passa mai da Dart.
+  local_auth: ^3.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

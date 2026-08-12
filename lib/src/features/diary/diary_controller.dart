@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import 'data/diary_models.dart';
+import 'data/stima_ai.dart';
 
 /// Il giorno che si sta guardando.
 ///
@@ -75,39 +76,79 @@ class DiaryActions {
     _ref.invalidate(diaryProvider);
   }
 
-  /// Riconoscimento da testo — A4.2.
+  /// Riconoscimento da testo — A4.2 / A4.8.
   ///
-  /// `save: true`: il backend crea già le voci. Restituire la stima e poi
-  /// crearle dall'app significherebbe due richieste e la possibilità che la
-  /// seconda fallisca lasciando l'utente con una stima che non ha salvato.
-  Future<void> addFromText(String text, String meal) async {
-    await _api.post<dynamic>(
+  /// ── 🚨 `save: false`: si stima, non si scrive ───────────────────────────
+  ///
+  /// Fino al 12/08/2026 questa chiamata mandava `save: true` e il backend
+  /// scriveva subito in diario. Il commento diceva che era per evitare «due
+  /// richieste e la possibilità che la seconda fallisca», ed era un ragionamento
+  /// giusto su una premessa sbagliata: dava per scontato che la stima fosse da
+  /// accettare.
+  ///
+  /// ⚠️ Non lo è. Su «due cotolette di pollo» il modello ha risposto con **zero
+  /// carboidrati** — cioè petto di pollo, non una cotoletta impanata — e nella
+  /// `note` aveva scritto di non sapere se fossero panate. Scrivendo subito,
+  /// quella nota non la leggeva nessuno e il numero sbagliato entrava nei totali.
+  ///
+  /// 💡 Il rischio che il vecchio commento temeva resta gestito: se la conferma
+  /// fallisce, **il foglio è ancora aperto con la stima dentro** e si riprova.
+  /// Prima, se falliva la scrittura, si perdeva comunque tutto — solo senza
+  /// averla mai vista.
+  Future<StimaAi> stimaDaTesto(String text, String meal) async {
+    final data = await _api.post<Map<String, dynamic>>(
       '/ai/food/text',
       body: {
         'text': text,
         'meal': meal,
         'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-        'save': true,
+        'save': false,
       },
     );
 
-    _ref.invalidate(diaryProvider);
+    return StimaAi.fromJson(data).conFrase(text);
   }
 
-  /// Riconoscimento da foto — A4.3.
+  /// Riconoscimento da foto — A4.3 / A4.8.
   ///
   /// 🚨 Il file va **già compresso** da chi chiama: vedi `PhotoPicker`. Qui non
   /// si comprime perché questa classe non sa niente di piattaforma, e mandare
   /// l'originale da 10 MB su rete mobile è un upload che fallisce.
-  Future<void> addFromPhoto(String path, String meal) async {
+  ///
+  /// ⚠️ `frase` resta nulla: da una foto non c'è niente da «precisare» — il
+  /// foglio di conferma lo sa e offre di correggere i numeri invece di rifare
+  /// la domanda.
+  Future<StimaAi> stimaDaFoto(String path, String meal) async {
     final form = FormData.fromMap({
       'photo': await MultipartFile.fromFile(path),
       'meal': meal,
       'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-      'save': 'true',
+      'save': 'false',
     });
 
-    await _api.upload<dynamic>('/ai/food/photo', form);
+    final data = await _api.upload<Map<String, dynamic>>('/ai/food/photo', form);
+
+    return StimaAi.fromJson(data);
+  }
+
+  /// Scrive in diario una stima **guardata da chi l'ha chiesta** — A4.8.
+  ///
+  /// 🚨 Passa da `/ai/food/confirm` e non da `/food-entries` perché `source` e
+  /// `ai_raw` devono sopravvivere: senza, ogni voce nascerebbe `manual` e il
+  /// giorno che un modello peggiora non si saprebbe più quali voci rifare.
+  ///
+  /// ⚠️ **Non consuma quota**: la chiamata al modello è già stata pagata dalla
+  /// stima.
+  Future<void> confermaStima(StimaAi stima, {required String meal, required bool daFoto}) async {
+    await _api.post<dynamic>(
+      '/ai/food/confirm',
+      body: {
+        'source': daFoto ? 'ai_photo' : 'ai_text',
+        'meal': meal,
+        'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
+        'items': stima.voci.map((v) => v.toJson()).toList(),
+      },
+    );
 
     _ref.invalidate(diaryProvider);
   }

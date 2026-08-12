@@ -8,7 +8,9 @@ import '../../../../core/media/photo_picker.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../privacy/consensi_controller.dart';
+import '../../data/stima_ai.dart';
 import '../../diary_controller.dart';
+import 'conferma_stima_sheet.dart';
 
 /// I tre modi di aggiungere qualcosa al diario — A4.2 / A4.3 / A4.4.
 ///
@@ -75,6 +77,88 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
     super.dispose();
   }
 
+  /// Stima → conferma → diario — A4.8.
+  ///
+  /// ── 🚨 Perché non si scrive più direttamente ────────────────────────────
+  ///
+  /// Fino al 12/08/2026 questo metodo chiamava l'AI con `save: true` e chiudeva
+  /// il foglio: la stima entrava in diario senza che nessuno l'avesse vista.
+  /// Su «due cotolette di pollo» il modello ha risposto con **zero
+  /// carboidrati** — cioè petto di pollo, non una cotoletta impanata — e nella
+  /// propria `note` aveva scritto di non sapere se fossero panate. Quella nota
+  /// arrivava sul telefono e non la leggeva nessuno.
+  ///
+  /// ⚠️ **«Precisa» ricomincia da qui**: il foglio di conferma restituisce la
+  /// frase originale, la si rimette nel campo con il cursore in fondo, e si
+  /// riscrive aggiungendo il pezzo che mancava. Costa una seconda chiamata al
+  /// modello, ed è il punto: una stima giusta vale più di un token risparmiato.
+  Future<void> _stimaEConferma(
+    Future<StimaAi> Function() stimatore, {
+    required bool daFoto,
+  }) async {
+    setState(() {
+      _inCorso = true;
+      _errore = null;
+    });
+
+    try {
+      final stima = await stimatore();
+
+      if (!mounted) return;
+
+      setState(() => _inCorso = false);
+
+      final daPrecisare = await ConfermaStimaSheet.mostra(
+        context,
+        stima: stima,
+        meal: widget.meal,
+        daFoto: daFoto,
+      );
+
+      if (!mounted) return;
+
+      if (daPrecisare != null) {
+        /*
+         * 💡 Il cursore va **in fondo**, non all'inizio: quello che manca alla
+         * frase si aggiunge in coda («due cotolette di pollo *impanate*»), e
+         * trovare il cursore all'inizio costringe a un gesto in più ogni volta.
+         */
+        _testo
+          ..text = daPrecisare
+          ..selection = TextSelection.collapsed(offset: daPrecisare.length);
+
+        _tabs.animateTo(0);
+
+        return;
+      }
+
+      // Confermata o annullata: in entrambi i casi qui non c'è più niente da
+      // fare, e il diario si è già aggiornato da solo.
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      final tradotto = ApiClient.unwrapError(error);
+
+      setState(() {
+        // 🚨 La quota finita ha un messaggio suo e **non invita a riprovare**:
+        // non si sblocca fino al mese prossimo, e un «riprova» qui farebbe
+        // martellare l'utente contro un muro.
+        _errore = switch (tradotto) {
+          AiQuotaExceededException() =>
+            '${tradotto.message}\nPuoi comunque inserire a mano.',
+          RateLimitedException() => 'Il servizio è occupato. Riprova fra poco.',
+          _ => tradotto.message,
+        };
+      });
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  /// L'inserimento **a mano**: qui non c'è niente da confermare.
+  ///
+  /// ⚠️ I numeri li ha scritti la persona. Farle rivedere quello che ha appena
+  /// digitato sarebbe un passaggio che non aggiunge nessuna informazione — e il
+  /// foglio di conferma esiste per un motivo preciso, non per simmetria.
   Future<void> _esegui(Future<void> Function() azione) async {
     setState(() {
       _inCorso = true;
@@ -89,9 +173,6 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
       final tradotto = ApiClient.unwrapError(error);
 
       setState(() {
-        // 🚨 La quota finita ha un messaggio suo e **non invita a riprovare**:
-        // non si sblocca fino al mese prossimo, e un «riprova» qui farebbe
-        // martellare l'utente contro un muro.
         _errore = switch (tradotto) {
           AiQuotaExceededException() =>
             '${tradotto.message}\nPuoi comunque inserire a mano.',
@@ -185,7 +266,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                   _Testo(
                     controller: _testo,
                     inCorso: _inCorso,
-                    onInvia: () => _esegui(() => azioni.addFromText(_testo.text, widget.meal)),
+                    onInvia: () => _stimaEConferma(
+                      () => azioni.stimaDaTesto(_testo.text, widget.meal),
+                      daFoto: false,
+                    ),
                   ),
 
                 if (consensi.isLoading)
@@ -195,7 +279,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                 else
                   _Foto(
                     inCorso: _inCorso,
-                    onScelta: (path) => _esegui(() => azioni.addFromPhoto(path, widget.meal)),
+                    onScelta: (path) => _stimaEConferma(
+                      () => azioni.stimaDaFoto(path, widget.meal),
+                      daFoto: true,
+                    ),
                   ),
                 _Manuale(
                   descrizione: _descrizione,

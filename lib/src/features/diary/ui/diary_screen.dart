@@ -138,6 +138,21 @@ class _Pasto extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
+    /*
+     * 🚨 **Le voci scorse via escono dalla lista SUBITO.**
+     *
+     * `Dismissible` pretende che l'elemento sparisca nello stesso frame del
+     * gesto; aspettare la risposta del server produce
+     * *«a dismissed Dismissible widget is still part of the tree»* — il
+     * rettangolo rosso che compariva mentre la cancellazione funzionava.
+     *
+     * ⚠️ Il filtro sta **qui e non dentro `_Voce`**: un widget non può togliersi
+     * dalla lista da solo, e nasconderlo con `Visibility` lascerebbe comunque
+     * l'elemento nell'albero — cioè esattamente ciò di cui Flutter si lamenta.
+     */
+    final inUscita = ref.watch(vociInUscitaProvider);
+    final visibili = pasto.entries.where((v) => !inUscita.contains(v.id)).toList();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: Gap.md),
       child: Card(
@@ -174,7 +189,7 @@ class _Pasto extends ConsumerWidget {
               ),
             ),
 
-            if (pasto.entries.isEmpty)
+            if (visibili.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
                 child: Text(
@@ -185,7 +200,7 @@ class _Pasto extends ConsumerWidget {
                 ),
               )
             else
-              for (final voce in pasto.entries) _Voce(voce: voce),
+              for (final voce in visibili) _Voce(voce: voce),
 
             Row(
               children: [
@@ -289,7 +304,19 @@ class _Voce extends ConsumerWidget {
           ),
         ),
       ),
-      onDismissed: (_) => ref.read(diaryActionsProvider).delete(voce.id),
+      // ⚠️ `deleteSubito` toglie la riga **prima** di chiamare il server, e la
+      // rimette se la chiamata fallisce. Vedi `vociInUscitaProvider`.
+      onDismissed: (_) async {
+        final messaggi = ScaffoldMessenger.of(context);
+
+        try {
+          await ref.read(diaryActionsProvider).deleteSubito(voce.id);
+        } on Object catch (error) {
+          messaggi.showSnackBar(
+            SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+          );
+        }
+      },
       child: ListTile(
         dense: true,
         // C15 — toccare una voce la apre in modifica. È il gesto che ci si

@@ -81,6 +81,58 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   double? _valore(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
+  /// Le unità in cui **un grammo è un grammo**, senza sapere che alimento sia.
+  ///
+  /// 🚨 **Non è la tabella di `FoodUnit` portata in Dart**, ed è la differenza
+  /// che rende questo codice lecito. Un chilo è mille grammi per qualunque cosa;
+  /// un *cucchiaio* pesa 14 g d'olio e 21 g di miele, e quel numero lo sa solo
+  /// il server. Duplicare quella tabella qui vorrebbe dire due conversioni da
+  /// tenere allineate — che è ciò che il commento in cima a questo file vieta.
+  ///
+  /// ⚠️ Su `ml` e compagni si segue la scelta dichiarata di `FoodUnit`: 1 ml = 1 g.
+  /// È un'approssimazione, ma è **la stessa** che farà il server, quindi
+  /// l'anteprima non può discordare dal risultato.
+  static const _grammiPer = {
+    'g': 1.0, 'mg': 0.001, 'hg': 100.0, 'kg': 1000.0,
+    'ml': 1.0, 'cl': 10.0, 'dl': 100.0, 'l': 1000.0,
+  };
+
+  /// La quantità è cambiata: **i macro si riscrivono mentre si digita**.
+  ///
+  /// ── 🚨 La richiesta, il 12/08/2026 ──────────────────────────────────────
+  ///
+  /// *«Quando modifico i grammi nella pagina di modifica alimento, i calcoli li
+  /// deve fare in tempo reale mentre scrivo.»*
+  ///
+  /// Prima i campi restavano fermi e sotto c'era scritto che il ricalcolo sarebbe
+  /// avvenuto. Vero, ma vuol dire premere «Salva» su una schermata che mostra i
+  /// numeri di prima: si conferma un valore che si sa sbagliato, fidandosi.
+  ///
+  /// ⚠️ **Quello che si manda non cambia**: i macro riscritti da qui NON entrano
+  /// in `_toccati`, quindi non viaggiano nella richiesta e il ricalcolo resta del
+  /// server. È un'anteprima, non una decisione — e usa la stessa proporzione.
+  ///
+  /// 🚨 **Un campo corretto a mano non si tocca più.** Chi ha scritto «32» nelle
+  /// proteine sta dicendo che ne sa più della stima, e vederselo riscrivere al
+  /// carattere successivo sarebbe un campo che si rifiuta di obbedire.
+  void _quantitaCambiata() {
+    final fattore = _grammiPer[_unitaScelta];
+    final q = _valore(_qty);
+
+    // Senza un fattore certo o senza valori per 100 g non si riscala niente: si
+    // lascia fare al server, che ha la tabella vera.
+    if (fattore == null || q == null || q <= 0 || !widget.voce.siRicalcola) return;
+
+    final nuovi = widget.voce.riscalataA(q * fattore);
+
+    setState(() {
+      if (!_toccati.contains('kcal')) _kcal.text = _pulito(nuovi.kcal);
+      if (!_toccati.contains('protein')) _proteine.text = _pulito(nuovi.proteine);
+      if (!_toccati.contains('carbs')) _carbo.text = _pulito(nuovi.carboidrati);
+      if (!_toccati.contains('fat')) _grassi.text = _pulito(nuovi.grassi);
+    });
+  }
+
   Future<void> _salva() async {
     setState(() {
       _inCorso = true;
@@ -177,6 +229,7 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                     controller: _qty,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(labelText: 'Quantità'),
+                    onChanged: (_) => _quantitaCambiata(),
                   ),
                 ),
                 const SizedBox(width: Gap.sm),
@@ -187,7 +240,12 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                     items: _unita
                         .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                         .toList(),
-                    onChanged: (v) => setState(() => _unitaScelta = v ?? 'g'),
+                    onChanged: (v) {
+                      // ⚠️ Cambiare unità cambia i grammi quanto cambiare il
+                      // numero: da «200 g» a «200 kg» l'anteprima deve seguire.
+                      setState(() => _unitaScelta = v ?? 'g');
+                      _quantitaCambiata();
+                    },
                   ),
                 ),
               ],
@@ -198,10 +256,16 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
               // 🚨 Si dice **se** il ricalcolo avverrà. Senza valori per 100 g
               // non avviene, e lasciar credere il contrario farebbe salvare
               // una porzione doppia con le calorie di prima.
-              widget.voce.siRicalcola
-                  ? 'Cambiando la quantità, calorie e macro si aggiornano da soli.'
-                  : 'Questa voce non ha valori per 100 g: cambiando la quantità '
-                        'dovrai correggere anche calorie e macro.',
+              !widget.voce.siRicalcola
+                  ? 'Questa voce non ha valori per 100 g: cambiando la quantità '
+                        'dovrai correggere anche calorie e macro.'
+                  : _grammiPer.containsKey(_unitaScelta)
+                  ? 'Calorie e macro si aggiornano mentre scrivi. Quelli che '
+                        'correggi a mano restano come li hai messi.'
+                  // 🚨 Su un\'unità che non è in grammi l\'app NON può riscalare:
+                  // quanto pesi un cucchiaio lo sa la tabella del server.
+                  : 'Cambiando la quantità in $_unitaScelta, calorie e macro li '
+                        'ricalcola il server al salvataggio.',
               style: theme.textTheme.bodySmall,
             ),
 

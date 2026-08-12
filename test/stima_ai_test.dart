@@ -249,6 +249,107 @@ void main() {
     });
   });
 
+  /// 🚨 **Il ricalcolo in tempo reale mentre si corregge la quantità.**
+  ///
+  /// Il committente, il 12/08/2026: *«quando modifico i grammi, i calcoli li deve
+  /// fare in tempo reale mentre scrivo»*. Senza, si corregge una porzione da 200
+  /// a 250 g e si conferma un pasto vedendo ancora le calorie di prima.
+  group('riscalare una voce', () {
+    const cotoletta = VoceStimata(
+      nome: 'Cotoletta di pollo',
+      qty: 200,
+      unita: 'g',
+      grammi: 200,
+      kcal: 330,
+      proteine: 48,
+      carboidrati: 0,
+      grassi: 15,
+    );
+
+    test('i valori per 100 g si ricavano da quelli assoluti', () {
+      final p = cotoletta.per100!;
+
+      expect(p.kcal, 165);
+      expect(p.proteine, 24);
+      expect(p.grassi, 7.5);
+    });
+
+    test('a 250 g tutto sale in proporzione', () {
+      final r = cotoletta.riscalataA(250, intoccabili: const {});
+
+      expect(r.grammi, 250);
+      expect(r.qty, 250, reason: 'in grammi la quantità è i grammi');
+      expect(r.kcal, 412.5);
+      expect(r.proteine, 60);
+      expect(r.grassi, 18.8);
+      expect(r.nome, 'Cotoletta di pollo');
+    });
+
+    /// 🚨 **Chi corregge un numero a mano ne sa più della proporzione.** Vederselo
+    /// riscrivere al carattere successivo sarebbe un campo che si rifiuta di
+    /// obbedire.
+    test('i valori corretti a mano non si riscalano', () {
+      final r = cotoletta.riscalataA(250, intoccabili: const {'protein', 'kcal'});
+
+      expect(r.proteine, 48, reason: 'toccato: resta com\'è');
+      expect(r.kcal, 330, reason: 'toccato: resta com\'è');
+      expect(r.grassi, 18.8, reason: 'non toccato: si riscala');
+      expect(r.grammi, 250, reason: 'i grammi seguono sempre la quantità');
+    });
+
+    /// ⚠️ Senza grammi non c'è nessuna proporzione da applicare: si lascia tutto
+    /// com'è invece di inventare.
+    test('senza grammi non si riscala niente', () {
+      const senzaPeso = VoceStimata(nome: 'x', kcal: 100, proteine: 10);
+
+      expect(senzaPeso.per100, isNull);
+      expect(senzaPeso.riscalataA(250, intoccabili: const {}).kcal, 100);
+    });
+
+    test('una quantità a zero non azzera la voce', () {
+      expect(cotoletta.riscalataA(0, intoccabili: const {}).kcal, 330);
+      expect(cotoletta.riscalataA(-5, intoccabili: const {}).kcal, 330);
+    });
+
+    /// 💡 Su un'unità che non è in grammi la quantità **non** diventa i grammi:
+    /// «2 cucchiai» resta 2, e i grammi li decide chi sa quanto pesa un cucchiaio.
+    test('con un\'unità non metrica la quantità resta la sua', () {
+      const olio = VoceStimata(
+        nome: 'Olio',
+        qty: 1,
+        unita: 'cucchiaio',
+        grammi: 14,
+        kcal: 126,
+      );
+
+      final r = olio.riscalataA(28, intoccabili: const {});
+
+      expect(r.grammi, 28);
+      expect(r.qty, 1, reason: 'la quantità in cucchiai non è un peso');
+      expect(r.kcal, 252);
+    });
+
+    /// 🚨 **Il macro corretto a mano cambia il verdetto sui macro impossibili.**
+    /// È il senso stesso di renderli modificabili: si vede l'avviso, si correggono
+    /// i numeri, e l'avviso deve sparire.
+    test('correggendo i macro l\'avviso si spegne', () {
+      const coppiette = VoceStimata(
+        nome: 'Coppiette',
+        grammi: 100,
+        kcal: 588,
+        proteine: 56,
+        carboidrati: 4,
+        grassi: 40,
+      );
+
+      expect(coppiette.macroImpossibili, isTrue);
+      expect(
+        coppiette.copyCon(proteine: 45, grassi: 20).macroImpossibili,
+        isFalse,
+      );
+    });
+  });
+
   /// 💡 La frase serve al pulsante «Precisa»: si riapre il campo **con dentro**
   /// quello che si era scritto, così si aggiunge «impanate» invece di
   /// ridigitare tutto. Chi deve riscrivere da capo non precisa: conferma.

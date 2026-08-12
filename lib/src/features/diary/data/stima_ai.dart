@@ -106,16 +106,79 @@ class VoceStimata {
     'fat': grassi,
   };
 
-  VoceStimata copyCon({double? qty, String? unita, double? grammi, double? kcal}) => VoceStimata(
+  VoceStimata copyCon({
+    double? qty,
+    String? unita,
+    double? grammi,
+    double? kcal,
+    double? proteine,
+    double? carboidrati,
+    double? grassi,
+  }) => VoceStimata(
     nome: nome,
     qty: qty ?? this.qty,
     unita: unita ?? this.unita,
     grammi: grammi ?? this.grammi,
     kcal: kcal ?? this.kcal,
-    proteine: proteine,
-    carboidrati: carboidrati,
-    grassi: grassi,
+    proteine: proteine ?? this.proteine,
+    carboidrati: carboidrati ?? this.carboidrati,
+    grassi: grassi ?? this.grassi,
   );
+
+  /// I valori **per 100 g**, ricavati da quelli assoluti.
+  ///
+  /// 🚨 Servono al ricalcolo in tempo reale mentre si corregge la quantità:
+  /// se 200 g valgono 330 kcal, 100 g ne valgono 165, e 250 g ne valgono 412.
+  ///
+  /// ⚠️ È **la stessa derivazione che fa il backend** in
+  /// `FoodEntry::derivaValoriPer100()`. Non è una seconda formula da tenere
+  /// allineata: è la stessa proporzione, e il server la rifà comunque al
+  /// salvataggio — questi numeri servono solo a **mostrare** dove si sta
+  /// andando mentre si digita.
+  ///
+  /// 💡 Restituisce `null` senza grammi: da «due cucchiai» senza peso non si
+  /// ricava niente, e riscalare inventando sarebbe peggio che non riscalare.
+  ({double? kcal, double? proteine, double? carboidrati, double? grassi})? get per100 {
+    final g = grammi;
+
+    if (g == null || g <= 0) return null;
+
+    double? per(double? v) => v == null ? null : v / g * 100;
+
+    return (
+      kcal: per(kcal),
+      proteine: per(proteine),
+      carboidrati: per(carboidrati),
+      grassi: per(grassi),
+    );
+  }
+
+  /// La stessa voce **riscalata** a una quantità nuova, in grammi.
+  ///
+  /// ⚠️ I valori che chi legge ha già corretto a mano non passano di qui: chi
+  /// chiama decide quali riscalare, perché un numero scritto da una persona non
+  /// va sovrascritto da una proporzione.
+  VoceStimata riscalataA(double nuoviGrammi, {required Set<String> intoccabili}) {
+    final base = per100;
+
+    if (base == null || nuoviGrammi <= 0) return this;
+
+    double? scala(String chiave, double? valore100, double? attuale) =>
+        intoccabili.contains(chiave) || valore100 == null
+        ? attuale
+        : double.parse((valore100 * nuoviGrammi / 100).toStringAsFixed(1));
+
+    return VoceStimata(
+      nome: nome,
+      qty: (unita == null || unita == 'g') ? nuoviGrammi : qty,
+      unita: unita,
+      grammi: nuoviGrammi,
+      kcal: scala('kcal', base.kcal, kcal),
+      proteine: scala('protein', base.proteine, proteine),
+      carboidrati: scala('carbs', base.carboidrati, carboidrati),
+      grassi: scala('fat', base.grassi, grassi),
+    );
+  }
 
   /// «200 g» oppure «1 cucchiaio · 14 g»: come lo si legge, non come si salva.
   String get quantita {

@@ -72,7 +72,69 @@ void main() {
   testWidgets('con una voce sola i dettagli sono già aperti', (tester) async {
     await tester.pumpWidget(dentroUnFoglio(stima()));
 
-    expect(find.text('Proteine 48 g'), findsOneWidget);
+    expect(find.text('Proteine'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '48'), findsOneWidget);
+  });
+
+  /// 🚨 **I macro sono campi, non etichette da leggere.**
+  ///
+  /// Il committente, il 12/08/2026: *«i macro devo poterli modificare nella
+  /// pagina di conferma dell'alimento»*. Prima erano tre pastiglie: chi vedeva
+  /// 48 g di proteine su una cotoletta impanata poteva solo confermare il numero
+  /// sbagliato e poi rientrare dal diario a correggerlo.
+  testWidgets('i macro si possono correggere', (tester) async {
+    await tester.pumpWidget(dentroUnFoglio(stima()));
+
+    for (final etichetta in ['Proteine', 'Carboidrati', 'Grassi']) {
+      expect(
+        find.widgetWithText(TextField, etichetta),
+        findsOneWidget,
+        reason: '«$etichetta» deve essere un campo modificabile',
+      );
+    }
+
+    await tester.enterText(find.widgetWithText(TextField, '48'), '32');
+    await tester.pump();
+
+    expect(find.widgetWithText(TextField, '32'), findsOneWidget);
+  });
+
+  /// 🚨 **Il ricalcolo in tempo reale.**
+  ///
+  /// *«Quando modifico i grammi, i calcoli li deve fare in tempo reale mentre
+  /// scrivo.»* Da 200 a 250 g: 330 kcal diventano 412,5 e 48 g di proteine
+  /// diventano 60, **mentre si digita**.
+  testWidgets('correggere la quantità riscala calorie e macro subito', (tester) async {
+    await tester.pumpWidget(dentroUnFoglio(stima()));
+
+    await tester.enterText(find.widgetWithText(TextField, '200'), '250');
+    await tester.pump();
+
+    expect(find.widgetWithText(TextField, '412.5'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '60'), findsOneWidget);
+
+    // E il totale in cima segue, macro compresi.
+    expect(find.text('413 kcal · P 60 · C 0 · G 19'), findsOneWidget);
+  });
+
+  /// ⚠️ **Un macro corretto a mano non si fa riscrivere.** Chi scrive «32» sta
+  /// dicendo che ne sa più del modello.
+  testWidgets('un macro corretto a mano resiste al ricalcolo', (tester) async {
+    await tester.pumpWidget(dentroUnFoglio(stima()));
+
+    await tester.enterText(find.widgetWithText(TextField, '48'), '32');
+    await tester.pump();
+
+    await tester.enterText(find.widgetWithText(TextField, '200'), '250');
+    await tester.pump();
+
+    expect(find.widgetWithText(TextField, '32'), findsOneWidget);
+    expect(
+      find.widgetWithText(TextField, '60'),
+      findsNothing,
+      reason: 'le proteine erano state corrette a mano: non si riscalano',
+    );
+    expect(find.widgetWithText(TextField, '18.8'), findsOneWidget, reason: 'i grassi sì');
   });
 
   testWidgets('con più voci i dettagli partono chiusi', (tester) async {
@@ -89,12 +151,13 @@ void main() {
 
     expect(find.text('Pasta'), findsOneWidget);
     expect(find.text('Sugo'), findsOneWidget);
-    expect(find.text('Proteine 10 g'), findsNothing);
+    expect(find.text('Proteine'), findsNothing);
 
     await tester.tap(find.text('Pasta'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Proteine 10 g'), findsOneWidget);
+    expect(find.text('Proteine'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '10'), findsOneWidget);
   });
 
   /// 🚨 Una voce fisicamente impossibile si segnala, e i suoi dettagli si aprono
@@ -115,8 +178,9 @@ void main() {
     expect(find.byIcon(Icons.scale_outlined), findsOneWidget);
 
     // La riga sbagliata è aperta, quella sana no.
-    expect(find.text('Proteine 56 g'), findsOneWidget);
-    expect(find.text('Proteine 8 g'), findsNothing);
+    expect(find.text('Proteine'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '56'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '8'), findsNothing);
   });
 
   /// 🚨 **«Precisa» restituisce la frase**, che è il modo in cui chi ha aperto

@@ -20,6 +20,37 @@ final selectedDateProvider = StateProvider<DateTime>((ref) {
 
 String _iso(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
+/// Le voci che stanno sparendo, mentre il server non lo sa ancora — C15.
+///
+/// ── 🚨 Il difetto, riferito il 12/08/2026 ────────────────────────────────
+///
+/// *«Quando slido via un cibo, mi dà una schermata rossa di errore (funziona,
+/// ma dà errore).»*
+///
+/// L'errore era **`A dismissed Dismissible widget is still part of the tree`**,
+/// e ha una causa precisa: `Dismissible.onDismissed` promette che chi lo ascolta
+/// tolga l'elemento dalla lista **nello stesso frame**. Qui invece partiva una
+/// `DELETE` sulla rete e poi un `invalidate`: fra il gesto e la lista nuova
+/// passano centinaia di millisecondi, e in quel tempo Flutter ritrova nell'albero
+/// un widget che si era già dichiarato scomparso.
+///
+/// 💡 **Per questo la cancellazione «funzionava lo stesso»**: la richiesta partiva
+/// davvero, e il diario si aggiornava. L'eccezione riguardava solo la coerenza
+/// dell'albero — ma un rettangolo rosso in mezzo alla schermata è, per chi usa
+/// l'app, indistinguibile da un guasto.
+///
+/// ⚠️ **Rimuovere l'elemento subito è l'unico modo corretto**, e vale anche come
+/// scelta d'interfaccia: la riga sparisce quando il dito la lascia, non quando
+/// risponde il server. Se la cancellazione fallisce, la riga **torna** e si dice
+/// perché.
+///
+/// 💡 **Gli id cancellati non si tolgono mai dall'insieme, ed è voluto.** Toglierli
+/// vorrebbe dire aspettare che il diario nuovo sia arrivato — e se lo si facesse
+/// prima, la riga riapparirebbe per un frame prima di sparire di nuovo. Un id
+/// che non esiste più nei dati non fa nessun danno: filtra qualcosa che non c'è,
+/// e l'insieme cresce di un intero per ogni cancellazione della sessione.
+final vociInUscitaProvider = StateProvider<Set<int>>((ref) => const {});
+
 /// La giornata alimentare — A4.1.
 final diaryProvider = FutureProvider.autoDispose<DiaryDay>((ref) async {
   final data = await ref
@@ -157,6 +188,39 @@ class DiaryActions {
     await _api.delete('/food-entries/$entryId');
 
     _ref.invalidate(diaryProvider);
+  }
+
+  /// Cancella **facendo sparire subito la riga** — C15.
+  ///
+  /// 🚨 Serve allo scorrimento: `Dismissible` pretende che l'elemento esca dalla
+  /// lista **nello stesso frame** del gesto, e una `DELETE` sulla rete non ci
+  /// arriva mai in tempo. Da lì il rettangolo rosso *«a dismissed Dismissible
+  /// widget is still part of the tree»*, che compariva mentre la cancellazione
+  /// funzionava benissimo.
+  ///
+  /// ⚠️ **Se la richiesta fallisce la riga torna**, e l'errore si rilancia a chi
+  /// ha chiamato perché lo mostri. Far sparire per sempre una voce che il server
+  /// ha ancora sarebbe peggio dell'errore che si stava togliendo: al prossimo
+  /// aggiornamento ricomparirebbe da sola, senza nessuna spiegazione.
+  ///
+  /// 💡 Il ripristino **non ripristina la posizione** nell'elenco: il diario è
+  /// ordinato dal server per pasto e orario, quindi la riga rientra dove le
+  /// spetta senza che l'app debba ricordarselo.
+  Future<void> deleteSubito(int entryId) async {
+    final prima = _ref.read(vociInUscitaProvider);
+
+    _ref.read(vociInUscitaProvider.notifier).state = {...prima, entryId};
+
+    try {
+      await _api.delete('/food-entries/$entryId');
+
+      _ref.invalidate(diaryProvider);
+    } on Object {
+      _ref.read(vociInUscitaProvider.notifier).state = {..._ref.read(vociInUscitaProvider)}
+        ..remove(entryId);
+
+      rethrow;
+    }
   }
 
   /// Salva una voce fra i preferiti — A4.5.

@@ -24,6 +24,9 @@ class FoodEntry {
     this.carbs,
     this.fat,
     this.kcal100,
+    this.protein100,
+    this.carbs100,
+    this.fat100,
     this.source = 'manual',
   });
 
@@ -39,6 +42,9 @@ class FoodEntry {
     carbs: _num(j['carbs']),
     fat: _num(j['fat']),
     kcal100: _num(j['kcal_100']),
+    protein100: _num(j['protein_100']),
+    carbs100: _num(j['carbs_100']),
+    fat100: _num(j['fat_100']),
     source: j['source']?.toString() ?? 'manual',
   );
 
@@ -48,15 +54,43 @@ class FoodEntry {
   final double? grams, qty, kcal, protein, carbs, fat;
   final String? unit;
 
-  /// Le calorie per 100 g.
+  /// I valori per 100 g.
   ///
-  /// 🚨 **Non serve all'app per contare** — il ricalcolo lo fa il server, che
-  /// possiede la tabella delle unità. Serve solo a **sapere** se cambiando la
-  /// quantità i macro si aggiorneranno: quando manca, il modulo deve dirlo
-  /// invece di lasciar credere a un ricalcolo che non avverrà.
-  final double? kcal100;
+  /// 🚨 **Il ricalcolo che vale resta del server**, che possiede la tabella
+  /// unità→grammi. Servono a due cose diverse:
+  ///
+  /// 1. a **sapere** se cambiando la quantità i macro si aggiorneranno — quando
+  ///    mancano, il modulo deve dirlo invece di lasciar credere a un ricalcolo
+  ///    che non avverrà;
+  /// 2. a **mostrare** dove si sta andando mentre si digita.
+  ///
+  /// ⚠️ Il punto 2 è arrivato il 12/08/2026: *«quando modifico i grammi, i
+  /// calcoli li deve fare in tempo reale mentre scrivo»*. Non è una seconda
+  /// formula da tenere allineata — è la stessa proporzione, e il server la rifà
+  /// comunque al salvataggio. Il numero che si vede è un'anteprima, non una
+  /// decisione.
+  final double? kcal100, protein100, carbs100, fat100;
 
   bool get siRicalcola => kcal100 != null;
+
+  /// Quanto varrebbe questa voce a `grammi` grammi.
+  ///
+  /// 💡 `null` per i valori che non hanno un riferimento per 100 g: una voce
+  /// scritta a mano senza macro non si riscala, e inventarne uno sarebbe peggio
+  /// che lasciare il campo com'è.
+  ({double? kcal, double? proteine, double? carboidrati, double? grassi}) riscalataA(
+    double grammi,
+  ) {
+    double? scala(double? per100) =>
+        per100 == null ? null : double.parse((per100 * grammi / 100).toStringAsFixed(1));
+
+    return (
+      kcal: scala(kcal100),
+      proteine: scala(protein100),
+      carboidrati: scala(carbs100),
+      grassi: scala(fat100),
+    );
+  }
 
   final String source;
 

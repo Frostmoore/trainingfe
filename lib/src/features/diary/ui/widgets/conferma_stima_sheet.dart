@@ -343,6 +343,17 @@ class _RigaVoceState extends State<_RigaVoce> {
     text: _testo(widget.voce.qty ?? widget.voce.grammi),
   );
   late final _kcal = TextEditingController(text: _testo(widget.voce.kcal));
+  late final _proteine = TextEditingController(text: _testo(widget.voce.proteine));
+  late final _carbo = TextEditingController(text: _testo(widget.voce.carboidrati));
+  late final _grassi = TextEditingController(text: _testo(widget.voce.grassi));
+
+  /// I valori che chi legge ha corretto a mano.
+  ///
+  /// 🚨 **Da quel momento non si riscalano più.** Chi scrive «32» nelle proteine
+  /// sta dicendo che ne sa più del modello, e vedersele riscrivere da una
+  /// proporzione al carattere successivo sarebbe un campo che si rifiuta di
+  /// obbedire.
+  final _toccati = <String>{};
 
   static String _testo(double? v) {
     if (v == null) return '';
@@ -354,16 +365,64 @@ class _RigaVoceState extends State<_RigaVoce> {
   void dispose() {
     _qty.dispose();
     _kcal.dispose();
+    _proteine.dispose();
+    _carbo.dispose();
+    _grassi.dispose();
     super.dispose();
   }
 
   double? _valore(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
-  /// 🚨 Correggendo la quantità si aggiornano **anche i grammi**, quando l'unità
-  /// è già in grammi. Altrimenti si salverebbe «250» con `grams` fermo a 200, e
-  /// il server conterebbe i grammi vecchi: un numero corretto a mano che non ha
-  /// nessun effetto è peggio di un campo non modificabile.
+  /// La quantità è cambiata: **tutto si riscala mentre si digita**.
+  ///
+  /// ── 🚨 Perché il ricalcolo è qui e non solo sul server ───────────────────
+  ///
+  /// Il committente, il 12/08/2026: *«quando modifico i grammi, i calcoli li
+  /// deve fare in tempo reale mentre scrivo»*. Ed è la richiesta giusta: senza,
+  /// si corregge una porzione da 200 a 250 g e si conferma un pasto vedendo
+  /// ancora le calorie di prima — cioè si accetta un numero che si sa sbagliato,
+  /// fidandosi che qualcun altro lo sistemi.
+  ///
+  /// ⚠️ **Non è una seconda formula da tenere allineata**: è la proporzione da
+  /// `per100`, la stessa che il backend rifà comunque al salvataggio. Qui serve
+  /// a **mostrare** dove si sta andando, non a decidere cosa si salva.
+  ///
+  /// 🚨 Si aggiornano anche i **grammi** quando l'unità è già in grammi: salvare
+  /// «250» con `grams` fermo a 200 farebbe contare al server i grammi vecchi, e
+  /// un numero corretto a mano senza effetto è peggio di un campo bloccato.
+  void _quantitaCambiata() {
+    final q = _valore(_qty);
+
+    if (q == null || q <= 0) {
+      _applica();
+
+      return;
+    }
+
+    final unita = widget.voce.unita ?? 'g';
+
+    // ⚠️ Su un'unità che non è in grammi non si può riscalare: quanto pesi un
+    // cucchiaio lo sa la tabella del server, non l'app. Si manda la quantità e
+    // si lascia fare a lui, come prima.
+    if (unita != 'g') {
+      _applica();
+
+      return;
+    }
+
+    final riscalata = widget.voce.riscalataA(q, intoccabili: _toccati);
+
+    // I campi non toccati si riscrivono con il valore nuovo, gli altri no.
+    if (!_toccati.contains('kcal')) _kcal.text = _testo(riscalata.kcal);
+    if (!_toccati.contains('protein')) _proteine.text = _testo(riscalata.proteine);
+    if (!_toccati.contains('carbs')) _carbo.text = _testo(riscalata.carboidrati);
+    if (!_toccati.contains('fat')) _grassi.text = _testo(riscalata.grassi);
+
+    _applica();
+  }
+
+  /// Manda alla stima quello che c'è **adesso** nei campi.
   void _applica() {
     final q = _valore(_qty);
     final unita = widget.voce.unita ?? 'g';
@@ -373,9 +432,45 @@ class _RigaVoceState extends State<_RigaVoce> {
         qty: q,
         grammi: (unita == 'g' && q != null) ? q : widget.voce.grammi,
         kcal: _valore(_kcal),
+        proteine: _valore(_proteine),
+        carboidrati: _valore(_carbo),
+        grassi: _valore(_grassi),
       ),
     );
   }
+
+  /// Un campo numerico che non taglia la propria etichetta.
+  ///
+  /// ⚠️ **`isDense: true` con `labelText` è la trappola**: l'etichetta, quando
+  /// sale, esce **sopra** il bordo del campo, e dentro un `ExpansionTile` con
+  /// padding superiore zero finiva tagliata a metà. Qui il padding verticale è
+  /// esplicito e l'etichetta ha lo spazio in cui salire.
+  Widget _campo(
+    TextEditingController controller,
+    String etichetta,
+    String suffisso, {
+    String? chiave,
+  }) => TextField(
+    controller: controller,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    style: Theme.of(context).textTheme.bodyMedium,
+    decoration: InputDecoration(
+      labelText: etichetta,
+      suffixText: suffisso,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      contentPadding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.sm),
+    ),
+    onChanged: (_) {
+      if (chiave == null) {
+        _quantitaCambiata();
+
+        return;
+      }
+
+      _toccati.add(chiave);
+      _applica();
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -400,49 +495,54 @@ class _RigaVoceState extends State<_RigaVoce> {
             : null,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
+            // ⚠️ Il padding superiore NON è zero: le etichette dei campi salgono
+            // sopra il bordo, e senza spazio finivano tagliate.
+            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, Gap.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _qty,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          labelText: 'Quantità',
-                          suffixText: v.unita ?? 'g',
-                          isDense: true,
-                        ),
-                        onChanged: (_) => _applica(),
-                      ),
-                    ),
+                    Expanded(child: _campo(_qty, 'Quantità', v.unita ?? 'g')),
                     const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: TextField(
-                        controller: _kcal,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Calorie',
-                          suffixText: 'kcal',
-                          isDense: true,
-                        ),
-                        onChanged: (_) => _applica(),
-                      ),
-                    ),
+                    Expanded(child: _campo(_kcal, 'Calorie', 'kcal', chiave: 'kcal')),
                   ],
                 ),
                 const SizedBox(height: Gap.md),
-                Wrap(
-                  spacing: Gap.sm,
-                  runSpacing: Gap.xs,
+
+                /*
+                 * 🚨 **I macro sono campi, non etichette.**
+                 *
+                 * Il committente: *«i macro devo poterli modificare nella pagina
+                 * di conferma dell'alimento»*. Prima erano tre pastiglie da
+                 * leggere, e chi vedeva 48 g di proteine su una cotoletta
+                 * impanata poteva solo confermare il numero sbagliato e poi
+                 * rientrare dal diario a correggerlo — cioè passare comunque per
+                 * un totale storto.
+                 */
+                Row(
                   children: [
-                    _Macro(nome: 'Proteine', grammi: v.proteine),
-                    _Macro(nome: 'Carboidrati', grammi: v.carboidrati),
-                    _Macro(nome: 'Grassi', grammi: v.grassi),
+                    Expanded(child: _campo(_proteine, 'Proteine', 'g', chiave: 'protein')),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(child: _campo(_carbo, 'Carboidrati', 'g', chiave: 'carbs')),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(child: _campo(_grassi, 'Grassi', 'g', chiave: 'fat')),
                   ],
                 ),
+
+                if (v.unita != null && v.unita != 'g') ...[
+                  const SizedBox(height: Gap.sm),
+                  Text(
+                    // 🚨 Si dice **se** il ricalcolo avverrà: quanto pesa un
+                    // cucchiaio lo sa la tabella del server, non l'app.
+                    'Cambiando la quantità in ${v.unita}, calorie e macro li '
+                    'ricalcola il server al salvataggio.',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+
                 if (widget.onTolta != null) ...[
                   const SizedBox(height: Gap.sm),
                   Align(
@@ -462,21 +562,6 @@ class _RigaVoceState extends State<_RigaVoce> {
       ),
     );
   }
-}
-
-class _Macro extends StatelessWidget {
-  const _Macro({required this.nome, required this.grammi});
-
-  final String nome;
-  final double? grammi;
-
-  @override
-  Widget build(BuildContext context) => Chip(
-    label: Text('$nome ${grammi == null ? '—' : '${grammi!.round()} g'}'),
-    labelStyle: Theme.of(context).textTheme.labelSmall,
-    visualDensity: VisualDensity.compact,
-    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-  );
 }
 
 /// I tre pulsanti, nell'ordine in cui servono.

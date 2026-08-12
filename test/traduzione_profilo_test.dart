@@ -51,9 +51,30 @@ void main() {
     /// 🚨 Il difetto che ha fatto partire tutto: `lose_weight` non è una chiave
     /// di `deltaObiettivo`, quindi il deficit era **0%**.
     test('l\'obiettivo si traduce', () {
-      expect(profilo(obiettivo: 'lose_weight').obiettivoPerFormula, 'lose');
-      expect(profilo(obiettivo: 'gain_muscle').obiettivoPerFormula, 'bulk');
-      expect(profilo(obiettivo: 'maintain').obiettivoPerFormula, 'maintain');
+      for (final o in [
+        'lose_fast',
+        'lose_slow',
+        'maintain',
+        'gain_lean',
+        'gain_fast',
+      ]) {
+        expect(
+          profilo(obiettivo: o).obiettivoPerFormula,
+          o,
+          reason: 'dal 12/08/2026 i due vocabolari coincidono',
+        );
+      }
+    });
+
+    /// ⚠️ I profili salvati prima del 12/08/2026 devono continuare a
+    /// funzionare: un valore vecchio che ricadesse su «mantenimento» sarebbe
+    /// **esattamente** il difetto che ha fatto nascere questo file.
+    test('il vocabolario vecchio si traduce ancora', () {
+      expect(profilo(obiettivo: 'lose_weight').obiettivoPerFormula, 'lose_slow');
+      expect(profilo(obiettivo: 'gain_muscle').obiettivoPerFormula, 'gain_lean');
+      expect(profilo(obiettivo: 'lose').obiettivoPerFormula, 'lose_slow');
+      expect(profilo(obiettivo: 'cut').obiettivoPerFormula, 'lose_fast');
+      expect(profilo(obiettivo: 'bulk').obiettivoPerFormula, 'gain_lean');
     });
 
     test('«molto attivo» è «atleta» nel calcolatore', () {
@@ -72,7 +93,17 @@ void main() {
   /// obiettivo al profilo e si dimentica della traduzione.
   group('ogni valore salvabile finisce su una chiave che esiste', () {
     test('gli obiettivi', () {
-      for (final salvato in ['lose_weight', 'maintain', 'gain_muscle']) {
+      for (final salvato in [
+        'lose_fast',
+        'lose_slow',
+        'maintain',
+        'gain_lean',
+        'gain_fast',
+        // ⚠️ Anche i valori vecchi: sono ancora in tabella finche' la
+        // migrazione non ha girato su ogni installazione.
+        'lose_weight',
+        'gain_muscle',
+      ]) {
         final tradotto = profilo(obiettivo: salvato).obiettivoPerFormula;
 
         expect(
@@ -118,7 +149,7 @@ void main() {
   test('il caso reale che ha fatto trovare il difetto', () {
     const c = CalcolatoreCalorie();
 
-    final p = profilo(sesso: 'm', attivita: 'sedentary', obiettivo: 'lose_weight');
+    final p = profilo(sesso: 'm', attivita: 'sedentary', obiettivo: 'lose_slow');
 
     final bmr = c.bmr(sesso: p.sessoPerFormula, kg: 96.7, cm: 175, eta: 37);
     final tdee = c.tdee(bmr, p.attivitaPerFormula);
@@ -128,14 +159,19 @@ void main() {
     expect(bmr, closeTo(1880.8, 0.1));
     expect(tdee, closeTo(2256.9, 0.1));
 
-    // −15% per «dimagrire». Prima usciva 2058: mantenimento, con il basale
-    // calcolato come se fosse una donna.
-    expect(kcal, 1918);
+    // −10% per «dimagrimento graduale» — il gradino su cui la migrazione
+    // porta chi aveva scritto «dimagrire».
+    //
+    // 💡 Con i tre obiettivi di prima erano 1918 (−15%). La scala nuova non
+    // ha quel gradino: fra i due si e' scelto il deficit **piu' piccolo**,
+    // perche' uno troppo grande sarebbe una scelta sulla salute di qualcuno
+    // presa al posto suo. Il gradino aggressivo adesso c'e', e si sceglie.
+    expect(kcal, 2031);
 
     final macro = c.macro(kcal, p.obiettivoPerFormula);
 
-    // La ripartizione di `lose` alza le proteine: in deficit servono a
+    // La ripartizione di `lose_slow` alza le proteine: in deficit servono a
     // limitare la perdita di massa magra.
-    expect(macro.proteineG, 153);
+    expect(macro.proteineG, 162);
   });
 }

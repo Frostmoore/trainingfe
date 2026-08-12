@@ -178,7 +178,20 @@ class _ConfermaStimaSheetState extends ConsumerState<ConfermaStimaSheet> {
 
           _Azioni(
             inCorso: _inCorso,
-            puoConfermare: !_stima.vuota,
+            /*
+             * 🚨 **I macro impossibili BLOCCANO il salvataggio** — 12/08/2026.
+             *
+             * Il committente: *«la guardia sull'impossibilità della massa è
+             * hard-blocking perché non è possibile che un alimento abbia più
+             * macro che peso»*. Il server lo rifiuta con un 422, e l'app deve
+             * fermarsi **prima**: un pulsante che si preme e restituisce un
+             * errore è peggio di un pulsante spento, perché non dice cosa fare.
+             *
+             * ⚠️ Qui invece la riga sbagliata è **già aperta** con i suoi campi
+             * modificabili: si corregge il numero e il pulsante si riaccende da
+             * solo. È l'unica ragione per cui bloccare qui è accettabile.
+             */
+            puoConfermare: !_stima.vuota && !_stima.haMacroImpossibili,
             // ⚠️ Da una foto non c'è niente da precisare a parole: si offre di
             // rifare lo scatto solo tornando indietro, e i numeri si correggono
             // qui sopra.
@@ -304,8 +317,8 @@ class _AvvisoMacroImpossibili extends StatelessWidget {
           Expanded(
             child: Text(
               'Una voce dichiara più proteine, carboidrati e grassi di quanto '
-              'pesa: è impossibile, quindi la stima è gonfiata. Controlla i '
-              'valori prima di aggiungerla.',
+              'pesa: è impossibile. Correggi i valori qui sotto — finché non '
+              'tornano, non si può aggiungere al diario.',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
             ),
           ),

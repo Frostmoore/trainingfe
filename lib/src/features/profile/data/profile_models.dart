@@ -7,6 +7,8 @@
 /// test se ne accorge, perché entrambi i numeri sono plausibili.
 library;
 
+import 'calcolatore_calorie.dart';
+
 class UserProfile {
   const UserProfile({
     required this.mealHours,
@@ -117,15 +119,23 @@ class UserProfile {
     _ => 'sedentary',
   };
 
-  /// `lose_weight`/`gain_muscle` → `lose`/`bulk`.
+  /// L'obiettivo nel vocabolario del calcolatore.
   ///
-  /// 💡 `cut` non ha corrispondente nel profilo: è un obiettivo che si imposta
-  /// dal piano alimentare del trainer, non da qui.
-  String get obiettivoPerFormula => switch (goal) {
-    'lose_weight' => 'lose',
-    'gain_muscle' => 'bulk',
-    _ => 'maintain',
-  };
+  /// 🚨 **Dal 12/08/2026 i due vocabolari coincidono**, ed è una scelta: la
+  /// traduzione fra `lose_weight` e `lose` è costata un target di
+  /// **mantenimento** a chi aveva scritto «voglio dimagrire», per settimane,
+  /// senza che niente lo segnalasse. Due elenchi da tenere allineati a mano
+  /// prima o poi divergono; uno solo no.
+  ///
+  /// ⚠️ Il getter resta perché deve tradurre i valori **salvati prima**, ed è il
+  /// ritratto di `Profile::goalForFormula()`.
+  String get obiettivoPerFormula {
+    final tradotto = CalcolatoreCalorie.normalizzaObiettivo(goal ?? '');
+
+    return CalcolatoreCalorie.deltaObiettivo.containsKey(tradotto)
+        ? tradotto
+        : 'maintain';
+  }
 
   /// L'etichetta italiana del campo mancante, per dirlo invece di elencare
   /// nomi di colonne.

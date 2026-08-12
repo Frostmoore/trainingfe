@@ -52,10 +52,11 @@ void main() {
 
   group('il target calorico', () {
     test('applica lo scostamento dell\'obiettivo', () {
-      expect(calc.targetCalorico(3000, 'lose'), 2550);
-      expect(calc.targetCalorico(3000, 'cut'), 2250);
-      expect(calc.targetCalorico(3000, 'maintain'), 3000);
-      expect(calc.targetCalorico(3000, 'bulk'), 3360);
+      expect(calc.targetCalorico(2500, 'lose_fast'), 2000);
+      expect(calc.targetCalorico(2500, 'lose_slow'), 2250);
+      expect(calc.targetCalorico(2500, 'gain_lean'), 2750);
+      expect(calc.targetCalorico(2500, 'maintain'), 2500);
+      expect(calc.targetCalorico(2500, 'gain_fast'), 3000);
     });
 
     /// 🚨 **Il pavimento a 1.200 kcal non è negoziabile.**
@@ -95,7 +96,7 @@ void main() {
     /// 🚨 I macro devono **ricomporre** il target, o l'app mostrerebbe tre
     /// barre che sommate danno un numero diverso da quello scritto sopra.
     test('i macro ricompongono il target entro l\'arrotondamento', () {
-      for (final obiettivo in ['lose', 'cut', 'maintain', 'bulk']) {
+      for (final obiettivo in ['lose_fast', 'lose_slow', 'maintain', 'gain_lean', 'gain_fast']) {
         final m = calc.macro(2000, obiettivo);
         final ricomposto = calc.kcalDaMacro(
           m.proteineG.toDouble(),

@@ -240,6 +240,42 @@ void main() {
     expect(find.textContaining('250 g'), findsWidgets);
   });
 
+  /// 🚨 **I macro impossibili BLOCCANO il salvataggio** — 12/08/2026.
+  ///
+  /// Il committente: *«la guardia sull'impossibilità della massa è
+  /// hard-blocking perché non è possibile che un alimento abbia più macro che
+  /// peso»*. Il server risponde 422, e l'app deve fermarsi **prima**: un
+  /// pulsante che si preme e restituisce un errore è peggio di un pulsante
+  /// spento, perché non dice cosa fare.
+  ///
+  /// ⚠️ Ed è accettabile bloccare **solo** perché la riga sbagliata è già aperta
+  /// con i campi modificabili: si corregge, e il pulsante si riaccende da solo.
+  testWidgets('con i macro impossibili non si può aggiungere', (tester) async {
+    await tester.pumpWidget(
+      dentroUnFoglio(
+        stima(
+          voci: const [
+            {'name': 'Coppiette', 'grams': 100, 'kcal': 588, 'protein': 56, 'carbs': 4, 'fat': 40},
+          ],
+        ),
+      ),
+    );
+
+    FilledButton bottone() => tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Aggiungi al diario'),
+    );
+
+    expect(bottone().onPressed, isNull, reason: 'spento finché i numeri sono impossibili');
+    expect(find.textContaining('non si può aggiungere al diario'), findsOneWidget);
+
+    // Si corregge il grasso: 56 + 4 + 20 = 80 g su 100. Adesso è possibile.
+    await tester.enterText(find.widgetWithText(TextField, '40'), '20');
+    await tester.pump();
+
+    expect(bottone().onPressed, isNotNull, reason: 'corretto il numero, si riaccende');
+    expect(find.textContaining('non si può aggiungere al diario'), findsNothing);
+  });
+
   /// ⚠️ Una stima vuota non si può confermare: il pulsante resta spento e si
   /// dice perché, invece di far premere qualcosa che non farà niente.
   testWidgets('una stima senza alimenti non si conferma', (tester) async {

@@ -17,7 +17,7 @@ void main() {
         'age': 38,
         'height_cm': 178,
         'activity_level': 'moderate',
-        'goal': 'lose_weight',
+        'goal': 'lose_slow',
         'weight_kg': 84.0,
         'meal_hours': {'breakfast': '07:00', 'dinner': '20:00'},
         'missing': <String>[],
@@ -30,7 +30,7 @@ void main() {
         },
         'options': {
           'activity_levels': {'moderate': 'Moderato'},
-          'goals': {'lose_weight': 'Dimagrire'},
+          'goals': {'lose_slow': 'Dimagrimento graduale'},
         },
       });
 

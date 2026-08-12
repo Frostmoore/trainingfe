@@ -52,15 +52,45 @@ class CalcolatoreCalorie {
   /// un taglio del 17%, sulla stessa persona a 1.600 è il 31% ed è
   /// insostenibile.
   ///
-  /// `cut` è più aggressivo di `lose` **di proposito**: sono due richieste
-  /// diverse, e appiattirle su una sola faceva sì che chi voleva dimagrire in
-  /// fretta smettesse di usare l'app.
+  /// 🚨 **Cinque gradini, simmetrici** — 12/08/2026.
+  ///
+  /// Il committente: *«non è una stima accurata se sono solo 3 scelte»*. Con
+  /// tre gradini l'unica alternativa a «mantenere» era un taglio del 15%:
+  /// troppo per chi vuole andare piano, troppo poco per chi ha fretta — e chi
+  /// non si ritrova nel numero smette di fidarsi dell'app, non dell'obiettivo.
+  ///
+  /// Su un TDEE di 2.500 kcal: 2.000 → 2.250 → 2.500 → 2.750 → 3.000.
+  ///
+  /// ⚠️ **Ritratto fedele di `CalorieCalculator::GOAL_DELTA`.** Chi cambia un
+  /// numero di là deve cambiarlo qui, o l'app e il server mostrerebbero due
+  /// target diversi per la stessa persona.
   static const deltaObiettivo = <String, double>{
-    'lose': -0.15,
-    'cut': -0.25,
+    'lose_fast': -0.20,
+    'lose_slow': -0.10,
     'maintain': 0.0,
-    'bulk': 0.12,
+    'gain_lean': 0.10,
+    'gain_fast': 0.20,
   };
+
+  /// ⚠️ Il vocabolario precedente, per i profili non ancora migrati.
+  ///
+  /// 🚨 `cut` valeva −25% e **nessuno lo impostava mai**: il commento diceva
+  /// che arrivava dal piano alimentare, e nel piano alimentare non c'era una
+  /// riga che lo facesse. Il suo posto lo prende `lose_fast`.
+  static const obiettiviStorici = <String, String>{
+    'lose': 'lose_slow',
+    'cut': 'lose_fast',
+    'bulk': 'gain_lean',
+    'lose_weight': 'lose_slow',
+    'gain_muscle': 'gain_lean',
+  };
+
+  /// Un obiettivo qualunque, portato al vocabolario di oggi.
+  static String normalizzaObiettivo(String obiettivo) {
+    final o = obiettivo.toLowerCase().trim();
+
+    return obiettiviStorici[o] ?? o;
+  }
 
   /// Ripartizione dei macro in percentuale delle calorie, per obiettivo.
   ///
@@ -69,14 +99,15 @@ class CalcolatoreCalorie {
   /// produce più proteine di quante ne stiano nel target: il conto non torna e
   /// bisogna correggerlo a mano. In percentuale il conto torna sempre.
   ///
-  /// `lose` e `cut` alzano le proteine perché in deficit servono a limitare la
-  /// perdita di massa magra — che è esattamente ciò che l'utente non vuole
-  /// perdere.
+  /// I due gradini di dimagrimento alzano le proteine perché in deficit servono
+  /// a limitare la perdita di massa magra — che è esattamente ciò che l'utente
+  /// non vuole perdere. Più il deficit è grande, più servono.
   static const ripartizioneMacro = <String, Map<String, double>>{
-    'lose': {'protein': 0.32, 'carbs': 0.38, 'fat': 0.30},
-    'cut': {'protein': 0.38, 'carbs': 0.32, 'fat': 0.30},
+    'lose_fast': {'protein': 0.38, 'carbs': 0.32, 'fat': 0.30},
+    'lose_slow': {'protein': 0.32, 'carbs': 0.38, 'fat': 0.30},
     'maintain': {'protein': 0.25, 'carbs': 0.48, 'fat': 0.27},
-    'bulk': {'protein': 0.25, 'carbs': 0.52, 'fat': 0.23},
+    'gain_lean': {'protein': 0.28, 'carbs': 0.50, 'fat': 0.22},
+    'gain_fast': {'protein': 0.25, 'carbs': 0.52, 'fat': 0.23},
   };
 
   /// Calorie per grammo: le costanti di Atwater.
@@ -138,14 +169,15 @@ class CalcolatoreCalorie {
   /// ⚠️ **Un obiettivo sconosciuto vale `maintain`, non un errore**: un piano
   /// salvato con un valore vecchio deve continuare a funzionare.
   int targetCalorico(double tdeeValore, String obiettivo) {
-    final delta = deltaObiettivo[obiettivo.toLowerCase()] ?? 0.0;
+    final delta = deltaObiettivo[normalizzaObiettivo(obiettivo)] ?? 0.0;
 
     return math.max(pavimentoKcal, (tdeeValore * (1 + delta)).round());
   }
 
   /// I grammi di ciascun macro per un dato target.
   Macro macro(int kcal, String obiettivo) {
-    final split = ripartizioneMacro[obiettivo.toLowerCase()] ?? ripartizioneMacro['maintain']!;
+    final split =
+        ripartizioneMacro[normalizzaObiettivo(obiettivo)] ?? ripartizioneMacro['maintain']!;
 
     return Macro(
       proteineG: (kcal * split['protein']! / _kcalPerGrammo['protein']!).round(),

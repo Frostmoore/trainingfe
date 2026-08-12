@@ -174,29 +174,21 @@ class _ModuloState extends ConsumerState<_Modulo> {
 
         // Le tendine arrivano dal server: aggiungere un livello non richiede
         // una nuova versione dell'app sugli store.
-        DropdownButtonFormField<String>(
-          initialValue: p.activityLevels.containsKey(_attivita) ? _attivita : null,
-          decoration: const InputDecoration(
-            labelText: 'Quanto ti muovi',
-            prefixIcon: Icon(Icons.directions_run_rounded),
-          ),
-          items: p.activityLevels.entries
-              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-              .toList(),
-          onChanged: (v) => setState(() => _attivita = v),
+        TendinaProfilo(
+          etichetta: 'Quanto ti muovi',
+          icona: Icons.directions_run_rounded,
+          voci: p.activityLevels,
+          scelta: _attivita,
+          onCambio: (v) => setState(() => _attivita = v),
         ),
         const SizedBox(height: Gap.md),
 
-        DropdownButtonFormField<String>(
-          initialValue: p.goals.containsKey(_obiettivo) ? _obiettivo : null,
-          decoration: const InputDecoration(
-            labelText: 'Obiettivo',
-            prefixIcon: Icon(Icons.flag_outlined),
-          ),
-          items: p.goals.entries
-              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-              .toList(),
-          onChanged: (v) => setState(() => _obiettivo = v),
+        TendinaProfilo(
+          etichetta: 'Obiettivo',
+          icona: Icons.flag_outlined,
+          voci: p.goals,
+          scelta: _obiettivo,
+          onCambio: (v) => setState(() => _obiettivo = v),
         ),
         const SizedBox(height: Gap.md),
 
@@ -351,6 +343,91 @@ class _ObiettivoCalcolato extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Una tendina che **non sfora** quando l'etichetta è lunga.
+///
+/// ── 🚨 Il difetto, riferito il 13/08/2026 ────────────────────────────────
+///
+/// *«Il livello sedentario va in overflow nel campo dove appare.»*
+///
+/// Portando i livelli di attività a cinque, le etichette sono diventate
+/// esplicite — «Sedentario (lavoro da fermo, niente allenamenti)» invece di
+/// «Sedentario» — perché tre parole in più valgono più di una tendina che
+/// costringe a indovinare cosa significhi «moderato». ⚠️ Ma un
+/// `DropdownButtonFormField` **non manda a capo e non accorcia**: disegna il
+/// testo alla sua larghezza naturale e lascia che sbordi dal campo.
+///
+/// ── Le due mosse, e perché servono entrambe ──────────────────────────────
+///
+/// 1. **`isExpanded: true`** — senza, la tendina si dimensiona sul contenuto
+///    invece che sul campo, ed è da lì che nasce lo sforo.
+/// 2. **`selectedItemBuilder`** — 🚨 è quello che salva l'informazione. Con il
+///    solo `isExpanded` il testo verrebbe **troncato con i puntini**, e
+///    «Sedentario (lavoro da fer…» è brutto ma soprattutto inutile. Così invece
+///    il campo chiuso mostra la parte **prima della parentesi** — cioè il nome
+///    del livello, intero — e la spiegazione resta per intero nel menu aperto,
+///    che è l'unico momento in cui serve davvero: quando si sta scegliendo.
+///
+/// 💡 Nel menu le voci possono andare a capo su due righe: lì lo spazio c'è, e
+/// la frase intera è il motivo per cui è stata scritta.
+///
+/// ⚠️ **È pubblica solo perché il test la raggiunga.** Un overflow non lo prende
+/// nessun test sui modelli — il dato è giusto ed è il disegno a rompersi —
+/// quindi serve un widget test, e un widget test non vede le classi private.
+class TendinaProfilo extends StatelessWidget {
+  const TendinaProfilo({
+    required this.etichetta,
+    required this.icona,
+    required this.voci,
+    required this.scelta,
+    required this.onCambio,
+    super.key,
+  });
+
+  final String etichetta;
+  final IconData icona;
+  final Map<String, String> voci;
+  final String? scelta;
+  final ValueChanged<String?> onCambio;
+
+  /// La parte prima della parentesi: «Sedentario (lavoro da fermo)» → «Sedentario».
+  ///
+  /// ⚠️ Se la parentesi non c'è si restituisce tutto: le etichette degli
+  /// obiettivi non ce l'hanno, e questa tendina serve anche a loro.
+  static String _breve(String completa) {
+    final i = completa.indexOf(' (');
+
+    return i == -1 ? completa : completa.substring(0, i);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final valido = voci.containsKey(scelta) ? scelta : null;
+
+    return DropdownButtonFormField<String>(
+      initialValue: valido,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: etichetta, prefixIcon: Icon(icona)),
+      selectedItemBuilder: (context) => voci.values
+          .map(
+            (v) => Align(
+              alignment: Alignment.centerLeft,
+              child: Text(_breve(v), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      items: voci.entries
+          .map(
+            (e) => DropdownMenuItem(
+              value: e.key,
+              child: Text(e.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: onCambio,
     );
   }
 }

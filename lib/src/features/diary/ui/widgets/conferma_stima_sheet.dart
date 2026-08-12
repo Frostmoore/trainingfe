@@ -141,6 +141,16 @@ class _ConfermaStimaSheetState extends ConsumerState<ConfermaStimaSheet> {
               children: [
                 if (_stima.nota != null) _NotaDelModello(testo: _stima.nota!),
 
+                /*
+                 * 🚨 **Gli avvisi del backend si mostrano separati dalla nota**,
+                 * e non e' pignoleria: la nota e' un'opinione del modello, questi
+                 * sono controlli deterministici che hanno **gia' corretto** un
+                 * numero o trovato un valore fuori scala. Chi legge deve poter
+                 * distinguere «il modello dice di non essere sicuro» da «il
+                 * sistema ha rifatto il conto al posto suo».
+                 */
+                for (final avviso in _stima.avvisi) _AvvisoDelSistema(testo: avviso),
+
                 if (_stima.haMacroImpossibili) const _AvvisoMacroImpossibili(),
 
                 const SizedBox(height: Gap.sm),
@@ -283,6 +293,41 @@ class _NotaDelModello extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.info_outline, size: 18, color: theme.colorScheme.outline),
+          const SizedBox(width: Gap.sm),
+          Expanded(child: Text(testo, style: theme.textTheme.bodySmall)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Un controllo deterministico del backend: una densità implausibile, i grammi
+/// di alcol rifatti dalla gradazione, un valore fuori scala.
+///
+/// 🚨 **Non è la nota del modello, ed è disegnato diverso apposta.** La nota è
+/// un'opinione di chi ha stimato; questo è il sistema che ha misurato — e in
+/// qualche caso ha già corretto. Confonderli farebbe sembrare opinabile una cosa
+/// che non lo è.
+class _AvvisoDelSistema extends StatelessWidget {
+  const _AvvisoDelSistema({required this.testo});
+
+  final String testo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      margin: const EdgeInsets.only(top: Gap.sm),
+      padding: const EdgeInsets.all(Gap.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Gap.radiusSm),
+        border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.rule_rounded, size: 18, color: theme.colorScheme.tertiary),
           const SizedBox(width: Gap.sm),
           Expanded(child: Text(testo, style: theme.textTheme.bodySmall)),
         ],
@@ -493,19 +538,43 @@ class _RigaVoceState extends State<_RigaVoce> {
     return Card(
       margin: const EdgeInsets.only(bottom: Gap.sm),
       child: ExpansionTile(
-        initiallyExpanded: widget.apertaDaSola || v.macroImpossibili,
+        initiallyExpanded:
+            widget.apertaDaSola || v.macroImpossibili || v.stato == StatoCottura.ambiguo,
         shape: const Border(),
         collapsedShape: const Border(),
-        title: Text(v.nome, style: theme.textTheme.titleSmall),
+        title: Text(
+          v.marca != null ? '${v.nome} · ${v.marca}' : v.nome,
+          style: theme.textTheme.titleSmall,
+        ),
         subtitle: Text(
-          [v.quantita, if (v.kcal != null) '${v.kcal!.round()} kcal']
-              .where((s) => s.isNotEmpty)
-              .join(' · '),
-          style: theme.textTheme.bodySmall,
+          [
+            v.quantita,
+            if (v.kcal != null) '${v.kcal!.round()} kcal',
+            // 💡 Lo stato si mostra solo quando dice qualcosa: «non applicabile»
+            // su uno yogurt e' rumore.
+            if (v.stato != null && v.stato!.etichetta.isNotEmpty) v.stato!.etichetta,
+          ].where((s) => s.isNotEmpty).join(' · '),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: v.stato == StatoCottura.ambiguo ? theme.colorScheme.tertiary : null,
+          ),
         ),
         trailing: v.macroImpossibili
             ? Icon(Icons.error_outline, color: theme.colorScheme.error)
-            : null,
+            /*
+             * 🚨 **L'incertezza si segna sulla RIGA, non solo in cima.**
+             *
+             * «Il pasto ha confidenza 0.68» non serve a nessuno: chi legge deve
+             * sapere **quale** ingrediente e' quello da guardare, perche' e'
+             * l'unico che ha senso correggere.
+             *
+             * ⚠️ Una quantita' **dichiarata** non si segna mai, anche se la sua
+             * confidenza e' bassa: la persona ha scritto «100 g», e rimetterlo in
+             * discussione e' il modo piu' rapido per farle smettere di scrivere
+             * le quantita'.
+             */
+            : (v.daGuardare && v.dichiarata != true
+                  ? Icon(Icons.help_outline, color: theme.colorScheme.tertiary)
+                  : null),
         children: [
           Padding(
             // ⚠️ Il padding superiore NON è zero: le etichette dei campi salgono

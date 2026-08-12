@@ -62,6 +62,33 @@ enum LivelloConfidenza {
   bool get apriDaSola => this == LivelloConfidenza.bassa;
 }
 
+/// Come è stato interpretato lo stato di cottura.
+///
+/// 🚨 **E' la singola fonte di errore piu' grande del dominio**: 100 g di
+/// pasta valgono ~350 kcal da cruda e ~150 da cotta. Prima l'interpretazione
+/// restava implicita nei numeri e non era ne' visibile ne' contestabile.
+enum StatoCottura {
+  crudo('crudo', 'pesata cruda'),
+  cotto('cotto', 'gia\' cotta'),
+  nonApplicabile('non_applicabile', ''),
+
+  /// ⚠️ Non e' un ripiego: e' il segnale con cui l'app **chiede**.
+  ambiguo('ambiguo', 'cruda o cotta?');
+
+  const StatoCottura(this.chiave, this.etichetta);
+
+  final String chiave;
+  final String etichetta;
+
+  static StatoCottura? da(String? valore) {
+    for (final s in StatoCottura.values) {
+      if (s.chiave == valore) return s;
+    }
+
+    return null;
+  }
+}
+
 /// Un alimento come lo ha stimato il modello, non ancora in diario.
 ///
 /// 🚨 **È modificabile**: `copyCon()` esiste perché il foglio di conferma deve
@@ -78,6 +105,13 @@ class VoceStimata {
     this.proteine,
     this.carboidrati,
     this.grassi,
+    this.ml,
+    this.basis,
+    this.stato,
+    this.dichiarata,
+    this.marca,
+    this.gradi,
+    this.confidenza,
   });
 
   factory VoceStimata.fromJson(Map<String, dynamic> j) => VoceStimata(
@@ -89,11 +123,45 @@ class VoceStimata {
     proteine: _num(j['protein']),
     carboidrati: _num(j['carbs']),
     grassi: _num(j['fat']),
+    ml: _num(j['ml']),
+    basis: j['basis']?.toString(),
+    stato: StatoCottura.da(j['state']?.toString()),
+    dichiarata: j['declared'] as bool?,
+    marca: (j['brand']?.toString().trim().isEmpty ?? true)
+        ? null
+        : j['brand'].toString().trim(),
+    gradi: _num(j['abv_pct']),
+    confidenza: _num(j['confidence']),
   );
 
   final String nome;
   final double? qty, grammi, kcal, proteine, carboidrati, grassi;
   final String? unita;
+
+  /// Il volume, per i liquidi.
+  ///
+  /// 🚨 Insieme a [basis] chiude un errore del **5% su ogni bevanda**: le
+  /// tabelle dei liquidi sono per 100 **ml**, e il modello applicava quel valore
+  /// ai grammi. La prova stava nel diario del committente: 521 ml di succo,
+  /// 547 g, 245,9 kcal — cioe' 45 kcal/100 ml moltiplicate per il peso.
+  final double? ml;
+
+  /// `per_100g` oppure `per_100ml`.
+  final String? basis;
+
+  final StatoCottura? stato;
+
+  /// 💡 La quantita' l'ha detta la persona? Allora **non si rimette in
+  /// discussione**: chiedere «sei sicuro che fossero 100 g?» a chi ha appena
+  /// scritto «100 g» e' il modo piu' rapido per farlo smettere di scriverle.
+  final bool? dichiarata;
+
+  final String? marca;
+  final double? gradi;
+
+  /// 🚨 La confidenza di **questa** voce: «il pasto e' incerto» non serve a
+  /// nessuno, serve sapere quale ingrediente lo e'.
+  final double? confidenza;
 
   Map<String, dynamic> toJson() => {
     'name': nome,
@@ -104,7 +172,19 @@ class VoceStimata {
     'protein': proteine,
     'carbs': carboidrati,
     'fat': grassi,
+    'ml': ml,
+    'basis': basis,
+    'state': stato?.chiave,
+    'declared': dichiarata,
+    'brand': marca,
+    'abv_pct': gradi,
+    'confidence': confidenza,
   };
+
+  /// Va guardata: il modello dichiara di non essere sicuro, oppure non sa se
+  /// l'alimento fosse crudo o cotto.
+  bool get daGuardare =>
+      (confidenza != null && confidenza! < 0.7) || stato == StatoCottura.ambiguo;
 
   VoceStimata copyCon({
     double? qty,
@@ -123,6 +203,13 @@ class VoceStimata {
     proteine: proteine ?? this.proteine,
     carboidrati: carboidrati ?? this.carboidrati,
     grassi: grassi ?? this.grassi,
+    ml: ml,
+    basis: basis,
+    stato: stato,
+    dichiarata: dichiarata,
+    marca: marca,
+    gradi: gradi,
+    confidenza: confidenza,
   );
 
   /// I valori **per 100 g**, ricavati da quelli assoluti.
@@ -177,6 +264,13 @@ class VoceStimata {
       proteine: scala('protein', base.proteine, proteine),
       carboidrati: scala('carbs', base.carboidrati, carboidrati),
       grassi: scala('fat', base.grassi, grassi),
+      ml: ml,
+      basis: basis,
+      stato: stato,
+      dichiarata: dichiarata,
+      marca: marca,
+      gradi: gradi,
+      confidenza: confidenza,
     );
   }
 
@@ -247,6 +341,7 @@ class StimaAi {
     required this.confidenza,
     this.nota,
     this.frase,
+    this.avvisi = const [],
   });
 
   factory StimaAi.fromJson(Map<String, dynamic> j) {
@@ -260,6 +355,9 @@ class StimaAi {
       nota: (stima['note']?.toString().trim().isEmpty ?? true)
           ? null
           : stima['note'].toString().trim(),
+      avvisi: ((j['warnings'] ?? stima['warnings']) as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 
@@ -277,8 +375,19 @@ class StimaAi {
   /// da capo non precisa: conferma e basta.
   final String? frase;
 
-  StimaAi conFrase(String? f) =>
-      StimaAi(voci: voci, confidenza: confidenza, nota: nota, frase: f);
+  /// 🚨 Quello che il **backend** ha trovato o corretto: una densita'
+  /// implausibile, dei grammi di alcol rifatti dalla gradazione, un valore fuori
+  /// scala. Sono controlli deterministici — non opinioni del modello — e per
+  /// questo si mostrano separati dalla sua nota.
+  final List<String> avvisi;
+
+  StimaAi conFrase(String? f) => StimaAi(
+    voci: voci,
+    confidenza: confidenza,
+    nota: nota,
+    frase: f,
+    avvisi: avvisi,
+  );
 
   bool get vuota => voci.isEmpty;
 
@@ -300,8 +409,18 @@ class StimaAi {
   /// ⚠️ Basta **una** delle due cose: una nota del modello, oppure una voce
   /// impossibile. La confidenza da sola non entra — sulla cotoletta valeva 0.85
   /// e la stima era comunque da guardare.
-  bool get daGuardare => nota != null || haMacroImpossibili || livello.apriDaSola;
+  bool get daGuardare =>
+      nota != null ||
+      haMacroImpossibili ||
+      livello.apriDaSola ||
+      avvisi.isNotEmpty ||
+      voci.any((v) => v.daGuardare);
 
-  StimaAi conVoci(List<VoceStimata> nuove) =>
-      StimaAi(voci: nuove, confidenza: confidenza, nota: nota, frase: frase);
+  StimaAi conVoci(List<VoceStimata> nuove) => StimaAi(
+    voci: nuove,
+    confidenza: confidenza,
+    nota: nota,
+    frase: frase,
+    avvisi: avvisi,
+  );
 }

@@ -350,6 +350,96 @@ void main() {
     });
   });
 
+  /// 🚨 I campi nati dalla specsheet del 13/08/2026 — la parte che chiude
+  /// l'errore sistematico sui liquidi e l'ambiguità crudo/cotto.
+  group('i campi nuovi dello schema', () {
+    VoceStimata succo() => VoceStimata.fromJson(const {
+      'name': 'Succo',
+      'qty': 500,
+      'unit': 'ml',
+      'grams': 525,
+      'ml': 500,
+      'basis': 'per_100ml',
+      'state': 'non_applicabile',
+      'declared': true,
+      'kcal': 225,
+      'carbs': 50,
+      'confidence': 0.7,
+    });
+
+    test('volume, peso e base sono tre cose distinte', () {
+      final v = succo();
+
+      expect(v.ml, 500);
+      expect(v.grammi, 525, reason: 'il peso non è il volume: densità 1,05');
+      expect(v.basis, 'per_100ml');
+    });
+
+    test('lo stato di cottura si legge, e l\'ignoto resta nullo', () {
+      expect(StatoCottura.da('crudo'), StatoCottura.crudo);
+      expect(StatoCottura.da('ambiguo'), StatoCottura.ambiguo);
+      expect(StatoCottura.da('tiepido'), isNull);
+      expect(StatoCottura.da(null), isNull);
+    });
+
+    test('la confidenza per voce e «dichiarata» arrivano', () {
+      expect(succo().confidenza, 0.7);
+      expect(succo().dichiarata, isTrue);
+    });
+
+    /// ⚠️ Sotto 0.7 **oppure** stato ambiguo: due segnali diversi, stessa
+    /// conseguenza — quella riga va guardata.
+    test('una voce si segnala da sola quando c\'è da guardarla', () {
+      expect(succo().daGuardare, isFalse);
+
+      expect(
+        VoceStimata.fromJson(const {'name': 'x', 'confidence': 0.5}).daGuardare,
+        isTrue,
+      );
+      expect(
+        VoceStimata.fromJson(const {'name': 'x', 'confidence': 0.95, 'state': 'ambiguo'}).daGuardare,
+        isTrue,
+      );
+    });
+
+    /// 🚨 Gli avvisi del **backend** sono cosa diversa dalla nota del modello:
+    /// quelli sono controlli deterministici, questa è un'opinione.
+    test('gli avvisi del backend arrivano e contano', () {
+      final s = StimaAi.fromJson(const {
+        'estimate': {'items': [], 'confidence': 0.9, 'note': null},
+        'warnings': ['«Vino»: 11,8 g di alcol dichiarati, 14,2 imposti. Corretto.'],
+      });
+
+      expect(s.avvisi, hasLength(1));
+      expect(s.daGuardare, isTrue, reason: 'un avviso del sistema basta da solo');
+    });
+
+    /// ⚠️ I campi nuovi devono sopravvivere alla correzione a mano e alla
+    /// riscalatura: perderli qui vorrebbe dire rimandare al server una voce
+    /// senza `basis`, cioè riaprire l'errore del 5%.
+    test('i campi nuovi sopravvivono a copyCon e riscalataA', () {
+      final corretta = succo().copyCon(kcal: 200);
+      final riscalata = succo().riscalataA(600, intoccabili: const {});
+
+      for (final v in [corretta, riscalata]) {
+        expect(v.ml, 500);
+        expect(v.basis, 'per_100ml');
+        expect(v.dichiarata, isTrue);
+        expect(v.confidenza, 0.7);
+      }
+    });
+
+    test('il giro completo di serializzazione non perde niente', () {
+      final j = succo().toJson();
+
+      expect(j['ml'], 500);
+      expect(j['basis'], 'per_100ml');
+      expect(j['state'], 'non_applicabile');
+      expect(j['declared'], isTrue);
+      expect(j['confidence'], 0.7);
+    });
+  });
+
   /// 💡 La frase serve al pulsante «Precisa»: si riapre il campo **con dentro**
   /// quello che si era scritto, così si aggiunge «impanate» invece di
   /// ridigitare tutto. Chi deve riscrivere da capo non precisa: conferma.

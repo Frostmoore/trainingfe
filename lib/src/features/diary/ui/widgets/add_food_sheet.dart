@@ -396,8 +396,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
 ///
 /// 💡 Per questo il pulsante non porta al listino ma **all'inserimento
 /// manuale**: la cosa che quella persona stava cercando di fare è registrare un
-/// pasto, non comprare un abbonamento. Il listino è una riga sotto, per chi
-/// vuole.
+/// pasto, non comprare un abbonamento.
+///
+/// ⚠️ **E il listino qui non c'è affatto**, non per dimenticanza: nessuna
+/// schermata dell'app ci porta, perché F9.3 — il pagamento — non ha ancora un
+/// fornitore. Un rimando a un listino da cui non si può comprare sarebbe una
+/// seconda strada chiusa dopo quella appena chiusa. Quando F9.3 sarà fatta,
+/// **questo è il posto**: una riga sotto il pulsante, mai al posto suo.
 class _SenzaPianoAi extends StatelessWidget {
   const _SenzaPianoAi({required this.onInserisciAMano});
 

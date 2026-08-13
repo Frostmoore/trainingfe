@@ -119,6 +119,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  /// 🚨 **Il carattere ingrandito** — 13/08/2026.
+  ///
+  /// Il test qui sopra gira a scala 1.0, che è l'unica in cui una voce su due
+  /// righe **ci sta per un pelo**: `DropdownButtonFormField` dà agli item del
+  /// menu un'altezza fissa (`kMinInteractiveDimension`, 48 px) e due righe a
+  /// 16 sp ne misurano 48 esatti. ⚠️ Chi ha alzato la dimensione del testo nelle
+  /// impostazioni di Android le vede sforare.
+  ///
+  /// 💡 1.3 non è un numero scelto per far passare il test: è dentro la forbice
+  /// che Android offre di serie (fino a 1.3 senza accessibilità, oltre con).
+  testWidgets('a carattere ingrandito il menu aperto non sfora', (tester) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+        child: suUnoSchermoStretto(
+          TendinaProfilo(
+            etichetta: 'Quanto ti muovi',
+            icona: Icons.directions_run_rounded,
+            voci: livelli,
+            scelta: 'sedentary',
+            onCambio: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull, reason: 'il campo chiuso');
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull, reason: 'il menu aperto');
+  });
+
+  /// ⚠️ Le larghezze vere dei telefoni in circolazione, non una a caso.
+  ///
+  /// Lo Xiaomi di prova sta a 360 dp meno i 16 di padding per lato = **328**.
+  /// I 320 usati sopra sono già più stretti del vero; qui si scende a **280**,
+  /// che è il caso peggiore realistico (schermo piccolo **e** finestra divisa).
+  for (final larghezza in [280.0, 328.0, 360.0]) {
+    testWidgets('nessuno sforo a ${larghezza.toInt()} px di larghezza', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: larghezza,
+                  child: TendinaProfilo(
+                    etichetta: 'Quanto ti muovi',
+                    icona: Icons.directions_run_rounded,
+                    voci: livelli,
+                    scelta: 'very_active',
+                    onCambio: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   /// 🚨 Una scelta che il server non conosce più non deve far esplodere la
   /// tendina: `DropdownButton` va in assert se il valore non è fra gli item.
   testWidgets('una scelta sconosciuta non rompe la tendina', (tester) async {

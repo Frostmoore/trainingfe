@@ -128,6 +128,30 @@ class ProfileScreen extends ConsumerWidget {
                  * Al suo posto, da S3.4, c'e' il collegamento: prima si collega
                  * la sorgente, poi ha senso mostrarne il risultato.
                  */
+                /*
+                 * 🆕 **«I miei utenti» — F5.1, solo per chi allena.**
+                 *
+                 * ⚠️ Sta qui e non in una sesta scheda della barra: **un
+                 * trainer si allena anche lui**, e la barra è la sua vita da
+                 * atleta. Una scheda in più la trasformerebbe in un pannello di
+                 * gestione con dentro anche il diario — il contrario di come
+                 * questa app viene usata.
+                 *
+                 * 💡 `isTrainer` copre sia il trainer di palestra sia quello
+                 * indipendente: per l'app sono la stessa cosa — gente che segue
+                 * altre persone — e la differenza la fa il server.
+                 */
+                if (utente?.isTrainer ?? false) ...[
+                  ListTile(
+                    leading: const Icon(Icons.groups_2_outlined),
+                    title: const Text('I miei utenti'),
+                    subtitle: const Text('Invita, segui e gestisci le persone che alleni'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.mieiUtenti),
+                  ),
+                  const Divider(height: 1),
+                ],
+
                 ListTile(
                   leading: const Icon(Icons.monitor_heart_outlined),
                   title: const Text('Sonno e recupero'),
@@ -199,13 +223,19 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: Gap.md),
 
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.storefront_outlined),
-              title: const Text('La tua palestra'),
-              subtitle: Text(palestra.name),
+          // 🚨 La scheda della palestra c'è **solo se una palestra c'è** — F3.
+          //
+          // ⚠️ Per chi si è iscritto senza codice questa card diceva «La tua
+          // palestra» seguita da un ripiego. Meglio non mostrarla: una sezione
+          // vuota fa cercare un dato che non manca — semplicemente non esiste.
+          if (palestra.name != null && palestra.name!.isNotEmpty)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.storefront_outlined),
+                title: const Text('La tua palestra'),
+                subtitle: Text(palestra.name!),
+              ),
             ),
-          ),
 
           const SizedBox(height: Gap.lg),
 

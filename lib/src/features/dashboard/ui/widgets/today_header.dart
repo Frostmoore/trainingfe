@@ -90,15 +90,29 @@ class TodayHeader extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            palestra.name,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: theme.colorScheme.onPrimaryContainer,
+                          /*
+                           * 🚨 Senza palestra, **la riga non c'è** — F3.
+                           *
+                           * `palestra.name` è `null` per chi si è iscritto
+                           * senza codice. ⚠️ Il ripiego sbagliato sarebbe
+                           * scrivere «Training Companion»: al posto del nome
+                           * della propria palestra comparirebbe il nome
+                           * dell'app, come se ci si fosse iscritti al software.
+                           *
+                           * 💡 Il saluto qui sotto resta, e da solo basta: dice
+                           * chi sei e che giorno è, che è ciò per cui questa
+                           * intestazione esiste.
+                           */
+                          if (palestra.name != null && palestra.name!.isNotEmpty)
+                            Text(
+                              palestra.name!,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                           Text(
                             // Il saluto con il nome e la data: dice a colpo d'occhio
                             // che si sta guardando **oggi**, che è la domanda a cui
@@ -226,16 +240,19 @@ class _Logo extends StatelessWidget {
       return CircleAvatar(
         radius: 22,
         backgroundColor: palestra.primary,
-        child: Text(
-          palestra.name.isEmpty
-              ? '?'
-              : palestra.name.characters.first.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-          ),
-        ),
+        // 💡 Senza palestra resta il cerchio con il simbolo dell'app: un buco
+        // in cima alla dashboard la fa sembrare rotta, ed è il motivo per cui
+        // questo ripiego esiste. Vedi la nota gemella in `GymHeader`.
+        child: (palestra.name?.isNotEmpty ?? false)
+            ? Text(
+                palestra.name!.characters.first.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                ),
+              )
+            : const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 22),
       );
     }
 

@@ -9,7 +9,7 @@ import '../../auth/data/social_sign_in.dart';
 /// `GET /api/v1/branding/lookup?code=`, che è pubblico.
 class GymBranding {
   const GymBranding({
-    required this.name,
+    this.name,
     required this.slug,
     required this.primary,
     required this.secondary,
@@ -31,7 +31,22 @@ class GymBranding {
         : const <String, dynamic>{};
 
     return GymBranding(
-      name: json['name']?.toString() ?? 'La tua palestra',
+      /*
+       * 🚨 **`null` è una risposta, non un dato mancante** — F3.
+       *
+       * Dal backend `branding.name` arriva `null` per un **tenant personale**:
+       * chi si è iscritto senza codice palestra non ha un'insegna da mostrare,
+       * e il nome del suo tenant è il **suo** nome.
+       *
+       * ⚠️ Il valore di riserva di prima — «La tua palestra» — qui sarebbe
+       * peggio del vuoto: scriverebbe in cima alla schermata il nome di una
+       * palestra che non esiste, a una persona che ha scelto di non averne una.
+       *
+       * 💡 Resta la differenza fra le due assenze: `null` dal server significa
+       * «non ne ha una», mentre una cache vecchia senza il campo dà anch'essa
+       * `null` — e il risultato voluto è lo stesso, cioè non disegnare niente.
+       */
+      name: json['name']?.toString(),
       slug: json['slug']?.toString() ?? '',
       primary: parseHex(colors['primary']?.toString()) ?? fallbackPrimary,
       secondary: parseHex(colors['secondary']?.toString()) ?? fallbackSecondary,
@@ -47,7 +62,12 @@ class GymBranding {
     );
   }
 
-  final String name;
+  /// 🚨 `null` quando **non c'è una palestra**: un tenant personale non ha
+  /// un'insegna, e il suo nome è quello della persona. Chi lo disegna deve
+  /// trattarlo come un'assenza da non riempire, non come un dato mancante da
+  /// sostituire con un valore di ripiego.
+  final String? name;
+
   final String slug;
   final Color primary;
   final Color secondary;

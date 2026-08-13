@@ -24,6 +24,7 @@ import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/progress/ui/progress_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
+import '../../features/trainer/ui/miei_utenti_screen.dart';
 import '../../features/training/ui/history_screen.dart';
 import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
@@ -72,6 +73,14 @@ class AppRoutes {
   // proprio con un pulsante «indietro», e non devono far sparire la barra di
   // navigazione dal sotto — è il comportamento che ci si aspetta da un
   // dettaglio, non da una sezione.
+  /// «I miei utenti» — F5.1.
+  ///
+  /// ⚠️ Sotto `/profilo` e non una sesta scheda in barra: **un trainer si
+  /// allena anche lui**, e la barra di navigazione è la sua vita da atleta.
+  /// Una scheda in più la trasformerebbe in un pannello di gestione con dentro
+  /// anche il diario, che è il contrario di come questa app viene usata.
+  static const mieiUtenti = '/profilo/i-miei-utenti';
+
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
@@ -238,6 +247,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const SchermataDiBlocco(),
       ),
 
+      /*
+       * ── F5.1 / F6 — «i miei utenti» ──────────────────────────────────
+       *
+       * 🚨 **Passa da `PortaDelleChiavi`**, ed è F5.2.
+       *
+       * Fino alla Parte B le chiavi servivano solo in chat, e la porta stava
+       * lì. ⚠️ Con l'interfaccia doppia **la chat non è più il primo posto in
+       * cui servono**: un trainer che assegna una scheda ne ha bisogno prima,
+       * perché il piano viaggia dentro il canale cifrato (D11/D13). Chi
+       * arrivasse qui senza chiave si troverebbe a mandare un invito, ricevere
+       * la persona, e scoprire solo aprendo la chat che non può scriverle.
+       *
+       * 🚨 **Trappola già pagata (S6)**: le schermate delle chiavi sono il
+       * **corpo** di `PortaDelleChiavi`, non rotte spinte sopra. Un
+       * `Navigator.pop()` là dentro lascia un Navigator vuoto → **pagina nera**.
+       * Spostando la porta non si è reintrodotto nessun `pop()`.
+       */
+      GoRoute(
+        path: AppRoutes.mieiUtenti,
+        builder: (_, _) => const PortaDelleChiavi(child: MieiUtentiScreen()),
+      ),
+
       // ── Fase C ────────────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.profileEdit,
@@ -381,3 +412,4 @@ class _RouterRefresh extends ChangeNotifier {
     super.dispose();
   }
 }
+

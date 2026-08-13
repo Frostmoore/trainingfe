@@ -18,6 +18,7 @@ class GymHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final nome = branding.name?.trim();
 
     return Column(
       children: [
@@ -32,12 +33,20 @@ class GymHeader extends StatelessWidget {
         else
           _Iniziale(branding: branding),
 
-        const SizedBox(height: Gap.md),
-        Text(
-          branding.name,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
+        // 🚨 Senza palestra non si scrive niente — F3.
+        //
+        // Il nome è `null` per chi si è iscritto senza codice. ⚠️ Qui non si
+        // mette un ripiego: scrivere «La tua palestra» a chi ha scelto di non
+        // averne una è peggio del vuoto, perché afferma una cosa falsa invece
+        // di tacere.
+        if (nome != null && nome.isNotEmpty) ...[
+          const SizedBox(height: Gap.md),
+          Text(
+            nome,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
       ],
     );
   }
@@ -50,17 +59,23 @@ class _Iniziale extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iniziale = branding.name.trim().isEmpty ? '?' : branding.name.trim()[0].toUpperCase();
+    // 💡 Senza palestra il cerchio resta, con il logo dell'applicazione al
+    // posto dell'iniziale: un buco in cima alla schermata di accesso la fa
+    // sembrare rotta, ed è il motivo per cui questo widget esiste.
+    final nome = branding.name?.trim() ?? '';
+    final iniziale = nome.isEmpty ? null : nome[0].toUpperCase();
 
     return Container(
       height: 88,
       width: 88,
       decoration: BoxDecoration(color: branding.primary, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text(
-        iniziale,
-        style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white),
-      ),
+      child: iniziale == null
+          ? const Icon(Icons.fitness_center_rounded, size: 40, color: Colors.white)
+          : Text(
+              iniziale,
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
     );
   }
 }

@@ -189,8 +189,15 @@ class AuthController extends StateNotifier<AuthState> {
   /// disattiva senza toglierlo. È il tipo di finta protezione che si scopre
   /// quando qualcuno resta chiuso fuori dal proprio account il giorno dopo
   /// l'iscrizione.
+  /// 🆕 **`joinCode` è facoltativo da F3.** Senza, il server fa nascere un
+  /// *tenant personale* e la persona diventa un utente senza palestra.
+  ///
+  /// ⚠️ Si manda `null` e **non la stringa vuota**: il server tratta il vuoto
+  /// come assente, ma affidarsi a quella tolleranza vorrebbe dire che il giorno
+  /// in cui qualcuno la togliesse l'app smetterebbe di funzionare senza che
+  /// niente qui dentro sia cambiato.
   Future<void> register({
-    required String joinCode,
+    String? joinCode,
     required String name,
     required String email,
     required String username,
@@ -202,7 +209,7 @@ class AuthController extends StateNotifier<AuthState> {
     final data = await _api.post<Map<String, dynamic>>(
       '/auth/register',
       body: {
-        'join_code': joinCode,
+        'join_code': joinCode == null || joinCode.trim().isEmpty ? null : joinCode.trim(),
         'name': name.trim(),
         'email': email.trim(),
         'username': username.trim().toLowerCase(),
@@ -252,13 +259,18 @@ class AuthController extends StateNotifier<AuthState> {
         'id_token': credenziale.idToken,
         'join_code': ?joinCode,
 
-        // 🚨 S9.2 — servono **solo insieme al `join_code`**, cioè al primo
-        // accesso: è quello il momento in cui ci si iscrive. Il server le
-        // ignora quando il codice non c'è (`exclude_without:join_code`), e
-        // chiederle a ogni accesso trasformerebbe una dichiarazione in un tasto
-        // che si preme senza leggere.
-        if (joinCode != null) 'age_confirmed': maggiorenne,
-        if (joinCode != null) 'terms_accepted': condizioniAccettate,
+        // 🚨 S9.2 — **si mandano sempre**, e da F3 è obbligatorio che sia così.
+        //
+        // Fino a F2 si mandavano solo insieme al `join_code`, perché «niente
+        // codice» voleva dire «non è un primo accesso». ⚠️ Da F3 quella
+        // equivalenza è **falsa**: senza codice si può nascere, e senza queste
+        // due il server risponde `consents_required` e non crea niente.
+        //
+        // 💡 Il server continua a ignorarle quando l'identità è già nota, quindi
+        // mandarle sempre non trasforma la dichiarazione in un tasto che si
+        // preme a ogni accesso: la si chiede una volta, alla prima.
+        'age_confirmed': maggiorenne,
+        'terms_accepted': condizioniAccettate,
 
         'device_name': 'app',
       },

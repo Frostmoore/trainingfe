@@ -65,6 +65,25 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
     }
   }
 
+  /// Prosegue **senza** palestra — F3.
+  ///
+  /// 🚨 Non valida il campo e non chiama la rete: non c'è niente da cercare, e
+  /// far passare questa strada dalla validazione vorrebbe dire chiedere un
+  /// codice di 8 caratteri a chi ha appena detto di non averne uno.
+  Future<void> _prosegui() async {
+    setState(() {
+      _inCorso = true;
+      _errore = null;
+    });
+
+    await ref.read(brandingControllerProvider.notifier).senzaPalestra();
+
+    if (mounted) {
+      setState(() => _inCorso = false);
+      context.go(AppRoutes.register);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -153,6 +172,26 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Continua'),
+                    ),
+
+                    /*
+                     * 🆕 **La via d'uscita per chi non ha una palestra** — F3.
+                     *
+                     * ⚠️ È un `TextButton` e non un secondo `FilledButton`, ed è
+                     * una scelta: due pulsanti di pari peso costringerebbero a
+                     * scegliere fra due strade prima di aver capito la
+                     * differenza. La strada principale resta il codice —
+                     * chi ce l'ha lo digita e non legge nemmeno questa riga.
+                     *
+                     * 💡 La frase dice cosa si perde, non cosa si guadagna:
+                     * «senza palestra» è l'informazione che serve a decidere, e
+                     * un invito entusiasta a proseguire da soli farebbe saltare
+                     * il codice a gente che ce l'ha in tasca.
+                     */
+                    const SizedBox(height: Gap.sm),
+                    TextButton(
+                      onPressed: _inCorso ? null : _prosegui,
+                      child: const Text('Non ho un codice: continuo senza palestra'),
                     ),
                   ],
                 ),

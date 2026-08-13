@@ -122,13 +122,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _registrati() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    /*
+     * 🆕 **Il codice può non esserci, e non è più un errore** — F3.
+     *
+     * Qui c'era un blocco che rifiutava l'iscrizione con «Manca il codice della
+     * palestra», ed era giusto finché ogni utente doveva appartenere a una: chi
+     * arrivava senza codice ci era arrivato per sbaglio.
+     *
+     * ⚠️ Da F3 «nessun codice» è una scelta esplicita — il pulsante «continuo
+     * senza palestra» della schermata precedente — e il server la sa gestire:
+     * fa nascere un tenant personale.
+     */
     final code = ref.read(brandingControllerProvider).joinCode;
-
-    if (code == null || code.isEmpty) {
-      setState(() => _errore = 'Manca il codice della palestra.');
-
-      return;
-    }
 
     setState(() {
       _inCorso = true;

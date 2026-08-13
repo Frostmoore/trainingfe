@@ -40,6 +40,22 @@ class BrandingController extends StateNotifier<BrandingState> {
   final ApiClient _api;
   final LocalCache _cache;
 
+  /// 🆕 **Si prosegue senza palestra** — F3.
+  ///
+  /// Non chiama la rete: non c'è niente da cercare. Azzera il codice e riporta
+  /// il branding a quello neutro, che è **esattamente** ciò che il server
+  /// risponderà poi per un tenant personale.
+  ///
+  /// ⚠️ **Il codice va tolto dalla cache, non solo dallo stato.** Se restasse su
+  /// disco, il prossimo avvio ripartirebbe con la palestra di prima — e la
+  /// persona si troverebbe a fare l'accesso dentro una palestra che ha appena
+  /// deciso di non avere.
+  Future<void> senzaPalestra() async {
+    await _cache.forgetGym();
+
+    state = const BrandingState(branding: GymBranding.neutral);
+  }
+
   /// Cerca la palestra da un codice d'invito.
   ///
   /// Lancia `NotFoundException` se il codice non esiste **o** se la palestra è

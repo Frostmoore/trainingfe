@@ -51,12 +51,34 @@ void main() {
     /// scritta da una versione precedente dell'app. Un campo mancante non deve
     /// far fallire l'avvio: l'utente non avrebbe modo di rimediare se non
     /// disinstallando.
+    /// ⚠️ **L'attesa sul nome è cambiata il 13/08/2026, con F3.**
+    ///
+    /// Prima il nome mancante diventava «La tua palestra», e il test pretendeva
+    /// `isNotEmpty`. Da F3 il server manda `name: null` per chi **non ha** una
+    /// palestra, e un ripiego lì sarebbe peggio del vuoto: scriverebbe in cima
+    /// alla schermata il nome di una palestra che non esiste.
+    ///
+    /// 🚨 Ciò che **non** è cambiato è la parte che contava: i colori hanno
+    /// ancora un valore di riserva. Una cache scritta da una versione
+    /// precedente non deve impedire l'avvio, perché chi la subisce non avrebbe
+    /// modo di rimediare se non disinstallando.
     test('sopravvive a un payload monco', () {
       final b = GymBranding.fromJson(const {});
 
-      expect(b.name, isNotEmpty);
+      expect(b.name, isNull);
       expect(b.primary, GymBranding.fallbackPrimary);
       expect(b.accent, GymBranding.fallbackAccent);
+    });
+
+    /// 🆕 F3 — `null` non è un dato mancante: è «non ho una palestra».
+    test('un tenant personale non ha un nome da mostrare', () {
+      final b = GymBranding.fromJson(const {
+        'name': null,
+        'colors': {'primary': '#123456'},
+      });
+
+      expect(b.name, isNull);
+      expect(b.primary, isNot(GymBranding.fallbackPrimary), reason: 'i colori arrivano lo stesso');
     });
 
     /// 🚨 Quali pulsanti d'accesso esterno mostrare lo decide il **server**.

@@ -27,7 +27,11 @@ class AppUser {
     passwordIsSet: json['password_is_set'] != false,
     // 💡 Si ricava da `roles`, che il server manda già: nessun campo nuovo da
     // aggiungere, nessuna versione di backend da aspettare.
-    isTrainer: ((json['roles'] as List?) ?? const []).contains('trainer'),
+    // 🆕 F5/F6 — anche `free_trainer` allena: è un trainer indipendente, senza
+    // una palestra alle spalle. ⚠️ Guardare solo `trainer` gli nasconderebbe
+    // «i miei utenti», cioè l'unica cosa per cui usa questa applicazione.
+    isTrainer: ((json['roles'] as List?) ?? const [])
+        .any((r) => r == 'trainer' || r == 'free_trainer'),
     social: ((json['social'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList(growable: false),

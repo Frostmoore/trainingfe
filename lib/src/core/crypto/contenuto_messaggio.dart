@@ -27,7 +27,13 @@ import 'dart:convert';
 sealed class ContenutoMessaggio {
   const ContenutoMessaggio();
 
-  static const int versione = 1;
+  /// 🆕 **2 da G8**: le buste portano l'`origine_id` e i totali.
+  ///
+  /// ⚠️ **Le buste `v1` restano leggibili**, ed è la promessa di questa classe:
+  /// «non lancia mai». Un piano arrivato prima di G8 semplicemente non ha
+  /// l'identità stabile, e cade sul comportamento vecchio — una riga per
+  /// messaggio, che è corretto, solo meno furbo.
+  static const int versione = 2;
 
   /// Interpreta ciò che è uscito dalla busta.
   ///
@@ -99,6 +105,9 @@ class ContenutoScheda extends ContenutoMessaggio {
 
   int get numeroEsercizi => (scheda['exercises'] as List?)?.length ?? 0;
 
+  /// L'identità stabile — D15. `null` per le buste `v1`.
+  String? get origineId => scheda['origine_id']?.toString();
+
   @override
   String perLaBusta() => json.encode({
     't': 'plan',
@@ -113,7 +122,15 @@ class ContenutoPianoAlimentare extends ContenutoMessaggio {
 
   final Map<String, dynamic> piano;
 
-  String get titolo => piano['title']?.toString() ?? 'Piano alimentare';
+  /// ⚠️ Il server manda `name`; `title` resta accettato perche' le buste
+  /// scritte prima di G8 lo usavano.
+  String get titolo =>
+      piano['name']?.toString() ?? piano['title']?.toString() ?? 'Piano alimentare';
+
+  /// L'identità stabile — D15. `null` per le buste `v1`.
+  String? get origineId => piano['origine_id']?.toString();
+
+  int get numeroGiorni => (piano['days'] as List?)?.length ?? 0;
 
   @override
   String perLaBusta() => json.encode({

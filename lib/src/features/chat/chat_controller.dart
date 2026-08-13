@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sodium/sodium_sumo.dart';
@@ -8,6 +9,8 @@ import '../../core/crypto/contenuto_messaggio.dart';
 import '../../core/crypto/providers_crypto.dart';
 import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/providers.dart';
+import '../health/health_controller.dart';
+import '../training/schede_ricevute_controller.dart';
 
 /// L'altra persona non ha ancora pubblicato una chiave.
 ///
@@ -240,6 +243,23 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
 
       final contenuto = ContenutoMessaggio.daChiaro(chiaro);
 
+      /*
+       * 🚨 **G8.8 — quello che arriva si conserva, senza chiedere.**
+       *
+       * Fino a G8 una scheda entrava nell'archivio **solo se l'allievo premeva
+       * «aggiungi»**. Chi non l'aveva premuto aveva quel piano solo dentro la
+       * conversazione — e il committente ha chiesto che i piani **non
+       * scompaiano**, perché li ha pagati.
+       *
+       * ⚠️ Si fa qui, alla decifratura, perché è **l'unico punto** in cui il
+       * contenuto è in chiaro. Il server non lo vede e non lo vedrà mai.
+       *
+       * 💡 `unawaited`: scrivere sull'archivio non deve rallentare il disegno
+       * della conversazione, e se fallisce il messaggio resta comunque
+       * leggibile — la scrittura si ritenta alla prossima apertura.
+       */
+      unawaited(_conserva(id, mittente, contenuto));
+
       return ChatMessage(
         id: id,
         senderId: mittente,
@@ -259,6 +279,41 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
       // Una singola busta illeggibile è un caso normale; una schermata che
       // esplode per un messaggio su duecento no.
       return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
+    }
+  }
+
+  /// Mette in archivio ciò che è arrivato — G8.8, G8.9.
+  ///
+  /// ⚠️ **Non lancia mai.** Un archivio che non si scrive è un fastidio; una
+  /// conversazione che non si apre è un guasto.
+  Future<void> _conserva(int messaggioId, int mittente, ContenutoMessaggio c) async {
+    final archivio = _ref.read(archivioSaluteProvider);
+
+    try {
+      switch (c) {
+        case ContenutoScheda():
+          await archivio.salvaScheda(
+            messaggioId: messaggioId,
+            mittenteId: mittente,
+            nome: c.titolo,
+            scheda: json.encode(c.scheda),
+            origineId: c.origineId,
+          );
+        case ContenutoPianoAlimentare():
+          await archivio.salvaPiano(
+            messaggioId: messaggioId,
+            mittenteId: mittente,
+            nome: c.titolo,
+            piano: json.encode(c.piano),
+            origineId: c.origineId,
+          );
+        default:
+          return;
+      }
+
+      _ref.read(revisioneSchedeProvider.notifier).state++;
+    } on Object {
+      // Vedi il dartdoc: si tace di proposito.
     }
   }
 

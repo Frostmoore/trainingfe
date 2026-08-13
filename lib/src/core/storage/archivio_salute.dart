@@ -33,6 +33,8 @@ part 'archivio_salute.g.dart';
     MisureCorpo,
     FotoProgressi,
     SchedeRicevute,
+    PianiRicevuti,
+    ContenutiRifiutati,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -42,7 +44,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -58,6 +60,22 @@ class ArchivioSalute extends _$ArchivioSalute {
 
           // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
           if (da < 5) await _riaccreditaLeNotti();
+
+          /*
+           * v5 → v6 (G8): i piani alimentari ricevuti, i rifiutati, e
+           * l'identita' stabile sulle schede.
+           *
+           * 🚨 **Il bump di `schemaVersion` non e' facoltativo.** Senza, il
+           * guasto si manifesta come un errore SQL **sul telefono di chi
+           * aggiorna** — mai su quello di chi installa da zero, cioe' mai sui
+           * nostri.
+           */
+          if (da < 6) {
+            await m.createTable(pianiRicevuti);
+            await m.createTable(contenutiRifiutati);
+            await m.addColumn(schedeRicevute, schedeRicevute.origineId);
+            await m.addColumn(schedeRicevute, schedeRicevute.aggiornatoIl);
+          }
         },
       );
 
@@ -400,6 +418,13 @@ class ArchivioSalute extends _$ArchivioSalute {
       b.deleteAll(misureCorpo);
       b.deleteAll(fotoProgressi);
       b.deleteAll(schedeRicevute);
+      b.deleteAll(pianiRicevuti);
+      /*
+       * ⚠️ **Anche i rifiutati.** Sono una decisione di **questa** persona: chi
+       * arriva dopo su questo telefono non deve ereditare i piani che qualcun
+       * altro aveva buttato — se ne riceve uno, deve vederlo.
+       */
+      b.deleteAll(contenutiRifiutati);
     });
   }
 
@@ -415,22 +440,52 @@ class ArchivioSalute extends _$ArchivioSalute {
   ///
   /// ⚠️ Toccare due volte «aggiungi» sullo stesso messaggio invece non deve
   /// produrre due copie: da qui `insertOrIgnore` sull'unique di `messaggioId`.
-  Future<void> salvaScheda({
+  Future<bool> salvaScheda({
     required int messaggioId,
     required int mittenteId,
     required String nome,
     required String scheda,
+    String? origineId,
   }) async {
+    if (origineId != null && await eRifiutato(origineId)) return false;
+
+    if (origineId != null) {
+      final esistente = await (select(schedeRicevute)
+            ..where((t) => t.origineId.equals(origineId)))
+          .getSingleOrNull();
+
+      if (esistente != null) {
+        // ⚠️ Fuori ordine: una versione piu' vecchia che arriva dopo non
+        // sovrascrive quella buona. Vedi `salvaPiano()`.
+        if (esistente.messaggioId >= messaggioId) return false;
+
+        await (update(schedeRicevute)..where((t) => t.id.equals(esistente.id))).write(
+          SchedeRicevuteCompanion(
+            messaggioId: Value(messaggioId),
+            mittenteId: Value(mittenteId),
+            nome: Value(nome),
+            scheda: Value(scheda),
+            aggiornatoIl: Value(DateTime.now()),
+          ),
+        );
+
+        return true;
+      }
+    }
+
     await into(schedeRicevute).insert(
       SchedeRicevuteCompanion.insert(
         messaggioId: messaggioId,
         mittenteId: mittenteId,
         nome: nome,
         scheda: scheda,
+        origineId: Value(origineId),
         ricevutaIl: DateTime.now(),
       ),
       mode: InsertMode.insertOrIgnore,
     );
+
+    return true;
   }
 
   Future<List<SchedaRicevuta>> schede() {
@@ -448,8 +503,138 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga != null;
   }
 
-  Future<void> dimenticaScheda(int id) =>
-      (delete(schedeRicevute)..where((t) => t.id.equals(id))).go();
+  /// Butta una scheda, e **ricorda che e' stata buttata** — G8.10.
+  Future<void> dimenticaScheda(int id) async {
+    final riga = await (select(schedeRicevute)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+
+    if (riga?.origineId != null) {
+      await into(contenutiRifiutati).insert(
+        ContenutiRifiutatiCompanion.insert(
+          origineId: riga!.origineId!,
+          rifiutatoIl: DateTime.now(),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+    }
+
+    await (delete(schedeRicevute)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ───────────────── i piani alimentari ricevuti (G8) ─────────────────
+
+  /// Salva un piano arrivato via chat, o **sostituisce** quello che c'era.
+  ///
+  /// ── 🚨 La regola di D15, per intero ───────────────────────────────────
+  ///
+  /// | Caso | Cosa succede |
+  /// |---|---|
+  /// | `origineId` mai visto | si salva |
+  /// | gia' in archivio, busta **piu' recente** | si **sostituisce**, conservando `ricevutaIl` |
+  /// | gia' in archivio, busta **piu' vecchia** | si ignora |
+  /// | rifiutato in passato | non si salva |
+  /// | busta senza `origineId` (v1) | si cade su `messaggioId`, come prima |
+  ///
+  /// ⚠️ **«Piu' recente» si misura sull'id del messaggio**, non sull'ora: i
+  /// messaggi possono arrivare fuori ordine — l'app riprende una conversazione
+  /// vecchia, o due dispositivi si sincronizzano — e una versione vecchia che
+  /// arriva dopo non deve sovrascrivere quella buona.
+  ///
+  /// 🚨 **`ricevutaIl` non si sposta.** E' la data che l'allievo riconosce
+  /// («quello di marzo»): spostarla a ogni correzione del trainer gli farebbe
+  /// sembrare nuovo un piano che segue da mesi.
+  ///
+  /// @return `true` se qualcosa e' stato scritto.
+  Future<bool> salvaPiano({
+    required int messaggioId,
+    required int mittenteId,
+    required String nome,
+    required String piano,
+    String? origineId,
+  }) async {
+    if (origineId != null && await eRifiutato(origineId)) return false;
+
+    if (origineId != null) {
+      final esistente = await (select(pianiRicevuti)
+            ..where((t) => t.origineId.equals(origineId)))
+          .getSingleOrNull();
+
+      if (esistente != null) {
+        if (esistente.messaggioId >= messaggioId) return false;
+
+        await (update(pianiRicevuti)..where((t) => t.id.equals(esistente.id))).write(
+          PianiRicevutiCompanion(
+            messaggioId: Value(messaggioId),
+            mittenteId: Value(mittenteId),
+            nome: Value(nome),
+            piano: Value(piano),
+            aggiornatoIl: Value(DateTime.now()),
+          ),
+        );
+
+        return true;
+      }
+    }
+
+    await into(pianiRicevuti).insert(
+      PianiRicevutiCompanion.insert(
+        messaggioId: messaggioId,
+        mittenteId: mittenteId,
+        nome: nome,
+        piano: piano,
+        origineId: Value(origineId),
+        ricevutaIl: DateTime.now(),
+      ),
+      // ⚠️ Sull'unique di `messaggioId`: toccare due volte lo stesso messaggio
+      // non deve produrre due copie.
+      mode: InsertMode.insertOrIgnore,
+    );
+
+    return true;
+  }
+
+  Future<List<PianoRicevuto>> piani() {
+    return (select(pianiRicevuti)
+          ..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
+        .get();
+  }
+
+  Future<bool> pianoGiaSalvato(int messaggioId) async {
+    final riga = await (select(pianiRicevuti)
+          ..where((t) => t.messaggioId.equals(messaggioId)))
+        .getSingleOrNull();
+
+    return riga != null;
+  }
+
+  /// Butta un piano, e **ricorda che e' stato buttato** — G8.10.
+  ///
+  /// 🚨 Senza la seconda meta', il salvataggio automatico glielo rimetterebbe
+  /// davanti al messaggio successivo. Buttare e' una decisione.
+  Future<void> dimenticaPiano(int id) async {
+    final riga = await (select(pianiRicevuti)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+
+    if (riga?.origineId != null) {
+      await into(contenutiRifiutati).insert(
+        ContenutiRifiutatiCompanion.insert(
+          origineId: riga!.origineId!,
+          rifiutatoIl: DateTime.now(),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+    }
+
+    await (delete(pianiRicevuti)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<bool> eRifiutato(String origineId) async {
+    final riga = await (select(contenutiRifiutati)
+          ..where((t) => t.origineId.equals(origineId)))
+        .getSingleOrNull();
+
+    return riga != null;
+  }
 
   static DateTime _soloGiorno(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -600,6 +785,60 @@ extension MinutiDelCampione on CampioneSonno {
 /// 💡 La scheda si conserva **per intero**, come JSON, non come riferimento:
 /// chi la riceve la tiene anche se domani cambia palestra, e un elenco di id
 /// non gli servirebbe a niente.
+@DataClassName('PianoRicevuto')
+/// I piani alimentari arrivati dal trainer via chat — G8.4.
+///
+/// 🚨 **Gemella di `SchedeRicevute`, e per la stessa ragione**: vivono sul
+/// telefono. Un piano dice cosa mangia una persona, e da un piano si capisce
+/// molto di lei — il modello resta sul server, il legame fra la persona e il
+/// piano non ci arriva mai (D4).
+class PianiRicevuti extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  IntColumn get messaggioId => integer().unique()();
+
+  IntColumn get mittenteId => integer()();
+
+  /// 🚨 **L'identita' stabile del piano** — D15.
+  ///
+  /// E' cio' che permette di riconoscere che un piano arrivato e' la **versione
+  /// nuova** di uno che c'e' gia', e di sostituirlo invece di affiancarlo.
+  ///
+  /// ⚠️ **Nullable**: le buste `v1` non ce l'hanno. Chi arriva senza cade sul
+  /// comportamento vecchio — una riga per messaggio — che e' corretto, solo
+  /// meno furbo.
+  TextColumn get origineId => text().nullable()();
+
+  TextColumn get nome => text()();
+
+  TextColumn get piano => text()();
+
+  /// 🚨 **La PRIMA volta che questo piano e' arrivato**, non l'ultima.
+  ///
+  /// Sostituendo una versione si conserva questa data: e' quella che l'allievo
+  /// riconosce («quello di marzo»). Spostarla a ogni correzione del trainer
+  /// gli farebbe sembrare nuovo un piano che segue da mesi.
+  DateTimeColumn get ricevutaIl => dateTime()();
+
+  /// Quando e' stato sostituito l'ultima volta. `null` = mai.
+  DateTimeColumn get aggiornatoIl => dateTime().nullable()();
+}
+
+@DataClassName('ContenutoRifiutato')
+/// Cio' che l'allievo ha buttato, e che non deve tornare — G8.10.
+///
+/// ⚠️ **Senza questa tabella il salvataggio automatico e' una trappola**: chi
+/// butta un piano se lo ritrova al messaggio successivo, lo butta di nuovo, e
+/// cosi' per sempre. Buttare e' una decisione, e va ricordata.
+class ContenutiRifiutati extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// L'`origine_id` del piano o della scheda rifiutata.
+  TextColumn get origineId => text().unique()();
+
+  DateTimeColumn get rifiutatoIl => dateTime()();
+}
+
 @DataClassName('SchedaRicevuta')
 class SchedeRicevute extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -620,5 +859,10 @@ class SchedeRicevute extends Table {
   /// La scheda intera, serializzata.
   TextColumn get scheda => text()();
 
+  /// 🆕 G8 — l'identita' stabile (D15). Vedi `PianiRicevuti.origineId`.
+  TextColumn get origineId => text().nullable()();
+
   DateTimeColumn get ricevutaIl => dateTime()();
+
+  DateTimeColumn get aggiornatoIl => dateTime().nullable()();
 }

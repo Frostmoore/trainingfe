@@ -1760,6 +1760,17 @@ class $SchedeRicevuteTable extends SchedeRicevute
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _origineIdMeta = const VerificationMeta(
+    'origineId',
+  );
+  @override
+  late final GeneratedColumn<String> origineId = GeneratedColumn<String>(
+    'origine_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _ricevutaIlMeta = const VerificationMeta(
     'ricevutaIl',
   );
@@ -1771,6 +1782,17 @@ class $SchedeRicevuteTable extends SchedeRicevute
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _aggiornatoIlMeta = const VerificationMeta(
+    'aggiornatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> aggiornatoIl = GeneratedColumn<DateTime>(
+    'aggiornato_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1778,7 +1800,9 @@ class $SchedeRicevuteTable extends SchedeRicevute
     mittenteId,
     nome,
     scheda,
+    origineId,
     ricevutaIl,
+    aggiornatoIl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1830,6 +1854,12 @@ class $SchedeRicevuteTable extends SchedeRicevute
     } else if (isInserting) {
       context.missing(_schedaMeta);
     }
+    if (data.containsKey('origine_id')) {
+      context.handle(
+        _origineIdMeta,
+        origineId.isAcceptableOrUnknown(data['origine_id']!, _origineIdMeta),
+      );
+    }
     if (data.containsKey('ricevuta_il')) {
       context.handle(
         _ricevutaIlMeta,
@@ -1837,6 +1867,15 @@ class $SchedeRicevuteTable extends SchedeRicevute
       );
     } else if (isInserting) {
       context.missing(_ricevutaIlMeta);
+    }
+    if (data.containsKey('aggiornato_il')) {
+      context.handle(
+        _aggiornatoIlMeta,
+        aggiornatoIl.isAcceptableOrUnknown(
+          data['aggiornato_il']!,
+          _aggiornatoIlMeta,
+        ),
+      );
     }
     return context;
   }
@@ -1867,10 +1906,18 @@ class $SchedeRicevuteTable extends SchedeRicevute
         DriftSqlType.string,
         data['${effectivePrefix}scheda'],
       )!,
+      origineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine_id'],
+      ),
       ricevutaIl: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}ricevuta_il'],
       )!,
+      aggiornatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}aggiornato_il'],
+      ),
     );
   }
 
@@ -1897,14 +1944,20 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
 
   /// La scheda intera, serializzata.
   final String scheda;
+
+  /// 🆕 G8 — l'identita' stabile (D15). Vedi `PianiRicevuti.origineId`.
+  final String? origineId;
   final DateTime ricevutaIl;
+  final DateTime? aggiornatoIl;
   const SchedaRicevuta({
     required this.id,
     required this.messaggioId,
     required this.mittenteId,
     required this.nome,
     required this.scheda,
+    this.origineId,
     required this.ricevutaIl,
+    this.aggiornatoIl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1914,7 +1967,13 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
     map['mittente_id'] = Variable<int>(mittenteId);
     map['nome'] = Variable<String>(nome);
     map['scheda'] = Variable<String>(scheda);
+    if (!nullToAbsent || origineId != null) {
+      map['origine_id'] = Variable<String>(origineId);
+    }
     map['ricevuta_il'] = Variable<DateTime>(ricevutaIl);
+    if (!nullToAbsent || aggiornatoIl != null) {
+      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl);
+    }
     return map;
   }
 
@@ -1925,7 +1984,13 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
       mittenteId: Value(mittenteId),
       nome: Value(nome),
       scheda: Value(scheda),
+      origineId: origineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(origineId),
       ricevutaIl: Value(ricevutaIl),
+      aggiornatoIl: aggiornatoIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aggiornatoIl),
     );
   }
 
@@ -1940,7 +2005,9 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
       mittenteId: serializer.fromJson<int>(json['mittenteId']),
       nome: serializer.fromJson<String>(json['nome']),
       scheda: serializer.fromJson<String>(json['scheda']),
+      origineId: serializer.fromJson<String?>(json['origineId']),
       ricevutaIl: serializer.fromJson<DateTime>(json['ricevutaIl']),
+      aggiornatoIl: serializer.fromJson<DateTime?>(json['aggiornatoIl']),
     );
   }
   @override
@@ -1952,7 +2019,9 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
       'mittenteId': serializer.toJson<int>(mittenteId),
       'nome': serializer.toJson<String>(nome),
       'scheda': serializer.toJson<String>(scheda),
+      'origineId': serializer.toJson<String?>(origineId),
       'ricevutaIl': serializer.toJson<DateTime>(ricevutaIl),
+      'aggiornatoIl': serializer.toJson<DateTime?>(aggiornatoIl),
     };
   }
 
@@ -1962,14 +2031,18 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
     int? mittenteId,
     String? nome,
     String? scheda,
+    Value<String?> origineId = const Value.absent(),
     DateTime? ricevutaIl,
+    Value<DateTime?> aggiornatoIl = const Value.absent(),
   }) => SchedaRicevuta(
     id: id ?? this.id,
     messaggioId: messaggioId ?? this.messaggioId,
     mittenteId: mittenteId ?? this.mittenteId,
     nome: nome ?? this.nome,
     scheda: scheda ?? this.scheda,
+    origineId: origineId.present ? origineId.value : this.origineId,
     ricevutaIl: ricevutaIl ?? this.ricevutaIl,
+    aggiornatoIl: aggiornatoIl.present ? aggiornatoIl.value : this.aggiornatoIl,
   );
   SchedaRicevuta copyWithCompanion(SchedeRicevuteCompanion data) {
     return SchedaRicevuta(
@@ -1982,9 +2055,13 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
           : this.mittenteId,
       nome: data.nome.present ? data.nome.value : this.nome,
       scheda: data.scheda.present ? data.scheda.value : this.scheda,
+      origineId: data.origineId.present ? data.origineId.value : this.origineId,
       ricevutaIl: data.ricevutaIl.present
           ? data.ricevutaIl.value
           : this.ricevutaIl,
+      aggiornatoIl: data.aggiornatoIl.present
+          ? data.aggiornatoIl.value
+          : this.aggiornatoIl,
     );
   }
 
@@ -1996,14 +2073,24 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
           ..write('mittenteId: $mittenteId, ')
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
-          ..write('ricevutaIl: $ricevutaIl')
+          ..write('origineId: $origineId, ')
+          ..write('ricevutaIl: $ricevutaIl, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, messaggioId, mittenteId, nome, scheda, ricevutaIl);
+  int get hashCode => Object.hash(
+    id,
+    messaggioId,
+    mittenteId,
+    nome,
+    scheda,
+    origineId,
+    ricevutaIl,
+    aggiornatoIl,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2013,7 +2100,9 @@ class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
           other.mittenteId == this.mittenteId &&
           other.nome == this.nome &&
           other.scheda == this.scheda &&
-          other.ricevutaIl == this.ricevutaIl);
+          other.origineId == this.origineId &&
+          other.ricevutaIl == this.ricevutaIl &&
+          other.aggiornatoIl == this.aggiornatoIl);
 }
 
 class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
@@ -2022,14 +2111,18 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
   final Value<int> mittenteId;
   final Value<String> nome;
   final Value<String> scheda;
+  final Value<String?> origineId;
   final Value<DateTime> ricevutaIl;
+  final Value<DateTime?> aggiornatoIl;
   const SchedeRicevuteCompanion({
     this.id = const Value.absent(),
     this.messaggioId = const Value.absent(),
     this.mittenteId = const Value.absent(),
     this.nome = const Value.absent(),
     this.scheda = const Value.absent(),
+    this.origineId = const Value.absent(),
     this.ricevutaIl = const Value.absent(),
+    this.aggiornatoIl = const Value.absent(),
   });
   SchedeRicevuteCompanion.insert({
     this.id = const Value.absent(),
@@ -2037,7 +2130,9 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
     required int mittenteId,
     required String nome,
     required String scheda,
+    this.origineId = const Value.absent(),
     required DateTime ricevutaIl,
+    this.aggiornatoIl = const Value.absent(),
   }) : messaggioId = Value(messaggioId),
        mittenteId = Value(mittenteId),
        nome = Value(nome),
@@ -2049,7 +2144,9 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
     Expression<int>? mittenteId,
     Expression<String>? nome,
     Expression<String>? scheda,
+    Expression<String>? origineId,
     Expression<DateTime>? ricevutaIl,
+    Expression<DateTime>? aggiornatoIl,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2057,7 +2154,9 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
       if (mittenteId != null) 'mittente_id': mittenteId,
       if (nome != null) 'nome': nome,
       if (scheda != null) 'scheda': scheda,
+      if (origineId != null) 'origine_id': origineId,
       if (ricevutaIl != null) 'ricevuta_il': ricevutaIl,
+      if (aggiornatoIl != null) 'aggiornato_il': aggiornatoIl,
     });
   }
 
@@ -2067,7 +2166,9 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
     Value<int>? mittenteId,
     Value<String>? nome,
     Value<String>? scheda,
+    Value<String?>? origineId,
     Value<DateTime>? ricevutaIl,
+    Value<DateTime?>? aggiornatoIl,
   }) {
     return SchedeRicevuteCompanion(
       id: id ?? this.id,
@@ -2075,7 +2176,9 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
       mittenteId: mittenteId ?? this.mittenteId,
       nome: nome ?? this.nome,
       scheda: scheda ?? this.scheda,
+      origineId: origineId ?? this.origineId,
       ricevutaIl: ricevutaIl ?? this.ricevutaIl,
+      aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
     );
   }
 
@@ -2097,8 +2200,14 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
     if (scheda.present) {
       map['scheda'] = Variable<String>(scheda.value);
     }
+    if (origineId.present) {
+      map['origine_id'] = Variable<String>(origineId.value);
+    }
     if (ricevutaIl.present) {
       map['ricevuta_il'] = Variable<DateTime>(ricevutaIl.value);
+    }
+    if (aggiornatoIl.present) {
+      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl.value);
     }
     return map;
   }
@@ -2111,7 +2220,804 @@ class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
           ..write('mittenteId: $mittenteId, ')
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
-          ..write('ricevutaIl: $ricevutaIl')
+          ..write('origineId: $origineId, ')
+          ..write('ricevutaIl: $ricevutaIl, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PianiRicevutiTable extends PianiRicevuti
+    with TableInfo<$PianiRicevutiTable, PianoRicevuto> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PianiRicevutiTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _messaggioIdMeta = const VerificationMeta(
+    'messaggioId',
+  );
+  @override
+  late final GeneratedColumn<int> messaggioId = GeneratedColumn<int>(
+    'messaggio_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _mittenteIdMeta = const VerificationMeta(
+    'mittenteId',
+  );
+  @override
+  late final GeneratedColumn<int> mittenteId = GeneratedColumn<int>(
+    'mittente_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _origineIdMeta = const VerificationMeta(
+    'origineId',
+  );
+  @override
+  late final GeneratedColumn<String> origineId = GeneratedColumn<String>(
+    'origine_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
+  @override
+  late final GeneratedColumn<String> nome = GeneratedColumn<String>(
+    'nome',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pianoMeta = const VerificationMeta('piano');
+  @override
+  late final GeneratedColumn<String> piano = GeneratedColumn<String>(
+    'piano',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ricevutaIlMeta = const VerificationMeta(
+    'ricevutaIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> ricevutaIl = GeneratedColumn<DateTime>(
+    'ricevuta_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _aggiornatoIlMeta = const VerificationMeta(
+    'aggiornatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> aggiornatoIl = GeneratedColumn<DateTime>(
+    'aggiornato_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    messaggioId,
+    mittenteId,
+    origineId,
+    nome,
+    piano,
+    ricevutaIl,
+    aggiornatoIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'piani_ricevuti';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PianoRicevuto> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('messaggio_id')) {
+      context.handle(
+        _messaggioIdMeta,
+        messaggioId.isAcceptableOrUnknown(
+          data['messaggio_id']!,
+          _messaggioIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_messaggioIdMeta);
+    }
+    if (data.containsKey('mittente_id')) {
+      context.handle(
+        _mittenteIdMeta,
+        mittenteId.isAcceptableOrUnknown(data['mittente_id']!, _mittenteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mittenteIdMeta);
+    }
+    if (data.containsKey('origine_id')) {
+      context.handle(
+        _origineIdMeta,
+        origineId.isAcceptableOrUnknown(data['origine_id']!, _origineIdMeta),
+      );
+    }
+    if (data.containsKey('nome')) {
+      context.handle(
+        _nomeMeta,
+        nome.isAcceptableOrUnknown(data['nome']!, _nomeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomeMeta);
+    }
+    if (data.containsKey('piano')) {
+      context.handle(
+        _pianoMeta,
+        piano.isAcceptableOrUnknown(data['piano']!, _pianoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pianoMeta);
+    }
+    if (data.containsKey('ricevuta_il')) {
+      context.handle(
+        _ricevutaIlMeta,
+        ricevutaIl.isAcceptableOrUnknown(data['ricevuta_il']!, _ricevutaIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ricevutaIlMeta);
+    }
+    if (data.containsKey('aggiornato_il')) {
+      context.handle(
+        _aggiornatoIlMeta,
+        aggiornatoIl.isAcceptableOrUnknown(
+          data['aggiornato_il']!,
+          _aggiornatoIlMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PianoRicevuto map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PianoRicevuto(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      messaggioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}messaggio_id'],
+      )!,
+      mittenteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mittente_id'],
+      )!,
+      origineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine_id'],
+      ),
+      nome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome'],
+      )!,
+      piano: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}piano'],
+      )!,
+      ricevutaIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ricevuta_il'],
+      )!,
+      aggiornatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}aggiornato_il'],
+      ),
+    );
+  }
+
+  @override
+  $PianiRicevutiTable createAlias(String alias) {
+    return $PianiRicevutiTable(attachedDatabase, alias);
+  }
+}
+
+class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
+  final int id;
+  final int messaggioId;
+  final int mittenteId;
+
+  /// 🚨 **L'identita' stabile del piano** — D15.
+  ///
+  /// E' cio' che permette di riconoscere che un piano arrivato e' la **versione
+  /// nuova** di uno che c'e' gia', e di sostituirlo invece di affiancarlo.
+  ///
+  /// ⚠️ **Nullable**: le buste `v1` non ce l'hanno. Chi arriva senza cade sul
+  /// comportamento vecchio — una riga per messaggio — che e' corretto, solo
+  /// meno furbo.
+  final String? origineId;
+  final String nome;
+  final String piano;
+
+  /// 🚨 **La PRIMA volta che questo piano e' arrivato**, non l'ultima.
+  ///
+  /// Sostituendo una versione si conserva questa data: e' quella che l'allievo
+  /// riconosce («quello di marzo»). Spostarla a ogni correzione del trainer
+  /// gli farebbe sembrare nuovo un piano che segue da mesi.
+  final DateTime ricevutaIl;
+
+  /// Quando e' stato sostituito l'ultima volta. `null` = mai.
+  final DateTime? aggiornatoIl;
+  const PianoRicevuto({
+    required this.id,
+    required this.messaggioId,
+    required this.mittenteId,
+    this.origineId,
+    required this.nome,
+    required this.piano,
+    required this.ricevutaIl,
+    this.aggiornatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['messaggio_id'] = Variable<int>(messaggioId);
+    map['mittente_id'] = Variable<int>(mittenteId);
+    if (!nullToAbsent || origineId != null) {
+      map['origine_id'] = Variable<String>(origineId);
+    }
+    map['nome'] = Variable<String>(nome);
+    map['piano'] = Variable<String>(piano);
+    map['ricevuta_il'] = Variable<DateTime>(ricevutaIl);
+    if (!nullToAbsent || aggiornatoIl != null) {
+      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl);
+    }
+    return map;
+  }
+
+  PianiRicevutiCompanion toCompanion(bool nullToAbsent) {
+    return PianiRicevutiCompanion(
+      id: Value(id),
+      messaggioId: Value(messaggioId),
+      mittenteId: Value(mittenteId),
+      origineId: origineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(origineId),
+      nome: Value(nome),
+      piano: Value(piano),
+      ricevutaIl: Value(ricevutaIl),
+      aggiornatoIl: aggiornatoIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aggiornatoIl),
+    );
+  }
+
+  factory PianoRicevuto.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PianoRicevuto(
+      id: serializer.fromJson<int>(json['id']),
+      messaggioId: serializer.fromJson<int>(json['messaggioId']),
+      mittenteId: serializer.fromJson<int>(json['mittenteId']),
+      origineId: serializer.fromJson<String?>(json['origineId']),
+      nome: serializer.fromJson<String>(json['nome']),
+      piano: serializer.fromJson<String>(json['piano']),
+      ricevutaIl: serializer.fromJson<DateTime>(json['ricevutaIl']),
+      aggiornatoIl: serializer.fromJson<DateTime?>(json['aggiornatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'messaggioId': serializer.toJson<int>(messaggioId),
+      'mittenteId': serializer.toJson<int>(mittenteId),
+      'origineId': serializer.toJson<String?>(origineId),
+      'nome': serializer.toJson<String>(nome),
+      'piano': serializer.toJson<String>(piano),
+      'ricevutaIl': serializer.toJson<DateTime>(ricevutaIl),
+      'aggiornatoIl': serializer.toJson<DateTime?>(aggiornatoIl),
+    };
+  }
+
+  PianoRicevuto copyWith({
+    int? id,
+    int? messaggioId,
+    int? mittenteId,
+    Value<String?> origineId = const Value.absent(),
+    String? nome,
+    String? piano,
+    DateTime? ricevutaIl,
+    Value<DateTime?> aggiornatoIl = const Value.absent(),
+  }) => PianoRicevuto(
+    id: id ?? this.id,
+    messaggioId: messaggioId ?? this.messaggioId,
+    mittenteId: mittenteId ?? this.mittenteId,
+    origineId: origineId.present ? origineId.value : this.origineId,
+    nome: nome ?? this.nome,
+    piano: piano ?? this.piano,
+    ricevutaIl: ricevutaIl ?? this.ricevutaIl,
+    aggiornatoIl: aggiornatoIl.present ? aggiornatoIl.value : this.aggiornatoIl,
+  );
+  PianoRicevuto copyWithCompanion(PianiRicevutiCompanion data) {
+    return PianoRicevuto(
+      id: data.id.present ? data.id.value : this.id,
+      messaggioId: data.messaggioId.present
+          ? data.messaggioId.value
+          : this.messaggioId,
+      mittenteId: data.mittenteId.present
+          ? data.mittenteId.value
+          : this.mittenteId,
+      origineId: data.origineId.present ? data.origineId.value : this.origineId,
+      nome: data.nome.present ? data.nome.value : this.nome,
+      piano: data.piano.present ? data.piano.value : this.piano,
+      ricevutaIl: data.ricevutaIl.present
+          ? data.ricevutaIl.value
+          : this.ricevutaIl,
+      aggiornatoIl: data.aggiornatoIl.present
+          ? data.aggiornatoIl.value
+          : this.aggiornatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PianoRicevuto(')
+          ..write('id: $id, ')
+          ..write('messaggioId: $messaggioId, ')
+          ..write('mittenteId: $mittenteId, ')
+          ..write('origineId: $origineId, ')
+          ..write('nome: $nome, ')
+          ..write('piano: $piano, ')
+          ..write('ricevutaIl: $ricevutaIl, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    messaggioId,
+    mittenteId,
+    origineId,
+    nome,
+    piano,
+    ricevutaIl,
+    aggiornatoIl,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PianoRicevuto &&
+          other.id == this.id &&
+          other.messaggioId == this.messaggioId &&
+          other.mittenteId == this.mittenteId &&
+          other.origineId == this.origineId &&
+          other.nome == this.nome &&
+          other.piano == this.piano &&
+          other.ricevutaIl == this.ricevutaIl &&
+          other.aggiornatoIl == this.aggiornatoIl);
+}
+
+class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
+  final Value<int> id;
+  final Value<int> messaggioId;
+  final Value<int> mittenteId;
+  final Value<String?> origineId;
+  final Value<String> nome;
+  final Value<String> piano;
+  final Value<DateTime> ricevutaIl;
+  final Value<DateTime?> aggiornatoIl;
+  const PianiRicevutiCompanion({
+    this.id = const Value.absent(),
+    this.messaggioId = const Value.absent(),
+    this.mittenteId = const Value.absent(),
+    this.origineId = const Value.absent(),
+    this.nome = const Value.absent(),
+    this.piano = const Value.absent(),
+    this.ricevutaIl = const Value.absent(),
+    this.aggiornatoIl = const Value.absent(),
+  });
+  PianiRicevutiCompanion.insert({
+    this.id = const Value.absent(),
+    required int messaggioId,
+    required int mittenteId,
+    this.origineId = const Value.absent(),
+    required String nome,
+    required String piano,
+    required DateTime ricevutaIl,
+    this.aggiornatoIl = const Value.absent(),
+  }) : messaggioId = Value(messaggioId),
+       mittenteId = Value(mittenteId),
+       nome = Value(nome),
+       piano = Value(piano),
+       ricevutaIl = Value(ricevutaIl);
+  static Insertable<PianoRicevuto> custom({
+    Expression<int>? id,
+    Expression<int>? messaggioId,
+    Expression<int>? mittenteId,
+    Expression<String>? origineId,
+    Expression<String>? nome,
+    Expression<String>? piano,
+    Expression<DateTime>? ricevutaIl,
+    Expression<DateTime>? aggiornatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (messaggioId != null) 'messaggio_id': messaggioId,
+      if (mittenteId != null) 'mittente_id': mittenteId,
+      if (origineId != null) 'origine_id': origineId,
+      if (nome != null) 'nome': nome,
+      if (piano != null) 'piano': piano,
+      if (ricevutaIl != null) 'ricevuta_il': ricevutaIl,
+      if (aggiornatoIl != null) 'aggiornato_il': aggiornatoIl,
+    });
+  }
+
+  PianiRicevutiCompanion copyWith({
+    Value<int>? id,
+    Value<int>? messaggioId,
+    Value<int>? mittenteId,
+    Value<String?>? origineId,
+    Value<String>? nome,
+    Value<String>? piano,
+    Value<DateTime>? ricevutaIl,
+    Value<DateTime?>? aggiornatoIl,
+  }) {
+    return PianiRicevutiCompanion(
+      id: id ?? this.id,
+      messaggioId: messaggioId ?? this.messaggioId,
+      mittenteId: mittenteId ?? this.mittenteId,
+      origineId: origineId ?? this.origineId,
+      nome: nome ?? this.nome,
+      piano: piano ?? this.piano,
+      ricevutaIl: ricevutaIl ?? this.ricevutaIl,
+      aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (messaggioId.present) {
+      map['messaggio_id'] = Variable<int>(messaggioId.value);
+    }
+    if (mittenteId.present) {
+      map['mittente_id'] = Variable<int>(mittenteId.value);
+    }
+    if (origineId.present) {
+      map['origine_id'] = Variable<String>(origineId.value);
+    }
+    if (nome.present) {
+      map['nome'] = Variable<String>(nome.value);
+    }
+    if (piano.present) {
+      map['piano'] = Variable<String>(piano.value);
+    }
+    if (ricevutaIl.present) {
+      map['ricevuta_il'] = Variable<DateTime>(ricevutaIl.value);
+    }
+    if (aggiornatoIl.present) {
+      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PianiRicevutiCompanion(')
+          ..write('id: $id, ')
+          ..write('messaggioId: $messaggioId, ')
+          ..write('mittenteId: $mittenteId, ')
+          ..write('origineId: $origineId, ')
+          ..write('nome: $nome, ')
+          ..write('piano: $piano, ')
+          ..write('ricevutaIl: $ricevutaIl, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ContenutiRifiutatiTable extends ContenutiRifiutati
+    with TableInfo<$ContenutiRifiutatiTable, ContenutoRifiutato> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContenutiRifiutatiTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _origineIdMeta = const VerificationMeta(
+    'origineId',
+  );
+  @override
+  late final GeneratedColumn<String> origineId = GeneratedColumn<String>(
+    'origine_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _rifiutatoIlMeta = const VerificationMeta(
+    'rifiutatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> rifiutatoIl = GeneratedColumn<DateTime>(
+    'rifiutato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, origineId, rifiutatoIl];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'contenuti_rifiutati';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContenutoRifiutato> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('origine_id')) {
+      context.handle(
+        _origineIdMeta,
+        origineId.isAcceptableOrUnknown(data['origine_id']!, _origineIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_origineIdMeta);
+    }
+    if (data.containsKey('rifiutato_il')) {
+      context.handle(
+        _rifiutatoIlMeta,
+        rifiutatoIl.isAcceptableOrUnknown(
+          data['rifiutato_il']!,
+          _rifiutatoIlMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_rifiutatoIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ContenutoRifiutato map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContenutoRifiutato(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      origineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine_id'],
+      )!,
+      rifiutatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}rifiutato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $ContenutiRifiutatiTable createAlias(String alias) {
+    return $ContenutiRifiutatiTable(attachedDatabase, alias);
+  }
+}
+
+class ContenutoRifiutato extends DataClass
+    implements Insertable<ContenutoRifiutato> {
+  final int id;
+
+  /// L'`origine_id` del piano o della scheda rifiutata.
+  final String origineId;
+  final DateTime rifiutatoIl;
+  const ContenutoRifiutato({
+    required this.id,
+    required this.origineId,
+    required this.rifiutatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['origine_id'] = Variable<String>(origineId);
+    map['rifiutato_il'] = Variable<DateTime>(rifiutatoIl);
+    return map;
+  }
+
+  ContenutiRifiutatiCompanion toCompanion(bool nullToAbsent) {
+    return ContenutiRifiutatiCompanion(
+      id: Value(id),
+      origineId: Value(origineId),
+      rifiutatoIl: Value(rifiutatoIl),
+    );
+  }
+
+  factory ContenutoRifiutato.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContenutoRifiutato(
+      id: serializer.fromJson<int>(json['id']),
+      origineId: serializer.fromJson<String>(json['origineId']),
+      rifiutatoIl: serializer.fromJson<DateTime>(json['rifiutatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'origineId': serializer.toJson<String>(origineId),
+      'rifiutatoIl': serializer.toJson<DateTime>(rifiutatoIl),
+    };
+  }
+
+  ContenutoRifiutato copyWith({
+    int? id,
+    String? origineId,
+    DateTime? rifiutatoIl,
+  }) => ContenutoRifiutato(
+    id: id ?? this.id,
+    origineId: origineId ?? this.origineId,
+    rifiutatoIl: rifiutatoIl ?? this.rifiutatoIl,
+  );
+  ContenutoRifiutato copyWithCompanion(ContenutiRifiutatiCompanion data) {
+    return ContenutoRifiutato(
+      id: data.id.present ? data.id.value : this.id,
+      origineId: data.origineId.present ? data.origineId.value : this.origineId,
+      rifiutatoIl: data.rifiutatoIl.present
+          ? data.rifiutatoIl.value
+          : this.rifiutatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContenutoRifiutato(')
+          ..write('id: $id, ')
+          ..write('origineId: $origineId, ')
+          ..write('rifiutatoIl: $rifiutatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, origineId, rifiutatoIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContenutoRifiutato &&
+          other.id == this.id &&
+          other.origineId == this.origineId &&
+          other.rifiutatoIl == this.rifiutatoIl);
+}
+
+class ContenutiRifiutatiCompanion extends UpdateCompanion<ContenutoRifiutato> {
+  final Value<int> id;
+  final Value<String> origineId;
+  final Value<DateTime> rifiutatoIl;
+  const ContenutiRifiutatiCompanion({
+    this.id = const Value.absent(),
+    this.origineId = const Value.absent(),
+    this.rifiutatoIl = const Value.absent(),
+  });
+  ContenutiRifiutatiCompanion.insert({
+    this.id = const Value.absent(),
+    required String origineId,
+    required DateTime rifiutatoIl,
+  }) : origineId = Value(origineId),
+       rifiutatoIl = Value(rifiutatoIl);
+  static Insertable<ContenutoRifiutato> custom({
+    Expression<int>? id,
+    Expression<String>? origineId,
+    Expression<DateTime>? rifiutatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (origineId != null) 'origine_id': origineId,
+      if (rifiutatoIl != null) 'rifiutato_il': rifiutatoIl,
+    });
+  }
+
+  ContenutiRifiutatiCompanion copyWith({
+    Value<int>? id,
+    Value<String>? origineId,
+    Value<DateTime>? rifiutatoIl,
+  }) {
+    return ContenutiRifiutatiCompanion(
+      id: id ?? this.id,
+      origineId: origineId ?? this.origineId,
+      rifiutatoIl: rifiutatoIl ?? this.rifiutatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (origineId.present) {
+      map['origine_id'] = Variable<String>(origineId.value);
+    }
+    if (rifiutatoIl.present) {
+      map['rifiutato_il'] = Variable<DateTime>(rifiutatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContenutiRifiutatiCompanion(')
+          ..write('id: $id, ')
+          ..write('origineId: $origineId, ')
+          ..write('rifiutatoIl: $rifiutatoIl')
           ..write(')'))
         .toString();
   }
@@ -2125,6 +3031,9 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   late final $MisureCorpoTable misureCorpo = $MisureCorpoTable(this);
   late final $FotoProgressiTable fotoProgressi = $FotoProgressiTable(this);
   late final $SchedeRicevuteTable schedeRicevute = $SchedeRicevuteTable(this);
+  late final $PianiRicevutiTable pianiRicevuti = $PianiRicevutiTable(this);
+  late final $ContenutiRifiutatiTable contenutiRifiutati =
+      $ContenutiRifiutatiTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2135,6 +3044,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     misureCorpo,
     fotoProgressi,
     schedeRicevute,
+    pianiRicevuti,
+    contenutiRifiutati,
   ];
 }
 
@@ -3044,7 +3955,9 @@ typedef $$SchedeRicevuteTableCreateCompanionBuilder =
       required int mittenteId,
       required String nome,
       required String scheda,
+      Value<String?> origineId,
       required DateTime ricevutaIl,
+      Value<DateTime?> aggiornatoIl,
     });
 typedef $$SchedeRicevuteTableUpdateCompanionBuilder =
     SchedeRicevuteCompanion Function({
@@ -3053,7 +3966,9 @@ typedef $$SchedeRicevuteTableUpdateCompanionBuilder =
       Value<int> mittenteId,
       Value<String> nome,
       Value<String> scheda,
+      Value<String?> origineId,
       Value<DateTime> ricevutaIl,
+      Value<DateTime?> aggiornatoIl,
     });
 
 class $$SchedeRicevuteTableFilterComposer
@@ -3090,8 +4005,18 @@ class $$SchedeRicevuteTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get ricevutaIl => $composableBuilder(
     column: $table.ricevutaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3130,8 +4055,18 @@ class $$SchedeRicevuteTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get ricevutaIl => $composableBuilder(
     column: $table.ricevutaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -3164,8 +4099,16 @@ class $$SchedeRicevuteTableAnnotationComposer
   GeneratedColumn<String> get scheda =>
       $composableBuilder(column: $table.scheda, builder: (column) => column);
 
+  GeneratedColumn<String> get origineId =>
+      $composableBuilder(column: $table.origineId, builder: (column) => column);
+
   GeneratedColumn<DateTime> get ricevutaIl => $composableBuilder(
     column: $table.ricevutaIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
     builder: (column) => column,
   );
 }
@@ -3212,14 +4155,18 @@ class $$SchedeRicevuteTableTableManager
                 Value<int> mittenteId = const Value.absent(),
                 Value<String> nome = const Value.absent(),
                 Value<String> scheda = const Value.absent(),
+                Value<String?> origineId = const Value.absent(),
                 Value<DateTime> ricevutaIl = const Value.absent(),
+                Value<DateTime?> aggiornatoIl = const Value.absent(),
               }) => SchedeRicevuteCompanion(
                 id: id,
                 messaggioId: messaggioId,
                 mittenteId: mittenteId,
                 nome: nome,
                 scheda: scheda,
+                origineId: origineId,
                 ricevutaIl: ricevutaIl,
+                aggiornatoIl: aggiornatoIl,
               ),
           createCompanionCallback:
               ({
@@ -3228,14 +4175,18 @@ class $$SchedeRicevuteTableTableManager
                 required int mittenteId,
                 required String nome,
                 required String scheda,
+                Value<String?> origineId = const Value.absent(),
                 required DateTime ricevutaIl,
+                Value<DateTime?> aggiornatoIl = const Value.absent(),
               }) => SchedeRicevuteCompanion.insert(
                 id: id,
                 messaggioId: messaggioId,
                 mittenteId: mittenteId,
                 nome: nome,
                 scheda: scheda,
+                origineId: origineId,
                 ricevutaIl: ricevutaIl,
+                aggiornatoIl: aggiornatoIl,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -3262,6 +4213,442 @@ typedef $$SchedeRicevuteTableProcessedTableManager =
       SchedaRicevuta,
       PrefetchHooks Function()
     >;
+typedef $$PianiRicevutiTableCreateCompanionBuilder =
+    PianiRicevutiCompanion Function({
+      Value<int> id,
+      required int messaggioId,
+      required int mittenteId,
+      Value<String?> origineId,
+      required String nome,
+      required String piano,
+      required DateTime ricevutaIl,
+      Value<DateTime?> aggiornatoIl,
+    });
+typedef $$PianiRicevutiTableUpdateCompanionBuilder =
+    PianiRicevutiCompanion Function({
+      Value<int> id,
+      Value<int> messaggioId,
+      Value<int> mittenteId,
+      Value<String?> origineId,
+      Value<String> nome,
+      Value<String> piano,
+      Value<DateTime> ricevutaIl,
+      Value<DateTime?> aggiornatoIl,
+    });
+
+class $$PianiRicevutiTableFilterComposer
+    extends Composer<_$ArchivioSalute, $PianiRicevutiTable> {
+  $$PianiRicevutiTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get messaggioId => $composableBuilder(
+    column: $table.messaggioId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mittenteId => $composableBuilder(
+    column: $table.mittenteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get piano => $composableBuilder(
+    column: $table.piano,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ricevutaIl => $composableBuilder(
+    column: $table.ricevutaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PianiRicevutiTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $PianiRicevutiTable> {
+  $$PianiRicevutiTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get messaggioId => $composableBuilder(
+    column: $table.messaggioId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mittenteId => $composableBuilder(
+    column: $table.mittenteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get piano => $composableBuilder(
+    column: $table.piano,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ricevutaIl => $composableBuilder(
+    column: $table.ricevutaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PianiRicevutiTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $PianiRicevutiTable> {
+  $$PianiRicevutiTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get messaggioId => $composableBuilder(
+    column: $table.messaggioId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mittenteId => $composableBuilder(
+    column: $table.mittenteId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get origineId =>
+      $composableBuilder(column: $table.origineId, builder: (column) => column);
+
+  GeneratedColumn<String> get nome =>
+      $composableBuilder(column: $table.nome, builder: (column) => column);
+
+  GeneratedColumn<String> get piano =>
+      $composableBuilder(column: $table.piano, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get ricevutaIl => $composableBuilder(
+    column: $table.ricevutaIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => column,
+  );
+}
+
+class $$PianiRicevutiTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $PianiRicevutiTable,
+          PianoRicevuto,
+          $$PianiRicevutiTableFilterComposer,
+          $$PianiRicevutiTableOrderingComposer,
+          $$PianiRicevutiTableAnnotationComposer,
+          $$PianiRicevutiTableCreateCompanionBuilder,
+          $$PianiRicevutiTableUpdateCompanionBuilder,
+          (
+            PianoRicevuto,
+            BaseReferences<
+              _$ArchivioSalute,
+              $PianiRicevutiTable,
+              PianoRicevuto
+            >,
+          ),
+          PianoRicevuto,
+          PrefetchHooks Function()
+        > {
+  $$PianiRicevutiTableTableManager(
+    _$ArchivioSalute db,
+    $PianiRicevutiTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PianiRicevutiTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PianiRicevutiTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PianiRicevutiTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> messaggioId = const Value.absent(),
+                Value<int> mittenteId = const Value.absent(),
+                Value<String?> origineId = const Value.absent(),
+                Value<String> nome = const Value.absent(),
+                Value<String> piano = const Value.absent(),
+                Value<DateTime> ricevutaIl = const Value.absent(),
+                Value<DateTime?> aggiornatoIl = const Value.absent(),
+              }) => PianiRicevutiCompanion(
+                id: id,
+                messaggioId: messaggioId,
+                mittenteId: mittenteId,
+                origineId: origineId,
+                nome: nome,
+                piano: piano,
+                ricevutaIl: ricevutaIl,
+                aggiornatoIl: aggiornatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int messaggioId,
+                required int mittenteId,
+                Value<String?> origineId = const Value.absent(),
+                required String nome,
+                required String piano,
+                required DateTime ricevutaIl,
+                Value<DateTime?> aggiornatoIl = const Value.absent(),
+              }) => PianiRicevutiCompanion.insert(
+                id: id,
+                messaggioId: messaggioId,
+                mittenteId: mittenteId,
+                origineId: origineId,
+                nome: nome,
+                piano: piano,
+                ricevutaIl: ricevutaIl,
+                aggiornatoIl: aggiornatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PianiRicevutiTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $PianiRicevutiTable,
+      PianoRicevuto,
+      $$PianiRicevutiTableFilterComposer,
+      $$PianiRicevutiTableOrderingComposer,
+      $$PianiRicevutiTableAnnotationComposer,
+      $$PianiRicevutiTableCreateCompanionBuilder,
+      $$PianiRicevutiTableUpdateCompanionBuilder,
+      (
+        PianoRicevuto,
+        BaseReferences<_$ArchivioSalute, $PianiRicevutiTable, PianoRicevuto>,
+      ),
+      PianoRicevuto,
+      PrefetchHooks Function()
+    >;
+typedef $$ContenutiRifiutatiTableCreateCompanionBuilder =
+    ContenutiRifiutatiCompanion Function({
+      Value<int> id,
+      required String origineId,
+      required DateTime rifiutatoIl,
+    });
+typedef $$ContenutiRifiutatiTableUpdateCompanionBuilder =
+    ContenutiRifiutatiCompanion Function({
+      Value<int> id,
+      Value<String> origineId,
+      Value<DateTime> rifiutatoIl,
+    });
+
+class $$ContenutiRifiutatiTableFilterComposer
+    extends Composer<_$ArchivioSalute, $ContenutiRifiutatiTable> {
+  $$ContenutiRifiutatiTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get rifiutatoIl => $composableBuilder(
+    column: $table.rifiutatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ContenutiRifiutatiTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $ContenutiRifiutatiTable> {
+  $$ContenutiRifiutatiTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get rifiutatoIl => $composableBuilder(
+    column: $table.rifiutatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ContenutiRifiutatiTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $ContenutiRifiutatiTable> {
+  $$ContenutiRifiutatiTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get origineId =>
+      $composableBuilder(column: $table.origineId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get rifiutatoIl => $composableBuilder(
+    column: $table.rifiutatoIl,
+    builder: (column) => column,
+  );
+}
+
+class $$ContenutiRifiutatiTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $ContenutiRifiutatiTable,
+          ContenutoRifiutato,
+          $$ContenutiRifiutatiTableFilterComposer,
+          $$ContenutiRifiutatiTableOrderingComposer,
+          $$ContenutiRifiutatiTableAnnotationComposer,
+          $$ContenutiRifiutatiTableCreateCompanionBuilder,
+          $$ContenutiRifiutatiTableUpdateCompanionBuilder,
+          (
+            ContenutoRifiutato,
+            BaseReferences<
+              _$ArchivioSalute,
+              $ContenutiRifiutatiTable,
+              ContenutoRifiutato
+            >,
+          ),
+          ContenutoRifiutato,
+          PrefetchHooks Function()
+        > {
+  $$ContenutiRifiutatiTableTableManager(
+    _$ArchivioSalute db,
+    $ContenutiRifiutatiTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContenutiRifiutatiTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ContenutiRifiutatiTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ContenutiRifiutatiTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> origineId = const Value.absent(),
+                Value<DateTime> rifiutatoIl = const Value.absent(),
+              }) => ContenutiRifiutatiCompanion(
+                id: id,
+                origineId: origineId,
+                rifiutatoIl: rifiutatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String origineId,
+                required DateTime rifiutatoIl,
+              }) => ContenutiRifiutatiCompanion.insert(
+                id: id,
+                origineId: origineId,
+                rifiutatoIl: rifiutatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ContenutiRifiutatiTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $ContenutiRifiutatiTable,
+      ContenutoRifiutato,
+      $$ContenutiRifiutatiTableFilterComposer,
+      $$ContenutiRifiutatiTableOrderingComposer,
+      $$ContenutiRifiutatiTableAnnotationComposer,
+      $$ContenutiRifiutatiTableCreateCompanionBuilder,
+      $$ContenutiRifiutatiTableUpdateCompanionBuilder,
+      (
+        ContenutoRifiutato,
+        BaseReferences<
+          _$ArchivioSalute,
+          $ContenutiRifiutatiTable,
+          ContenutoRifiutato
+        >,
+      ),
+      ContenutoRifiutato,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -3276,4 +4663,8 @@ class $ArchivioSaluteManager {
       $$FotoProgressiTableTableManager(_db, _db.fotoProgressi);
   $$SchedeRicevuteTableTableManager get schedeRicevute =>
       $$SchedeRicevuteTableTableManager(_db, _db.schedeRicevute);
+  $$PianiRicevutiTableTableManager get pianiRicevuti =>
+      $$PianiRicevutiTableTableManager(_db, _db.pianiRicevuti);
+  $$ContenutiRifiutatiTableTableManager get contenutiRifiutati =>
+      $$ContenutiRifiutatiTableTableManager(_db, _db.contenutiRifiutati);
 }

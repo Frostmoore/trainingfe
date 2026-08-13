@@ -7,6 +7,7 @@ import '../../../core/crypto/contenuto_messaggio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../nutrition/compositore_piano_controller.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 
@@ -216,6 +217,47 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     }
   }
 
+  /// «Manda un piano alimentare» — G8.2, G8.3.
+  ///
+  /// ── 🚨 Lo spoglio del «Rif. Allievo», che è la parte da non dimenticare ──
+  ///
+  /// Il piano arriva dal server **con** `rif_allievo`, perché chi lo sta
+  /// mandando è chi l'ha scritto e quindi lo vede (R4). ⚠️ Ma quel campo è
+  /// l'etichetta privata del trainer: mandarla vorrebbe dire mostrare
+  /// all'allievo come lo si chiama negli appunti.
+  ///
+  /// 💡 Va tolto **qui**, nell'app, e non basta che il server non lo mandi agli
+  /// altri: il trainer **è** l'autore, il campo ce l'ha, ed è lui che spedisce.
+  Future<void> _allegaPiano() async {
+    final piano = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _SceltaPiano(),
+    );
+
+    if (piano == null || !mounted) return;
+
+    setState(() => _inCorso = true);
+
+    try {
+      // 🚨 R4 — la copia che parte non ha il promemoria di chi l'ha scritta.
+      final perLAllievo = Map<String, dynamic>.from(piano)..remove('rif_allievo');
+
+      await ref
+          .read(threadProvider(widget.id).notifier)
+          .inviaContenuto(ContenutoPianoAlimentare(perLAllievo));
+      _inFondo();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Piano non inviato. Riprova.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
   /// «Manda una scheda» — S7.3.
   ///
   /// 🎯 Non c'è nessun endpoint di assegnazione, nessun caricamento a parte,
@@ -317,6 +359,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       onPressed: _inCorso ? null : _allega,
                       icon: const Icon(Icons.assignment_outlined),
                       tooltip: 'Manda una scheda',
+                    ),
+                  // 🆕 G8.2 — e un piano alimentare. `ContenutoPianoAlimentare`
+                  // esisteva da S7 e **non lo mandava nessuno**: mancava solo
+                  // il posto da cui sceglierlo.
+                  if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+                    IconButton(
+                      onPressed: _inCorso ? null : _allegaPiano,
+                      icon: const Icon(Icons.restaurant_menu_outlined),
+                      tooltip: 'Manda un piano alimentare',
                     ),
                   Expanded(
                     child: TextField(
@@ -431,6 +482,57 @@ class _SceltaModello extends ConsumerWidget {
                       esercizi == 1 ? '1 esercizio' : '$esercizi esercizi',
                     ),
                     onTap: () => Navigator.of(context).pop(m),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+}
+
+/// L'elenco dei piani alimentari da cui il trainer sceglie — G8.2.
+///
+/// 🚨 Gemello di `_SceltaModello`, e con lo stesso rischio: `G0.2` ha misurato
+/// che di modelli di scheda in staging non ce n'era **nemmeno uno**, quindi
+/// quella lista era vuota da sempre. Questa nasce dopo `G7`, cioè dopo che un
+/// posto dove scrivere i piani esiste.
+class _SceltaPiano extends ConsumerWidget {
+  const _SceltaPiano();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final piani = ref.watch(mieiPianiTemplateProvider);
+
+    return SafeArea(
+      child: piani.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(Gap.lg),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.all(Gap.lg),
+          child: Text('Non riesco a leggere i piani.\n$e'),
+        ),
+        data: (List<Map<String, dynamic>> elenco) => elenco.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(Gap.lg),
+                child: Text(
+                  'Non hai ancora scritto nessun piano. Vai nel profilo, '
+                  '«I miei piani alimentari», e poi da qui lo mandi.',
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: elenco.length,
+                itemBuilder: (context, i) {
+                  final p = elenco[i];
+                  final giorni = (p['days'] as List?)?.length ?? 0;
+
+                  return ListTile(
+                    leading: const Icon(Icons.restaurant_menu_outlined),
+                    title: Text(p['name']?.toString() ?? 'Piano'),
+                    subtitle: Text(giorni == 1 ? '1 giorno' : '$giorni giorni'),
+                    onTap: () => Navigator.of(context).pop(p),
                   );
                 },
               ),

@@ -20,6 +20,22 @@ final mieiPianiProvider = FutureProvider.autoDispose<List<PianoAlimentare>>((ref
       .toList(growable: false);
 });
 
+/// I **modelli** da mandare in chat — G8.2.
+///
+/// 🚨 Torna la forma grezza (`Map`) e non `PianoAlimentare`, ed è voluto: quello
+/// che parte dentro la busta è **il JSON del server**, non una sua traduzione.
+/// Passare dal modello dell'app e ritornare indietro vorrebbe dire che un campo
+/// che l'app non conosce si perde per strada — e chi lo riceve non saprebbe mai
+/// che c'era.
+final mieiPianiTemplateProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final dati = await ref
+          .watch(apiClientProvider)
+          .get<List<dynamic>>('/nutrition-plans/templates');
+
+      return dati.map((e) => (e as Map).cast<String, dynamic>()).toList();
+    });
+
 /// Un piano per intero, con giorni, pasti e alimenti.
 final pianoProvider = FutureProvider.autoDispose.family<PianoAlimentare, int>((ref, id) async {
   final dati = await ref

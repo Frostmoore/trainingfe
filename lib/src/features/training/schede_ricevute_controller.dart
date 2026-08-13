@@ -60,6 +60,7 @@ class AzioniSchede {
       mittenteId: mittenteId,
       nome: contenuto.titolo,
       scheda: json.encode(contenuto.scheda),
+      origineId: contenuto.origineId,
     );
 
     _ref.read(revisioneSchedeProvider.notifier).state++;
@@ -73,6 +74,38 @@ class AzioniSchede {
 }
 
 final azioniSchedeProvider = Provider<AzioniSchede>(AzioniSchede.new);
+
+/// I piani alimentari arrivati dal trainer via chat — G8.5.
+///
+/// 🚨 **Vivono sul telefono**, come le schede e per la stessa ragione: da un
+/// piano si capisce molto di chi lo segue, e il legame fra la persona e il piano
+/// sul server non ci arriva mai (D4).
+final pianiRicevutiProvider =
+    FutureProvider.autoDispose<List<PianoRicevuto>>((ref) async {
+      ref.watch(revisioneSchedeProvider);
+
+      return ref.watch(archivioSaluteProvider).piani();
+    });
+
+class AzioniPianiRicevuti {
+  const AzioniPianiRicevuti(this._ref);
+
+  final Ref _ref;
+
+  /// Butta un piano — e **ricorda che e' stato buttato**.
+  ///
+  /// 🚨 Senza la seconda meta', il salvataggio automatico di G8.8 glielo
+  /// rimetterebbe davanti al messaggio successivo, e l'allievo lo butterebbe di
+  /// nuovo. Per sempre.
+  Future<void> butta(int id) async {
+    await _ref.read(archivioSaluteProvider).dimenticaPiano(id);
+
+    _ref.read(revisioneSchedeProvider.notifier).state++;
+  }
+}
+
+final azioniPianiRicevutiProvider =
+    Provider<AzioniPianiRicevuti>(AzioniPianiRicevuti.new);
 
 /// I modelli della palestra — solo per chi allena.
 ///

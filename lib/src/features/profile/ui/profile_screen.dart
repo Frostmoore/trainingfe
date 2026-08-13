@@ -151,6 +151,22 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push(AppRoutes.mieiUtenti),
                   ),
                   const Divider(height: 1),
+
+                  /*
+                   * G7 — l'autore dei piani alimentari.
+                   *
+                   * 💡 Sta accanto a «i miei utenti» e non in una scheda in
+                   * fondo: chi allena resta prima di tutto un atleta, e una
+                   * scheda in più cambierebbe l'app a tutti per servirne pochi.
+                   */
+                  ListTile(
+                    leading: const Icon(Icons.restaurant_menu_outlined),
+                    title: const Text('I miei piani alimentari'),
+                    subtitle: const Text('Scrivili qui, poi mandali dalla chat'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.mieiPiani),
+                  ),
+                  const Divider(height: 1),
                 ],
 
                 ListTile(

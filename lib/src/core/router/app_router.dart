@@ -15,6 +15,8 @@ import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
+import '../../features/nutrition/ui/compositore_piano.dart';
+import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
 import '../../features/privacy/ui/schermata_consensi.dart';
@@ -80,6 +82,15 @@ class AppRoutes {
   /// Una scheda in più la trasformerebbe in un pannello di gestione con dentro
   /// anche il diario, che è il contrario di come questa app viene usata.
   static const mieiUtenti = '/profilo/i-miei-utenti';
+
+  /// I piani alimentari scritti dal trainer — G7.
+  ///
+  /// 💡 Sotto `/profilo` come «i miei utenti», e per la stessa ragione: chi
+  /// allena resta prima di tutto un atleta, e una scheda in piu' in fondo
+  /// cambierebbe l'app a tutti per servirne pochi.
+  static const mieiPiani = '/profilo/i-miei-piani';
+
+  static const compositorePiano = '/profilo/i-miei-piani/nuovo';
 
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
@@ -285,6 +296,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.mieiUtenti,
         builder: (_, _) => const PortaDelleChiavi(child: MieiUtentiScreen()),
+      ),
+
+      /*
+       * G7 — l'autore dei piani alimentari.
+       *
+       * 🚨 **Anche questi dentro `PortaDelleChiavi`**, e non per abitudine: da
+       * qui si compone cio' che poi si manda via chat, e mandarlo richiede le
+       * chiavi. Chiederle al momento dell'invio vorrebbe dire fermare qualcuno
+       * che ha appena finito di scrivere un piano.
+       *
+       * ⚠️ `/nuovo` **prima** di `/:id`: go_router prende la prima che combacia,
+       * e con l'ordine inverso «nuovo» finirebbe come id.
+       */
+      GoRoute(
+        path: AppRoutes.mieiPiani,
+        builder: (_, _) => const PortaDelleChiavi(child: MieiPianiScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.compositorePiano,
+        builder: (_, _) => const PortaDelleChiavi(child: CompositorePiano()),
+      ),
+      GoRoute(
+        path: '${AppRoutes.mieiPiani}/:id',
+        builder: (_, stato) => PortaDelleChiavi(
+          child: CompositorePiano(
+            pianoId: int.tryParse(stato.pathParameters['id'] ?? ''),
+          ),
+        ),
       ),
 
       // ── Fase C ────────────────────────────────────────────────────────

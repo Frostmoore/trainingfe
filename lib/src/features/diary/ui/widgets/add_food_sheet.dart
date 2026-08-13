@@ -7,6 +7,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../core/media/photo_picker.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../auth/auth_controller.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../data/stima_ai.dart';
 import '../../diary_controller.dart';
@@ -213,7 +214,24 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   Widget build(BuildContext context) {
     final azioni = ref.read(diaryActionsProvider);
     final consensi = ref.watch(consensiProvider);
-    final aiOk = _aiPermessa(consensi);
+
+    /*
+     * 🚨 **Due motivi diversi per cui l'AI può non esserci, e due schermate
+     * diverse** — difetto riferito il 13/08/2026.
+     *
+     * *«La stima da testo mi dice correttamente che non ho le funzioni AI, ma
+     * me lo dovrebbe proprio mostrare come disattivato.»*
+     *
+     * ⚠️ Prima l'unico caso previsto era il **consenso**. Con F4 se n'è
+     * aggiunto un secondo — il **piano** — e senza distinguerli l'app avrebbe
+     * mandato ai consensi chi ha già acconsentito e deve invece cambiare piano.
+     *
+     * 💡 L'ordine è quello del server (`ai.plan` prima di `ai.consent`): se il
+     * piano non comprende l'AI, chiedere il consenso non serve a niente.
+     */
+    final pianoOk = ref.watch(authControllerProvider).user?.aiAbilitata ?? true;
+    final consensoOk = _aiPermessa(consensi);
+    final aiOk = pianoOk && consensoOk;
 
     /*
      * ⚠️ Se l'AI non c'è, si parte da «A mano» invece che dalla scheda
@@ -234,12 +252,46 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          /*
+           * 🚨 **Le due linguette dell'AI si vedono spente** — 13/08/2026.
+           *
+           * ⚠️ Prima erano identiche alle altre e il rifiuto arrivava **dopo**
+           * aver scritto la frase: si compilava un campo per sentirsi dire di
+           * no. Grigie in partenza, la risposta c'è **prima** del gesto.
+           *
+           * 💡 Restano toccabili di proposito: chi le tocca trova la
+           * spiegazione e il pulsante per andare avanti a mano. Toglierle
+           * lascerebbe due funzioni sparite senza dire perché — e chi le ha
+           * viste ieri penserebbe a un guasto.
+           */
           TabBar(
             controller: _tabs,
-            tabs: const [
-              Tab(icon: Icon(Icons.auto_awesome_outlined), text: 'Scrivi'),
-              Tab(icon: Icon(Icons.photo_camera_outlined), text: 'Foto'),
-              Tab(icon: Icon(Icons.edit_outlined), text: 'A mano'),
+            tabs: [
+              Tab(
+                icon: Icon(
+                  aiOk ? Icons.auto_awesome_outlined : Icons.auto_awesome_outlined,
+                  color: aiOk ? null : Theme.of(context).colorScheme.outline,
+                ),
+                child: Text(
+                  'Scrivi',
+                  style: aiOk
+                      ? null
+                      : TextStyle(color: Theme.of(context).colorScheme.outline),
+                ),
+              ),
+              Tab(
+                icon: Icon(
+                  Icons.photo_camera_outlined,
+                  color: aiOk ? null : Theme.of(context).colorScheme.outline,
+                ),
+                child: Text(
+                  'Foto',
+                  style: aiOk
+                      ? null
+                      : TextStyle(color: Theme.of(context).colorScheme.outline),
+                ),
+              ),
+              const Tab(icon: Icon(Icons.edit_outlined), text: 'A mano'),
             ],
           ),
 
@@ -260,7 +312,11 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
               children: [
                 if (consensi.isLoading)
                   const Center(child: CircularProgressIndicator())
-                else if (!aiOk)
+                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
+                // non è compresa, chiedere il consenso non serve a niente.
+                else if (!pianoOk)
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(2))
+                else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
                   _Testo(
@@ -274,7 +330,11 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
 
                 if (consensi.isLoading)
                   const Center(child: CircularProgressIndicator())
-                else if (!aiOk)
+                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
+                // non è compresa, chiedere il consenso non serve a niente.
+                else if (!pianoOk)
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(2))
+                else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
                   _Foto(
@@ -320,6 +380,68 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
 /// ⚠️ Il pulsante porta ai consensi e **non** accende niente da qui: il
 /// consenso si concede dalla schermata che lo spiega, non da un foglio in cui
 /// si stava facendo altro. Un consenso raccolto di sfuggita non è «informato».
+/// «Il tuo piano non comprende l'AI» — F4, difetto riferito il 13/08/2026.
+///
+/// ── 🚨 Perché non basta il `403` del server ────────────────────────────────
+///
+/// *«Mi dice correttamente che non ho le funzioni AI, ma me lo dovrebbe proprio
+/// mostrare come disattivato: quando cerco di inserire un alimento mi deve dire
+/// "non hai accesso alle funzioni AI, inserisci a mano" e mandarmi
+/// all'inserimento manuale.»*
+///
+/// ⚠️ Un rifiuto che arriva **dopo** aver scritto la frase è un modulo
+/// compilato per niente. E soprattutto **lascia lì**: la persona voleva
+/// registrare quello che ha mangiato, e si ritrova con un errore e nessuna
+/// strada.
+///
+/// 💡 Per questo il pulsante non porta al listino ma **all'inserimento
+/// manuale**: la cosa che quella persona stava cercando di fare è registrare un
+/// pasto, non comprare un abbonamento. Il listino è una riga sotto, per chi
+/// vuole.
+class _SenzaPianoAi extends StatelessWidget {
+  const _SenzaPianoAi({required this.onInserisciAMano});
+
+  final VoidCallback onInserisciAMano;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(Gap.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.auto_awesome_outlined, size: 40, color: theme.colorScheme.outline),
+          const SizedBox(height: Gap.md),
+          Text(
+            'Non hai accesso alle funzioni AI',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(
+            'La stima da una frase o da una foto è compresa nei piani a '
+            'pagamento. Puoi comunque registrare quello che hai mangiato '
+            'inserendolo a mano.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Gap.md),
+
+          // 🚨 La via d'uscita è **fare la cosa che si stava facendo**, non
+          // comprare qualcosa.
+          FilledButton.tonalIcon(
+            onPressed: onInserisciAMano,
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Inserisci a mano'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SenzaConsensoAi extends StatelessWidget {
   const _SenzaConsensoAi();
 

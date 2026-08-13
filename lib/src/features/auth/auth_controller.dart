@@ -7,6 +7,7 @@ import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/sicurezza/blocco_biometrico.dart';
 import '../../core/storage/archivio_salute.dart';
+import '../../core/storage/local_cache.dart';
 import '../../core/storage/token_store.dart';
 import '../../core/tempo/fuso_del_dispositivo.dart';
 import '../health/health_controller.dart';
@@ -60,8 +61,13 @@ class AuthState {
 
 /// Chi è l'utente, e cosa succede quando smette di esserlo — A2.3 / A2.4.
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._api, this._tokens, [this._archivio, this._blocco])
-    : super(const AuthState.unknown()) {
+  AuthController(
+    this._api,
+    this._tokens, [
+    this._archivio,
+    this._blocco,
+    this._cache,
+  ]) : super(const AuthState.unknown()) {
     // 🚨 Il 401 arriva da **qualunque** richiesta, non solo da quelle di
     // autenticazione: una schermata qualsiasi può essere la prima ad accorgersi
     // che la sessione è morta. Ascoltare lo stream centrale è ciò che evita di
@@ -88,7 +94,47 @@ class AuthController extends StateNotifier<AuthState> {
   /// comportamento di prima di A1.
   final BloccoBiometrico? _blocco;
 
+  /// La cache in chiaro, per ricordare **chi c'era prima** su questo telefono.
+  ///
+  /// ⚠️ Facoltativa come le altre due, e per lo stesso motivo: i test del
+  /// controller non hanno `shared_preferences` sotto. `null` = nessuna pulizia
+  /// al cambio di persona, cioè il comportamento di prima.
+  final LocalCache? _cache;
+
   StreamSubscription<void>? _sessionSub;
+
+  /// 🚨 **Il telefono ha cambiato padrone: si azzera l'archivio locale.**
+  ///
+  /// ── Perché qui e non al logout ─────────────────────────────────────────
+  ///
+  /// Fino al 13/08/2026 l'archivio si svuotava a **ogni** uscita, per proteggere
+  /// il telefono condiviso — la tavoletta della reception, il telefono di
+  /// famiglia. ⚠️ La preoccupazione era giusta e il momento sbagliato: chi esce
+  /// e rientra sul **proprio** telefono perdeva mesi di storico, e peso e misure
+  /// inseriti a mano **non tornano** da Health Connect.
+  ///
+  /// 💡 Spostata qui, la protezione fa esattamente la stessa cosa nel caso che
+  /// contava — *entra una persona diversa* — e nessuna in quello che non
+  /// c'entrava.
+  ///
+  /// 🚨 **Prima di scrivere, non dopo**: la pulizia deve finire mentre lo stato
+  /// è ancora `unknown`, cioè prima che una qualunque schermata abbia potuto
+  /// leggere l'archivio della persona precedente.
+  Future<void> _puliziaSeCambiaPersona(AppUser? utente) async {
+    if (_cache == null || utente == null) return;
+
+    final precedente = _cache.ultimaPersona;
+
+    if (precedente != null && precedente != utente.id) {
+      try {
+        await _archivio?.svuota();
+      } on Object {
+        // Come altrove: peggio fallire la pulizia che bloccare l'accesso.
+      }
+    }
+
+    await _cache.setUltimaPersona(utente.id);
+  }
 
   /// Legge il token salvato e chiede al server chi siamo.
   ///
@@ -307,7 +353,16 @@ class AuthController extends StateNotifier<AuthState> {
   /// Serve dopo l'eliminazione dell'account: il token è già stato revocato, e
   /// una `logout()` farebbe una chiamata destinata a un 401. Il router reagisce
   /// al cambio di stato e riporta all'accesso.
-  Future<void> forgetSession() => _forgetSession();
+  ///
+  /// 🚨 **Qui l'archivio locale si svuota davvero, ed è l'unico caso** (S9.3).
+  /// Chi cancella l'account ha chiesto di sparire: il server cancella ciò che
+  /// ha, e **non ha** peso, misure, sonno e battito — quelli vivono qui. Senza
+  /// questa riga i dati più personali del sistema sopravvivrebbero a una
+  /// cancellazione.
+  ///
+  /// ⚠️ Da non confondere con `logout()`, che **non** cancella niente: la
+  /// differenza fra «esco» e «sparisco» è tutta in questo parametro.
+  Future<void> forgetSession() => _forgetSession(cancellaIDati: true);
 
   // ───────────────────────── interni ─────────────────────────
 
@@ -333,11 +388,15 @@ class AuthController extends StateNotifier<AuthState> {
     // salutava nessuno. Difetto invisibile a chi riapriva l'app, cioè a chi
     // provava — che è esattamente il motivo per cui è sopravvissuto.
     final utente = data['data'];
+    final persona = utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null;
 
-    state = AuthState(
-      status: AuthStatus.loggedIn,
-      user: utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null,
-    );
+    // 🚨 **Prima di dichiarare la sessione aperta.** Se la pulizia avvenisse
+    // dopo, per un istante lo stato sarebbe `loggedIn` con dentro l'archivio
+    // della persona precedente — e basta una schermata che si ricostruisce in
+    // quel momento perché quei dati si vedano.
+    await _puliziaSeCambiaPersona(persona);
+
+    state = AuthState(status: AuthStatus.loggedIn, user: persona);
   }
 
   Future<void> _loadMe() async {
@@ -349,11 +408,14 @@ class AuthController extends StateNotifier<AuthState> {
       );
 
       final utente = risposta['data'];
+      final persona = utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null;
 
-      state = AuthState(
-        status: AuthStatus.loggedIn,
-        user: utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null,
-      );
+      // ⚠️ Anche qui, e **prima** dello stato: `restore()` passa da questa
+      // strada, quindi è il punto in cui un telefono che ha cambiato padrone se
+      // ne accorge alla riapertura dell'app e non solo al login esplicito.
+      await _puliziaSeCambiaPersona(persona);
+
+      state = AuthState(status: AuthStatus.loggedIn, user: persona);
 
       unawaited(_sincronizzaFuso());
     } on Object catch (error) {
@@ -409,7 +471,7 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> _forgetSession() async {
+  Future<void> _forgetSession({bool cancellaIDati = false}) async {
     await _tokens.clear();
 
     /*
@@ -418,24 +480,48 @@ class AuthController extends StateNotifier<AuthState> {
      * Dopo S1-S5 peso, misure, sonno, HRV e battito **non stanno più sul
      * server**: vivono qui, in un database SQLite. Quando qualcuno cancella il
      * proprio account, `AccountEraser` fa il suo lavoro su ciò che ha — ⚠️ e
-     * **il server non può cancellare quello che non ha**. Senza questa riga, i
-     * dati più personali del sistema sopravvivrebbero a una cancellazione,
-     * proprio come faceva `health_readings`.
+     * **il server non può cancellare quello che non ha**. Senza questo
+     * svuotamento, i dati più personali del sistema sopravvivrebbero a una
+     * cancellazione, proprio come faceva `health_readings`.
      *
-     * ⚠️ **Vale anche al logout, e non è eccesso di zelo**: su un telefono
-     * condiviso — la tavoletta della reception, il telefono di famiglia — «esci»
-     * deve voler dire che la persona dopo non trova il peso e il diario di
-     * quella prima. L'archivio si ripopola da Health Connect in pochi secondi
-     * per chi rientra.
+     * ── 🚨 Ma NON al logout. Difetto riferito il 13/08/2026 ────────────────
+     *
+     * *«Anche se non ho cambiato dispositivo, quando sono uscito mi ha
+     * cancellato tutti i dati di peso, altezza eccetera nonché tutti i dati di
+     * Health Connect, che ho dovuto risincronizzare a mano.»*
+     *
+     * Qui c'era uno svuotamento **incondizionato**, con questa motivazione: su
+     * un telefono condiviso «esci» deve voler dire che la persona dopo non
+     * trova il peso di quella prima.
+     *
+     * ⚠️ **La preoccupazione è giusta, il momento era sbagliato.** Uscire dal
+     * proprio account sul **proprio** telefono è la cosa più normale del mondo
+     * — lo si fa per rientrare —, e pagarla con la perdita di mesi di storico
+     * è un prezzo che nessuno si aspetta. E la riga «si ripopola da Health
+     * Connect in pochi secondi» era **falsa**: peso e misure inseriti a mano
+     * non stanno in Health Connect, e non tornano da nessuna parte.
+     *
+     * 💡 **La protezione del telefono condiviso resta, spostata dove serve**:
+     * l'archivio si svuota quando entra **una persona diversa** (vedi
+     * `_puliziaSeCambiaPersona()`). Chi esce e rientra ritrova i suoi dati;
+     * chi trova il telefono di un altro non vede niente di suo. È lo stesso
+     * risultato, senza il danno collaterale.
      *
      * 🚨 L'eccezione si cattura: un guasto del database locale **non deve
      * lasciare qualcuno dentro l'app** con la sessione già cancellata. Peggio
      * fallire la pulizia che bloccare l'uscita.
      */
-    try {
-      await _archivio?.svuota();
-    } on Object {
-      // Volutamente silenzioso: vedi sopra.
+    if (cancellaIDati) {
+      try {
+        await _archivio?.svuota();
+      } on Object {
+        // Volutamente silenzioso: vedi sopra.
+      }
+
+      // 💡 E si dimentica chi c'era: l'archivio è già vuoto, quindi la pulizia
+      // al cambio di persona non avrebbe più niente da fare — e lasciare un id
+      // che punta a un account cancellato è una riga che mente.
+      await _cache?.dimenticaUltimaPersona();
     }
 
     /*
@@ -465,6 +551,7 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     ref.watch(tokenStoreProvider),
     ref.watch(archivioSaluteProvider),
     ref.watch(bloccoBiometricoProvider),
+    ref.watch(localCacheProvider),
   ),
 );
 

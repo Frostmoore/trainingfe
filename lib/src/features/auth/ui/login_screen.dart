@@ -180,13 +180,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: const Text('Non ho ancora un account'),
                     ),
 
+                    /*
+                     * 🚨 **Stessa dignità dell'accesso** — difetto riferito il
+                     * 13/08/2026.
+                     *
+                     * ⚠️ Era un `TextButton` in fondo, largo quanto il suo
+                     * testo. Ma «cambia palestra» è la via d'uscita di chi si
+                     * trova nel posto sbagliato — un iscritto che ha digitato
+                     * il codice di un'altra palestra, o chi vuole passare
+                     * all'accesso senza palestra — e chi è nel posto sbagliato
+                     * non deve cercare l'uscita scritta più piccola.
+                     */
                     const SizedBox(height: Gap.md),
-                    TextButton.icon(
+                    OutlinedButton.icon(
                       onPressed: () async {
                         await ref.read(brandingControllerProvider.notifier).forget();
                       },
                       icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                      label: const Text('Cambia palestra'),
+                      label: Text(
+                        ref.watch(brandingControllerProvider).hasGym
+                            ? 'Cambia palestra'
+                            : 'Entra con una palestra',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
                     ),
                   ],
                 ),

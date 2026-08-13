@@ -16,6 +16,7 @@ class AppUser {
     this.passwordIsSet = true,
     this.social = const [],
     this.isTrainer = false,
+    this.aiAbilitata = true,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -32,6 +33,23 @@ class AppUser {
     // «i miei utenti», cioè l'unica cosa per cui usa questa applicazione.
     isTrainer: ((json['roles'] as List?) ?? const [])
         .any((r) => r == 'trainer' || r == 'free_trainer'),
+
+    /*
+     * 🚨 **Di serie `true`, e la direzione è deliberata** — F4.
+     *
+     * Un server vecchio non manda questo campo. Trattare l'assenza come «niente
+     * AI» spegnerebbe la funzione a **tutti** gli utenti paganti nel momento in
+     * cui l'app si aggiorna prima del backend — e loro non avrebbero modo di
+     * capire perché.
+     *
+     * ⚠️ L'errore opposto costa molto meno: un pulsante che si può premere e
+     * che riceve `403`. È lo stesso stato di prima di F4, non un guasto nuovo.
+     *
+     * 💡 E il campo qui **non è un permesso**: serve a decidere se disegnare un
+     * pulsante. Il cancello vero è `RequirePlanWithAi` lato server, che
+     * risponde `403` anche a un'app che ignorasse questo valore.
+     */
+    aiAbilitata: json['ai_enabled'] as bool? ?? true,
     social: ((json['social'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList(growable: false),
@@ -60,6 +78,17 @@ class AppUser {
   /// errore: un pulsante rotto fa sembrare rotta tutta l'applicazione, non solo
   /// se stesso.
   final bool isTrainer;
+
+  /// Se il piano di questa persona comprende le funzioni con l'AI — F4.
+  ///
+  /// 🚨 **Serve a disegnare, non ad autorizzare.** L'app lo usa per mostrare la
+  /// stima da testo e da foto **già disattivata**, con scritto perché e dove
+  /// andare — invece di far compilare un modulo e poi rispondere `403`.
+  ///
+  /// ⚠️ Il cancello vero resta `RequirePlanWithAi` lato server: un client non
+  /// decide mai i permessi, e un'app che ignorasse questo campo riceverebbe
+  /// comunque un rifiuto.
+  final bool aiAbilitata;
 
   /// Se questa persona ha una password **che conosce** — G8.
   ///

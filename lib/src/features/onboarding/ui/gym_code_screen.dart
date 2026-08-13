@@ -110,7 +110,8 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                     ),
                     const SizedBox(height: Gap.sm),
                     Text(
-                      'Inserisci il codice che ti ha dato la tua palestra.',
+                      'Se sei iscritto a una palestra, inserisci il suo codice. '
+                      'Altrimenti puoi cominciare da solo.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -171,27 +172,66 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Continua'),
+                          : const Text('Continua con la palestra'),
                     ),
 
                     /*
-                     * 🆕 **La via d'uscita per chi non ha una palestra** — F3.
+                     * 🚨 **Due modi di entrare, con la stessa dignità** —
+                     * difetto riferito il 13/08/2026.
                      *
-                     * ⚠️ È un `TextButton` e non un secondo `FilledButton`, ed è
-                     * una scelta: due pulsanti di pari peso costringerebbero a
-                     * scegliere fra due strade prima di aver capito la
-                     * differenza. La strada principale resta il codice —
-                     * chi ce l'ha lo digita e non legge nemmeno questa riga.
+                     * *«Il tasto "non ho un codice" è troppo poco visibile:
+                     * devono essere modalità di accesso alternative, quindi
+                     * devono avere la stessa dignità.»*
                      *
-                     * 💡 La frase dice cosa si perde, non cosa si guadagna:
-                     * «senza palestra» è l'informazione che serve a decidere, e
-                     * un invito entusiasta a proseguire da soli farebbe saltare
-                     * il codice a gente che ce l'ha in tasca.
+                     * ⚠️ Qui c'era un `TextButton` in fondo, con la
+                     * motivazione che «la strada principale resta il codice».
+                     * Era sbagliata: dopo F3 **non esiste più una strada
+                     * principale**. Chi ha una palestra e chi non ce l'ha sono
+                     * due pubblici, non un caso normale e un'eccezione — e un
+                     * pubblico intero non deve cercare la propria porta in
+                     * fondo alla pagina, scritto più piccolo.
+                     *
+                     * 💡 `OutlinedButton` e non un secondo `FilledButton`:
+                     * stessa altezza, stessa larghezza, stesso peso nella
+                     * gerarchia — ma due pulsanti pieni identici non direbbero
+                     * *quale* dei due si è già cominciato a compilare, e il
+                     * campo qui sopra riguarda solo il primo.
                      */
-                    const SizedBox(height: Gap.sm),
-                    TextButton(
+                    const SizedBox(height: Gap.lg),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                          child: Text(
+                            'oppure',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: Gap.lg),
+
+                    OutlinedButton.icon(
                       onPressed: _inCorso ? null : _prosegui,
-                      child: const Text('Non ho un codice: continuo senza palestra'),
+                      icon: const Icon(Icons.person_outline_rounded),
+                      label: const Text('Continua senza palestra'),
+                      style: OutlinedButton.styleFrom(
+                        // 💡 L'altezza è quella di serie di `FilledButton`:
+                        // pareggiarla è metà del «stessa dignità».
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
+                    const SizedBox(height: Gap.sm),
+                    Text(
+                      'Ti alleni per conto tuo, o ti segue un trainer indipendente.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

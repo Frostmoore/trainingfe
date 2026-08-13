@@ -4,6 +4,8 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:training_companion/src/core/api/api_client.dart';
 import 'package:training_companion/src/core/config/app_config.dart';
 import 'package:training_companion/src/core/sicurezza/blocco_biometrico.dart';
+import 'package:training_companion/src/core/storage/archivio_salute.dart';
+import 'package:training_companion/src/core/storage/local_cache.dart';
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/auth/auth_controller.dart';
 
@@ -219,6 +221,106 @@ void main() {
     expect(token.salvato, isNull);
   });
 
+  // ─────────── 🚨 L'archivio locale: chi lo cancella, e quando ───────────
+
+  /// **Il difetto riferito il 13/08/2026, ed è quello che è costato di più.**
+  ///
+  /// *«Anche se non ho cambiato dispositivo, quando sono uscito mi ha cancellato
+  /// tutti i dati di peso, altezza eccetera nonché tutti i dati di Health
+  /// Connect, che ho dovuto risincronizzare a mano.»*
+  ///
+  /// ⚠️ Lo svuotamento era **incondizionato**, per proteggere il telefono
+  /// condiviso. La preoccupazione era giusta e il momento sbagliato: uscire dal
+  /// proprio account sul proprio telefono è la cosa più normale del mondo — lo
+  /// si fa per rientrare — e pagarla con mesi di storico è un prezzo che nessuno
+  /// si aspetta.
+  ///
+  /// 🚨 E la giustificazione scritta nel codice — *«si ripopola da Health
+  /// Connect in pochi secondi»* — era **falsa**: peso e misure inseriti a mano
+  /// non stanno in Health Connect, e non tornano da nessuna parte.
+  group('archivio locale', () {
+    late _ArchivioFinto archivio;
+    late _CacheFinta cache;
+
+    setUp(() {
+      archivio = _ArchivioFinto();
+      cache = _CacheFinta();
+
+      adapter.onPost(
+        '/auth/login',
+        (s) => s.reply(200, rispostaConToken),
+        data: Matchers.any,
+      );
+    });
+
+    test('uscire NON cancella i dati locali', () async {
+      adapter.onPost('/auth/logout', (s) => s.reply(200, {}), data: Matchers.any);
+
+      final auth = AuthController(client, token, archivio, null, cache);
+
+      await auth.login(login: 'mario.rossi', password: 'x');
+      await auth.logout();
+
+      expect(auth.state.status, AuthStatus.loggedOut);
+      expect(
+        archivio.svuotato,
+        isFalse,
+        reason: 'Uscire dal proprio account ha cancellato peso, misure e sonno.',
+      );
+    });
+
+    /// 🚨 **Ma cancellare l'account sì, ed è obbligatorio** — S9.3.
+    ///
+    /// Il server cancella ciò che ha, e **non ha** peso, misure, sonno e
+    /// battito: vivono qui. Senza questo, i dati più personali del sistema
+    /// sopravvivrebbero a una richiesta di cancellazione.
+    test('cancellare l\'account cancella tutto', () async {
+      final auth = AuthController(client, token, archivio, null, cache);
+
+      await auth.login(login: 'mario.rossi', password: 'x');
+      await auth.forgetSession();
+
+      expect(archivio.svuotato, isTrue);
+      expect(cache.ultima, isNull, reason: 'Un id che punta a un account cancellato mente.');
+    });
+
+    /// 💡 La protezione del telefono condiviso resta, spostata dove serve.
+    test('entrando una persona diversa, l\'archivio si azzera', () async {
+      cache.ultima = 999; // qualcun altro ha usato questo telefono
+
+      final auth = AuthController(client, token, archivio, null, cache);
+
+      await auth.login(login: 'mario.rossi', password: 'x');
+
+      expect(archivio.svuotato, isTrue);
+      expect(cache.ultima, 7, reason: 'Adesso il telefono è di Mario.');
+    });
+
+    /// ⚠️ E rientrando **la stessa** persona non si tocca niente: è il caso
+    /// normale, ed è quello che il difetto rendeva distruttivo.
+    test('rientrando la stessa persona non si tocca niente', () async {
+      cache.ultima = 7;
+
+      final auth = AuthController(client, token, archivio, null, cache);
+
+      await auth.login(login: 'mario.rossi', password: 'x');
+
+      expect(archivio.svuotato, isFalse);
+    });
+
+    /// 💡 Al primo accesso su un telefono nuovo non c'è niente da cancellare —
+    /// e cancellare comunque sarebbe innocuo, ma l'id va scritto per la
+    /// prossima volta.
+    test('al primo accesso non si cancella, ma si prende nota', () async {
+      final auth = AuthController(client, token, archivio, null, cache);
+
+      await auth.login(login: 'mario.rossi', password: 'x');
+
+      expect(archivio.svuotato, isFalse);
+      expect(cache.ultima, 7);
+    });
+  });
+
   // ───────────────────────── A1 — lo sblocco rapido ─────────────────────────
 
   group('blocco biometrico', () {
@@ -402,6 +504,36 @@ class _BloccoFinto implements BloccoBiometrico {
     // di mano, e chi accede dopo non ha mai visto nessuna proposta.
     proposto = false;
   }
+}
+
+/// 💡 `implements` + `noSuchMethod`: `ArchivioSalute` è una classe concreta con
+/// decine di metodi, e qui ne serve **uno**. Dichiarare `noSuchMethod` dice al
+/// compilatore «gli altri non li chiamo» — e se un giorno qualcuno li chiamasse,
+/// il test fallirebbe nominando il metodo invece di passare in silenzio.
+class _ArchivioFinto implements ArchivioSalute {
+  bool svuotato = false;
+
+  @override
+  Future<void> svuota() async => svuotato = true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CacheFinta implements LocalCache {
+  int? ultima;
+
+  @override
+  int? get ultimaPersona => ultima;
+
+  @override
+  Future<void> setUltimaPersona(int id) async => ultima = id;
+
+  @override
+  Future<void> dimenticaUltimaPersona() async => ultima = null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _TokenStoreFinto implements TokenStore {

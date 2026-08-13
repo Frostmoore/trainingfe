@@ -29,6 +29,29 @@ class LocalCache {
   static const _joinCode = 'gym.join_code';
   static const _branding = 'gym.branding';
   static const _senzaPalestra = 'gym.senza_palestra';
+  static const _ultimaPersona = 'sessione.ultima_persona';
+
+  // ───────────────────────── chi c'era prima ─────────────────────────
+
+  /// L'id dell'ultima persona che ha usato questo telefono — 13/08/2026.
+  ///
+  /// 🚨 **Serve a proteggere il telefono condiviso senza punire chi non lo
+  /// condivide.** Prima l'archivio locale si svuotava a **ogni** logout, con la
+  /// motivazione del telefono di famiglia o della tavoletta in reception: la
+  /// preoccupazione è giusta, ma il momento era sbagliato — chi esce e rientra
+  /// sul proprio telefono perdeva mesi di storico.
+  ///
+  /// 💡 Con questo id la stessa protezione scatta **quando entra qualcun
+  /// altro**, che è il momento in cui serve davvero.
+  ///
+  /// ⚠️ È un id numerico e non un'email: qui non va niente di riservato (è un
+  /// file in chiaro), e un id non dice a chi legge il telefono **chi** ci sia
+  /// stato dentro.
+  int? get ultimaPersona => _prefs.getInt(_ultimaPersona);
+
+  Future<void> setUltimaPersona(int id) => _prefs.setInt(_ultimaPersona, id);
+
+  Future<void> dimenticaUltimaPersona() => _prefs.remove(_ultimaPersona);
 
   // ───────────────────────── palestra ─────────────────────────
 

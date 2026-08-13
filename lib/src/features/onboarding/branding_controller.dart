@@ -91,6 +91,24 @@ class BrandingController extends StateNotifier<BrandingState> {
     );
   }
 
+  /// 🆕 **Adotta un branding che arriva da un'altra strada** — B4.
+  ///
+  /// Serve a `POST /account/join-gym`, che risponde già con il branding della
+  /// palestra in cui si è appena entrati: senza questo, l'app resterebbe vestita
+  /// di neutro dentro una palestra che ha i suoi colori — e sembrerebbe non aver
+  /// funzionato.
+  ///
+  /// ⚠️ **Non chiama la rete e non ha un codice da salvare**: il `join_code`
+  /// della palestra è quello che l'utente ha appena digitato, ma qui non
+  /// serve — da adesso la palestra si legge dall'utente autenticato, non da un
+  /// codice in cache.
+  Future<void> adotta(Map<String, dynamic> branding) async {
+    await _cache.setBranding(branding);
+    await _cache.setSenzaPalestra(false);
+
+    state = BrandingState(branding: GymBranding.fromJson(branding));
+  }
+
   /// Cerca la palestra da un codice d'invito.
   ///
   /// Lancia `NotFoundException` se il codice non esiste **o** se la palestra è

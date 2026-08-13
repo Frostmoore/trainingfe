@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../onboarding/branding_controller.dart';
 import '../profile_controller.dart';
+import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
 import 'widgets/weight_sheet.dart';
 
@@ -234,6 +235,33 @@ class ProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.storefront_outlined),
                 title: const Text('La tua palestra'),
                 subtitle: Text(palestra.name!),
+              ),
+            )
+          else
+            /*
+             * 🆕 **«Entra in una palestra»** — requisito B4, chiesto il
+             * 13/08/2026.
+             *
+             * ⚠️ **Non è un cambio di etichetta: dietro c'è una migrazione di
+             * dati.** Diario, allenamenti, piani e foto sono marcati con il
+             * tenant personale, e senza spostarli il `TenantScope` li
+             * renderebbe **invisibili** a chi entra in palestra. Il lavoro sta
+             * in `UnisciAUnaPalestra`, lato server.
+             *
+             * 💡 Sta al posto della card «La tua palestra», non accanto: per
+             * chi non ne ha una, questa **è** quella sezione.
+             */
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.storefront_outlined),
+                title: const Text('Entra in una palestra'),
+                subtitle: const Text(
+                  'Ti sei iscritto da solo. Se hai il codice di una palestra, '
+                  'puoi entrarci portandoti dietro tutto.',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                isThreeLine: true,
+                onTap: () => EntraInPalestraSheet.mostra(context),
               ),
             ),
 

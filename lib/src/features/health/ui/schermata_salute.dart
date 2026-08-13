@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,11 +25,79 @@ import 'widgets/grafico_metrica.dart';
 /// *«restano sul tuo telefono»*. Dopo S1 il server non ha nessun endpoint per
 /// riceverli, quindi non è una promessa di condotta — è una cosa che il
 /// software non è più capace di fare.
-class SchermataSalute extends ConsumerWidget {
+class SchermataSalute extends ConsumerStatefulWidget {
   const SchermataSalute({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SchermataSalute> createState() => _SchermataSaluteState();
+}
+
+/// 🚨 **Si collega da sola quando i permessi arrivano** — difetto riferito il
+/// 13/08/2026.
+///
+/// *«Quando dò le autorizzazioni da Health Connect, non voglio dover cliccare
+/// su "Collega Health Connect": lo deve fare da solo.»*
+///
+/// ── Perché prima non lo faceva ────────────────────────────────────────────
+///
+/// Il permesso si concede **fuori dall'app**: si apre Health Connect, si
+/// spuntano le caselle, si torna indietro. ⚠️ Nel frattempo questa schermata è
+/// rimasta viva e ferma: era un `ConsumerWidget`, e un widget senza stato non ha
+/// modo di accorgersi che l'app è tornata in primo piano. Il permesso c'era già,
+/// e l'app continuava a chiedere di collegarsi.
+///
+/// 💡 `WidgetsBindingObserver` è il pezzo che mancava: al rientro si richiama
+/// `aggiornaInSilenzio()`, che **non apre nessun dialogo** — guarda solo se il
+/// permesso c'è, e se c'è sincronizza. Chi non l'ha ancora dato non se ne
+/// accorge nemmeno.
+class _SchermataSaluteState extends ConsumerState<SchermataSalute>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    /*
+     * ⚠️ **Anche all'apertura, non solo al rientro.**
+     *
+     * Ci si arriva anche dal collegamento che Health Connect stesso propone
+     * (`ACTION_SHOW_PERMISSIONS_RATIONALE`), e in quel caso l'app non è mai
+     * andata in secondo piano: senza questa riga la schermata si aprirebbe
+     * dicendo «collega» a chi ha appena concesso tutto.
+     *
+     * 💡 `addPostFrameCallback` perché toccare un provider durante `initState`
+     * modifica lo stato mentre l'albero si sta ancora costruendo.
+     */
+    WidgetsBinding.instance.addPostFrameCallback((_) => _provaACollegarti());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState stato) {
+    // 🚨 Solo al **rientro**: `paused` e `inactive` scattano anche mentre si
+    // apre il dialogo di sistema, e reagire lì vorrebbe dire leggere i permessi
+    // prima che la persona abbia finito di concederli.
+    if (stato == AppLifecycleState.resumed) _provaACollegarti();
+  }
+
+  /// ⚠️ Non chiede **niente** a nessuno: se il permesso manca, non succede
+  /// nulla. Aprire il dialogo di sistema da qui sarebbe la cosa che
+  /// `PonteSalute` vieta — un permesso chiesto prima che si capisca a cosa
+  /// serve viene negato, e su Android un rifiuto ripetuto **non si ripropone
+  /// più**.
+  void _provaACollegarti() {
+    if (!mounted) return;
+
+    unawaited(ref.read(healthControllerProvider.notifier).aggiornaInSilenzio());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stato = ref.watch(healthControllerProvider);
 

@@ -8,14 +8,35 @@ import 'data/gym_branding.dart';
 
 /// Lo stato dell'onboarding white-label — A2.1 / A2.2 / A2.5.
 class BrandingState {
-  const BrandingState({required this.branding, this.joinCode, this.isLoading = false});
+  const BrandingState({
+    required this.branding,
+    this.joinCode,
+    this.senzaPalestra = false,
+    this.isLoading = false,
+  });
 
   final GymBranding branding;
   final String? joinCode;
+
+  /// 🚨 Ha scelto **di non averne una** — F3.
+  final bool senzaPalestra;
+
   final bool isLoading;
 
   /// `true` quando l'utente ha già scelto una palestra.
   bool get hasGym => joinCode != null && joinCode!.isNotEmpty;
+
+  /// 🚨 **Ha fatto la scelta**, qualunque essa sia — F3.
+  ///
+  /// ⚠️ **Non è `hasGym`, ed è il difetto del 13/08/2026.** Il router usava
+  /// `hasGym` per decidere se mandare alla schermata del codice, e così «non ho
+  /// una palestra» e «non ho ancora scelto» erano lo stesso stato: chi toccava
+  /// «continuo senza palestra» veniva rimandato indietro **allo stesso schermo**,
+  /// e per lui non succedeva niente.
+  ///
+  /// 💡 Le due domande sono diverse e vanno tenute separate: *«di che colore mi
+  /// vesto?»* la risponde `hasGym`; *«posso andare avanti?»* la risponde questa.
+  bool get sceltaFatta => hasGym || senzaPalestra;
 }
 
 /// Il branding della palestra: dalla cache subito, dalla rete dopo.
@@ -34,6 +55,10 @@ class BrandingController extends StateNotifier<BrandingState> {
               ? GymBranding.fromJson(_cache.branding!)
               : GymBranding.neutral,
           joinCode: _cache.joinCode,
+
+          // ⚠️ Si rilegge dal disco all'avvio: la scelta deve sopravvivere a
+          // una chiusura dell'app a metà registrazione.
+          senzaPalestra: _cache.senzaPalestra,
         ),
       );
 
@@ -50,10 +75,20 @@ class BrandingController extends StateNotifier<BrandingState> {
   /// disco, il prossimo avvio ripartirebbe con la palestra di prima — e la
   /// persona si troverebbe a fare l'accesso dentro una palestra che ha appena
   /// deciso di non avere.
+  /// 🚨 **E si registra la scelta**, che è il pezzo che mancava.
+  ///
+  /// ⚠️ Senza, «non ho una palestra» restava indistinguibile da «non ho ancora
+  /// scelto», e la regola 5 del router rimandava alla stessa schermata: per chi
+  /// toccava il pulsante **non succedeva niente**. È il difetto riferito il
+  /// 13/08/2026 provando la `v6.3.0`.
   Future<void> senzaPalestra() async {
     await _cache.forgetGym();
+    await _cache.setSenzaPalestra(true);
 
-    state = const BrandingState(branding: GymBranding.neutral);
+    state = const BrandingState(
+      branding: GymBranding.neutral,
+      senzaPalestra: true,
+    );
   }
 
   /// Cerca la palestra da un codice d'invito.
@@ -65,7 +100,7 @@ class BrandingController extends StateNotifier<BrandingState> {
   Future<GymBranding> lookup(String code) async {
     final normalizzato = code.trim().toUpperCase();
 
-    state = BrandingState(branding: state.branding, joinCode: state.joinCode, isLoading: true);
+    state = BrandingState(branding: state.branding, joinCode: state.joinCode, senzaPalestra: state.senzaPalestra, isLoading: true);
 
     try {
       final data = await _api.get<Map<String, dynamic>>(
@@ -83,7 +118,7 @@ class BrandingController extends StateNotifier<BrandingState> {
       return branding;
     } finally {
       if (state.isLoading) {
-        state = BrandingState(branding: state.branding, joinCode: state.joinCode);
+        state = BrandingState(branding: state.branding, joinCode: state.joinCode, senzaPalestra: state.senzaPalestra);
       }
     }
   }
@@ -129,3 +164,4 @@ class BrandingController extends StateNotifier<BrandingState> {
 final brandingControllerProvider = StateNotifierProvider<BrandingController, BrandingState>(
   (ref) => BrandingController(ref.watch(apiClientProvider), ref.watch(localCacheProvider)),
 );
+

@@ -260,6 +260,47 @@ void main() {
       expect(auth.state.status, AuthStatus.loggedIn);
     });
 
+    /// 🚨 **Niente impronta senza una sessione da proteggere** — 13/08/2026.
+    ///
+    /// Riferito provando la `v6.3.0`: *«al primo accesso mi chiede l'impronta
+    /// prima ancora di aver creato un account»*.
+    ///
+    /// ⚠️ Il blocco esiste per proteggere **un token già in mano**: senza
+    /// token non c'è niente da proteggere, e chiedere l'impronta a chi non ha
+    /// ancora un account è una porta chiusa davanti a una stanza vuota.
+    ///
+    /// 💡 Questo test **non riproduce** il difetto riferito — sul telefono il
+    /// token c'era, sopravvissuto all'installazione con `-r`, e il blocco ha
+    /// fatto il suo lavoro. Resta perché fissa l'invariante: se un giorno il
+    /// blocco scattasse davvero senza sessione, sarebbe qui che si vedrebbe.
+    test('senza token non si chiede niente: si va al login', () async {
+      blocco.acceso = true;
+      token.salvato = null;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(
+        auth.state.status,
+        AuthStatus.loggedOut,
+        reason: 'Impronta chiesta a chi non ha ancora un account.',
+      );
+    });
+
+    /// ⚠️ E nemmeno con un token **vuoto**, che è ciò che resta dopo un logout
+    /// scritto male.
+    test('nemmeno con un token vuoto', () async {
+      blocco.acceso = true;
+      token.salvato = '';
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(auth.state.status, AuthStatus.loggedOut);
+    });
+
     test('sbloccando si entra', () async {
       blocco
         ..acceso = true

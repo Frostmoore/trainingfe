@@ -23,10 +23,10 @@ void main() {
   String? dove(
     AuthStatus stato, {
     String posizione = AppRoutes.home,
-    bool haPalestra = true,
+    bool sceltaFatta = true,
   }) => destinazione(
     stato: stato,
-    haPalestra: haPalestra,
+    sceltaFatta: sceltaFatta,
     posizione: posizione,
   );
 
@@ -72,7 +72,7 @@ void main() {
     /// chi non ha sbloccato vorrebbe dire che il blocco non blocca niente.
     test('blocca anche senza palestra scelta', () {
       expect(
-        dove(AuthStatus.locked, haPalestra: false),
+        dove(AuthStatus.locked, sceltaFatta: false),
         AppRoutes.bloccata,
       );
     });
@@ -104,16 +104,59 @@ void main() {
   group('nessuna palestra scelta', () {
     test('porta al codice e ce lo tiene', () {
       expect(
-        dove(AuthStatus.loggedOut, haPalestra: false),
+        dove(AuthStatus.loggedOut, sceltaFatta: false),
         AppRoutes.gymCode,
       );
       expect(
         dove(
           AuthStatus.loggedOut,
-          haPalestra: false,
+          sceltaFatta: false,
           posizione: AppRoutes.gymCode,
         ),
         isNull,
+      );
+    });
+
+    /// 🚨 **Il difetto del 13/08/2026, provando la `v6.3.0`.**
+    ///
+    /// *«Se clicco su "non ho un codice" non succede niente.»*
+    ///
+    /// ⚠️ La causa era **questa regola**, e il nome del parametro la
+    /// nascondeva: si chiamava `haPalestra` e leggeva `hasGym`, quindi chi
+    /// sceglieva di non avere una palestra restava **indistinguibile** da chi
+    /// non aveva ancora scelto. `context.go('/registrati')` partiva davvero, e
+    /// il `redirect` lo rimandava **allo stesso schermo** un istante dopo:
+    /// nessun errore, nessun movimento.
+    ///
+    /// 💡 Le due domande sono diverse: *«di che colore mi vesto?»* la risponde
+    /// `hasGym`; *«posso andare avanti?»* la risponde `sceltaFatta`.
+    test('chi ha scelto di NON avere una palestra può andare avanti', () {
+      // Ha scelto: `sceltaFatta` è vero anche se `hasGym` è falso.
+      expect(
+        dove(
+          AuthStatus.loggedOut,
+          posizione: AppRoutes.register,
+        ),
+        isNull,
+        reason: 'La registrazione senza palestra viene rimandata al codice.',
+      );
+
+      expect(
+        dove(AuthStatus.loggedOut, posizione: AppRoutes.login),
+        isNull,
+      );
+    });
+
+    /// ⚠️ E il contrario resta vero: chi **non ha ancora scelto** non deve
+    /// poter arrivare alla registrazione, o l'app non saprebbe dove iscriverlo.
+    test('chi non ha ancora scelto viene riportato al codice', () {
+      expect(
+        dove(
+          AuthStatus.loggedOut,
+          sceltaFatta: false,
+          posizione: AppRoutes.register,
+        ),
+        AppRoutes.gymCode,
       );
     });
   });
@@ -171,3 +214,4 @@ void main() {
     }
   });
 }
+

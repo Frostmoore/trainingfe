@@ -144,7 +144,18 @@ class AppRoutes {
 ///  7. autenticato su una schermata d'accesso.
 String? destinazione({
   required AuthStatus stato,
-  required bool haPalestra,
+
+  /// 🚨 **Ha fatto la scelta**, non «ha una palestra» — F3, 13/08/2026.
+  ///
+  /// ⚠️ Il parametro si chiamava `haPalestra` e leggeva `hasGym`, e da lì
+  /// nasceva il difetto: chi toccava «continuo senza palestra» finiva in uno
+  /// stato che valeva `false` esattamente come chi non aveva ancora scelto, e
+  /// la regola 5 lo rimandava **allo stesso schermo da cui era partito**.
+  /// Per lui non succedeva niente — nessun errore, nessun movimento.
+  ///
+  /// 💡 Il nome è cambiato insieme al significato, di proposito: `haPalestra`
+  /// avrebbe continuato a suggerire la domanda sbagliata a chi legge.
+  required bool sceltaFatta,
   required String posizione,
 }) {
   final autenticato = stato == AuthStatus.loggedIn;
@@ -196,8 +207,15 @@ String? destinazione({
    */
   if (posizione == AppRoutes.bloccata && autenticato) return AppRoutes.home;
 
-  // 5. Nessuna palestra scelta: l'app non sa nemmeno di che colore essere.
-  if (!haPalestra) {
+  /*
+   * 5. **Non ha ancora scelto**: l'app non sa nemmeno di che colore essere.
+   *
+   * 🚨 `sceltaFatta` e non `haPalestra` — F3. Chi ha toccato «continuo senza
+   * palestra» **ha scelto**, e deve poter andare avanti: con la vecchia
+   * condizione veniva rimandato a `gymCode`, cioè alla schermata da cui era
+   * appena partito, e per lui non succedeva niente.
+   */
+  if (!sceltaFatta) {
     return posizione == AppRoutes.gymCode ? null : AppRoutes.gymCode;
   }
 
@@ -225,7 +243,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) => destinazione(
       stato: ref.read(authControllerProvider).status,
-      haPalestra: ref.read(brandingControllerProvider).hasGym,
+      sceltaFatta: ref.read(brandingControllerProvider).sceltaFatta,
       posizione: state.matchedLocation,
     ),
     routes: [

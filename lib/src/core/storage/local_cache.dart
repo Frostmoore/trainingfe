@@ -28,12 +28,29 @@ class LocalCache {
 
   static const _joinCode = 'gym.join_code';
   static const _branding = 'gym.branding';
+  static const _senzaPalestra = 'gym.senza_palestra';
 
   // ───────────────────────── palestra ─────────────────────────
 
   String? get joinCode => _prefs.getString(_joinCode);
 
   Future<void> setJoinCode(String code) => _prefs.setString(_joinCode, code);
+
+  /// 🚨 **«Ho scelto di non avere una palestra»** — F3, difetto del 13/08/2026.
+  ///
+  /// Serve perché «non ho una palestra» e «non ho ancora scelto» sono **due
+  /// cose diverse**, e prima di questo flag l'app le confondeva: `hasGym`
+  /// guardava solo il codice, quindi chi toccava «continuo senza palestra»
+  /// restava indistinguibile da chi non aveva ancora deciso — e la regola 5 del
+  /// router lo rimandava indietro alla schermata del codice.
+  ///
+  /// ⚠️ **Sta qui e non in memoria**: la scelta deve sopravvivere al riavvio.
+  /// Tenuta solo nello stato, chi chiudeva l'app durante la registrazione si
+  /// ritrovava di nuovo davanti al codice palestra.
+  bool get senzaPalestra => _prefs.getBool(_senzaPalestra) ?? false;
+
+  Future<void> setSenzaPalestra(bool valore) =>
+      _prefs.setBool(_senzaPalestra, valore);
 
   /// Il branding così com'è arrivato dal backend.
   ///
@@ -66,6 +83,11 @@ class LocalCache {
   Future<void> forgetGym() async {
     await _prefs.remove(_joinCode);
     await _prefs.remove(_branding);
+
+    // ⚠️ **Anche la scelta «senza palestra» si dimentica.** «Cambia palestra»
+    // deve riportare alla domanda, non a metà: chi era senza palestra e tocca
+    // «cambia» sta dicendo che vuole ridecidere.
+    await _prefs.remove(_senzaPalestra);
   }
 
   // ───────────────────────── generico ─────────────────────────

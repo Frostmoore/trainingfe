@@ -17,6 +17,29 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
 
     <!--
+      🚨 LA RETE — 14/08/2026.
+
+      ⚠️ **Il template di Flutter mette `INTERNET` solo in `debug` e `profile`**,
+      non qui. Per mesi non se n'è accorto nessuno perché in sviluppo si gira
+      sempre in debug, dove il permesso c'è: l'app funzionava, e la **release**
+      non era mai stata installata su niente.
+
+      🚨 Il sintomo non assomiglia alla causa: senza questo permesso ogni
+      chiamata fallisce con un errore di connessione, e l'app dice «impossibile
+      connettersi al server, controlla la tua connessione» — cioè accusa la rete
+      del telefono e il server, che stanno benissimo entrambi. Il primo posto
+      dove si va a cercare è quello sbagliato.
+
+      💡 Trovato perché nel dump dei permessi di `logcat` c'erano `USE_BIOMETRIC`,
+      `VIBRATE`, `POST_NOTIFICATIONS`... e non `INTERNET`.
+
+      ⛔ **Non toglierlo credendo che lo aggiunga Flutter**: lo aggiunge solo
+      alle build di sviluppo. `test/permesso_internet_test.dart` sta qui per
+      questo.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!--
       Lo sblocco rapido — A1.
 
       🚨 Serve a `local_auth`. ⚠️ E va insieme a `MainActivity : FlutterFragmentActivity()`:

@@ -8,10 +8,12 @@ import '../../../../core/media/photo_picker.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
+import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../data/stima_ai.dart';
 import '../../diary_controller.dart';
 import 'conferma_stima_sheet.dart';
+import 'dal_piano_tab.dart';
 
 /// I tre modi di aggiungere qualcosa al diario — A4.2 / A4.3 / A4.4.
 ///
@@ -51,7 +53,15 @@ class AddFoodSheet extends ConsumerStatefulWidget {
 }
 
 class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 3, vsync: this);
+  /*
+   * 🚨 **Quattro linguette da G9**, e la nuova sta **prima** di «A mano»: chi
+   * ha un piano lo segue, e chi lo segue non deve digitare quello che e' gia'
+   * scritto.
+   *
+   * ⚠️ Gli indici sono usati altrove (`_tabs.animateTo(2)` dal pannello senza
+   * AI): «A mano» e' passata da 2 a **3**.
+   */
+  late final TabController _tabs = TabController(length: 4, vsync: this);
 
   final _testo = TextEditingController();
   final _descrizione = TextEditingController();
@@ -155,6 +165,37 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
     }
   }
 
+  /// Registra nel diario quello che si e' scelto dal piano — G9.2.
+  ///
+  /// ── 💡 Perche' NON passa dal foglio di conferma ──────────────────────────
+  ///
+  /// Il foglio di conferma esiste perche' una stima dell'AI puo' sbagliare, e
+  /// va guardata prima di entrare nei totali. Qui i numeri li ha scritti **il
+  /// trainer**: farli riguardare all'allievo non aggiunge nessuna informazione,
+  /// e trasformerebbe «ho mangiato quello che c'era scritto» in sei conferme.
+  ///
+  /// ⚠️ `FoodSource::Plan` lo mette il server quando riconosce la provenienza;
+  /// qui si scrive con `addManual` perche' **il server non conosce piu' quel
+  /// piano** (D4). Vedi il debito §7.2 del piano: `food_entries.nutrition_plan_id`
+  /// resta `null`, ed e' il prezzo dichiarato dell'anonimato.
+  Future<void> _registra(DiaryActions azioni, List<AlimentoDelPiano> alimenti) async {
+    for (final a in alimenti) {
+      if (a.descrizione.trim().isEmpty) continue;
+
+      await azioni.addManual(
+        description: a.descrizione,
+        meal: widget.meal,
+        grams: a.grammi,
+        qty: a.qty,
+        unit: a.unita,
+        kcal: a.kcal,
+        protein: a.proteine,
+        carbs: a.carboidrati,
+        fat: a.grassi,
+      );
+    }
+  }
+
   /// L'inserimento **a mano**: qui non c'è niente da confermare.
   ///
   /// ⚠️ I numeri li ha scritti la persona. Farle rivedere quello che ha appena
@@ -241,7 +282,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
      */
     if (!aiOk && !consensi.isLoading && _tabs.index < 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _tabs.index < 2) _tabs.animateTo(2);
+        // ⚠️ Da G9 «A mano» e' la **quarta**: con `2` si finiva su «Dal piano».
+        if (mounted && _tabs.index < 3) _tabs.animateTo(3);
       });
     }
 
@@ -291,6 +333,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                       : TextStyle(color: Theme.of(context).colorScheme.outline),
                 ),
               ),
+              const Tab(icon: Icon(Icons.restaurant_menu_outlined), text: 'Dal piano'),
               const Tab(icon: Icon(Icons.edit_outlined), text: 'A mano'),
             ],
           ),
@@ -315,7 +358,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(2))
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(3))
                 else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
@@ -333,7 +376,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(2))
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(3))
                 else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
@@ -344,6 +387,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                       daFoto: true,
                     ),
                   ),
+                DalPianoTab(onScelti: (alimenti) => _esegui(() => _registra(azioni, alimenti))),
+
                 _Manuale(
                   descrizione: _descrizione,
                   quantita: _quantita,

@@ -167,6 +167,23 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push(AppRoutes.mieiPiani),
                   ),
                   const Divider(height: 1),
+
+                  /*
+                   * G7.2 — l'autore delle schede.
+                   *
+                   * ⚠️ **Non è «Schede» della barra**, che sono le schede che
+                   * questa persona esegue. Queste sono quelle che **scrive per
+                   * altri**, ed è una distinzione che il titolo deve reggere da
+                   * solo: chi allena vede entrambe le voci nella stessa app.
+                   */
+                  ListTile(
+                    leading: const Icon(Icons.fitness_center_outlined),
+                    title: const Text('Le mie schede'),
+                    subtitle: const Text('Quelle che scrivi per i tuoi allievi'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.mieSchede),
+                  ),
+                  const Divider(height: 1),
                 ],
 
                 ListTile(

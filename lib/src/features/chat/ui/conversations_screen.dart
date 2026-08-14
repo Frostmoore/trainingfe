@@ -258,11 +258,25 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     }
   }
 
-  /// «Manda una scheda» — S7.3.
+  /// «Manda una scheda» — S7.3, e lo spoglio di G7.
   ///
   /// 🎯 Non c'è nessun endpoint di assegnazione, nessun caricamento a parte,
   /// nessun permesso in più: la scheda entra **dentro la busta** come farebbe
   /// una frase, e il server la instrada senza sapere cos'è.
+  ///
+  /// ── 🚨 Perché lo spoglio è arrivato QUI dopo, e non insieme ai piani ──────
+  ///
+  /// Fino a G7 `WorkoutPlanController::dettaglio()` **non tornava mai**
+  /// `rif_allievo`: non c'era niente da togliere, e la regola R4 sulle schede
+  /// era rispettata **per assenza**.
+  ///
+  /// ⚠️ G7 ha dovuto aggiungere quel campo alla risposta — il compositore deve
+  /// poter rileggere quello che scrive — e nel farlo ha aperto la strada al
+  /// promemoria privato del trainer dentro la busta dell'allievo. **La stessa
+  /// riga che rende possibile una funzione apre un buco in un'altra.**
+  ///
+  /// 💡 È il tipo di difetto che non si vede guardando la modifica: la
+  /// modifica era sul server, il buco è qui.
   Future<void> _allega() async {
     final modelli = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -275,9 +289,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     setState(() => _inCorso = true);
 
     try {
+      // 🚨 R4 — la copia che parte non ha il promemoria di chi l'ha scritta.
+      final perLAllievo = Map<String, dynamic>.from(modelli)..remove('rif_allievo');
+
       await ref
           .read(threadProvider(widget.id).notifier)
-          .inviaContenuto(ContenutoScheda(modelli));
+          .inviaContenuto(ContenutoScheda(perLAllievo));
       _inFondo();
     } on Object {
       if (mounted) {

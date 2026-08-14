@@ -17,10 +17,22 @@ import '../data/piano_alimentare.dart';
 /// preoccupazione **resta vera**: l'albero intero, tutto insieme, su 328 px è
 /// illeggibile.
 ///
-/// 💡 Quello che la rende superabile è la forma: si sceglie **un giorno**, si
-/// lavora dentro quel giorno, e le alternative sono un foglio che si apre sopra.
-/// L'albero intero non si vede mai — e non serve vederlo, perché non si scrive
-/// mai in due punti insieme.
+/// 💡 Quello che la rende superabile è la forma: si sceglie **un giorno** e si
+/// lavora dentro quel giorno. L'albero intero non si vede mai — e non serve
+/// vederlo, perché non si scrive mai in due punti insieme.
+///
+/// ── ⏸ Le alternative da qui NON si scrivono, ed è un debito dichiarato ────
+///
+/// 🚨 I modelli le reggono e `toJson()` le manda, ma **non c'è nessun campo per
+/// aggiungerle**: un piano composto dall'app esce sempre senza alternative, e
+/// per metterle bisogna passare dal pannello web.
+///
+/// ⚠️ Questo commento diceva che «le alternative sono un foglio che si apre
+/// sopra». Non era vero, e una promessa in un commento è peggio di un silenzio:
+/// chi legge smette di cercare. Il foglio esiste davvero, ma nel **compositore
+/// delle schede** (`compositore_scheda.dart`, `_FoglioAlternative`) — è lì che
+/// si trova la forma da riusare quando questo debito si chiude. Vedi §7.8 del
+/// piano.
 ///
 /// ⚠️ **La misura vera è 328 px**, la larghezza utile dello Xiaomi del
 /// committente: è lì che il difetto delle tendine del profilo è stato misurato,

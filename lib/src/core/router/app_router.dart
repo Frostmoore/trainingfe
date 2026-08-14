@@ -27,7 +27,9 @@ import '../../features/profile/ui/profile_screen.dart';
 import '../../features/progress/ui/progress_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
+import '../../features/training/ui/compositore_scheda.dart';
 import '../../features/training/ui/history_screen.dart';
+import '../../features/training/ui/mie_schede_screen.dart';
 import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
 import '../../features/training/ui/player_screen.dart';
@@ -91,6 +93,17 @@ class AppRoutes {
   static const mieiPiani = '/profilo/i-miei-piani';
 
   static const compositorePiano = '/profilo/i-miei-piani/nuovo';
+
+  /// Le schede scritte dal trainer — G7.2.
+  ///
+  /// ⚠️ **Non è `/schede`**, che è l'editor delle schede **proprie** di chi si
+  /// allena (`planNew`, `/schede/:id/modifica`). Sono due strumenti diversi per
+  /// due persone diverse, e stanno sotto due prefissi diversi apposta: un
+  /// giorno qualcuno unificherà i percorsi «per pulizia» e si porterà dietro
+  /// anche i widget.
+  static const mieSchede = '/profilo/le-mie-schede';
+
+  static const compositoreScheda = '/profilo/le-mie-schede/nuova';
 
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
@@ -322,6 +335,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, stato) => PortaDelleChiavi(
           child: CompositorePiano(
             pianoId: int.tryParse(stato.pathParameters['id'] ?? ''),
+          ),
+        ),
+      ),
+
+      /*
+       * G7.2 — l'autore delle schede. Stesse tre rotte, stesso ordine, stessa
+       * `PortaDelleChiavi`: da qui si compone ciò che poi si manda via chat.
+       *
+       * ⚠️ `/nuova` **prima** di `/:id`, come sopra: go_router prende la prima
+       * che combacia, e con l'ordine inverso «nuova» finirebbe come id — che
+       * `int.tryParse` non sa leggere, quindi si aprirebbe un compositore vuoto
+       * al posto di quello nuovo. Il sintomo assomiglia a «funziona», ed è il
+       * motivo per cui la nota sta scritta due volte.
+       */
+      GoRoute(
+        path: AppRoutes.mieSchede,
+        builder: (_, _) => const PortaDelleChiavi(child: MieSchedeScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.compositoreScheda,
+        builder: (_, _) => const PortaDelleChiavi(child: CompositoreScheda()),
+      ),
+      GoRoute(
+        path: '${AppRoutes.mieSchede}/:id',
+        builder: (_, stato) => PortaDelleChiavi(
+          child: CompositoreScheda(
+            schedaId: int.tryParse(stato.pathParameters['id'] ?? ''),
           ),
         ),
       ),

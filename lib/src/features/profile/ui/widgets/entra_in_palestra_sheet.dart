@@ -149,6 +149,14 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
               keyboardType: TextInputType.visiblePassword,
               textCapitalization: TextCapitalization.characters,
               autocorrect: false,
+
+              // 🚨 E anche questo: `visiblePassword` + `autofocus` fanno
+              // scattare il gestore di password del telefono, che chiede
+              // l'impronta per riempire un codice che non è una credenziale.
+              // ⚠️ Il predefinito è `const []`, che **accende** l'autofill:
+              // solo `null` lo spegne. Vedi la nota lunga in
+              // `gym_code_screen.dart`.
+              autofillHints: null,
               maxLength: 8,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(

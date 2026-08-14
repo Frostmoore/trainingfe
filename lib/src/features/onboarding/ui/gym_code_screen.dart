@@ -129,6 +129,34 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                       keyboardType: TextInputType.visiblePassword,
                       textCapitalization: TextCapitalization.characters,
                       autocorrect: false,
+
+                      /*
+                       * 🚨 **`autofillHints: null` SPEGNE l'autofill, e serve
+                       * davvero** — riferito provando l'app il 14/08/2026:
+                       * *«mi chiede l'impronta prima ancora di aver fatto la
+                       * scelta di palestra o autonomo»*.
+                       *
+                       * ⚠️ **Non era il nostro blocco biometrico.** Era il
+                       * gestore di password del telefono: questo campo si
+                       * dichiara `visiblePassword` (per avere la tastiera
+                       * giusta, vedi sopra) ed è `autofocus`, quindi Android lo
+                       * scambia per una casella di credenziali e al primo
+                       * fotogramma dell'app offre di riempirla — con l'impronta.
+                       *
+                       * 🚨 **Il valore predefinito di `autofillHints` è
+                       * `const <String>[]`, non `null`**, e la lista vuota
+                       * significa «autofill acceso, indovina tu il tipo». Solo
+                       * `null` lo spegne. È una trappola perfetta: il campo
+                       * sembra non aver chiesto niente.
+                       *
+                       * 💡 Un codice palestra **non è** una credenziale
+                       * personale: è la sigla che sta sul volantino della
+                       * palestra. Non ha senso salvarlo in un gestore di
+                       * password, e chiederlo dietro un'impronta prima ancora
+                       * di sapere chi sia l'utente è il primo gesto che l'app
+                       * fa vedere.
+                       */
+                      autofillHints: null,
                       maxLength: 8,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(

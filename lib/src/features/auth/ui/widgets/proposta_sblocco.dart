@@ -27,6 +27,31 @@ import '../../auth_controller.dart';
 /// 💡 **Non disegna niente**: è un widget invisibile che si limita a far
 /// comparire un dialogo. Sta nella shell perché è l'unico posto che esiste
 /// subito dopo l'accesso e sopravvive al cambio di scheda.
+///
+/// ── 🚨 4ª regola: SOLO a sessione aperta — 14/08/2026 ─────────────────────
+///
+/// Difetto riferito provando l'app: *«mi chiede l'impronta prima ancora di aver
+/// fatto la scelta di palestra o autonomo»*.
+///
+/// ⚠️ **La proposta partiva al primo fotogramma dell'app, sempre.** Il router
+/// nasce con `initialLocation: AppRoutes.home`, e finché lo stato è
+/// `AuthStatus.unknown` la regola 1 di `destinazione()` risponde «resta dove
+/// sei» — quindi `HomeShell` **viene costruita davvero**, per la frazione di
+/// secondo che serve a leggere il Keychain. Con lei nasceva questo widget, e il
+/// suo `postFrameCallback` faceva il resto: nessuno era ancora entrato, e l'app
+/// chiedeva l'impronta.
+///
+/// 🚨 **E la parte peggiore non è il fastidio.** `segnaProposto()` si scrive
+/// **anche quando la risposta è no** (regola 1): la proposta «una volta sola per
+/// dispositivo» veniva **bruciata prima del primo accesso**, cioè nel momento in
+/// cui non voleva dire niente. Chi rispondeva «più tardi» non se la sarebbe più
+/// vista offrire nel momento giusto — e la funzione sarebbe rimasta un
+/// interruttore nascosto nel profilo, che è esattamente quello che la proposta
+/// esiste per evitare.
+///
+/// 💡 Perciò non basta un `initState`: quando la sessione si apre, questa shell
+/// **è già montata**. La proposta deve reagire al **passaggio** a `loggedIn`,
+/// non al momento in cui nasce.
 class PropostaSblocco extends ConsumerStatefulWidget {
   const PropostaSblocco({super.key});
 
@@ -39,14 +64,15 @@ class _PropostaSbloccoState extends ConsumerState<PropostaSblocco> {
   /// dialogo si aprirebbe due volte sovrapposto.
   bool _giaFatto = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _forse());
-  }
-
   Future<void> _forse() async {
     if (_giaFatto) return;
+
+    // 🚨 La quarta regola, applicata qui: **si chiede solo a chi è dentro.**
+    // Il controllo sta dentro `_forse()` e non solo nel `build` perché fra la
+    // pianificazione del callback e la sua esecuzione può passare un frame, e
+    // in quel frame la sessione può essere caduta.
+    if (ref.read(authControllerProvider).status != AuthStatus.loggedIn) return;
+
     _giaFatto = true;
 
     final blocco = ref.read(bloccoBiometricoProvider);
@@ -104,5 +130,22 @@ class _PropostaSbloccoState extends ConsumerState<PropostaSblocco> {
   }
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    /*
+     * 🚨 `watch` e non `initState`: quando la sessione si apre questa shell **è
+     * già montata**, quindi un callback piazzato alla nascita del widget è già
+     * passato da un pezzo. Guardando lo stato, la proposta scatta al
+     * **passaggio** a `loggedIn` — che è il momento in cui ha un senso.
+     *
+     * ⚠️ Il `postFrameCallback` resta: aprire un dialogo **durante** un `build`
+     * è un errore di framework, non una scortesia.
+     */
+    final stato = ref.watch(authControllerProvider).status;
+
+    if (stato == AuthStatus.loggedIn && !_giaFatto) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _forse());
+    }
+
+    return const SizedBox.shrink();
+  }
 }

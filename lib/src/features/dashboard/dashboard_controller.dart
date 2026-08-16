@@ -250,3 +250,33 @@ class Consiglio {
 
   bool get haTesto => testo != null && testo!.isNotEmpty;
 }
+
+/// Rigenera il consiglio **pagando** — 16/08/2026.
+///
+/// 🚨 `manuale: 1` fa saltare la cache al server: senza, la chiamata
+/// restituirebbe lo stesso testo di prima **senza spendere niente**, e il
+/// pulsante sembrerebbe rotto.
+///
+/// ⚠️ Manda anche target e recupero, come la lettura normale: un consiglio
+/// rigenerato senza quel contesto sarebbe **peggiore** di quello che sostituisce
+/// — e l'utente avrebbe pagato per peggiorarlo.
+final rigeneraConsiglioProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    final locale = (await ref.read(targetLocaleProvider.future)).target;
+    final recupero = await ref.read(recuperoPerIlConsiglioProvider.future);
+
+    await ref.read(apiClientProvider).get<Map<String, dynamic>>(
+      '/ai/advice',
+      query: {
+        'manuale': 1,
+        if (locale != null) ...{
+          'target_kcal': locale.kcal,
+          'target_protein_g': locale.macro.proteineG,
+          'target_carbs_g': locale.macro.carboidratiG,
+          'target_fat_g': locale.macro.grassiG,
+        },
+        ...recupero,
+      },
+    );
+  };
+});

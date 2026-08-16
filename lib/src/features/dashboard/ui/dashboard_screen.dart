@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../profile/corpo_controller.dart';
 import '../dashboard_controller.dart';
+import '../gettoni_controller.dart';
 import 'widgets/today_cards.dart';
 import 'widgets/today_header.dart';
 
@@ -114,14 +115,64 @@ class _Blocchi extends StatelessWidget {
   }
 }
 
-class _Consiglio extends StatelessWidget {
+/// La card del consiglio del giorno.
+///
+/// ── 🚨 L'avvertenza NON è una postilla: è metà della card ─────────────────
+///
+/// Richiesta del committente, 16/08/2026: *«deve essere specificamente indicato
+/// che è generato da AI e che non ha NESSUN VALORE MEDICO, che l'utente non
+/// dovrebbe fidarsi e che lo dovrebbe far vedere a un medico sportivo»*.
+///
+/// ⚠️ Perciò sta **sempre a schermo**, sotto il testo, e non dietro un tocco né
+/// in fondo a una schermata di impostazioni. Un'avvertenza che bisogna cercare
+/// è un'avvertenza che non c'è.
+///
+/// 💡 E il prompt lavora nella stessa direzione (regola 5): al modello è vietato
+/// il tono della prescrizione — niente «devi», «ti serve». Un testo che dice
+/// «devi» sotto una riga che dice «non fidarti» si contraddice da solo, e a
+/// vincere è sempre il testo più grande.
+class _Consiglio extends ConsumerStatefulWidget {
   const _Consiglio({required this.testo});
 
   final String testo;
 
   @override
+  ConsumerState<_Consiglio> createState() => _ConsiglioState();
+}
+
+class _ConsiglioState extends ConsumerState<_Consiglio> {
+  bool _inCorso = false;
+
+  /// Rigenera **pagando**: è una chiamata vera al modello.
+  ///
+  /// 🚨 `manuale: true` fa saltare la cache al server. Senza, il tocco
+  /// restituirebbe lo stesso testo di prima senza spendere niente — e
+  /// sembrerebbe rotto.
+  Future<void> _rigenera() async {
+    setState(() => _inCorso = true);
+
+    try {
+      await ref.read(rigeneraConsiglioProvider)();
+      ref
+        ..invalidate(adviceProvider)
+        // 💡 Il saldo è appena cambiato: senza questa riga l'intestazione
+        // continuerebbe a mostrare il numero di prima fino al prossimo avvio.
+        ..invalidate(gettoniProvider);
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.unwrapError(e).message)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sopra = theme.colorScheme.onPrimaryContainer;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -133,23 +184,80 @@ class _Consiglio extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.onPrimaryContainer),
+                Icon(Icons.auto_awesome_rounded, color: sopra),
                 const SizedBox(width: Gap.sm),
-                Text(
-                  'Consiglio di oggi',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    'Spunto di oggi',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: sopra,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+
+                /*
+                 * 🚨 **Il costo è scritto sul pulsante, non in un avviso dopo.**
+                 * Stessa regola delle linguette del cibo: chi sta per spendere
+                 * lo deve sapere **mentre decide**, non mentre scopre il saldo
+                 * calato.
+                 */
+                if (_inCorso)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: Gap.sm),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  TextButton.icon(
+                    onPressed: _rigenera,
+                    icon: Icon(Icons.refresh_rounded, size: 18, color: sopra),
+                    label: Text(
+                      '1 gettone',
+                      style: theme.textTheme.labelSmall?.copyWith(color: sopra),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: Gap.sm),
+
+            Text(
+              widget.testo,
+              style: theme.textTheme.bodyMedium?.copyWith(color: sopra),
+            ),
+
+            const SizedBox(height: Gap.md),
+            Divider(height: 1, color: sopra.withValues(alpha: 0.20)),
+            const SizedBox(height: Gap.sm),
+
+            // 🚨 L'avvertenza. Sempre visibile, mai dietro un tocco.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, size: 14, color: sopra.withValues(alpha: 0.75)),
+                const SizedBox(width: Gap.xs),
+                Expanded(
+                  child: Text(
+                    'Scritto da un\'intelligenza artificiale sui pochi dati che ha, '
+                    'e può sbagliare. Non è un parere medico e non va preso per '
+                    'buono: se riguarda la tua salute, parlane con un medico dello '
+                    'sport.',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: sopra.withValues(alpha: 0.75),
+                      height: 1.3,
+                    ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: Gap.sm),
-            Text(
-              testo,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
             ),
           ],
         ),

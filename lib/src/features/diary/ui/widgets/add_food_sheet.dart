@@ -314,11 +314,32 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                   aiOk ? Icons.auto_awesome_outlined : Icons.auto_awesome_outlined,
                   color: aiOk ? null : Theme.of(context).colorScheme.outline,
                 ),
-                child: Text(
-                  'Scrivi',
-                  style: aiOk
-                      ? null
-                      : TextStyle(color: Theme.of(context).colorScheme.outline),
+                /*
+                 * 🚨 **Il costo si dice PRIMA, non dopo** — 16/08/2026.
+                 *
+                 * Un contatore che scende di 10 dopo una foto, senza che
+                 * nessuno abbia detto quanto costava, sembra un errore. E chi
+                 * sospetta un errore smette di usare la funzione.
+                 *
+                 * 💡 Sta sull'etichetta e non in un avviso: si legge **mentre
+                 * si sceglie**, che è l'unico momento in cui serve.
+                 */
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Scrivi',
+                      style: aiOk
+                          ? null
+                          : TextStyle(color: Theme.of(context).colorScheme.outline),
+                    ),
+                    Text(
+                      '1 gettone',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Tab(
@@ -326,15 +347,42 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                   Icons.photo_camera_outlined,
                   color: aiOk ? null : Theme.of(context).colorScheme.outline,
                 ),
-                child: Text(
-                  'Foto',
-                  style: aiOk
-                      ? null
-                      : TextStyle(color: Theme.of(context).colorScheme.outline),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Foto',
+                      style: aiOk
+                          ? null
+                          : TextStyle(color: Theme.of(context).colorScheme.outline),
+                    ),
+                    // ⚠️ Dieci, non uno: una foto costa al fornitore circa
+                    // quattro volte una frase, e il prezzo lo dice.
+                    Text(
+                      '10 gettoni',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Tab(icon: Icon(Icons.restaurant_menu_outlined), text: 'Dal piano'),
-              const Tab(icon: Icon(Icons.edit_outlined), text: 'A mano'),
+              /*
+               * 💡 **Anche le gratuite dicono che sono gratuite.** Se solo due
+               * linguette su quattro portano un prezzo, le altre sembrano non
+               * ancora tariffate — e chi vuole risparmiare non sa dove andare.
+               *
+               * 🎯 Ed è il punto: qui c'è la via per registrare un pasto senza
+               * spendere niente, e va vista.
+               */
+              const Tab(
+                icon: Icon(Icons.restaurant_menu_outlined),
+                child: _EtichettaGratis(testo: 'Dal piano'),
+              ),
+              const Tab(
+                icon: Icon(Icons.edit_outlined),
+                child: _EtichettaGratis(testo: 'A mano'),
+              ),
             ],
           ),
 
@@ -701,5 +749,30 @@ class _Manuale extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// L'etichetta di una linguetta che non consuma gettoni.
+///
+/// 💡 Esiste per non ripetere due volte la stessa colonna, e perché «gratis»
+/// scritto in piccolo sotto il nome è una cosa che vale la pena poter cambiare
+/// in un punto solo.
+class _EtichettaGratis extends StatelessWidget {
+  const _EtichettaGratis({required this.testo});
+
+  final String testo;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(testo),
+      Text(
+        'gratis',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.outline,
+        ),
+      ),
+    ],
   );
 }

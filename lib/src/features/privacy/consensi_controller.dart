@@ -9,20 +9,46 @@ import '../../core/providers.dart';
 /// dire *«concesso il 12 agosto»* invece di una spunta muta — chi riapre questa
 /// schermata sta cercando di ricordarsi cosa ha deciso e quando.
 class Consensi {
-  const Consensi({this.salute, this.ai});
+  const Consensi({
+    this.salute,
+    this.ai,
+    this.recupero,
+    this.consiglioAutomatico = true,
+  });
 
   factory Consensi.fromJson(Map<String, dynamic> j) => Consensi(
     salute: DateTime.tryParse(j['health']?.toString() ?? ''),
     ai: DateTime.tryParse(j['ai']?.toString() ?? ''),
+    recupero: DateTime.tryParse(j['sleep_ai']?.toString() ?? ''),
+    consiglioAutomatico: j['consiglio_automatico'] as bool? ?? true,
   );
 
   /// Quando è stato concesso, oppure `null` se non lo è.
   final DateTime? salute;
   final DateTime? ai;
 
+  /// 🚨 Il consenso a mandare **sonno, battito e variabilità** ad Anthropic,
+  /// dentro il consiglio del giorno — 16/08/2026.
+  ///
+  /// ⚠️ È **separato** da [ai], e non per pignoleria: chi accetta che una frase
+  /// sul pranzo vada a un modello non ha con ciò accettato che ci vada quanto e
+  /// come dorme. Sono due decisioni di intimità diversa, e l'art. 7 vieta il
+  /// consenso a pacchetto.
+  ///
+  /// 💡 È **subordinato** ad [ai]: revocare l'AI lo revoca a cascata, lato
+  /// server. L'interfaccia lo mostra spento e non toccabile finché l'AI è
+  /// spenta — altrimenti si accenderebbe un consenso che non può valere.
+  final DateTime? recupero;
+
+  /// 💡 **Preferenza, non consenso**: un booleano, non una data. Di una
+  /// preferenza non serve sapere *quando* è stata cambiata, di un consenso sì.
+  final bool consiglioAutomatico;
+
   bool get saluteDato => salute != null;
 
   bool get aiDato => ai != null;
+
+  bool get recuperoDato => recupero != null;
 }
 
 final consensiProvider = FutureProvider<Consensi>((ref) async {

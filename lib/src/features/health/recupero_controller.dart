@@ -100,3 +100,47 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
     parametri: await MediaDiRiferimento.tutte(archivio),
   );
 });
+
+/// Il recupero **nella forma che il consiglio del giorno si aspetta** — 16/08/2026.
+///
+/// ── 🚨 I nomi sono quelli del server, non i nostri ────────────────────────
+///
+/// `AiController::RECUPERO` è una **lista bianca**: quello che non ha
+/// esattamente questi nomi non parte, e non lo dice a nessuno. ⚠️ Un `hrv` al
+/// posto di `hrv_ms` non darebbe errore — darebbe un consiglio che ignora la
+/// variabilità, e nessuno capirebbe perché.
+///
+/// ── 💡 Perché i `baseline` viaggiano insieme ai valori ────────────────────
+///
+/// Un HRV di 48 non vuol dire niente da solo: vuol dire qualcosa solo contro la
+/// media di quella persona. Mandare il valore senza la sua media significa dare
+/// al modello un numero che **non può leggere** — e un modello che non può
+/// leggere un numero se lo inventa.
+///
+/// 🎯 Restituisce una mappa vuota quando non c'è niente da dire: senza le ore
+/// dormite il server scarta tutto comunque, e mandare metà quadro sarebbe
+/// traffico per niente.
+final recuperoPerIlConsiglioProvider =
+    FutureProvider.autoDispose<Map<String, Object>>((ref) async {
+      final r = await ref.watch(recuperoProvider.future);
+      final notte = r.notte;
+
+      if (notte == null) return const {};
+
+      final hrv = r.parametri[MetricaSalute.hrv];
+      final battito = r.parametri[MetricaSalute.battitoARiposo];
+
+      return {
+        // ⚠️ Ore, non minuti: è l'unità che il prompt nomina.
+        'hours': (notte.minutiDormiti / 60).toStringAsFixed(1),
+        'wakings': notte.minutiSvegli,
+        'deep_min': notte.minutiProfondo,
+        'rem_min': notte.minutiRem,
+
+        if (hrv != null) 'hrv_ms': hrv.valore.round(),
+        if (hrv?.media != null) 'hrv_baseline_ms': hrv!.media!.round(),
+
+        if (battito != null) 'resting_hr': battito.valore.round(),
+        if (battito?.media != null) 'resting_hr_baseline': battito!.media!.round(),
+      };
+    });

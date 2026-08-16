@@ -10,6 +10,7 @@ import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../data/dashboard_models.dart';
+import '../../gettoni_controller.dart';
 
 /// L'intestazione di «Oggi»: la palestra e i numeri della giornata.
 ///
@@ -129,6 +130,22 @@ class TodayHeader extends ConsumerWidget {
                         ],
                       ),
                     ),
+
+                    /*
+                     * 🚨 **Il saldo dei gettoni** — richiesta del committente,
+                     * 16/08/2026.
+                     *
+                     * Sta qui e non in una scheda più in basso perché è un
+                     * numero che si guarda **prima** di fare qualcosa, non
+                     * dopo: chi sta per fotografare un piatto deve sapere di
+                     * averne dieci senza andarli a cercare.
+                     *
+                     * ⚠️ In coda alla riga e non in una riga sua: sopra 328 px
+                     * una riga in più spinge fuori il resto dell'intestazione,
+                     * ed è la larghezza su cui questo progetto ha già misurato
+                     * due difetti di layout.
+                     */
+                    const _SaldoGettoni(),
                   ],
                 ),
 
@@ -297,6 +314,74 @@ class _Valore extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Il saldo dei gettoni nell'intestazione — 16/08/2026.
+///
+/// ── 💡 Perché non mostra niente mentre carica ─────────────────────────────
+///
+/// Un numero che compare, sparisce e ricompare a ogni apertura è peggio di un
+/// numero che arriva mezzo secondo dopo. E se la chiamata fallisce non si
+/// scrive «errore» in mezzo al saluto: il saldo semplicemente non c'è, e
+/// l'intestazione resta quella di prima.
+///
+/// ⚠️ **Non blocca niente.** È informativo: il cancello vero è sul server, che
+/// risponde `402` con quanti gettoni servivano. Un client non decide mai i
+/// permessi — vale qui come per `ai_enabled`.
+class _SaldoGettoni extends ConsumerWidget {
+  const _SaldoGettoni();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return ref.watch(gettoniProvider).maybeWhen(
+      orElse: () => const SizedBox.shrink(),
+      data: (g) {
+        // 🚨 `null` = illimitata: si disegna un simbolo, mai uno zero.
+        final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
+
+        return Tooltip(
+          message: g.illimitata
+              ? 'Gettoni AI illimitati'
+              : 'Ti restano ${g.disponibili ?? 0} gettoni AI questo mese',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.toll_outlined,
+                  size: 16,
+                  // 💡 Sotto il costo di una foto cambia colore: chi ha 6
+                  // gettoni non è a zero, ma la prossima foto non la fa — e
+                  // scoprirlo dopo aver inquadrato il piatto è la sequenza
+                  // peggiore.
+                  color: g.quasiFiniti
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  testo,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: g.quasiFiniti
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

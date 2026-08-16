@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
+import '../health/recupero_controller.dart';
 import '../profile/corpo_controller.dart';
 import '../profile/target_locale_controller.dart';
 import 'data/dashboard_models.dart';
@@ -171,6 +172,26 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
    */
   final locale = (await ref.watch(targetLocaleProvider.future)).target;
 
+  /*
+   * 🚨 **Il recupero lo manda l'app, per la stessa ragione del target** —
+   * 16/08/2026.
+   *
+   * Sonno, variabilità e battito vivono nell'archivio locale (D9): il server
+   * non li ha e non li conserva. Se li vuole il consiglio, glieli deve passare
+   * chi ce li ha.
+   *
+   * 💡 E risolve un conflitto che sembrava grosso: il consiglio **non può**
+   * essere generato da un job del server, perché il server questi dati non li
+   * vede. Lo chiede l'app — al massimo una volta per fascia — e il tetto di tre
+   * al giorno resta senza nessuno schedulatore.
+   *
+   * ⚠️ **Si manda anche se il consenso manca**, e non è una svista: la
+   * decisione sta sul server (`AiController::recuperoDallApp()`), che è l'unico
+   * posto dove non si aggira. Un client che decide da solo cosa può mandare è
+   * un client di cui bisogna fidarsi, e non ci si fida mai.
+   */
+  final recupero = await ref.watch(recuperoPerIlConsiglioProvider.future);
+
   try {
     final data = await ref
         .watch(apiClientProvider)
@@ -183,6 +204,7 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
               'target_carbs_g': locale.macro.carboidratiG,
               'target_fat_g': locale.macro.grassiG,
             },
+            ...recupero,
           },
         );
 

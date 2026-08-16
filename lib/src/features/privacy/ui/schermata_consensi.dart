@@ -67,6 +67,52 @@ class SchermataConsensi extends ConsumerWidget {
               concessoIl: dati.ai,
               chiave: 'ai',
             ),
+            const SizedBox(height: Gap.md),
+
+            /*
+             * 🚨 **Il terzo consenso — 16/08/2026.**
+             *
+             * Riapre una porta che era stata chiusa apposta in S1.5: sonno,
+             * battito e variabilità erano stati tolti dal contesto del
+             * consiglio perché non uscissero dal telefono (D9).
+             *
+             * ⚠️ Si può riaprire **solo così**: casella separata, revocabile,
+             * e con scritto dove finiscono i dati. §C12 di
+             * `todo-2026-08-11.md` dice che è esattamente quello che serve —
+             * e che non serve nient'altro.
+             *
+             * 💡 `abilitato: dati.aiDato` — spento e non toccabile finché
+             * l'AI è spenta: un consenso figlio che non può valere senza il
+             * padre non deve nemmeno potersi accendere.
+             */
+            _Interruttore(
+              titolo: 'Sonno e recupero nel consiglio del giorno',
+              spiegazione:
+                  'Il consiglio tiene conto anche di come hai dormito: ore, '
+                  'risvegli, sonno profondo, variabilità cardiaca e battito a '
+                  'riposo. Questi dati partono verso Anthropic insieme al resto, '
+                  'e sono più intimi di quello che mangi: per questo te lo '
+                  'chiediamo a parte. Senza, il consiglio funziona lo stesso — '
+                  'solo, non sa se stanotte hai dormito male.',
+              concessoIl: dati.recupero,
+              chiave: 'sleep_ai',
+              abilitato: dati.aiDato,
+            ),
+
+            const SizedBox(height: Gap.lg),
+
+            /*
+             * 💡 **Qui sotto non è un consenso, ed è separato apposta.**
+             *
+             * È una preferenza: «voglio che il consiglio si aggiorni da solo».
+             * Sta nella stessa schermata perché è lì che uno la cerca, ma sotto
+             * una riga e con un titolo che non parla di dati.
+             */
+            const Divider(height: Gap.xl),
+            Text('Come funziona il consiglio', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: Gap.sm),
+
+            _InterruttoreConsiglio(acceso: dati.consiglioAutomatico),
 
             const SizedBox(height: Gap.lg),
             Text(
@@ -90,12 +136,22 @@ class _Interruttore extends ConsumerStatefulWidget {
     required this.spiegazione,
     required this.concessoIl,
     required this.chiave,
+    this.abilitato = true,
   });
 
   final String titolo;
   final String spiegazione;
   final DateTime? concessoIl;
   final String chiave;
+
+  /// 🚨 Un consenso **subordinato** a un altro non deve poter essere acceso.
+  ///
+  /// ⚠️ Non è cortesia d'interfaccia: accendere il sonno mentre l'AI è spenta
+  /// scriverebbe una data su un consenso che non può valere, e il giorno che
+  /// l'AI si riaccende quel consenso tornerebbe attivo **senza che nessuno
+  /// l'abbia riconfermato**. Il server lo revoca a cascata; qui si evita che
+  /// nasca.
+  final bool abilitato;
 
   @override
   ConsumerState<_Interruttore> createState() => _InterruttoreState();
@@ -142,13 +198,25 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
                   ),
                 ),
                 Switch(
-                  value: concesso,
-                  onChanged: _inCorso ? null : _cambia,
+                  value: concesso && widget.abilitato,
+                  onChanged: (_inCorso || ! widget.abilitato) ? null : _cambia,
                 ),
               ],
             ),
             const SizedBox(height: Gap.sm),
             Text(widget.spiegazione, style: testo.bodyMedium),
+
+            // 💡 Se è spento perché dipende da un altro, si dice **perché**:
+            // un interruttore grigio senza spiegazione sembra un guasto.
+            if (! widget.abilitato) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Per attivarlo serve prima il consenso qui sopra.',
+                style: testo.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+            ],
             if (concesso) ...[
               const SizedBox(height: Gap.sm),
               Text(
@@ -156,6 +224,83 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
                 style: testo.bodySmall,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// L'interruttore del consiglio automatico — 16/08/2026.
+///
+/// 🚨 **Non è un consenso, e sta apposta sotto una riga separata.** Un consenso
+/// è una base giuridica: si dà, si revoca, e se ne conserva la data. Questa è
+/// una preferenza — «voglio che il consiglio si aggiorni da solo» — e nel
+/// database è un booleano, non una data.
+///
+/// 💡 Spegnerlo **non cancella** il consiglio che c'è: ferma la spesa, non la
+/// lettura. Chi lo spegne e poi apre «Oggi» trova ancora l'ultimo scritto, con
+/// l'ora.
+class _InterruttoreConsiglio extends ConsumerStatefulWidget {
+  const _InterruttoreConsiglio({required this.acceso});
+
+  final bool acceso;
+
+  @override
+  ConsumerState<_InterruttoreConsiglio> createState() =>
+      _InterruttoreConsiglioState();
+}
+
+class _InterruttoreConsiglioState extends ConsumerState<_InterruttoreConsiglio> {
+  bool _inCorso = false;
+
+  Future<void> _cambia(bool acceso) async {
+    setState(() => _inCorso = true);
+
+    try {
+      await ref.read(cambiaConsensoProvider)('consiglio_automatico', acceso);
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Non ha funzionato: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final testo = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Aggiorna il consiglio da solo',
+                    style: testo.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Switch(
+                  value: widget.acceso,
+                  onChanged: _inCorso ? null : _cambia,
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              'Tre volte al giorno — mattina, primo pomeriggio e sera. '
+              'Ogni aggiornamento costa un gettone. Se lo spegni, il consiglio '
+              'resta quello dell\'ultima volta e lo aggiorni tu quando vuoi.',
+              style: testo.bodyMedium,
+            ),
           ],
         ),
       ),

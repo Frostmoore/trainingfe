@@ -340,13 +340,27 @@ class _SaldoGettoni extends ConsumerWidget {
     return ref.watch(gettoniProvider).maybeWhen(
       orElse: () => const SizedBox.shrink(),
       data: (g) {
+        /*
+         * 🚨 **A chi è abbonato non si mostra niente**, e non è un dettaglio
+         * di presentazione: la dotazione dell'abbonamento è uso compreso, non
+         * un credito da contare. Mostrarne il residuo dice a chi legge il
+         * listino che comprare un pacchetto conviene di più.
+         *
+         * ⚠️ E non si mostra **zero**: uno zero accanto a un'AI che funziona è
+         * una contraddizione, e chi lo legge pensa che sia rotta.
+         */
+        if (!g.daMostrare) return const SizedBox.shrink();
+
         // 🚨 `null` = illimitata: si disegna un simbolo, mai uno zero.
         final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
 
         return Tooltip(
           message: g.illimitata
               ? 'Gettoni AI illimitati'
-              : 'Ti restano ${g.disponibili ?? 0} gettoni AI questo mese',
+              // 💡 «comprati», non «questo mese»: sono i soli che questo numero
+              // conta, e chiamarli come non sono farebbe cercare una ricarica
+              // che non è mancata.
+              : 'Ti restano ${g.disponibili ?? 0} gettoni AI comprati',
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: 4),
             decoration: BoxDecoration(

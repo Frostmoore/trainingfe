@@ -78,19 +78,19 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: Center(
             child: SizedBox(
               width: 328,
               child: Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded, size: 14),
-                      const SizedBox(width: 4),
+                      Icon(Icons.info_outline_rounded, size: 14),
+                      SizedBox(width: 4),
                       Expanded(child: Text(avvertenza)),
                     ],
                   ),

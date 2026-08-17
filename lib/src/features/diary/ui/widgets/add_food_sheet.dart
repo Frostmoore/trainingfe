@@ -10,8 +10,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
 import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
+import '../../data/alimento_catalogo.dart';
 import '../../data/stima_ai.dart';
 import '../../diary_controller.dart';
+import 'campo_alimento.dart';
 import 'conferma_stima_sheet.dart';
 import 'dal_piano_tab.dart';
 
@@ -68,6 +70,24 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   final _quantita = TextEditingController();
   final _kcal = TextEditingController();
 
+  /*
+   * I macro, **facoltativi**.
+   *
+   * 🚨 Sono la condizione per cui un alimento entra nel catalogo condiviso:
+   * senza tutti e quattro non ci si puo' fidare del dato, e una riga a meta'
+   * sporcherebbe i suggerimenti di tutti.
+   *
+   * ⚠️ Ma restano facoltativi: obbligarli vorrebbe dire che chi non li sa
+   * non registra il pasto, e un diario incompleto e' peggio di un catalogo
+   * incompleto.
+   */
+  final _proteine = TextEditingController();
+  final _carboidrati = TextEditingController();
+  final _grassi = TextEditingController();
+
+  /// L'alimento scelto dai suggerimenti, se se ne e' scelto uno.
+  AlimentoCatalogo? _scelto;
+
   String _unita = 'g';
   bool _inCorso = false;
   String? _errore;
@@ -85,6 +105,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
     _descrizione.dispose();
     _quantita.dispose();
     _kcal.dispose();
+    _proteine.dispose();
+    _carboidrati.dispose();
+    _grassi.dispose();
     super.dispose();
   }
 
@@ -250,6 +273,47 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   /// il consenso sanitario, non poter verificare vale quanto un no.
   bool _aiPermessa(AsyncValue<Consensi> consensi) =>
       consensi.valueOrNull?.aiDato ?? false;
+
+  /// Da «12,5» a `12.5`, e da «» a `null`.
+  ///
+  /// 💡 La virgola: su una tastiera italiana e' quella che si preme, e
+  /// `double.tryParse` non la accetta.
+  double? _numero(TextEditingController c) =>
+      double.tryParse(c.text.trim().replaceAll(',', '.'));
+
+  /// Riempie i macro con quelli dell'alimento scelto dai suggerimenti.
+  ///
+  /// 🚨 **Solo se la quantita' e' in grammi o millilitri.** Il catalogo
+  /// tiene i valori per 100 g: con «2 porzioni» o «1 tazza» non c'e' niente da
+  /// moltiplicare, e riempire i campi con numeri a caso sarebbe peggio che
+  /// lasciarli vuoti.
+  void _riempiDaCatalogo(AlimentoCatalogo? a) {
+    setState(() => _scelto = a);
+
+    if (a == null) return;
+
+    _ricalcolaDaCatalogo();
+  }
+
+  /// ⚠️ Richiamato anche quando cambia la quantita': chi sceglie
+  /// «Petto di pollo» e poi scrive 150 si aspetta che i macro seguano, non che
+  /// restino quelli di 100 g.
+  void _ricalcolaDaCatalogo() {
+    final a = _scelto;
+    final quantita = _numero(_quantita);
+
+    if (a == null || quantita == null || quantita <= 0) return;
+    if (_unita != 'g' && _unita != 'ml') return;
+
+    final v = a.per(quantita);
+
+    String scrivi(double? n) => n == null ? '' : n.toStringAsFixed(n >= 10 ? 0 : 1);
+
+    _kcal.text = scrivi(v.kcal);
+    _proteine.text = scrivi(v.proteine);
+    _carboidrati.text = scrivi(v.carboidrati);
+    _grassi.text = scrivi(v.grassi);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -441,17 +505,26 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                   descrizione: _descrizione,
                   quantita: _quantita,
                   kcal: _kcal,
+                  proteine: _proteine,
+                  carboidrati: _carboidrati,
+                  grassi: _grassi,
                   unita: _unita,
                   unitaAmmesse: _unitaAmmesse,
                   inCorso: _inCorso,
+                  scelto: _scelto,
                   onUnita: (u) => setState(() => _unita = u),
+                  onScelto: _riempiDaCatalogo,
+                  onQuantita: _ricalcolaDaCatalogo,
                   onSalva: () => _esegui(
                     () => azioni.addManual(
                       description: _descrizione.text,
                       meal: widget.meal,
-                      qty: double.tryParse(_quantita.text.replaceAll(',', '.')),
+                      qty: _numero(_quantita),
                       unit: _unita,
-                      kcal: double.tryParse(_kcal.text.replaceAll(',', '.')),
+                      kcal: _numero(_kcal),
+                      protein: _numero(_proteine),
+                      carbs: _numero(_carboidrati),
+                      fat: _numero(_grassi),
                     ),
                   ),
                 ),
@@ -683,73 +756,213 @@ class _Manuale extends StatelessWidget {
     required this.descrizione,
     required this.quantita,
     required this.kcal,
+    required this.proteine,
+    required this.carboidrati,
+    required this.grassi,
     required this.unita,
     required this.unitaAmmesse,
     required this.inCorso,
+    required this.scelto,
     required this.onUnita,
+    required this.onScelto,
+    required this.onQuantita,
     required this.onSalva,
   });
 
   final TextEditingController descrizione, quantita, kcal;
+  final TextEditingController proteine, carboidrati, grassi;
   final String unita;
   final List<String> unitaAmmesse;
   final bool inCorso;
+  final AlimentoCatalogo? scelto;
   final ValueChanged<String> onUnita;
+  final ValueChanged<AlimentoCatalogo?> onScelto;
+  final VoidCallback onQuantita;
   final VoidCallback onSalva;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(Gap.md),
-    child: Column(
-      children: [
-        TextField(
-          controller: descrizione,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Cosa hai mangiato'),
-        ),
-        const SizedBox(height: Gap.md),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextField(
-                controller: quantita,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Quantità'),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(Gap.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CampoAlimento(controller: descrizione, onScelto: onScelto),
+
+          if (scelto != null) ...[
+            const SizedBox(height: Gap.sm),
+            _AlimentoScelto(alimento: scelto!),
+          ],
+
+          const SizedBox(height: Gap.md),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: quantita,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => onQuantita(),
+                  decoration: const InputDecoration(labelText: 'Quantit\u00e0'),
+                ),
               ),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                flex: 3,
+                child: DropdownButtonFormField<String>(
+                  initialValue: unita,
+                  decoration: const InputDecoration(labelText: 'Unit\u00e0'),
+                  items: [
+                    for (final u in unitaAmmesse) DropdownMenuItem(value: u, child: Text(u)),
+                  ],
+                  onChanged: (v) => v != null ? onUnita(v) : null,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: Gap.md),
+          TextField(
+            controller: kcal,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Calorie',
+              helperText: 'Se non le sai, lascia vuoto.',
             ),
-            const SizedBox(width: Gap.sm),
-            Expanded(
-              flex: 3,
-              child: DropdownButtonFormField<String>(
-                initialValue: unita,
-                decoration: const InputDecoration(labelText: 'Unità'),
-                items: [
-                  for (final u in unitaAmmesse) DropdownMenuItem(value: u, child: Text(u)),
-                ],
-                onChanged: (v) => v != null ? onUnita(v) : null,
+          ),
+
+          const SizedBox(height: Gap.lg),
+
+          /*
+           * \u{1F6A8} **I macro sono facoltativi, e c'\u00e8 scritto perch\u00e9 conviene
+           * compilarli.**
+           *
+           * Senza una ragione visibile non li compila nessuno, e senza di loro
+           * il catalogo non impara niente: sono la condizione perch\u00e9 un
+           * alimento diventi un suggerimento per la volta dopo.
+           *
+           * \u26A0\uFE0F Restano facoltativi: obbligarli vorrebbe dire che chi non li
+           * sa non registra il pasto, e un diario incompleto \u00e8 peggio di un
+           * catalogo incompleto.
+           */
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_outlined, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: Gap.xs),
+              Expanded(
+                child: Text(
+                  'Se compili anche i macro, la prossima volta te lo suggeriamo gi\u00e0 pronto.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: Gap.sm),
+          Row(
+            children: [
+              Expanded(child: _Macro(controller: proteine, etichetta: 'Proteine')),
+              const SizedBox(width: Gap.sm),
+              Expanded(child: _Macro(controller: carboidrati, etichetta: 'Carboidrati')),
+              const SizedBox(width: Gap.sm),
+              Expanded(child: _Macro(controller: grassi, etichetta: 'Grassi')),
+            ],
+          ),
+
+          const SizedBox(height: Gap.lg),
+          FilledButton(
+            style: bottonePieno(),
+            onPressed: inCorso ? null : onSalva,
+            child: const Text('Aggiungi'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Un campo per un macro, in grammi.
+class _Macro extends StatelessWidget {
+  const _Macro({required this.controller, required this.etichetta});
+
+  final TextEditingController controller;
+  final String etichetta;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: controller,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    decoration: InputDecoration(labelText: etichetta, suffixText: 'g', isDense: true),
+  );
+}
+
+/// L'alimento scelto dai suggerimenti: immagine, valori e **provenienza**.
+///
+/// \u{1F6A8} **La nota non \u00e8 un dettaglio: \u00e8 l'attribuzione.**
+///
+/// CREA chiede «una chiara indicazione della fonte originale», Open Food Facts
+/// chiede l'attribuzione ODbL. \u26A0\uFE0F Tenerla in banca dati \u00e8 met\u00e0 del lavoro:
+/// la licenza chiede che la veda **chi usa il dato**, e chi usa il dato \u00e8 la
+/// persona che sta registrando il pasto.
+///
+/// \u{1F4A1} E serve anche a lei: sapere che un valore viene da un ente di ricerca o
+/// dall'etichetta di una confezione cambia quanto ci si fida.
+class _AlimentoScelto extends StatelessWidget {
+  const _AlimentoScelto({required this.alimento});
+
+  final AlimentoCatalogo alimento;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(Gap.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: Gap.xs),
+              Expanded(
+                child: Text(
+                  alimento.titolo,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          if (alimento.kcal100 != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              '${alimento.kcal100!.round()} kcal per 100 ${alimento.basis}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
-        ),
-        const SizedBox(height: Gap.md),
-        TextField(
-          controller: kcal,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Calorie',
-            helperText: 'Se non le sai, lascia vuoto.',
-          ),
-        ),
-        const SizedBox(height: Gap.lg),
-        FilledButton(
-          style: bottonePieno(),
-          onPressed: inCorso ? null : onSalva,
-          child: const Text('Aggiungi'),
-        ),
-      ],
-    ),
-  );
+          if (alimento.note != null && alimento.note!.isNotEmpty) ...[
+            const SizedBox(height: Gap.xs),
+            Text(
+              alimento.note!,
+              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// L'etichetta di una linguetta che non consuma gettoni.

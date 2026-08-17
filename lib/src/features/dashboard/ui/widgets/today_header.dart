@@ -341,17 +341,14 @@ class _SaldoGettoni extends ConsumerWidget {
       orElse: () => const SizedBox.shrink(),
       data: (g) {
         /*
-         * 🚨 **A chi è abbonato non si mostra niente**, e non è un dettaglio
-         * di presentazione: la dotazione dell'abbonamento è uso compreso, non
-         * un credito da contare. Mostrarne il residuo dice a chi legge il
-         * listino che comprare un pacchetto conviene di più.
+         * 🚨 Il contatore c'è **sempre**: illimitato, pieno o a zero.
          *
-         * ⚠️ E non si mostra **zero**: uno zero accanto a un'AI che funziona è
-         * una contraddizione, e chi lo legge pensa che sia rotta.
+         * ⚠️ Nasconderlo a chi non ha gettoni comprati sembrava gentile e non
+         * lo era: chi lo cerca e non lo trova pensa che sia rotto. Uno zero
+         * almeno si capisce, e dice pure cosa fare.
+         *
+         * 💡 `null` = illimitata: si disegna un simbolo, mai uno zero.
          */
-        if (!g.daMostrare) return const SizedBox.shrink();
-
-        // 🚨 `null` = illimitata: si disegna un simbolo, mai uno zero.
         final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
 
         return Tooltip(

@@ -17,20 +17,22 @@ import '../../core/providers.dart';
 ///
 /// 💡 Chi ha comprato gettoni continua a vederli, ed è giusto: li ha pagati a
 /// parte, sono suoi, e vuole sapere quanti gliene restano.
+///
+/// ── ⚠️ E il contatore si vede SEMPRE, anche a zero — 17/08/2026 ──────────
+///
+/// La prima versione lo nascondeva a chi è abbonato e non ha comprato niente,
+/// per non far leggere uno zero accanto a un'AI che funziona. 🚨 Provandolo sul
+/// telefono, il committente non l'ha trovato e ha pensato fosse rotto.
+///
+/// 💡 **Un contatore che a volte c'è e a volte no è peggio di uno zero**: chi
+/// lo cerca e non lo trova non ha modo di sapere se è sparito perché non serve
+/// o perché non funziona. Uno zero almeno si capisce.
 class Gettoni {
-  const Gettoni({
-    required this.disponibili,
-    required this.illimitata,
-    required this.daMostrare,
-  });
+  const Gettoni({required this.disponibili, required this.illimitata});
 
   factory Gettoni.fromJson(Map<String, dynamic> j) => Gettoni(
     disponibili: (j['gettoni_disponibili'] as num?)?.toInt(),
     illimitata: j['illimitata'] as bool? ?? false,
-    // ⚠️ Il valore di ripiego è `false`: se il server non lo dice — perché è
-    // più vecchio dell'app — **non si mostra niente**. Il contrario
-    // rimetterebbe in giro il numero che si è appena smesso di mostrare.
-    daMostrare: j['mostra_gettoni'] as bool? ?? false,
   );
 
   /// I soli gettoni **comprati**. `null` quando la quota è illimitata.
@@ -41,15 +43,6 @@ class Gettoni {
   final int? disponibili;
 
   final bool illimitata;
-
-  /// Se l'intestazione debba disegnare il contatore, oppure niente.
-  ///
-  /// ── ⚠️ Perché non basta mostrare zero ───────────────────────────────────
-  ///
-  /// Perché uno zero accanto a un'AI che **funziona** è una contraddizione:
-  /// chi lo legge pensa che sia rotta, e scrive. Il contatore va **nascosto**,
-  /// non azzerato.
-  final bool daMostrare;
 
   /// 💡 Sotto il costo di una foto il numero va segnalato: chi ha 6 gettoni non
   /// è a zero, ma la prossima foto non la fa — e scoprirlo dopo aver inquadrato

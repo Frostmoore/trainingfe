@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/health/dati_salute.dart';
+import '../../features/health/sessioni_di_sonno.dart';
 
 part 'archivio_salute.g.dart';
 
@@ -44,7 +45,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,10 +77,27 @@ class ArchivioSalute extends _$ArchivioSalute {
             await m.addColumn(schedeRicevute, schedeRicevute.origineId);
             await m.addColumn(schedeRicevute, schedeRicevute.aggiornatoIl);
           }
+
+          /*
+           * v6 -> v7 (18/08/2026): notti e pennichelle si riconoscono davvero.
+           *
+           * La regola precedente decideva la giornata guardando l'ora d'inizio
+           * del **singolo segmento di fase**: dopo le 18 apparteneva al giorno
+           * dopo. Una pennichella cominciata alle 18:09 finiva quindi
+           * accreditata all'indomani, e la giornata risultava sfasata.
+           *
+           * 🚨 **Va rifatto anche su chi era gia' alla v5 o alla v6.** Il
+           * riaccredito qui sopra scatta solo `se da < 5`: senza questa riga,
+           * chi ha gia' aggiornato una volta si terrebbe i dati sbagliati per
+           * sempre — e il difetto sembrerebbe corretto solo a chi installa da
+           * zero, cioe' a noi.
+           */
+          if (da < 7) await _riaccreditaLeNotti();
         },
       );
 
-  /// Ricalcola `notte` su tutti i campioni già salvati — migrazione v4 → v5.
+  /// Ricalcola `notte` su tutti i campioni già salvati — v4 → v5, e di nuovo
+  /// v6 → v7.
   ///
   /// ── 🚨 Perché una migrazione, e non «si sistema alla prossima lettura» ──
   ///
@@ -102,11 +120,30 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> _riaccreditaLeNotti() async {
     final righe = await select(campioniSonno).get();
 
+    if (righe.isEmpty) return;
+
+    /*
+     * \U0001F6A8 Si ricompongono le dormite **su tutto l'archivio insieme**, non
+     * riga per riga.
+     *
+     * ⚠️ È il punto in cui la versione precedente sbagliava: chiamava
+     * `notteDi(iniziatoIl)` su ogni segmento separatamente, e un segmento da
+     * solo non sa se fa parte di una notte o di una pennichella. Una pennica
+     * delle 18:09 finiva accreditata al giorno dopo.
+     *
+     * \U0001F4A1 Nessun dato si perde: si riscrive una colonna **derivata**, e
+     * `notte` non fa parte di nessun vincolo di unicita' — quello e' su
+     * `(fonte, iniziatoIl)`.
+     */
+    final giornate = SessioniDiSonno.giornatePerSegmento(
+      righe.map((r) => (inizio: r.iniziatoIl, fine: r.finitoIl)),
+    );
+
     await batch((b) {
       for (final riga in righe) {
-        final giusta = _soloGiorno(notteDi(riga.iniziatoIl));
+        final giusta = giornate[riga.iniziatoIl];
 
-        if (giusta == riga.notte) continue;
+        if (giusta == null || giusta == riga.notte) continue;
 
         b.update(
           campioniSonno,

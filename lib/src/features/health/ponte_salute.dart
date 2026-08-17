@@ -3,6 +3,7 @@ import 'package:health/health.dart';
 
 import '../../core/storage/archivio_salute.dart';
 import 'dati_salute.dart';
+import 'sessioni_di_sonno.dart';
 
 /// Il ponte fra il telefono e l'archivio locale — S3.3.
 ///
@@ -149,10 +150,21 @@ class PonteSalute {
       final fase = _faseDi(punto.type);
 
       if (fase != null) {
+        /*
+         * \U0001F6A8 La giornata si mette **dopo**, non qui.
+         *
+         * Quello che arriva sono **segmenti di fase** — venti minuti di REM,
+         * quaranta di profondo — e da un segmento solo non si puo' sapere se
+         * fa parte di una notte o di un pisolino. ⚠️ La regola precedente ci
+         * provava guardando l'ora d'inizio, e una pennichella cominciata alle
+         * 18:09 finiva accreditata all'indomani.
+         *
+         * \U0001F4A1 Si mette un segnaposto e si decide sotto, quando ci sono tutti.
+         */
         campioni.add(CampioneSonno(
           id: 0,
           fonte: _fonte(punto),
-          notte: notteDi(punto.dateFrom),
+          notte: punto.dateFrom,
           iniziatoIl: punto.dateFrom,
           finitoIl: punto.dateTo,
           fase: fase.codice,
@@ -160,10 +172,36 @@ class PonteSalute {
       }
     }
 
+    final conLaGiornataGiusta = _assegnaLeGiornate(campioni);
+
     final a1 = await _archivio.scriviLetture(letture);
-    final a2 = await _archivio.scriviCampioniSonno(campioni);
+    final a2 = await _archivio.scriviCampioniSonno(conLaGiornataGiusta);
 
     return a1 + a2;
+  }
+
+  /// Ricompone i segmenti in dormite e da' a ognuno la giornata della sua.
+  ///
+  /// \U0001F6A8 È il passaggio che la versione precedente non aveva: decideva
+  /// segmento per segmento, e un segmento da solo non sa dove appartiene.
+  static List<CampioneSonno> _assegnaLeGiornate(List<CampioneSonno> campioni) {
+    if (campioni.isEmpty) return campioni;
+
+    final giornate = SessioniDiSonno.giornatePerSegmento(
+      campioni.map((c) => (inizio: c.iniziatoIl, fine: c.finitoIl)),
+    );
+
+    return [
+      for (final c in campioni)
+        CampioneSonno(
+          id: c.id,
+          fonte: c.fonte,
+          notte: giornate[c.iniziatoIl] ?? c.iniziatoIl,
+          iniziatoIl: c.iniziatoIl,
+          finitoIl: c.finitoIl,
+          fase: c.fase,
+        ),
+    ];
   }
 
   static String _fonte(HealthDataPoint punto) {

@@ -358,4 +358,79 @@ void main() {
       await db.close();
     });
   });
+  group('l\x27involucro con la chiave maestra', () {
+    test('il backup del cloud si apre con la chiave maestra', () async {
+      /*
+       * 🚨 **È la decisione che rende possibile il backup automatico.**
+       *
+       * ⚠️ Un lavoro in background non ha nessuno a cui chiedere la password di
+       * recupero, e l'app non la conserva: un backup automatico che la pretende
+       * non è automatico.
+       *
+       * 💡 La catena passa da quello che esiste già: telefono nuovo → password
+       * → il server restituisce la chiave maestra → con quella si apre questo
+       * file.
+       */
+      final backup = FileDiBackup(sodium);
+      final maestra = Uint8List.fromList(List.filled(32, 11));
+
+      final file = await backup.esportaV2(
+        chiaveMaestra: maestra,
+        archivio: const {'x': []},
+        codice: backup.generaCodice(),
+        avvolgiConLaChiaveMaestra: true,
+      );
+
+      final contenuto = await backup.importaConChiaveMaestra(
+        file: file,
+        chiaveMaestra: maestra,
+      );
+
+      expect(contenuto.chiaveMaestra, equals(maestra));
+    });
+
+    test('una chiave maestra sbagliata non apre niente', () async {
+      final backup = FileDiBackup(sodium);
+
+      final file = await backup.esportaV2(
+        chiaveMaestra: Uint8List.fromList(List.filled(32, 12)),
+        archivio: const {},
+        codice: backup.generaCodice(),
+        avvolgiConLaChiaveMaestra: true,
+      );
+
+      await expectLater(
+        backup.importaConChiaveMaestra(
+          file: file,
+          chiaveMaestra: Uint8List.fromList(List.filled(32, 99)),
+        ),
+        throwsA(isA<CodiceDiRipristinoSbagliato>()),
+      );
+    });
+
+    test('un file SENZA quell\x27involucro lo dice invece di fallire a caso', () async {
+      // 💡 È il caso di un file manuale: si apre col codice, non con la chiave.
+      final backup = FileDiBackup(sodium);
+
+      final file = await backup.esportaV2(
+        chiaveMaestra: Uint8List.fromList(List.filled(32, 13)),
+        archivio: const {},
+        codice: backup.generaCodice(),
+      );
+
+      await expectLater(
+        backup.importaConChiaveMaestra(
+          file: file,
+          chiaveMaestra: Uint8List.fromList(List.filled(32, 13)),
+        ),
+        throwsA(
+          isA<CodiceDiRipristinoSbagliato>().having(
+            (e) => e.motivo,
+            'motivo',
+            contains('codice'),
+          ),
+        ),
+      );
+    });
+  });
 }

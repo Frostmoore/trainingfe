@@ -244,6 +244,7 @@ class FileDiBackup {
     required Map<String, dynamic> archivio,
     required String codice,
     String? password,
+    bool avvolgiConLaChiaveMaestra = false,
   }) async {
     /*
      * 🚨 La chiave del contenuto è **a caso e nuova ogni volta**.
@@ -265,6 +266,28 @@ class FileDiBackup {
         'salt_codice': base64Encode(saltCodice),
         'wrap_codice': _avvolgi(chiaveContenuto, codice, saltCodice),
       };
+
+      /*
+       * 🚨 **Il terzo involucro: la chiave maestra stessa** — N3.
+       *
+       * ⚠️ Serve al backup automatico, e senza non esisterebbe: un lavoro in
+       * background non ha nessuno a cui chiedere la password di recupero, e
+       * l'app non la conserva.
+       *
+       * 💡 **La catena regge lo stesso**: su un telefono nuovo si digita la
+       * password, il server restituisce la chiave maestra (`ripristinaConPassword`),
+       * e con quella si apre il file del cloud. Una porta in piu', non una
+       * scorciatoia.
+       *
+       * ⚠️ Niente Argon2 qui: la chiave maestra ha gia' 256 bit di entropia
+       * vera. Derivare da un segreto forte con un KDF lento e' tempo speso a
+       * proteggersi da un attacco a dizionario che non ha nessun dizionario da
+       * provare.
+       */
+      if (avvolgiConLaChiaveMaestra) {
+        involucri['wrap_maestra'] =
+            _avvolgiConChiave(chiaveContenuto, _daMaestra(chiaveMaestra));
+      }
 
       if (password != null && password.isNotEmpty) {
         final saltPassword =
@@ -324,6 +347,25 @@ class FileDiBackup {
     String? codice,
     String? password,
   }) async {
+    final intestazione = _intestazioneDi(file);
+
+    return _leggiIlCorpo(
+      file: file,
+      intestazione: intestazione,
+      chiaveContenuto: _scartaLInvolucro(
+        intestazione: intestazione,
+        codice: codice,
+        password: password,
+      ),
+    );
+  }
+
+  /// L'intestazione in chiaro: 4 byte di lunghezza, poi il JSON.
+  ///
+  /// 🚨 Estratta perché la usano **due** strade — il codice/password e la
+  /// chiave maestra. ⚠️ Duplicarla vorrebbe dire due letture dello stesso
+  /// formato che un giorno divergono, e la seconda sbaglierebbe in silenzio.
+  Map<String, dynamic> _intestazioneDi(Uint8List file) {
     if (file.length < 4) throw const CodiceDiRipristinoSbagliato(_nonSiApre);
 
     final lunghezza = ByteData.sublistView(file, 0, 4).getUint32(0);
@@ -332,35 +374,38 @@ class FileDiBackup {
       throw const CodiceDiRipristinoSbagliato(_nonSiApre);
     }
 
-    final Map<String, dynamic> intestazione;
-
     try {
-      intestazione = json.decode(
-        utf8.decode(file.sublist(4, 4 + lunghezza)),
-      ) as Map<String, dynamic>;
+      return json.decode(utf8.decode(file.sublist(4, 4 + lunghezza)))
+          as Map<String, dynamic>;
     } on Object {
       throw const CodiceDiRipristinoSbagliato(_nonSiApre);
     }
+  }
 
-    final chiaveContenuto = _scartaLInvolucro(
-      intestazione: intestazione,
-      codice: codice,
-      password: password,
-    );
+  /// Decifra i blocchi e ne ricava il contenuto.
+  ///
+  /// ⚠️ Consuma [chiaveContenuto]: la libera in ogni caso, anche fallendo. Una
+  /// chiave che resta in memoria dopo l'uso è esattamente ciò che `SecureKey`
+  /// esiste per evitare.
+  Future<ContenutoDelBackup> _leggiIlCorpo({
+    required Uint8List file,
+    required Map<String, dynamic> intestazione,
+    required SecureKey chiaveContenuto,
+  }) async {
+    final lunghezza = ByteData.sublistView(file, 0, 4).getUint32(0);
 
     try {
       final blocchi = await _sodium.crypto.secretStream
           .pullChunked(
             cipherStream: Stream.value(file.sublist(4 + lunghezza)),
             key: chiaveContenuto,
-            chunkSize: (intestazione['chunk'] as num?)?.toInt() ??
-                _byteDelBlocco,
+            chunkSize:
+                (intestazione['chunk'] as num?)?.toInt() ?? _byteDelBlocco,
           )
           .expand((b) => b)
           .toList();
 
-      final corpo =
-          json.decode(utf8.decode(blocchi)) as Map<String, dynamic>;
+      final corpo = json.decode(utf8.decode(blocchi)) as Map<String, dynamic>;
 
       return ContenutoDelBackup(
         chiaveMaestra: base64Decode(corpo['master_key'] as String),
@@ -475,6 +520,90 @@ class FileDiBackup {
     }
 
     return importaV2(file: file, codice: codice, password: password);
+  }
+
+  /// La chiave con cui si avvolge usando la **chiave maestra** — N3.
+  ///
+  /// 🚨 Non è la chiave maestra nuda: è una sua derivazione con un'etichetta.
+  ///
+  /// ⚠️ Riusare la stessa chiave per due scopi diversi — cifrare i messaggi e
+  /// avvolgere i backup — è il modo classico in cui una debolezza in uno dei due
+  /// usi diventa una debolezza nell'altro. La derivazione con etichetta separa
+  /// i domini, e costa un hash.
+  SecureKey _daMaestra(Uint8List chiaveMaestra) => SecureKey.fromList(
+    _sodium,
+    _sodium.crypto.genericHash(
+      message: Uint8List.fromList(utf8.encode('training-companion/backup-wrap')),
+      key: SecureKey.fromList(_sodium, chiaveMaestra),
+      outLen: _sodium.crypto.secretBox.keyBytes,
+    ),
+  );
+
+  /// Avvolge con una chiave già pronta, senza passare da un KDF.
+  ///
+  /// 💡 Distinto da `_avvolgi`, che parte da un segreto **debole** (una
+  /// password, un codice) e deve rinforzarlo con Argon2. Qui il segreto è già
+  /// forte: un KDF lento non aggiungerebbe niente e costerebbe secondi a ogni
+  /// backup automatico.
+  Map<String, String> _avvolgiConChiave(
+    SecureKey chiaveContenuto,
+    SecureKey chiave,
+  ) {
+    final nonce = _sodium.randombytes.buf(_sodium.crypto.secretBox.nonceBytes);
+
+    try {
+      final cifrato = _sodium.crypto.secretBox.easy(
+        message: chiaveContenuto.extractBytes(),
+        nonce: nonce,
+        key: chiave,
+      );
+
+      return {'nonce': base64Encode(nonce), 'dato': base64Encode(cifrato)};
+    } finally {
+      chiave.dispose();
+    }
+  }
+
+  /// Riapre un backup del cloud con la **chiave maestra** — N3.
+  ///
+  /// 🚨 È la strada del telefono nuovo: si digita la password di recupero, il
+  /// server restituisce la chiave maestra, e con quella si apre questo file.
+  Future<ContenutoDelBackup> importaConChiaveMaestra({
+    required Uint8List file,
+    required Uint8List chiaveMaestra,
+  }) async {
+    final intestazione = _intestazioneDi(file);
+    final wrap = intestazione['wrap_maestra'];
+
+    if (wrap is! Map) {
+      throw const CodiceDiRipristinoSbagliato(
+        'Questo backup non si apre con la chiave dell\'account: serve il codice.',
+      );
+    }
+
+    final derivata = _daMaestra(chiaveMaestra);
+    final SecureKey chiaveContenuto;
+
+    try {
+      chiaveContenuto = SecureKey.fromList(
+        _sodium,
+        _sodium.crypto.secretBox.openEasy(
+          cipherText: base64Decode(wrap['dato'] as String),
+          nonce: base64Decode(wrap['nonce'] as String),
+          key: derivata,
+        ),
+      );
+    } on Object {
+      throw const CodiceDiRipristinoSbagliato(_nonSiApre);
+    } finally {
+      derivata.dispose();
+    }
+
+    return _leggiIlCorpo(
+      file: file,
+      intestazione: intestazione,
+      chiaveContenuto: chiaveContenuto,
+    );
   }
 
   static String normalizza(String codice) => codice

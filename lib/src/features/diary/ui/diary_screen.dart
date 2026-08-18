@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
+import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
 import 'widgets/add_food_sheet.dart';
@@ -39,6 +40,8 @@ class DiaryScreen extends ConsumerWidget {
             icon: const Icon(Icons.calendar_month_rounded),
             tooltip: 'Calendario',
           ),
+          // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
+          const BottoneProfilo(),
         ],
         bottom: _BarraGiorno(giorno: giorno, ref: ref),
       ),

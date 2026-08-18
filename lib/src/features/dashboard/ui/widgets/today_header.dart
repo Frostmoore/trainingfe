@@ -9,6 +9,7 @@ import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
 import '../../../profile/corpo_controller.dart';
+import '../../../profile/ui/widgets/bottone_profilo.dart';
 import '../../data/dashboard_models.dart';
 import '../../gettoni_controller.dart';
 
@@ -146,6 +147,20 @@ class TodayHeader extends ConsumerWidget {
                      * due difetti di layout.
                      */
                     const _SaldoGettoni(),
+
+                    /*
+                     * 👤 **Il profilo, in alto a destra** — M7.1, 18/08/2026.
+                     *
+                     * 🚨 Qui non c'è nessuna `AppBar` — l'intestazione **è** la
+                     * scheda della palestra — quindi il bottone sta in coda a
+                     * questa riga: è comunque l'angolo in alto a destra dello
+                     * schermo, che è dove le persone lo cercano.
+                     *
+                     * ⚠️ **Dopo** il saldo dei gettoni e non prima: il saldo si
+                     * guarda ogni giorno, il profilo una volta a settimana, e
+                     * l'ordine di lettura va dal più usato al meno usato.
+                     */
+                    const BottoneProfilo(),
                   ],
                 ),
 

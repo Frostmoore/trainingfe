@@ -36,11 +36,20 @@ class HomeShell extends StatelessWidget {
       selectedIcon: Icon(Icons.chat_bubble_rounded),
       label: 'Messaggi',
     ),
-    NavigationDestination(
-      icon: Icon(Icons.person_outline_rounded),
-      selectedIcon: Icon(Icons.person_rounded),
-      label: 'Profilo',
-    ),
+
+    /*
+     * 🚨 **Il profilo NON è più qui** — M7.1, 18/08/2026, richiesta del
+     * committente.
+     *
+     * La barra in basso è quello che si fa **ogni giorno**: oggi, diario,
+     * allenamento, messaggi. ⚠️ Il profilo non è un'attività — è dove si va a
+     * cambiare una cosa, ogni tanto — e teneva un quinto dello spazio più
+     * prezioso dell'app per una schermata che si apre una volta a settimana.
+     *
+     * 💡 Adesso sta in alto a destra con la propria faccia (`BottoneProfilo`),
+     * che è anche dove le persone lo cercano già: è la convenzione di ogni
+     * applicazione che hanno sul telefono.
+     */
   ];
 
   @override

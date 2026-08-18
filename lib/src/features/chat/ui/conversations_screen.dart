@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
 import '../../nutrition/compositore_piano_controller.dart';
+import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 
@@ -41,6 +42,8 @@ class ConversationsScreen extends ConsumerWidget {
             tooltip: 'Trova una palestra o un trainer',
             onPressed: () => context.push(AppRoutes.catalogo),
           ),
+          // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
+          const BottoneProfilo(),
         ],
       ),
       floatingActionButton: const _NuovoMessaggio(),

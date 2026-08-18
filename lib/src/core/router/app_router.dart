@@ -501,15 +501,32 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.profile,
-                builder: (_, _) => const ProfileScreen(),
-              ),
-            ],
-          ),
+          /*
+           * 🚨 **Il ramo del profilo NON c'è più** — M7.1.
+           *
+           * ⚠️ Toglierlo dalla barra senza toglierlo da qui avrebbe lasciato un
+           * quinto ramo irraggiungibile: `shell.goBranch(4)` non lo chiama
+           * nessuno, ma `StatefulShellRoute` continuerebbe a costruirne lo
+           * stato e a tenerlo vivo nell'`IndexedStack`.
+           *
+           * 💡 `/profilo` è diventata una rotta **sopra** la shell, come «i
+           * miei utenti»: si spinge con `push`, ha il pulsante «indietro», e la
+           * barra in basso resta dov'è.
+           */
         ],
+      ),
+
+      /*
+       * 👤 Il profilo — M7.1. Fuori dalla shell, sopra di essa.
+       *
+       * ⚠️ **Dopo** `StatefulShellRoute` e non prima: go_router prende la prima
+       * rotta che combacia, e `/profilo/...` ha già dei figli dichiarati più in
+       * alto (`/profilo/i-miei-utenti`, `/profilo/dati`…). Metterla sopra li
+       * intercetterebbe tutti.
+       */
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (_, _) => const ProfileScreen(),
       ),
     ],
   );

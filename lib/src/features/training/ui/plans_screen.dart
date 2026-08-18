@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -39,6 +40,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Allenamento'),
+        // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
+        actions: const [BottoneProfilo()],
         // Il selettore sta **nella barra**, sotto il titolo: è la posizione in
         // cui si cerca un cambio di vista, e non ruba una riga al contenuto.
         bottom: PreferredSize(

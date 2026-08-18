@@ -1,4 +1,4 @@
-package it.riccardoronconi.training_companion
+package com.smp.mytrainingcompanion
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

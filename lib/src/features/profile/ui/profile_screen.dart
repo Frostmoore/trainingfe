@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../onboarding/branding_controller.dart';
+import '../../scoperta/ui/scelta_citta.dart';
 import '../profile_controller.dart';
 import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
@@ -185,6 +186,19 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                 ],
+
+                /*
+                 * 📍 La città — M1.2.
+                 *
+                 * 🚨 Sta **sopra** «sonno e recupero» e non in fondo: è il
+                 * campo che accende la vicinanza nel catalogo, e senza di esso
+                 * chi cerca una palestra riceve un elenco in ordine alfabetico
+                 * senza capire perché.
+                 *
+                 * ⚠️ E non è obbligatoria: si può togliere.
+                 */
+                const VoceCitta(),
+                const Divider(height: 1),
 
                 ListTile(
                   leading: const Icon(Icons.monitor_heart_outlined),

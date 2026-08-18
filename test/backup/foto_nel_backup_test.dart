@@ -5,60 +5,90 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/backup/raccolta_foto.dart';
 import 'package:training_companion/src/core/backup/sincronizza_foto.dart';
 import 'package:training_companion/src/core/crypto/file_di_backup.dart';
+import 'package:training_companion/src/core/media/archivio_foto.dart';
+import 'package:training_companion/src/core/media/tipo_foto.dart';
 
+import '../aiuto/cartelle_finte.dart';
 import '../aiuto/libsodium.dart';
 import 'riaccensione_test.dart' show CloudFinto;
 
-/// Le foto nel backup — N5.
+/// Le foto nel backup — N5, N12.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FileDiBackup backup;
-  late Directory cartella;
+
+  const archivio = ArchivioFoto();
+  const raccolta = RaccoltaFoto();
 
   final maestra = Uint8List.fromList(List.generate(32, (i) => i));
 
   setUpAll(() async => backup = FileDiBackup(await libsodiumPerTest()));
 
-  setUp(() {
-    cartella = Directory.systemTemp.createTempSync('foto-test');
-  });
+  setUp(() => CartelleFinte.installa(aFine: addTearDown));
 
-  tearDown(() {
-    if (cartella.existsSync()) cartella.deleteSync(recursive: true);
-  });
+  Uint8List byte(int quanti) =>
+      Uint8List.fromList(List.generate(quanti, (i) => i % 256));
 
-  File scrivi(String nome, List<int> byte) =>
-      File('${cartella.path}${Platform.pathSeparator}$nome')
-        ..writeAsBytesSync(byte);
+  /// Mette un file dentro la cartella di un tipo, col nome che si vuole.
+  Future<File> metti(TipoFoto tipo, String nome, [Uint8List? contenuto]) async {
+    final cartella = await archivio.cartellaDi(tipo);
+    final f = File('${cartella.path}${Platform.pathSeparator}$nome');
+
+    await f.writeAsBytes(contenuto ?? byte(30));
+
+    return f;
+  }
 
   SincronizzaFoto sincronizzatore(CloudFinto cloud) => SincronizzaFoto(
     cloud: cloud,
     backup: backup,
-    raccolta: RaccoltaFoto(cartella),
     chiaveMaestra: maestra,
   );
 
   group('l\'inventario', () {
-    test('conta solo le immagini, e i video restano fuori', () async {
-      // 🚨 N5.3: i video non entrano MAI nel backup automatico. Qui si prova
-      // che l'elenco di ammessi li lascia davvero fuori.
-      scrivi('a.jpg', [1, 2, 3]);
-      scrivi('b.PNG', [4, 5]);
-      scrivi('filmato.mp4', List.filled(9000, 7));
-      scrivi('altro.mov', List.filled(9000, 7));
-      scrivi('appunti.txt', [9]);
+    test('🚨 guarda solo i tipi che vanno nel backup — N12.2', () async {
+      /*
+       * ⚠️ Una foto per il modello finita nel backup verrebbe salvata **per
+       * sempre su Drive**, quando serviva a una cosa sola e per pochi secondi.
+       * E una effimera sopravviverebbe a chi l'ha mandata, che è l'esatto
+       * contrario di quello che voleva.
+       */
+      await metti(TipoFoto.progressi, 'a.jpg');
+      await metti(TipoFoto.chat, 'b.jpg');
+      await metti(TipoFoto.ai, 'piatto.jpg');
+      await metti(TipoFoto.effimere, 'segreta.jpg');
+      await metti(TipoFoto.alimenti, 'mela.jpg');
 
-      final raccolta = RaccoltaFoto(cartella);
-      final elenco = await raccolta.elenca();
+      final nomi = (await raccolta.elenca()).map((f) => f.nomeNelCloud).toSet();
 
-      expect(elenco.map((f) => f.uri.pathSegments.last), ['a.jpg', 'b.PNG']);
-      expect(await raccolta.byteTotali(), 5, reason: 'ha contato un video');
+      expect(nomi, {'progressi~a.jpg', 'chat~b.jpg'});
     });
 
-    test('una cartella che non esiste non e\' un guasto', () async {
-      final raccolta = RaccoltaFoto(Directory('${cartella.path}/mai-creata'));
+    test('i video restano fuori — N5.3', () async {
+      await metti(TipoFoto.progressi, 'a.jpg');
+      await metti(TipoFoto.progressi, 'filmato.mp4', byte(9000));
+      await metti(TipoFoto.progressi, 'altro.mov', byte(9000));
 
+      expect((await raccolta.elenca()).map((f) => f.nome), ['a.jpg']);
+      expect(await raccolta.byteTotali(), 30, reason: 'ha contato un video');
+    });
+
+    test('cartelle mai create non sono un guasto', () async {
       expect(await raccolta.elenca(), isEmpty);
       expect(await raccolta.byteTotali(), 0);
+    });
+
+    test('l\'elenco è ordinato, così due telefoni concordano', () async {
+      await metti(TipoFoto.progressi, 'z.jpg');
+      await metti(TipoFoto.chat, 'a.jpg');
+      await metti(TipoFoto.progressi, 'b.jpg');
+
+      expect((await raccolta.elenca()).map((f) => f.nomeNelCloud), [
+        'chat~a.jpg',
+        'progressi~b.jpg',
+        'progressi~z.jpg',
+      ]);
     });
 
     test('il peso si legge come lo scrive Android', () {
@@ -70,15 +100,49 @@ void main() {
     });
   });
 
+  group('il nome nel cloud', () {
+    test('porta con sé il tipo, e si rilegge', () {
+      final letto = FotoDaSalvare.leggi('progressi~123.jpg');
+
+      expect(letto?.tipo, TipoFoto.progressi);
+      expect(letto?.nome, '123.jpg');
+    });
+
+    test('🚨 un tipo che nel backup non va non si accetta', () async {
+      // ⚠️ Se il cloud contiene un `ai~…` — per un residuo, o perché qualcuno
+      // ce l'ha messo — non deve tornare sul telefono.
+      expect(FotoDaSalvare.leggi('ai~123.jpg'), isNull);
+      expect(FotoDaSalvare.leggi('effimere~123.jpg'), isNull);
+    });
+
+    test('🚨 un percorso dentro il nome viene ripulito', () {
+      final letto = FotoDaSalvare.leggi('progressi~../../fuori.jpg');
+
+      expect(letto?.nome, 'fuori.jpg');
+    });
+
+    test('nomi malfatti tornano null invece di rompere', () {
+      for (final brutto in [
+        'senzatilde.jpg',
+        '~123.jpg',
+        'progressi~',
+        'inventato~123.jpg',
+        'progressi~appunti.txt',
+      ]) {
+        expect(FotoDaSalvare.leggi(brutto), isNull, reason: '"$brutto" passa');
+      }
+    });
+  });
+
   group('il caricamento', () {
     test('cifra le foto: nel cloud non finiscono i byte in chiaro', () async {
-      final chiaro = Uint8List.fromList(List.generate(500, (i) => i % 251));
-      scrivi('a.jpg', chiaro);
+      final chiaro = byte(500);
+      await metti(TipoFoto.progressi, 'a.jpg', chiaro);
 
       final cloud = CloudFinto();
       expect(await sincronizzatore(cloud).caricaLeNuove(), 1);
 
-      final salvata = cloud.allegati['a.jpg']!;
+      final salvata = cloud.allegati['progressi~a.jpg']!;
 
       /*
        * 🚨 L'asserzione che conta davvero. Un difetto in cui la cifratura non
@@ -93,62 +157,68 @@ void main() {
       );
     });
 
-    test('non ricarica quello che nel cloud c\'e\' gia\'', () async {
-      scrivi('a.jpg', [1, 2, 3]);
-      scrivi('b.jpg', [4, 5, 6]);
+    test('non ricarica quello che nel cloud c\'è già', () async {
+      await metti(TipoFoto.progressi, 'a.jpg');
+      await metti(TipoFoto.chat, 'b.jpg');
 
       final cloud = CloudFinto();
       expect(await sincronizzatore(cloud).caricaLeNuove(), 2);
 
       // 💡 È tutta la ragione per cui le foto stanno fuori dall'archivio: al
-      // secondo giro non si ricarica niente. Un backup giornaliero che
-      // rispedisse ogni volta centinaia di megabyte verrebbe spento.
+      // secondo giro non si carica niente.
       expect(await sincronizzatore(cloud).caricaLeNuove(), 0);
 
-      scrivi('c.jpg', [7]);
+      await metti(TipoFoto.progressi, 'c.jpg');
       expect(await sincronizzatore(cloud).caricaLeNuove(), 1);
-      expect(cloud.allegati.keys.toSet(), {'a.jpg', 'b.jpg', 'c.jpg'});
     });
 
-    test('i video non salgono nemmeno passando di qui', () async {
-      scrivi('a.jpg', [1]);
-      scrivi('vacanza.mp4', List.filled(100, 3));
+    test('🚨 le foto per il modello non salgono mai', () async {
+      await metti(TipoFoto.progressi, 'a.jpg');
+      await metti(TipoFoto.ai, 'piatto.jpg');
+      await metti(TipoFoto.effimere, 'segreta.jpg');
 
       final cloud = CloudFinto();
       await sincronizzatore(cloud).caricaLeNuove();
 
-      expect(cloud.allegati.keys, ['a.jpg']);
+      expect(cloud.allegati.keys, ['progressi~a.jpg']);
     });
   });
 
   group('il ripristino', () {
-    test('riscrive su disco le foto che mancano', () async {
-      final chiaro = Uint8List.fromList([9, 8, 7, 6]);
-      scrivi('a.jpg', chiaro);
+    test('rimette ogni foto nella SUA cartella', () async {
+      final progresso = byte(40);
+      final messaggio = byte(50);
+
+      await metti(TipoFoto.progressi, 'a.jpg', progresso);
+      await metti(TipoFoto.chat, 'b.jpg', messaggio);
 
       final cloud = CloudFinto();
       await sincronizzatore(cloud).caricaLeNuove();
 
-      // Il telefono nuovo: stesso cloud, cartella vuota.
-      final nuova = Directory.systemTemp.createTempSync('foto-nuove');
-      addTearDown(() => nuova.deleteSync(recursive: true));
+      // Il telefono nuovo: stesso cloud, cartelle vuote.
+      CartelleFinte.installa(aFine: addTearDown);
 
-      final riprese = await SincronizzaFoto(
-        cloud: cloud,
-        backup: backup,
-        raccolta: RaccoltaFoto(nuova),
-        chiaveMaestra: maestra,
-      ).riprendiLeMancanti();
+      expect(await sincronizzatore(cloud).riprendiLeMancanti(), 2);
 
-      expect(riprese, 1);
-      expect(
-        File('${nuova.path}${Platform.pathSeparator}a.jpg').readAsBytesSync(),
-        chiaro,
-      );
+      final dove = <TipoFoto, List<String>>{};
+
+      for (final f in await raccolta.elenca()) {
+        (dove[f.tipo] ??= []).add(f.nome);
+      }
+
+      expect(dove[TipoFoto.progressi], ['a.jpg']);
+      expect(dove[TipoFoto.chat], ['b.jpg']);
+
+      final tornata = await File(
+        '${(await archivio.cartellaDi(TipoFoto.progressi)).path}'
+        '${Platform.pathSeparator}a.jpg',
+      ).readAsBytes();
+
+      expect(tornata, progresso);
     });
 
-    test('non riscarica quello che sul telefono c\'e\' gia\'', () async {
-      scrivi('a.jpg', [1, 2]);
+    test('non riscarica quello che sul telefono c\'è già', () async {
+      await metti(TipoFoto.progressi, 'a.jpg');
 
       final cloud = CloudFinto();
       await sincronizzatore(cloud).caricaLeNuove();
@@ -156,38 +226,22 @@ void main() {
       expect(await sincronizzatore(cloud).riprendiLeMancanti(), 0);
     });
 
-    test('un nome con un percorso dentro non scrive fuori dalla cartella', () async {
-      /*
-       * 🚨 Il nome arriva dal cloud, e non ci si fida.
-       *
-       * ⚠️ Senza il `basename` in `riprendiLeMancanti`, un allegato chiamato
-       * `../fuori.jpg` finirebbe **accanto** alla cartella delle foto. Non è
-       * l'attacco più probabile del mondo — quel file lo abbiamo scritto noi —
-       * ma la riga che lo impedisce costa nulla e questa prova la tiene ferma.
-       */
+    test('🚨 un allegato di un tipo non salvabile viene ignorato', () async {
       final cloud = CloudFinto()
-        ..allegati['../fuori.jpg'] = await backup.cifraFoto(
+        ..allegati['ai~123.jpg'] = await backup.cifraFoto(
           chiaveMaestra: maestra,
-          contenuto: Uint8List.fromList([1]),
+          contenuto: byte(10),
         );
 
-      await sincronizzatore(cloud).riprendiLeMancanti();
-
-      final fuori = File(
-        '${cartella.parent.path}${Platform.pathSeparator}fuori.jpg',
-      );
-
-      expect(fuori.existsSync(), isFalse, reason: 'ha scritto fuori!');
-      expect(
-        File('${cartella.path}${Platform.pathSeparator}fuori.jpg').existsSync(),
-        isTrue,
-        reason: 'il nome andava ripulito, non scartato',
-      );
+      expect(await sincronizzatore(cloud).riprendiLeMancanti(), 0);
+      expect(await raccolta.elenca(), isEmpty);
     });
 
     test('una foto rovinata nel cloud si fa riconoscere', () async {
       final cloud = CloudFinto()
-        ..allegati['rotta.jpg'] = Uint8List.fromList(List.filled(200, 0));
+        ..allegati['progressi~rotta.jpg'] = Uint8List.fromList(
+          List.filled(200, 0),
+        );
 
       await expectLater(
         sincronizzatore(cloud).riprendiLeMancanti(),
@@ -199,7 +253,7 @@ void main() {
   test('una chiave maestra diversa non apre le foto', () async {
     final cifrata = await backup.cifraFoto(
       chiaveMaestra: maestra,
-      contenuto: Uint8List.fromList([1, 2, 3]),
+      contenuto: byte(20),
     );
 
     await expectLater(

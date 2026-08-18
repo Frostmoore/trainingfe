@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/health/health_controller.dart';
@@ -15,17 +12,15 @@ import 'drive_di_backup.dart';
 import 'raccolta_foto.dart';
 import 'sincronizza_foto.dart';
 
-/// L'inventario delle foto sul telefono — N5.1.
+/// L'inventario delle foto che vanno nel backup — N5.1, N12.1.
 ///
-/// ⚠️ La cartella è la stessa di `progress_controller.dart`
-/// (`Documents/foto`), e va tenuta allineata a quella: due idee diverse su
-/// dove stiano le foto vorrebbero dire un backup che salva una cartella vuota
-/// senza dirlo a nessuno.
-final raccoltaFotoProvider = FutureProvider<RaccoltaFoto>((ref) async {
-  final base = await getApplicationDocumentsDirectory();
-
-  return RaccoltaFoto(Directory(p.join(base.path, 'foto')));
-});
+/// 💡 Non prende piu' una cartella: le sa da sola, chiedendole a
+/// `TipoFoto.daSalvare`. ⚠️ Prima qui c'era `Documents/foto` scritta a mano,
+/// cioe' una **seconda idea** di dove stiano le foto accanto a quella di
+/// `ArchivioFoto` — e due idee sulla stessa cosa divergono.
+final raccoltaFotoProvider = Provider<RaccoltaFoto>(
+  (ref) => const RaccoltaFoto(),
+);
 
 /// Quanto pesano le foto, per poterlo scrivere accanto alla spunta — N5.1.
 ///
@@ -34,7 +29,7 @@ final raccoltaFotoProvider = FutureProvider<RaccoltaFoto>((ref) async {
 /// ricalcolo dello stato metterebbe un giro di disco su ogni apertura della
 /// schermata.
 final pesoDelleFotoProvider = FutureProvider<int>(
-  (ref) async => (await ref.watch(raccoltaFotoProvider.future)).byteTotali(),
+  (ref) async => ref.watch(raccoltaFotoProvider).byteTotali(),
 );
 
 /// Il posto dove finisce la copia di sicurezza — N3.
@@ -271,7 +266,7 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
       SincronizzaFoto(
         cloud: cloud,
         backup: FileDiBackup(await ref.read(sodiumProvider.future)),
-        raccolta: await ref.read(raccoltaFotoProvider.future),
+        raccolta: ref.read(raccoltaFotoProvider),
         chiaveMaestra: maestra,
       );
 

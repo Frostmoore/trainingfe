@@ -38,6 +38,24 @@
         <exclude domain="root" path="foto" />
 
         <!--
+          N12.3 - la stessa riga copre le SOTTOCARTELLE.
+
+          Da `v7.4.0` sotto `foto/` ci sono `progressi/` e `chat/`. #! `path`
+          e' un PREFISSO, quindi valgono gia' entrambe: non serve una riga per
+          cartella. /!\ Ma se qualcuno rinominasse `ArchivioFoto.madre`,
+          questa regola smetterebbe di valere IN SILENZIO - ed e' scritto anche
+          li'.
+
+          * Gli altri tre tipi (`ai`, `alimenti`, `effimere`) NON stanno qui:
+          vivono nella cartella di cache. Non e' una comodita', e' il
+          meccanismo - Android esclude sempre `getCacheDir()` dal backup, e
+          quella esclusione NON e' sovrascrivibile nemmeno provando a
+          includerla. Quello che non deve uscire dal telefono non esce per
+          costruzione, invece che perche' qualcuno si e' ricordato di scriverlo
+          qui.
+        -->
+
+        <!--
           🚨 Le due cassette di `flutter_secure_storage`, ed è la riga che evita
           un guasto brutto.
 

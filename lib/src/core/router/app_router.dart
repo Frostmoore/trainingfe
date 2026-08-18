@@ -25,6 +25,7 @@ import '../../features/profile/ui/delete_account_screen.dart';
 import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/progress/ui/progress_screen.dart';
+import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
 import '../../features/training/ui/compositore_scheda.dart';
@@ -84,6 +85,18 @@ class AppRoutes {
   /// Una scheda in più la trasformerebbe in un pannello di gestione con dentro
   /// anche il diario, che è il contrario di come questa app viene usata.
   static const mieiUtenti = '/profilo/i-miei-utenti';
+
+  /// Il catalogo di palestre e trainer — Parte M7.4.
+  ///
+  /// ⚠️ **Non è una sesta scheda in barra**, ed è la stessa ragione di «i miei
+  /// utenti»: una palestra la si cerca **una volta**, quando si comincia o
+  /// quando si cambia città. Una scheda permanente in fondo allo schermo per
+  /// una cosa che si fa una volta l'anno toglierebbe spazio alle quattro che si
+  /// usano ogni giorno.
+  ///
+  /// 💡 Ci si arriva dai messaggi, che è il posto dove la domanda nasce: «con
+  /// chi posso parlare?».
+  static const catalogo = '/messaggi/trova';
 
   /// I piani alimentari scritti dal trainer — G7.
   ///
@@ -309,6 +322,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.mieiUtenti,
         builder: (_, _) => const PortaDelleChiavi(child: MieiUtentiScreen()),
+      ),
+
+      /*
+       * 🚨 Il catalogo — M7.4 — **dentro `PortaDelleChiavi`**.
+       *
+       * Da qui si apre una conversazione, e una conversazione richiede le
+       * chiavi. ⚠️ Chiederle al momento in cui si tocca una palestra vorrebbe
+       * dire fermare qualcuno che ha appena deciso di scrivere: il momento
+       * peggiore possibile per far comparire una password.
+       */
+      GoRoute(
+        path: AppRoutes.catalogo,
+        builder: (_, _) => const PortaDelleChiavi(child: CatalogoScreen()),
       ),
 
       /*

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/crypto/contenuto_messaggio.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
@@ -20,7 +22,27 @@ class ConversationsScreen extends ConsumerWidget {
     final elenco = ref.watch(conversationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Messaggi')),
+      appBar: AppBar(
+        title: const Text('Messaggi'),
+        actions: [
+          /*
+           * 🚨 Il catalogo si raggiunge **da qui** — M7.4.
+           *
+           * ⚠️ Non da una sesta scheda in barra: una palestra la si cerca una
+           * volta, quando si comincia o quando si cambia città, e una scheda
+           * permanente per una cosa che si fa una volta l'anno toglierebbe
+           * spazio alle quattro che si usano ogni giorno.
+           *
+           * 💡 E sta nei messaggi perché è lì che la domanda nasce: «con chi
+           * posso parlare?».
+           */
+          IconButton(
+            icon: const Icon(Icons.travel_explore_rounded),
+            tooltip: 'Trova una palestra o un trainer',
+            onPressed: () => context.push(AppRoutes.catalogo),
+          ),
+        ],
+      ),
       floatingActionButton: const _NuovoMessaggio(),
       body: elenco.when(
         loading: () => const LoadingState(),

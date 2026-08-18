@@ -539,6 +539,77 @@ class FileDiBackup {
     ),
   );
 
+  /// La chiave con cui si cifrano le foto — N5.
+  ///
+  /// 🚨 **Etichetta diversa da quella dell'archivio**, e non è pignoleria: due
+  /// usi che partono dalla stessa chiave maestra devono arrivare a due chiavi
+  /// diverse, così che un difetto in uno dei due percorsi non regali anche
+  /// l'altro. Si chiama separazione di dominio e costa una stringa.
+  SecureKey _daMaestraPerFoto(Uint8List chiaveMaestra) => SecureKey.fromList(
+    _sodium,
+    _sodium.crypto.genericHash(
+      message: Uint8List.fromList(utf8.encode('training-companion/foto')),
+      key: SecureKey.fromList(_sodium, chiaveMaestra),
+      outLen: _sodium.crypto.secretStream.keyBytes,
+    ),
+  );
+
+  /// Cifra una foto, da sola, per mandarla nel cloud — N5.
+  ///
+  /// 💡 **Una chiave sola per tutte le foto e va bene lo stesso**: ogni flusso
+  /// di `secretStream` genera la propria intestazione casuale, quindi due file
+  /// cifrati con la stessa chiave non producono niente di confrontabile.
+  Future<Uint8List> cifraFoto({
+    required Uint8List chiaveMaestra,
+    required Uint8List contenuto,
+  }) async {
+    final chiave = _daMaestraPerFoto(chiaveMaestra);
+
+    try {
+      final blocchi = await _sodium.crypto.secretStream
+          .pushChunked(
+            messageStream: Stream.value(contenuto),
+            key: chiave,
+            chunkSize: _byteDelBlocco,
+          )
+          .expand((b) => b)
+          .toList();
+
+      return Uint8List.fromList(blocchi);
+    } finally {
+      chiave.dispose();
+    }
+  }
+
+  /// Riapre una foto cifrata da [cifraFoto].
+  Future<Uint8List> decifraFoto({
+    required Uint8List chiaveMaestra,
+    required Uint8List contenuto,
+  }) async {
+    final chiave = _daMaestraPerFoto(chiaveMaestra);
+
+    try {
+      final blocchi = await _sodium.crypto.secretStream
+          .pullChunked(
+            cipherStream: Stream.value(contenuto),
+            key: chiave,
+            chunkSize: _byteDelBlocco,
+          )
+          .expand((b) => b)
+          .toList();
+
+      return Uint8List.fromList(blocchi);
+    } on Object {
+      // ⚠️ Stessa scelta dell'archivio: file rovinato e file manomesso da fuori
+      // sono indistinguibili, e va detta la cosa vera.
+      throw const CodiceDiRipristinoSbagliato(
+        'Non riesco ad aprire una delle foto salvate.',
+      );
+    } finally {
+      chiave.dispose();
+    }
+  }
+
   /// Avvolge con una chiave già pronta, senza passare da un KDF.
   ///
   /// 💡 Distinto da `_avvolgi`, che parte da un segreto **debole** (una

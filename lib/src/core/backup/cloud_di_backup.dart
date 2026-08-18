@@ -51,6 +51,40 @@ abstract class CloudDiBackup {
   /// Lasciare lì i file di qualcuno che ha appena detto «non voglio più» è la
   /// cosa sbagliata; cancellarli senza chiedere è peggio.
   Future<void> cancellaTutto();
+
+  // ────────────────────────── gli allegati ──────────────────────────
+  //
+  // ── 🚨 Perché le foto NON stanno dentro l'archivio ────────────────────────
+  //
+  // Sarebbe stato più semplice aggiungere un campo `foto` al file `v2` e
+  // chiudere la questione. Due ragioni lo escludono, e sono entrambe pratiche:
+  //
+  // **1. L'archivio si rifà da zero a ogni backup.** Le foto dentro
+  // vorrebbero dire ricaricarle **tutte, ogni giorno**: qualche centinaio di
+  // megabyte del piano dati di qualcun altro e del suo spazio su Drive, per
+  // file che non cambiano mai. Separate, si carica solo quello che manca.
+  //
+  // **2. Il file `v2` si costruisce in memoria.** ⚠️ Duecento megabyte di foto
+  // diventano, fra base64, JSON e cifratura, più di un giga di picco: l'app
+  // verrebbe uccisa dal sistema proprio mentre mette al sicuro le cose.
+  //
+  // 💡 Il prezzo è che il cloud vede **quante** foto ci sono e quanto pesano.
+  // Non cosa contengono: ognuna è cifrata per conto suo.
+
+  /// Carica un allegato con un nome suo, sovrascrivendolo se c'è già.
+  Future<void> caricaAllegato(String nome, Uint8List contenuto);
+
+  /// Riprende un allegato, o `null` se non c'è.
+  Future<Uint8List?> scaricaAllegato(String nome);
+
+  /// I nomi degli allegati già nel cloud.
+  ///
+  /// 💡 È quello che rende il caricamento **incrementale**: si carica la
+  /// differenza fra quello che c'è sul telefono e quello che c'è già lì.
+  Future<Set<String>> elencaAllegati();
+
+  /// Cancella un allegato. Non è un errore se non c'era.
+  Future<void> cancellaAllegato(String nome);
 }
 
 /// Il cloud non è raggiungibile, o ha detto di no.

@@ -211,6 +211,116 @@ class DriveDiBackup implements CloudDiBackup {
 
       if (file != null) await api.files.delete(file.id!);
     }
+
+    /*
+     * 🚨 **Anche gli allegati** — N5.
+     *
+     * ⚠️ Dimenticarli qui vorrebbe dire che «spegni e cancella» lascia nel
+     * proprio Drive centinaia di megabyte di foto cifrate che nessuno vedrà
+     * mai più e che continuano a occupare la quota. Chi ha detto «cancella
+     * tutto» intendeva tutto.
+     */
+    for (final nome in await elencaAllegati()) {
+      await cancellaAllegato(nome);
+    }
+  }
+
+  // ────────────────────────── gli allegati ──────────────────────────
+
+  /// 💡 Il prefisso serve a distinguerli dall'archivio dentro la stessa
+  /// cartella, e a poterli elencare tutti con una domanda sola.
+  static const _prefissoAllegato = 'allegato-';
+
+  @override
+  Future<void> caricaAllegato(String nome, Uint8List contenuto) async {
+    final api = await _api();
+    final vero = '$_prefissoAllegato$nome';
+
+    // ⚠️ Si cancella e si riscrive invece di aggiornare: `files.update` con
+    // media su appDataFolder è la strada in cui si inciampa sui permessi, e
+    // qui riscrivere costa quanto aggiornare.
+    final gia = await _trova(api, vero);
+
+    if (gia != null) await api.files.delete(gia.id!);
+
+    await api.files.create(
+      drive.File()
+        ..name = vero
+        ..parents = [_cartella],
+      uploadMedia: drive.Media(
+        Stream.value(contenuto),
+        contenuto.length,
+        contentType: 'application/octet-stream',
+      ),
+    );
+  }
+
+  @override
+  Future<Uint8List?> scaricaAllegato(String nome) async {
+    final api = await _api();
+    final file = await _trova(api, '$_prefissoAllegato$nome');
+
+    if (file == null) return null;
+
+    final media = await api.files.get(
+      file.id!,
+      downloadOptions: drive.DownloadOptions.fullMedia,
+    ) as drive.Media;
+
+    final byte = <int>[];
+
+    await for (final pezzo in media.stream) {
+      byte.addAll(pezzo);
+    }
+
+    return Uint8List.fromList(byte);
+  }
+
+  @override
+  Future<Set<String>> elencaAllegati() async {
+    final api = await _api();
+    final nomi = <String>{};
+
+    /*
+     * 🚨 **Con le pagine, non senza.**
+     *
+     * ⚠️ Drive ne restituisce cento per volta. Fermarsi alla prima pagina
+     * significherebbe, per chi ha più di cento foto, ricaricare ogni volta
+     * tutte quelle dalla centunesima in poi — credendo che manchino.
+     */
+    String? pagina;
+
+    do {
+      final elenco = await api.files.list(
+        q: "name contains '$_prefissoAllegato'",
+        spaces: _cartella,
+        $fields: 'nextPageToken,files(id,name)',
+        pageSize: 1000,
+        pageToken: pagina,
+      );
+
+      for (final f in elenco.files ?? const <drive.File>[]) {
+        final n = f.name;
+
+        if (n != null && n.startsWith(_prefissoAllegato)) {
+          nomi.add(n.substring(_prefissoAllegato.length));
+        }
+      }
+
+      pagina = elenco.nextPageToken;
+    } while (pagina != null);
+
+    return nomi;
+  }
+
+  @override
+  Future<void> cancellaAllegato(String nome) async {
+    final api = await _api();
+    final file = await _trova(api, '$_prefissoAllegato$nome');
+
+    // 💡 Non c'era: non è un errore. Cancellare qualcosa che già non esiste è
+    // il risultato che si voleva.
+    if (file != null) await api.files.delete(file.id!);
   }
 
   /// Il client di Drive, con il token in testa a ogni richiesta.

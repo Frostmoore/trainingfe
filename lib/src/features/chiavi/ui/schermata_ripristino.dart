@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/backup/backup_controller.dart';
 import '../../../core/crypto/cassaforte.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
@@ -50,6 +51,16 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
   bool _inCorso = false;
   String? _errore;
 
+  /// La copia trovata su Drive, se la ricerca è andata a buon fine — N7.1.
+  DateTime? _copiaNelCloud;
+
+  /// ⚠️ Distingue **«non ho ancora cercato»** da **«ho cercato e non c'era
+  /// niente»**: senza, la schermata non saprebbe se offrire il pulsante o dire
+  /// che la copia non esiste, e direbbe la seconda cosa prima di aver guardato.
+  bool _cercato = false;
+
+  bool _cercando = false;
+
   @override
   void dispose() {
     _password.dispose();
@@ -63,8 +74,30 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
     });
 
     try {
+      final messaggeria = ScaffoldMessenger.of(context);
+
       final servizio = await ref.read(servizioChiaviProvider.future);
       await servizio.ripristinaConPassword(_password.text);
+
+      /*
+       * 🚨 **L'archivio subito dopo la chiave, nello stesso gesto** — N7.1.
+       *
+       * Fino alla `v7.2.0` erano due strade separate: qui si riapriva la chat,
+       * e per riavere peso e misure bisognava andare a cercare «Riprendi da
+       * Google Drive» in fondo al profilo. ⚠️ Chi ha appena cambiato telefono
+       * non sa che quella voce esiste: concludeva che i dati erano persi, e
+       * aveva ragione di concluderlo.
+       *
+       * 🚨 **Un guasto qui non deve annullare il ripristino della chiave.** I
+       * messaggi sono l'unica cosa irrecuperabile; peso e misure si riprendono
+       * domani dallo stesso file, che resta dov'è. Quindi si prosegue e si
+       * **dice** cos'è andato storto, invece di far fallire tutto.
+       */
+      final avviso = _copiaNelCloud == null ? null : await _riprendiLArchivio();
+
+      if (avviso != null) {
+        messaggeria.showSnackBar(SnackBar(content: Text(avviso)));
+      }
 
       // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
       // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
@@ -75,6 +108,68 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       _fallito('Questa password non apre il tuo account. Riprova.');
     } on Object catch (e) {
       _fallito(e.toString());
+    }
+  }
+
+  /// Guarda se in questo account Google c'è una copia di sicurezza — N7.1.
+  ///
+  /// ── ⚠️ Perché si preme un pulsante invece di cercare da soli ─────────────
+  ///
+  /// Su un telefono nuovo l'app **non** è collegata a Drive: guardare vuol dire
+  /// aprire la scelta dell'account Google. Farlo da soli all'apertura
+  /// significherebbe un pannello di Google in faccia a chi ha appena fatto
+  /// l'accesso, senza che abbia chiesto niente — il gesto di un'app che si
+  /// prende, non di una che offre.
+  ///
+  /// 💡 Per questo la scheda sta **in cima**, sopra la password: si vede
+  /// subito, ma parte quando lo si decide.
+  Future<void> _cercaNelCloud() async {
+    setState(() {
+      _cercando = true;
+      _errore = null;
+    });
+
+    try {
+      final quando = await ref
+          .read(backupAutomaticoProvider.notifier)
+          .cercaNelCloud();
+
+      if (!mounted) return;
+
+      setState(() {
+        _copiaNelCloud = quando;
+        _cercato = true;
+        _cercando = false;
+      });
+    } on Object catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        // ⚠️ `_cercato` resta `false`: un guasto di rete non è una risposta, e
+        // dire «non c'è nessuna copia» sarebbe una bugia con conseguenze —
+        // porterebbe dritti al pulsante che ricomincia da capo.
+        _cercando = false;
+        _errore = e.toString();
+      });
+    }
+  }
+
+  /// Riprende peso, misure e sonno dalla copia nel cloud.
+  ///
+  /// @return `null` se è andata; il messaggio da mostrare se no.
+  Future<String?> _riprendiLArchivio() async {
+    try {
+      // 💡 Riprende **e** riaccende il backup automatico, che su un telefono
+      // nuovo è spento per definizione. La regola su quando riaccenderlo — e
+      // soprattutto su quando **non** farlo — vive nel controller, dove si può
+      // provare: vedi `BackupAutomatico.ripristinaDalCloudERiaccendi`.
+      await ref
+          .read(backupAutomaticoProvider.notifier)
+          .ripristinaDalCloudERiaccendi();
+
+      return null;
+    } on Object catch (e) {
+      return 'Account riaperto, ma i dati di salute non sono tornati: $e';
     }
   }
 
@@ -206,6 +301,81 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
     }
   }
 
+  /// La scheda «c'è una copia su Drive?», nei suoi quattro stati — N7.1.
+  ///
+  /// Non cercata · in ricerca · trovata · cercata e non trovata.
+  Widget _schedaDelCloud() {
+    // ⚠️ Senza cloud configurato la scheda **non c'è**, invece di esserci e
+    // fallire: un comando che non può funzionare confonde e basta. È la stessa
+    // regola dell'interruttore in `SchermataBackup`.
+    final stato = ref.watch(backupAutomaticoProvider).valueOrNull;
+
+    if (stato == null || !stato.disponibile) return const SizedBox.shrink();
+
+    final tema = Theme.of(context);
+    final trovata = _copiaNelCloud;
+
+    if (trovata != null) {
+      return Card(
+        margin: EdgeInsets.zero,
+        color: tema.colorScheme.primaryContainer,
+        child: ListTile(
+          leading: Icon(
+            Icons.cloud_done_outlined,
+            color: tema.colorScheme.onPrimaryContainer,
+          ),
+          title: Text('Trovata una copia del ${_giorno(trovata)}'),
+          subtitle: const Text(
+            'Peso, misure e sonno tornano insieme all\'account, qui sotto.',
+          ),
+          textColor: tema.colorScheme.onPrimaryContainer,
+          subtitleTextStyle: tema.textTheme.bodyMedium?.copyWith(
+            color: tema.colorScheme.onPrimaryContainer,
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: _cercando
+            ? const SizedBox.square(
+                dimension: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                _cercato ? Icons.cloud_off_outlined : Icons.cloud_outlined,
+                color: tema.colorScheme.onSurfaceVariant,
+              ),
+        title: Text(
+          _cercato
+              ? 'Nessuna copia trovata'
+              : 'Hai una copia su ${stato.nomeDelCloud}?',
+        ),
+        subtitle: Text(
+          _cercato
+              // 💡 «Non l'ho trovata» e non «non esiste»: può essere l'account
+              // Google sbagliato, ed è l'errore più facile da fare qui — chi
+              // cambia telefono spesso ne ha due configurati.
+              ? 'Potrebbe essere un altro account Google: puoi riprovare.'
+              : 'Se avevi acceso il backup automatico, da lì torna tutto.',
+        ),
+        trailing: _cercando
+            ? null
+            : TextButton(
+                onPressed: _inCorso ? null : _cercaNelCloud,
+                child: Text(_cercato ? 'Riprova' : 'Cerca'),
+              ),
+        onTap: _cercando || _inCorso ? null : _cercaNelCloud,
+      ),
+    );
+  }
+
+  String _giorno(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/${d.year}';
+
   void _fallito(String messaggio) {
     if (!mounted) return;
 
@@ -238,6 +408,8 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
             style: testo.bodyMedium,
           ),
           const SizedBox(height: Gap.lg),
+          _schedaDelCloud(),
+          const SizedBox(height: Gap.lg),
           TextField(
             controller: _password,
             obscureText: true,
@@ -263,7 +435,17 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
                     dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Riapri il mio account'),
+                /*
+                 * 💡 L'etichetta dice cosa **sta per succedere**: trovata la
+                 * copia, quel pulsante riapre la chat *e* rimette a posto
+                 * l'archivio. Prometterne solo metà farebbe sembrare
+                 * incompleto un ripristino invece riuscito.
+                 */
+                : Text(
+                    _copiaNelCloud == null
+                        ? 'Riapri il mio account'
+                        : 'Riapri tutto',
+                  ),
           ),
           const Divider(height: Gap.lg * 2),
           Text('Non ce l\'hai più?', style: testo.titleMedium),

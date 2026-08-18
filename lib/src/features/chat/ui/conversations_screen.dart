@@ -13,6 +13,7 @@ import '../../nutrition/compositore_piano_controller.dart';
 import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
+import '../data/permesso_negato.dart';
 
 /// L'elenco delle conversazioni — A7.1.
 class ConversationsScreen extends ConsumerWidget {
@@ -228,18 +229,108 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     try {
       await ref.read(threadProvider(widget.id).notifier).invia(testo);
       _inFondo();
-    } on Object {
+    } on Object catch (errore) {
       if (mounted) {
         // Il testo torna nel campo: perderlo sarebbe la cosa peggiore.
         _testo.text = testo;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Messaggio non inviato. Riprova.')),
-        );
+        /*
+         * 🚨 **M3.4 — si spiega il diniego, non si dice «riprova».**
+         *
+         * ⚠️ «Messaggio non inviato. Riprova.» è la cosa sbagliata da dire a
+         * chi ha finito i tre messaggi di presentazione: riproverà, fallirà di
+         * nuovo, e concluderà che l'app è rotta. Il server manda il **motivo**
+         * (`spiegazione`) e dice se c'è qualcosa da offrire
+         * (`proponi_abbonamento`), proprio perché qui si possa dire la cosa
+         * giusta.
+         */
+        final rifiuto = PermessoNegato.da(errore);
+
+        if (rifiuto != null) {
+          _mostraIlMotivo(rifiuto);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Messaggio non inviato. Riprova.')),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
+  }
+
+  /// Spiega perché non si può scrivere, e offre l'abbonamento **solo** quando
+  /// c'è davvero qualcosa da offrire — M3.4.
+  ///
+  /// 🚨 Un foglio e non uno snackbar: uno snackbar dura tre secondi e se ne va,
+  /// e questa è la schermata in cui si decide se abbonarsi. ⚠️ Far sparire da
+  /// solo il messaggio che spiega perché non si può più scrivere è il modo per
+  /// non farlo leggere a nessuno.
+  void _mostraIlMotivo(PermessoNegato rifiuto) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (foglio) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    rifiuto.proponiAbbonamento
+                        ? Icons.lock_open_rounded
+                        : Icons.info_outline_rounded,
+                    color: Theme.of(foglio).colorScheme.primary,
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
+                      rifiuto.proponiAbbonamento
+                          ? 'Hai finito i messaggi di presentazione'
+                          : 'Non puoi scrivere qui',
+                      style: Theme.of(foglio).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gap.sm),
+
+              // 💡 Il testo lo scrive il **server**: così il giorno che la
+              // regola cambia non serve pubblicare una versione dell'app.
+              Text(rifiuto.spiegazione),
+              const SizedBox(height: Gap.md),
+
+              /*
+               * 🚨 **L'abbonamento si propone solo qui, e non è un caso.**
+               *
+               * Non i gettoni: un gettone vuol dire una chiamata all'AI, dietro
+               * cui c'è un costo vero. Far valere alla stessa unità anche
+               * «permesso di parlare» vorrebbe dire che il giorno che se ne
+               * cambia il prezzo si muovono due leve credendo di muoverne una.
+               */
+              if (rifiuto.proponiAbbonamento)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(foglio).pop(),
+                    child: const Text('Ho capito'),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(foglio).pop(),
+                    child: const Text('Chiudi'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// «Manda un piano alimentare» — G8.2, G8.3.

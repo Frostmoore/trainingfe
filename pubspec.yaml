@@ -136,6 +136,7 @@ dependencies:
   # ⚠️ Serve solo a **disegnare la richiesta**: la verifica avviene nel chip
   # sicuro del telefono, e nessun dato biometrico passa mai da Dart.
   local_auth: ^3.0.2
+  share_plus: ^12.0.2
 
 dev_dependencies:
   flutter_test:

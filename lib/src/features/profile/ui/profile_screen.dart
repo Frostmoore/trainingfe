@@ -10,6 +10,7 @@ import '../../scoperta/ui/scelta_citta.dart';
 import '../profile_controller.dart';
 import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
+import 'widgets/voce_avatar.dart';
 import 'widgets/weight_sheet.dart';
 
 /// Il profilo — A8.
@@ -197,7 +198,31 @@ class ProfileScreen extends ConsumerWidget {
                  *
                  * ⚠️ E non è obbligatoria: si può togliere.
                  */
+                // 📷 M7.2 — la foto sta in cima al gruppo: è la prima cosa che
+                // una persona vede di sé in questa schermata.
+                const VoceAvatar(),
+                const Divider(height: 1),
+
                 const VoceCitta(),
+                const Divider(height: 1),
+
+                /*
+                 * 💾 M7.3 — la copia di sicurezza.
+                 *
+                 * 🚨 Fino a oggi l'app sapeva **importare** un file di backup e
+                 * non crearne nessuno: si poteva ripristinare da un file che
+                 * non si poteva fare. Era il buco più silenzioso di tutto
+                 * l'impianto delle chiavi, perché si scopre solo quando serve.
+                 */
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: const Text('Copia di sicurezza'),
+                  subtitle: const Text(
+                    'Se perdi il telefono, è quello che ti fa rientrare',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.backup),
+                ),
                 const Divider(height: 1),
 
                 ListTile(

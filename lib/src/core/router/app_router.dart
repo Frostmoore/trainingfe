@@ -11,6 +11,7 @@ import '../../features/calendar/ui/calendar_screen.dart';
 import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
 import '../../features/chiavi/ui/porta_delle_chiavi.dart';
+import '../../features/chiavi/ui/schermata_backup.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/health/ui/schermata_salute.dart';
@@ -121,6 +122,13 @@ class AppRoutes {
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
+
+  /// La copia di sicurezza delle chiavi — M7.3.
+  ///
+  /// 🚨 Sta nel profilo e non sepolta nelle impostazioni: fino a oggi l'app
+  /// sapeva **importare** un file di backup e non crearne nessuno — si poteva
+  /// ripristinare da un file che non si poteva fare.
+  static const backup = '/profilo/copia-di-sicurezza';
 
   /// I consensi facoltativi (S9.1). 🚨 Sta nel profilo e non in un sottomenù:
   /// revocare dev'essere facile quanto concedere (art. 7(3)).
@@ -527,6 +535,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profile,
         builder: (_, _) => const ProfileScreen(),
+      ),
+
+      /*
+       * 💾 M7.3 — la copia di sicurezza delle chiavi.
+       *
+       * ⚠️ **Fuori da `PortaDelleChiavi`**, e non per dimenticanza: questa
+       * schermata serve anche a chi la chat non l'ha mai aperta, e la porta gli
+       * chiederebbe di creare una password prima di lasciarlo passare. 🚨 Se
+       * non c'è ancora nessuna chiave, la schermata lo dice — che è
+       * un'informazione utile, non un ostacolo.
+       */
+      GoRoute(
+        path: AppRoutes.backup,
+        builder: (_, _) => const SchermataBackup(),
       ),
     ],
   );

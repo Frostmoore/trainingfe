@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Le stesse regole, per Android 11 e precedenti — `fullBackupContent`.
+
+  ⚠️ **Servono tutti e due i file**, e non è ridondanza: `dataExtractionRules`
+  esiste solo da Android 12 (API 31). Su un telefono più vecchio quel file viene
+  ignorato del tutto, e senza questo varrebbero i default — cioè foto e cassette
+  cifrate finirebbero nella copia su Google.
+
+  💡 Qui non esiste la distinzione fra copia sul cloud e trasferimento diretto:
+  c'è una regola sola, e vale per entrambi. Le foto restano fuori.
+
+  🚨 Le due copie vanno tenute allineate a mano. Se un giorno se ne cambia una,
+  l'altra continua a fare quello che faceva — su una parte del parco telefoni,
+  e senza dare nessun segno.
+-->
+<full-backup-content>
+    <exclude domain="root" path="foto" />
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+</full-backup-content>

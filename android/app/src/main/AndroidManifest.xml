@@ -62,9 +62,24 @@
         <package android:name="com.google.android.apps.healthdata"/>
     </queries>
 
+    <!--
+      🚨 Il backup di sistema: acceso, ma con delle regole — 18/08/2026.
+
+      `allowBackup` era gia' vero per default e nessuno lo aveva scritto: le
+      foto dei progressi finivano nella copia su Google, dove il tetto e' 25 MB
+      per app. ⚠️ Superato quel tetto il sistema smette di caricare **e non lo
+      dice a nessuno** — bastavano poche decine di foto per far smettere di
+      funzionare il backup anche di sonno, misure e preferenze.
+
+      💡 I due file di regole servono entrambi: `dataExtractionRules` vale da
+      Android 12 in su, `fullBackupContent` sotto. Vanno tenuti allineati.
+    -->
     <application
         android:label="training_companion"
         android:name="${applicationName}"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

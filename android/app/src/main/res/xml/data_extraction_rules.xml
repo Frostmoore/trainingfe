@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cosa esce da questo telefono, e cosa no — Android 12+ (API 31+).
+
+  ══ 🚨 Perché queste regole esistono ═══════════════════════════════════════
+
+  Senza, valgono i default: Android copia TUTTO quello che sta nella cartella
+  dell'app, foto dei progressi comprese. ⚠️ E il tetto è 25 MB per app: superato,
+  il sistema smette di caricare **e non lo dice a nessuno**. Bastano poche decine
+  di foto perché smetta di essere salvato anche il resto — sonno, misure,
+  preferenze — senza nessun errore da nessuna parte.
+
+  💡 Il commento in `archivio_salute.dart` lo aveva previsto («entrano solo nel
+  file esportato»); mancavano le regole che lo rendessero vero.
+
+  ══ ⚠️ `cloud-backup` e `device-transfer` sono due cose diverse ═════════════
+
+  Il primo è la copia su Google; il secondo è il passaggio diretto fra due
+  telefoni appoggiati uno all'altro. 💡 Nel trasferimento diretto le foto **si
+  portano dietro**: non c'è nessun tetto di 25 MB, non passano da nessun server,
+  e chi cambia telefono in negozio se le ritrova. È esattamente il caso in cui
+  escluderle sarebbe una perdita gratuita.
+-->
+<data-extraction-rules>
+
+    <cloud-backup>
+        <!--
+          🚨 Le foto dei progressi FUORI dalla copia su Google.
+
+          Vivono in `app_flutter/foto/` — `getApplicationDocumentsDirectory()`
+          su Android è `getDir("flutter")`, quindi dominio `root`.
+
+          ⚠️ Sono l'unica cosa che il committente ha detto di poter perdere
+          («tanto gli utenti ne avranno a bizzeffe nei loro cellulari»), e sono
+          anche l'unica che può sfondare il tetto. Entrano nel file di backup
+          esportabile, con una spunta.
+        -->
+        <exclude domain="root" path="foto" />
+
+        <!--
+          🚨 Le due cassette di `flutter_secure_storage`, ed è la riga che evita
+          un guasto brutto.
+
+          Dentro ci sono la chiave maestra della chat e il token di sessione,
+          cifrati con una chiave del **Keystore di Android** — che non lascia
+          mai il dispositivo. ⚠️ Ripristinandole su un telefono nuovo si
+          otterrebbero blob **indecifrabili**: l'app troverebbe «una chiave che
+          c'è ma non si apre», che è lo stato peggiore possibile.
+
+          💡 Escludendole, il telefono nuovo parte pulito da «nessuna chiave» —
+          che è esattamente lo stato che il ripristino sa gestire, e da lì si
+          chiede la password di recupero o il file di backup.
+        -->
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    </cloud-backup>
+
+    <device-transfer>
+        <!--
+          💡 Qui le foto RESTANO: nessun tetto, nessun server di mezzo.
+
+          🚨 Le cassette cifrate restano fuori anche qui: il Keystore non si
+          trasferisce nemmeno da telefono a telefono, quindi il problema è
+          identico.
+        -->
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    </device-transfer>
+
+</data-extraction-rules>

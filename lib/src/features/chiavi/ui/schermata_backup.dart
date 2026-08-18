@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
+import '../../health/health_controller.dart';
 
 /// L'esportazione del file di backup — M7.3, 18/08/2026.
 ///
@@ -60,15 +61,26 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
           const SizedBox(height: 8),
           const Text('· La chiave per leggere i tuoi messaggi.'),
           const SizedBox(height: 4),
+          const Text(
+            '· Peso, misure, sonno e recupero: tutto quello che vive solo sul '
+            'tuo telefono.',
+          ),
+          const SizedBox(height: 4),
           /*
            * 🚨 **Si dice anche cosa NON c'è.**
            *
            * ⚠️ Un backup che qualcuno crede completo è peggio di nessun backup:
            * si perde il telefono tranquilli, e si scopre dopo.
            */
+          /*
+           * 🚨 Si dice anche cosa NON c'è.
+           *
+           * ⚠️ Un backup che qualcuno crede completo è peggio di nessun backup:
+           * si perde il telefono tranquilli, e si scopre dopo.
+           */
           const Text(
-            '· Non ci sono peso, sonno e allenamenti: quelli li copia già il '
-            'backup del telefono.',
+            '· Non ci sono le foto dei progressi: quelle le copia il backup del '
+            'telefono.',
           ),
           const SizedBox(height: 20),
 
@@ -172,11 +184,17 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
       final backup = FileDiBackup(sodium);
       final codice = backup.generaCodice();
 
-      final byte = backup.esporta(
+      /*
+       * 🚨 **L'archivio ci va dentro davvero** — N2.1.
+       *
+       * ⚠️ Fino alla `v6.24.0` qui c'era `archivio: const {}`: il file
+       * conteneva solo la chiave, e la schermata sembrava funzionare
+       * benissimo. Un backup si prova riaprendo quello che c'era, non
+       * guardando se il pulsante risponde.
+       */
+      final byte = await backup.esportaV2(
         chiaveMaestra: maestra,
-        // 📌 Vuoto per ora: l'archivio locale è coperto dal backup di sistema,
-        // e serializzarlo è debito dichiarato nel piano.
-        archivio: const {},
+        archivio: await ref.read(archivioSaluteProvider).esportaPerBackup(),
         codice: codice,
       );
 

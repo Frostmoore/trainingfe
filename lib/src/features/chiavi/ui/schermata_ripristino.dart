@@ -7,6 +7,7 @@ import '../../../core/crypto/cassaforte.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../health/health_controller.dart';
 
 /// Il ripristino su un dispositivo nuovo — S6.7.
 ///
@@ -98,7 +99,7 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       final sodium = await ref.read(sodiumProvider.future);
       final servizio = await ref.read(servizioChiaviProvider.future);
 
-      final contenuto = FileDiBackup(sodium).importa(
+      final contenuto = await FileDiBackup(sodium).importaQualsiasi(
         file: await File(scelta.percorso).readAsBytes(),
         codice: scelta.codice,
       );
@@ -107,6 +108,27 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
         chiaveMaestra: contenuto.chiaveMaestra,
         nuovaPassword: scelta.nuovaPassword,
       );
+
+      /*
+       * 🚨 **L'archivio si riscrive DOPO la chiave** — N2.2.
+       *
+       * Fino alla `v6.24.0` `contenuto.archivio` non lo leggeva nessuno: si
+       * ripristinava la chat e si perdevano peso, misure e sonno, senza che
+       * niente lo dicesse.
+       *
+       * ⚠️ L'ordine conta: se l'archivio fallisse dopo che la chiave e' gia'
+       * a posto, la persona ha comunque riavuto i messaggi — che sono la cosa
+       * irrecuperabile. Al contrario avrebbe l'archivio e nessun modo di
+       * leggere la chat.
+       *
+       * 💡 Un archivio vuoto (il caso dei file `v1`) non fa niente:
+       * `ripristinaDaBackup` salta le tabelle che il file non contiene.
+       */
+      if (contenuto.archivio.isNotEmpty) {
+        await ref
+            .read(archivioSaluteProvider)
+            .ripristinaDaBackup(contenuto.archivio);
+      }
 
       // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
       // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —

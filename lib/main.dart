@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'src/app.dart';
 import 'src/core/config/app_config.dart';
+import 'src/core/media/archivio_foto.dart';
 import 'src/core/notifications/notifications.dart';
 import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
@@ -62,6 +63,22 @@ Future<void> main() async {
       // cache. I colori sbagliati sono un problema estetico, un'app che non
       // parte no.
       unawaited(container.read(brandingControllerProvider.notifier).refreshQuietly());
+
+      /*
+       * 🧹 **La spazzata delle foto scadute** — N11.6.
+       *
+       * Butta quello che e' rimasto in `Cache/foto/ai` e `Cache/foto/effimere`
+       * oltre le 24 ore. ⚠️ Serve perche' l'app puo' morire fra lo scatto di
+       * una foto per il modello e la conferma dell'alimento: quell'orfano non
+       * lo cancellerebbe piu' nessuno.
+       *
+       * 💡 `unawaited` di proposito: e' un giro di disco su cartelle quasi
+       * sempre vuote, e non deve rallentare di un millisecondo il primo
+       * disegno. Se fallisce, riprova al prossimo avvio.
+       */
+      unawaited(
+        const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0),
+      );
 
       runApp(
         UncontrolledProviderScope(

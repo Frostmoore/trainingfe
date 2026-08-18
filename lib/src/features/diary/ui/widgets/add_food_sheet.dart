@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../core/media/photo_picker.dart';
+import '../../../../core/media/archivio_foto.dart';
+import '../../../../core/media/canale_foto.dart';
+import '../../../../core/media/tipo_foto.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
@@ -126,9 +128,22 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   /// frase originale, la si rimette nel campo con il cursore in fondo, e si
   /// riscrive aggiungendo il pezzo che mancava. Costa una seconda chiamata al
   /// modello, ed è il punto: una stima giusta vale più di un token risparmiato.
+  /// [fotoDaButtare] e' il percorso relativo della foto mandata al modello.
+  ///
+  /// ── 🚨 La foto muore qui, comunque vada — N11.5 ─────────────────────────
+  ///
+  /// Serve a **una cosa sola**: farsi dire cosa c'e' nel piatto. Appena la
+  /// stima e' stata guardata — confermata, annullata o rimandata al testo —
+  /// quella foto non serve piu' a nessuno.
+  ///
+  /// ⚠️ Senza questa cancellazione resterebbe sul telefono per sempre, e
+  /// crescerebbe di qualche foto al giorno per anni. 💡 Vive nella cache, quindi
+  /// non finirebbe comunque in nessun backup: ma occupare spazio per niente
+  /// resta occupare spazio per niente.
   Future<void> _stimaEConferma(
     Future<StimaAi> Function() stimatore, {
     required bool daFoto,
+    String? fotoDaButtare,
   }) async {
     setState(() {
       _inCorso = true;
@@ -185,6 +200,26 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
       });
     } finally {
       if (mounted) setState(() => _inCorso = false);
+
+      /*
+       * 🚨 **La foto muore qui, e "finally" non e' un dettaglio** — N11.5.
+       *
+       * Ci si passa da ogni strada: stima confermata, annullata, rimandata al
+       * testo, e anche fallita. ⚠️ Mettendo la cancellazione in una sola di
+       * quelle strade, le altre lascerebbero il file li' per sempre - e sono
+       * proprio quelle che capitano quando qualcosa va storto, cioe' le piu'
+       * facili da non provare.
+       *
+       * 💡 Non fallisce niente se non riesce: e' spazzatura in una cartella
+       * di cache, e la riprende `spazzaGliOrfani()` al prossimo avvio.
+       */
+      if (fotoDaButtare != null) {
+        try {
+          await const ArchivioFoto().cancella(fotoDaButtare);
+        } on Object {
+          // Ci pensera' la spazzata.
+        }
+      }
     }
   }
 
@@ -494,8 +529,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                 else
                   _Foto(
                     inCorso: _inCorso,
-                    onScelta: (path) => _stimaEConferma(
-                      () => azioni.stimaDaFoto(path, widget.meal),
+                    onScelta: (relativo) => _stimaEConferma(
+                      () async => azioni.stimaDaFoto(
+                        (await const ArchivioFoto().fileDi(relativo)).path,
+                        widget.meal,
+                      ),
+                      fotoDaButtare: relativo,
                       daFoto: true,
                     ),
                   ),
@@ -721,9 +760,13 @@ class _Foto extends StatelessWidget {
           FilledButton.icon(
             style: bottonePieno(),
             onPressed: () async {
-              final path = await PhotoPicker.dallaFotocamera();
+              final scelta = await CanaleFoto.scatta(
+                context,
+                tipo: TipoFoto.ai,
+                titolo: 'Inquadra il piatto',
+              );
 
-              if (path != null) onScelta(path);
+              if (scelta != null) onScelta(scelta.relativo);
             },
             icon: const Icon(Icons.photo_camera_rounded),
             label: const Text('Scatta una foto'),
@@ -732,9 +775,13 @@ class _Foto extends StatelessWidget {
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () async {
-              final path = await PhotoPicker.dallaGalleria();
+              final scelta = await CanaleFoto.dallaGalleria(
+                context,
+                tipo: TipoFoto.ai,
+                titolo: 'Scegli il quadrato',
+              );
 
-              if (path != null) onScelta(path);
+              if (scelta != null) onScelta(scelta.relativo);
             },
             icon: const Icon(Icons.photo_library_outlined),
             label: const Text('Scegli dalla galleria'),

@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
-import '../../core/media/photo_picker.dart';
+import '../../core/media/archivio_foto.dart';
+import '../../core/media/canale_foto.dart';
+import '../../core/media/tipo_foto.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 
@@ -33,27 +34,13 @@ class ProgressPhoto {
 /// Ogni scrittura incrementa questo contatore e i provider si ricalcolano.
 final revisioneFotoProvider = StateProvider<int>((ref) => 0);
 
-/// La cartella dove vivono i file.
-///
-/// 🚨 **`Documents`, non la cache.** La cache il sistema la svuota quando ha
-/// bisogno di spazio: le foto dei progressi sparirebbero da sole, e nessuno
-/// capirebbe perché. È la stessa ragione per cui ci sta il database (S3.1).
-Future<Directory> _cartellaFoto() async {
-  final base = await getApplicationDocumentsDirectory();
-  final dir = Directory(p.join(base.path, 'foto'));
-
-  if (!dir.existsSync()) await dir.create(recursive: true);
-
-  return dir;
-}
-
 /// Ricostruisce il percorso assoluto da quello relativo salvato a database.
 ///
-/// ⚠️ **Su iOS il contenitore dell'app cambia percorso a ogni aggiornamento.**
-/// Salvare l'assoluto avrebbe fatto svuotare la galleria da sola dopo il primo
-/// aggiornamento dallo store, senza che nessuno avesse cancellato niente.
+/// 💡 Adesso lo sa fare `ArchivioFoto`, che conosce anche la differenza fra
+/// documenti e cache: qui restava una seconda idea di dove stiano le foto, ed
+/// erano due idee destinate a divergere.
 Future<File> _fileDi(String relativo) async =>
-    File(p.join((await getApplicationDocumentsDirectory()).path, relativo));
+    const ArchivioFoto().fileDi(relativo);
 
 /// La galleria.
 final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((ref) async {
@@ -100,25 +87,40 @@ class ProgressActions {
   /// chiama non deve mostrarlo come tale. È il motivo per cui non basta un
   /// `Future<void>` — a fine allenamento la foto è facoltativa, e «ho cambiato
   /// idea» dev'essere distinguibile da «non è riuscita».
-  Future<bool> upload({required bool daFotocamera, int? workoutSessionId}) async {
+  /// ⚠️ Serve il [context] perche' la fotocamera e la scelta del quadrato sono
+  /// **schermate nostre**, non finestre di sistema: vanno spinte su un
+  /// `Navigator`, e quello sta nel contesto di chi chiama.
+  Future<bool> upload({
+    required BuildContext context,
+    required bool daFotocamera,
+    int? workoutSessionId,
+  }) async {
+    /*
+     * 🚨 **Dal canale unico** — N11.4.
+     *
+     * Torna una foto gia' quadrata, gia' a 1080, gia' riposta nella cartella
+     * giusta e senza EXIF. 💡 Qui dentro non resta niente che sappia di
+     * fotocamere, di compressione o di dove stiano i file: era quella
+     * conoscenza sparsa a far salvare le foto di progresso a 1600 px senza che
+     * nessuno l'avesse deciso.
+     */
     final scelta = daFotocamera
-        ? await PhotoPicker.dallaFotocamera()
-        : await PhotoPicker.dallaGalleria();
+        ? await CanaleFoto.scatta(
+            context,
+            tipo: TipoFoto.progressi,
+            titolo: 'La foto di oggi',
+          )
+        : await CanaleFoto.dallaGalleria(
+            context,
+            tipo: TipoFoto.progressi,
+            titolo: 'Scegli il quadrato',
+          );
 
     if (scelta == null) return false;
 
-    final cartella = await _cartellaFoto();
-    final nome = '${DateTime.now().microsecondsSinceEpoch}${p.extension(scelta)}';
-    final destinazione = File(p.join(cartella.path, nome));
-
-    // ⚠️ `copy`, non `rename`: l'originale sta nella cartella temporanea di
-    // `image_picker`, e su Android puo' essere su un volume diverso — dove
-    // `rename` fallisce con un errore che non dice perche'.
-    await File(scelta).copy(destinazione.path);
-
     await _ref.read(archivioSaluteProvider).registraFoto(
           FotoProgressiCompanion.insert(
-            percorso: p.join('foto', nome),
+            percorso: scelta.relativo,
             scattataIl: DateTime.now(),
             sessioneId: Value(workoutSessionId),
           ),
@@ -155,9 +157,23 @@ class ProgressActions {
   /// Serve alla cancellazione dell'account e al logout (S9.3): il server non
   /// può cancellare ciò che non ha mai avuto.
   Future<void> cancellaTutto() async {
-    final cartella = await _cartellaFoto();
+    /*
+     * 🚨 **Tutti i tipi, non solo i progressi** — N11.4.
+     *
+     * Prima qui c'era una cartella sola, perche' ce n'era una sola. Adesso ce
+     * ne sono cinque, e chi cancella l'account non intende «cancella le foto
+     * dei progressi»: intende **tutto**.
+     *
+     * /!\ Lasciare indietro `foto/chat` vorrebbe dire tenere sul telefono le
+     * foto scambiate con un trainer dopo che l'account non esiste piu' - la
+     * cosa peggiore da dimenticare, fra tutte quelle che si possono
+     * dimenticare qui.
+     */
+    for (final tipo in TipoFoto.values) {
+      final cartella = await const ArchivioFoto().cartellaDi(tipo);
 
-    if (cartella.existsSync()) await cartella.delete(recursive: true);
+      if (cartella.existsSync()) await cartella.delete(recursive: true);
+    }
 
     _ref.read(revisioneFotoProvider.notifier).state++;
   }

@@ -142,7 +142,7 @@ class DiaryActions {
 
   /// Riconoscimento da foto — A4.3 / A4.8.
   ///
-  /// 🚨 Il file va **già compresso** da chi chiama: vedi `PhotoPicker`. Qui non
+  /// 🚨 Il file va **già compresso** da chi chiama: vedi `CanaleFoto`. Qui non
   /// si comprime perché questa classe non sa niente di piattaforma, e mandare
   /// l'originale da 10 MB su rete mobile è un upload che fallisce.
   ///

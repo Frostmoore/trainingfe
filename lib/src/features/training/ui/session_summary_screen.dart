@@ -327,7 +327,7 @@ class _FotoState extends ConsumerState<_Foto> {
     try {
       await ref
           .read(progressActionsProvider)
-          .upload(daFotocamera: daFotocamera, workoutSessionId: widget.sessione.id);
+          .upload(context: context, daFotocamera: daFotocamera, workoutSessionId: widget.sessione.id);
 
       // 🚨 Si ricarica la sessione, non solo la galleria: la foto va mostrata
       // **qui**, e senza questo resterebbe una schermata che dice «caricata»

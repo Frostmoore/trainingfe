@@ -190,7 +190,7 @@ class _Aggiungi extends ConsumerWidget {
     required bool daFotocamera,
   }) async {
     try {
-      await ref.read(progressActionsProvider).upload(daFotocamera: daFotocamera);
+      await ref.read(progressActionsProvider).upload(context: context, daFotocamera: daFotocamera);
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(

@@ -105,14 +105,45 @@ class _Cella extends ConsumerWidget {
     );
   }
 
+  /// Apre la foto a schermo intero.
+  ///
+  /// 💡 **Il velo scuro dietro non e' decorazione**: una foto quadrata su fondo
+  /// chiaro, aperta sopra una griglia di altre foto quadrate, non si distingue
+  /// da quella che era gia' li'. ⚠️ Senza uno stacco netto, chi la apre non
+  /// capisce di aver aperto qualcosa — e cerca il modo di chiudere una cosa che
+  /// non sembra aperta.
   void _apri(BuildContext context) => showDialog<void>(
     context: context,
+    // Il velo del sistema, ma piu' fitto: il predefinito e' pensato per un
+    // riquadro piccolo su una pagina di testo, non per una foto a tutto schermo.
+    barrierColor: Colors.black.withValues(alpha: 0.82),
     builder: (context) => Dialog(
       insetPadding: const EdgeInsets.all(Gap.md),
-      child: Consumer(
-        builder: (context, ref, _) => InteractiveViewer(
-          child: FotoLocale(file: foto.file, fit: BoxFit.contain),
-        ),
+      // 🚨 Senza sfondo e senza ombra: il contenitore chiaro del `Dialog`
+      // disegnerebbe un rettangolo bianco attorno alla foto, e sarebbe
+      // esattamente il bordo che il velo serve a togliere.
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Stack(
+        alignment: Alignment.topRight,
+        children: [
+          Consumer(
+            builder: (context, ref, _) => InteractiveViewer(
+              child: FotoLocale(file: foto.file, fit: BoxFit.contain),
+            ),
+          ),
+          /*
+           * 💡 Una via d'uscita **visibile**. Il tocco fuori chiude gia', ma
+           * dopo aver ingrandito con le dita non e' piu' ovvio dove sia il
+           * "fuori": la X e' li' per quel momento.
+           */
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
+            color: Colors.white,
+            tooltip: 'Chiudi',
+          ),
+        ],
       ),
     ),
   );

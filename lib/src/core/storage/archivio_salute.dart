@@ -673,6 +673,152 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga != null;
   }
 
+  // ───────────────────────── la copia di sicurezza ─────────────────────────
+
+  /// 🚨 La chiave con cui si riconosce la versione dello schema dentro un
+  /// backup. Se cambia, i file vecchi smettono di essere leggibili.
+  static const chiaveSchema = '_schema';
+
+  /// Tutto l'archivio in una mappa, pronta per il file di backup — N1.1.
+  ///
+  /// ── 🚨 Si ENUMERANO le tabelle, non si scrive un elenco ────────────────
+  ///
+  /// `allTables` viene dal codice generato da drift, quindi una tabella
+  /// aggiunta domani entra qui **da sola**. ⚠️ Un elenco scritto a mano
+  /// invecchia: la prima tabella di una fase futura resterebbe fuori dal
+  /// backup, e nessuno se ne accorgerebbe finché qualcuno non prova a
+  /// ripristinare e scopre che manca qualcosa.
+  ///
+  /// 💡 È lo stesso principio che il progetto usa già altrove — il gate
+  /// dell'isolamento fra palestre e lo spostamento dei dati quando si entra in
+  /// una palestra enumerano entrambi invece di elencare.
+  ///
+  /// ── ⚠️ `SELECT *` e non le classi generate ─────────────────────────────
+  ///
+  /// Le righe tornano come `Map<String, Object?>` di valori primitivi — interi,
+  /// reali, testo, `null`. Passando dalle classi di drift servirebbe un
+  /// `toJson()` per tabella, cioè di nuovo del codice per tabella, cioè di
+  /// nuovo qualcosa che invecchia.
+  ///
+  /// 🚨 **Nessuna colonna è un blob**, verificato: le foto sono **percorsi**,
+  /// non byte. Se un giorno ne comparisse una, questa funzione andrebbe
+  /// cambiata — `Uint8List` non passa da `jsonEncode`.
+  Future<Map<String, dynamic>> esportaPerBackup() async {
+    final dati = <String, dynamic>{
+      /*
+       * 🚨 La versione dello schema viaggia **dentro** il backup.
+       *
+       * ⚠️ Senza, ripristinare un file vecchio su un'app nuova sarebbe un tiro
+       * di dadi: le colonne potrebbero non esserci più, o essercene di nuove
+       * senza valore. Con il numero, il ripristino sa cosa ha in mano.
+       */
+      chiaveSchema: schemaVersion,
+    };
+
+    for (final tabella in allTables) {
+      final nome = tabella.actualTableName;
+      final righe = await customSelect('SELECT * FROM "$nome"').get();
+
+      dati[nome] = righe.map((r) => r.data).toList(growable: false);
+    }
+
+    return dati;
+  }
+
+  /// Riscrive l'archivio da un backup — N1.2.
+  ///
+  /// ── 🚨 In una transazione, e non è una precauzione di stile ────────────
+  ///
+  /// A metà strada l'archivio è **svuotato e non ancora riempito**. ⚠️ Se
+  /// qualcosa fallisse lì — disco pieno, file rovinato, app uccisa dal sistema
+  /// — senza transazione la persona resterebbe con un archivio vuoto **e senza
+  /// più quello di prima**: il ripristino avrebbe distrutto esattamente ciò che
+  /// doveva salvare.
+  ///
+  /// ── ⚠️ La regola sugli schemi ──────────────────────────────────────────
+  ///
+  /// | Backup | Cosa si fa |
+  /// |---|---|
+  /// | Schema **più vecchio** | si scrive, e drift fa girare le migrazioni |
+  /// | Schema **uguale** | si scrive |
+  /// | Schema **più nuovo** | 🚨 **si rifiuta** |
+  ///
+  /// Un backup più nuovo dell'app contiene tabelle e colonne che questa
+  /// versione non conosce. Scriverle sarebbe impossibile; ignorarle
+  /// silenziosamente vorrebbe dire ripristinare **meno di quello che c'era**
+  /// facendo credere di aver ripristinato tutto — che è il modo per perdere
+  /// dati con un messaggio verde davanti.
+  ///
+  /// 💡 Le colonne sconosciute **dentro una tabella nota** si scartano invece:
+  /// è il caso normale di un backup vecchio letto da un'app nuova, e lì
+  /// scartare è giusto — quella colonna non esisteva.
+  ///
+  /// @throws [BackupTroppoNuovo] se lo schema del file supera quello dell'app.
+  Future<void> ripristinaDaBackup(Map<String, dynamic> dati) async {
+    final schemaDelFile = (dati[chiaveSchema] as num?)?.toInt();
+
+    if (schemaDelFile != null && schemaDelFile > schemaVersion) {
+      throw BackupTroppoNuovo(delFile: schemaDelFile, dellApp: schemaVersion);
+    }
+
+    await transaction(() async {
+      for (final tabella in allTables) {
+        final nome = tabella.actualTableName;
+        final righe = dati[nome];
+
+        /*
+         * ⚠️ Una tabella assente dal backup si **salta**, non si svuota.
+         *
+         * 🚨 È il caso di un backup vecchio: quella tabella non esisteva
+         * ancora. Svuotarla cancellerebbe dati che il file non poteva
+         * contenere — cioè il ripristino distruggerebbe qualcosa che non stava
+         * ripristinando.
+         */
+        if (righe is! List) continue;
+
+        await customStatement('DELETE FROM "$nome"');
+
+        // 💡 I nomi delle colonne che questa versione dell'app conosce.
+        final colonne = tabella.$columns.map((c) => c.name).toSet();
+
+        for (final riga in righe) {
+          if (riga is! Map) continue;
+
+          final valori = <String, Object?>{};
+
+          for (final voce in riga.entries) {
+            final colonna = voce.key.toString();
+
+            // ⚠️ Le colonne che non esistono più si scartano: il file è più
+            // vecchio dell'app, e quella colonna è stata tolta apposta.
+            if (colonne.contains(colonna)) valori[colonna] = voce.value;
+          }
+
+          if (valori.isEmpty) continue;
+
+          final campi = valori.keys.map((c) => '"$c"').join(', ');
+          final segnaposto = List.filled(valori.length, '?').join(', ');
+
+          await customInsert(
+            'INSERT INTO "$nome" ($campi) VALUES ($segnaposto)',
+            variables: valori.values.map(_variabile).toList(growable: false),
+          );
+        }
+      }
+    });
+  }
+
+  /// 💡 Da valore JSON a variabile drift. I tipi che possono uscire da un
+  /// `SELECT *` su questo archivio sono quattro, e `jsonDecode` li restituisce
+  /// tutti come tipi Dart nativi.
+  static Variable<Object> _variabile(Object? valore) => switch (valore) {
+    null => const Variable<String>(null),
+    final int v => Variable<int>(v),
+    final double v => Variable<double>(v),
+    final bool v => Variable<bool>(v),
+    _ => Variable<String>(valore.toString()),
+  };
+
   static DateTime _soloGiorno(DateTime d) => DateTime(d.year, d.month, d.day);
 
   static QueryExecutor _apri() {
@@ -693,6 +839,37 @@ class ArchivioSalute extends _$ArchivioSalute {
       return NativeDatabase.createInBackground(file);
     });
   }
+}
+
+/// Il backup viene da una versione dell'app più nuova di questa — N1.2.
+///
+/// ── 🚨 Perché si rifiuta invece di provarci ────────────────────────────────
+///
+/// Un file più nuovo contiene tabelle e colonne che questa versione non
+/// conosce. Scriverle è impossibile; ignorarle in silenzio vorrebbe dire
+/// ripristinare **meno di quello che c'era** facendo credere di aver
+/// ripristinato tutto — cioè perdere dati con un messaggio verde davanti.
+///
+/// 💡 La via d'uscita è semplice e va detta a chi legge: **aggiornare l'app**.
+/// Capita davvero — si ripristina su un telefono vecchio con una versione
+/// vecchia dal negozio — e non è un guasto.
+class BackupTroppoNuovo implements Exception {
+  const BackupTroppoNuovo({required this.delFile, required this.dellApp});
+
+  /// Lo schema scritto dentro il file.
+  final int delFile;
+
+  /// Lo schema che questa versione dell'app sa gestire.
+  final int dellApp;
+
+  /// 💡 Il messaggio dice **cosa fare**, non solo cosa è successo.
+  String get motivo =>
+      'Questo backup è stato fatto con una versione più recente dell\'app. '
+      'Aggiorna l\'app e riprova.';
+
+  @override
+  String toString() =>
+      'BackupTroppoNuovo(file: $delFile, app: $dellApp) — $motivo';
 }
 
 /// Le letture istantanee: HRV, battito a riposo, battito medio.

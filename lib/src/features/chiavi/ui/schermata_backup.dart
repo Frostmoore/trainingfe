@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/backup/backup_controller.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../health/health_controller.dart';
@@ -48,6 +49,26 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          /*
+           * ☁️ L'automatico sta **in cima** — N3.5.
+           *
+           * 💡 È quello che risolve il problema per davvero: un file creato a
+           * mano una volta e dimenticato in una cartella protegge molto meno
+           * di una copia che si rifà da sola. Il manuale resta sotto, per chi
+           * lo vuole e per il caso «ho scordato la password».
+           */
+          const _InterruttoreCloud(),
+          const SizedBox(height: 24),
+
+          Text('Il file da tenere da parte', style: tema.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          const Text(
+            'Serve nel caso peggiore: hai perso il telefono E hai dimenticato '
+            'la password di recupero. Il backup automatico non copre quel caso, '
+            'perché si apre proprio con quella password.',
+          ),
+          const SizedBox(height: 20),
+
           Text('A cosa serve', style: tema.textTheme.titleMedium),
           const SizedBox(height: 8),
           const Text(
@@ -219,6 +240,186 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
       messaggeria.showSnackBar(
         const SnackBar(content: Text('Non riesco a creare il file.')),
       );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+}
+
+
+/// L'interruttore del backup automatico sul cloud — N3.5 e N3.6.
+///
+/// 🚨 **Spento di serie.** Mandare i propri dati — anche cifrati — nel proprio
+/// spazio su Google è una decisione che deve prendere la persona, non un
+/// effetto collaterale di aver installato l'app.
+class _InterruttoreCloud extends ConsumerStatefulWidget {
+  const _InterruttoreCloud();
+
+  @override
+  ConsumerState<_InterruttoreCloud> createState() => _InterruttoreCloudState();
+}
+
+class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
+  bool _inCorso = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final stato = ref.watch(backupAutomaticoProvider);
+
+    return stato.when(
+      loading: () => const ListTile(
+        leading: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        title: Text('Backup automatico'),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (s) {
+        /*
+         * 💡 Senza cloud configurato l'interruttore **non c'è**, invece di
+         * esserci e dare errore: un comando che fallisce sempre fa sembrare
+         * rotta tutta l'applicazione.
+         */
+        if (!s.disponibile) return const SizedBox.shrink();
+
+        return Card(
+          margin: EdgeInsets.zero,
+          child: Column(
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.cloud_upload_outlined),
+                title: Text('Backup automatico su ${s.nomeDelCloud}'),
+                subtitle: Text(_sottotitolo(s)),
+                value: s.acceso,
+                onChanged: _inCorso ? null : (_) => _cambia(s),
+              ),
+              if (s.acceso) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.refresh_rounded),
+                  title: const Text('Aggiorna adesso'),
+                  enabled: !_inCorso,
+                  onTap: _inCorso ? null : _adesso,
+                ),
+              ],
+              if (_inCorso)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: LinearProgressIndicator(),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 🚨 Con «acceso» si dice **quando è stato l'ultimo**.
+  ///
+  /// ⚠️ Senza una data, «è acceso» è una promessa che nessuno può verificare —
+  /// ed è esattamente il tipo di promessa che si scopre falsa quando serve.
+  String _sottotitolo(StatoBackup s) {
+    if (!s.acceso) {
+      return 'Spento. Acceso, i tuoi dati si salvano da soli nel tuo spazio.';
+    }
+
+    final quando = s.ultimo;
+
+    if (quando == null) return 'Acceso · non so ancora quando è stato l\'ultimo';
+
+    final giorni = DateTime.now().difference(quando).inDays;
+
+    return switch (giorni) {
+      0 => 'Ultimo backup: oggi',
+      1 => 'Ultimo backup: ieri',
+      _ => 'Ultimo backup: $giorni giorni fa',
+    };
+  }
+
+  Future<void> _cambia(StatoBackup s) async {
+    if (s.acceso) {
+      await _spegni();
+
+      return;
+    }
+
+    setState(() => _inCorso = true);
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    try {
+      final acceso = await ref.read(backupAutomaticoProvider.notifier).accendi();
+
+      if (!acceso) {
+        // 💡 Ha detto di no: non è un errore, e non merita un messaggio rosso.
+        messaggeria.showSnackBar(
+          const SnackBar(content: Text('Backup automatico non attivato.')),
+        );
+      }
+    } on Object catch (errore) {
+      messaggeria.showSnackBar(SnackBar(content: Text(errore.toString())));
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  /// 🚨 Spegnendo si **chiede** se cancellare quello che c'è nel cloud.
+  ///
+  /// ⚠️ Lasciarlo lì in silenzio dopo un «non voglio più» è la cosa sbagliata;
+  /// cancellarlo senza chiedere è peggio — quella copia potrebbe essere l'unica
+  /// rimasta.
+  Future<void> _spegni() async {
+    final scelta = await showDialog<bool>(
+      context: context,
+      builder: (dialogo) => AlertDialog(
+        title: const Text('Spegnere il backup automatico?'),
+        content: const Text(
+          'Da adesso i tuoi dati non si salveranno più da soli.\n\n'
+          'Vuoi anche cancellare la copia già caricata?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(false),
+            child: const Text('Spegni e basta'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(true),
+            child: const Text('Spegni e cancella'),
+          ),
+        ],
+      ),
+    );
+
+    // ⚠️ `null` = ha annullato. Diverso da `false` = «spegni ma non cancellare».
+    if (scelta == null || !mounted) return;
+
+    setState(() => _inCorso = true);
+
+    try {
+      await ref
+          .read(backupAutomaticoProvider.notifier)
+          .spegni(cancellaDalCloud: scelta);
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  Future<void> _adesso() async {
+    setState(() => _inCorso = true);
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(backupAutomaticoProvider.notifier).adesso();
+      messaggeria.showSnackBar(
+        const SnackBar(content: Text('Backup aggiornato.')),
+      );
+    } on Object catch (errore) {
+      messaggeria.showSnackBar(SnackBar(content: Text(errore.toString())));
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }

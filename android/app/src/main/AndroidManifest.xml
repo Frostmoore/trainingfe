@@ -53,6 +53,25 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
     <!--
+      La fotocamera nostra - N10.1.
+
+      #! Serve al pacchetto `camera`, che apre l'anteprima dal vivo: senza,
+      l'inquadratura quadrata non si potrebbe mostrare, e chi scatta si
+      ritroverebbe salvata una foto diversa da quella che aveva composto.
+
+      /!\ E' un permesso "dangerous": va chiesto a runtime, non basta
+      dichiararlo qui. Lo chiede il pacchetto quando si inizializza il
+      controller, e la schermata deve saper gestire il no.
+
+      * `android.hardware.camera` NON e' dichiarato come `uses-feature`
+      obbligatorio di proposito: renderebbe l'app invisibile sul Play Store ai
+      dispositivi senza fotocamera. Il resto dell'app funziona benissimo lo
+      stesso, e chi non ce l'ha usera' la galleria.
+    -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+    <!--
       ⚠️ Serve a sapere SE Health Connect esiste su questo telefono.
       Senza, su un dispositivo che non ce l'ha l'app non riesce nemmeno a
       distinguere «l'utente ha detto di no» da «qui non c'è niente da chiedere»,

@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- N10.1: senza queste due iOS chiude l'app di netto quando si apre la
+	     fotocamera o la galleria. Non e' un avviso: e' una terminazione. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Per scattare le foto dei tuoi progressi e dei tuoi pasti.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Per scegliere una foto che hai gia’ scattato.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

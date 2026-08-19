@@ -250,14 +250,47 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// avvio dell'app, sostituita dal record originale. Il sintomo sarebbe «ogni
   /// tanto si dimentica la scheda che gli ho detto», che è la specie di difetto
   /// che nessuno riesce a riprodurre.
+  ///
+  /// ── 🚨 E però i dati del sensore si AGGIORNANO ────────────────────────────
+  ///
+  /// L'inserimento da solo non basta, e il 20/08 si è visto perché: gli
+  /// allenamenti già salvati portavano le calorie **sbagliate** — quelle col
+  /// metabolismo basale dentro — e nessuna risincronizzazione le avrebbe mai
+  /// corrette, perché la riga c'era già.
+  ///
+  /// 💡 Quindi la regola giusta non è «non toccare niente», è **chi possiede
+  /// cosa**:
+  ///
+  /// | Campo | Di chi è | A una rilettura |
+  /// |---|---|---|
+  /// | `tipo`, `finitoIl`, `kcal`, `distanzaMetri`, `passi` | dell'orologio | si **riscrive** |
+  /// | `schedaAssegnata`, `nascosto` | di chi usa l'app | non si tocca **mai** |
+  ///
+  /// ⚠️ In transazione: a metà strada ci sarebbero righe inserite e non
+  /// aggiornate, cioè di nuovo il numero vecchio su una parte dell'elenco.
   Future<int> scriviAllenamenti(List<AllenamentoDaOrologio> allenamenti) async {
     if (allenamenti.isEmpty) return 0;
 
-    await batch((b) => b.insertAll(
-          allenamentiDaOrologio,
-          allenamenti.map(_companionAllenamento).toList(),
-          mode: InsertMode.insertOrIgnore,
+    await transaction(() async {
+      await batch((b) => b.insertAll(
+            allenamentiDaOrologio,
+            allenamenti.map(_companionAllenamento).toList(),
+            mode: InsertMode.insertOrIgnore,
+          ));
+
+      for (final a in allenamenti) {
+        await (update(allenamentiDaOrologio)
+              ..where((t) =>
+                  t.fonte.equals(a.fonte) & t.iniziatoIl.equals(a.iniziatoIl)))
+            .write(AllenamentiDaOrologioCompanion(
+          tipo: Value(a.tipo),
+          finitoIl: Value(a.finitoIl),
+          kcal: Value(a.kcal),
+          distanzaMetri: Value(a.distanzaMetri),
+          passi: Value(a.passi),
         ));
+      }
+    });
 
     return allenamenti.length;
   }
@@ -1311,18 +1344,26 @@ class AllenamentiDaOrologio extends Table {
   DateTimeColumn get iniziatoIl => dateTime()();
   DateTimeColumn get finitoIl => dateTime()();
 
-  /// Le calorie della **singola sessione**, come le dà l'orologio.
+  /// Le calorie **attive** bruciate durante la sessione.
   ///
-  /// ══ 🚨 NON SONO LE CALORIE DELLA GIORNATA ═══════════════════════════════
+  /// ══ 🚨 ATTIVE, non totali — corretto il 20/08 ═══════════════════════════
   ///
-  /// Arrivano da `TotalCaloriesBurnedRecord`, che comprende il **metabolismo
-  /// basale** del periodo. Su un'ora di allenamento è una manciata di kcal, e
-  /// per descrivere quella seduta va benissimo.
+  /// Prima venivano da `WorkoutHealthValue.totalEnergyBurned`, cioè da
+  /// `TotalCaloriesBurnedRecord`, che comprende il **metabolismo basale**.
+  /// ⚠️ Il committente se n'è accorto in un minuto: l'app dell'orologio diceva
+  /// **680 kcal** per quella seduta, la nostra ne mostrava **835**.
   ///
-  /// ⚠️ **Non si sommano al totale del giorno.** Quello resta
-  /// `ACTIVE_ENERGY_BURNED` letto a parte: sommare queste vorrebbe dire contare
-  /// due volte sia il basale sia l'attività, che in quella finestra è già
-  /// dentro le calorie attive.
+  /// 💡 Adesso si sommano i campioni di `ACTIVE_ENERGY_BURNED` che cadono nella
+  /// finestra dell'allenamento — vedi `PonteSalute._attiveDentro`. Non è solo
+  /// più corretto: è **la stessa fonte** delle calorie della giornata, quindi
+  /// due schermate dell'app non possono più dire numeri diversi sulla stessa
+  /// ora.
+  ///
+  /// 🚨 **`null` quando non si sa**, e non uno zero: nessun ripiego su
+  /// `totalEnergyBurned`, che rimetterebbe dentro il basale di nascosto.
+  ///
+  /// ⚠️ **Non si sommano comunque al totale del giorno.** Quello si calcola già
+  /// dagli stessi campioni: sommare anche queste li conterebbe due volte.
   IntColumn get kcal => integer().nullable()();
 
   /// Metri percorsi, quando ha senso: una corsa sì, i pesi quasi no.

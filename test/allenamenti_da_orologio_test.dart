@@ -92,6 +92,40 @@ void main() {
       expect((await archivio.allenamentiDellOrologio()).single.schedaAssegnata, isNull);
     });
 
+    /// ══ 🚨 E però i dati del SENSORE si correggono ═══════════════════════
+    ///
+    /// Il 20/08 gli allenamenti già salvati portavano le calorie **sbagliate**
+    /// — quelle col metabolismo basale dentro, 835 al posto di 680 — e con il
+    /// solo `insertOrIgnore` nessuna risincronizzazione le avrebbe mai
+    /// corrette, perché la riga c'era già.
+    ///
+    /// 💡 La regola non è «non toccare niente», è **chi possiede cosa**.
+    test('una rilettura corregge le calorie sbagliate', () async {
+      await archivio.scriviAllenamenti([corsa(kcal: 835)]);
+
+      await archivio.scriviAllenamenti([corsa(kcal: 680)]);
+
+      expect((await archivio.allenamentiDellOrologio()).single.kcal, 680);
+      expect(await archivio.allenamentiDellOrologio(), hasLength(1));
+    });
+
+    /// 🚨 **Le due cose insieme**, che è il punto: il numero si corregge **e**
+    /// la scheda resta. Separati, i due test passerebbero anche con
+    /// un'implementazione che sbaglia.
+    test('corregge il sensore SENZA perdere la scheda assegnata', () async {
+      await archivio.scriviAllenamenti([corsa(kcal: 835)]);
+
+      final salvato = (await archivio.allenamentiDellOrologio()).single;
+      await archivio.assegnaSchedaAllenamento(salvato.id, 77);
+
+      await archivio.scriviAllenamenti([corsa(kcal: 680)]);
+
+      final dopo = (await archivio.allenamentiDellOrologio()).single;
+
+      expect(dopo.kcal, 680);
+      expect(dopo.schedaAssegnata, 77);
+    });
+
     test('e nemmeno il nascondi si perde', () async {
       await archivio.scriviAllenamenti([corsa()]);
 

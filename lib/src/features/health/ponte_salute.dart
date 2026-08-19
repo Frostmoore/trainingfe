@@ -313,7 +313,26 @@ class PonteSalute {
         tipo: codice,
         iniziatoIl: punto.dateFrom,
         finitoIl: punto.dateTo,
-        kcal: valore.totalEnergyBurned,
+
+        /*
+         * ══ 🚨 NON `valore.totalEnergyBurned` ═══════════════════════════════
+         *
+         * Quello viene da `TotalCaloriesBurnedRecord` e comprende il
+         * **metabolismo basale**. Il 20/08 il committente l'ha visto subito:
+         * l'app dell'orologio diceva **680 kcal** per quella seduta, e noi ne
+         * mostravamo **835**.
+         *
+         * ⚠️ È lo **stesso errore** che la regola sul totale giornaliero vieta,
+         * solo in scala più piccola — e infatti mi era sfuggito proprio perché
+         * la regola parlava della giornata.
+         *
+         * 💡 E le calorie giuste ce le **abbiamo già**: sono
+         * `ACTIVE_ENERGY_BURNED`, lo stesso record che alimenta il totale del
+         * giorno. Prenderle da lì non è solo più corretto: è l'unico modo
+         * perché due schermate dell'app non dicano numeri diversi sulla stessa
+         * ora.
+         */
+        kcal: _attiveDentro(punti, punto.dateFrom, punto.dateTo),
         distanzaMetri: valore.totalDistance,
         passi: valore.totalSteps,
         nascosto: false,
@@ -321,6 +340,59 @@ class PonteSalute {
     }
 
     return fuori;
+  }
+
+  /// Le calorie **attive** bruciate fra `da` e `a`, dai campioni letti.
+  ///
+  /// ── ⚠️ Si contano in proporzione, non tutte o niente ──────────────────────
+  ///
+  /// Un campione di calorie attive copre un intervallo, e quell'intervallo può
+  /// cominciare prima dell'allenamento o finire dopo. Contarlo intero
+  /// gonfierebbe una corsa di venti minuti con l'ora di camminata che la
+  /// precede; scartarlo perché «non ci sta dentro» butterebbe via il grosso.
+  ///
+  /// 💡 Nel caso vero misurato il 20/08 la proporzione non serve — Zepp scrive
+  /// **un** campione che coincide con la sessione — ma non tutte le app fanno
+  /// così, e la regola giusta costa tre righe.
+  ///
+  /// 🚨 Torna `null`, non `0`, quando non c'è niente da sommare: «non lo so» e
+  /// «non hai bruciato niente» sono due cose diverse, e mostrare uno zero
+  /// inventato è peggio che non mostrare niente. ⚠️ E in nessun caso si ripiega
+  /// su `totalEnergyBurned`: sarebbe rimettere dentro il basale di nascosto.
+  static int? _attiveDentro(List<HealthDataPoint> punti, DateTime da, DateTime a) {
+    var somma = 0.0;
+    var trovato = false;
+
+    for (final punto in punti) {
+      if (punto.type != HealthDataType.ACTIVE_ENERGY_BURNED) continue;
+
+      final valore = punto.value;
+      if (valore is! NumericHealthValue) continue;
+
+      final inizio = punto.dateFrom.isAfter(da) ? punto.dateFrom : da;
+      final fine = punto.dateTo.isBefore(a) ? punto.dateTo : a;
+
+      if (fine.isBefore(inizio)) continue;
+
+      final kcal = valore.numericValue.toDouble();
+      final durata = punto.dateTo.difference(punto.dateFrom).inSeconds;
+
+      /*
+       * 💡 Un campione istantaneo (`dateFrom == dateTo`) non si può ripartire:
+       * o sta dentro o no. La riga sopra ha già scartato quelli fuori.
+       */
+      if (durata <= 0) {
+        somma += kcal;
+        trovato = true;
+
+        continue;
+      }
+
+      somma += kcal * (fine.difference(inizio).inSeconds / durata);
+      trovato = true;
+    }
+
+    return trovato ? somma.round() : null;
   }
 
   /// Ricompone i segmenti in dormite e da' a ognuno la giornata della sua.

@@ -320,11 +320,10 @@ class _RigaOrologio extends StatelessWidget {
               'dall\'orologio',
               '$minuti min',
               /*
-               * ⚠️ Le calorie della **sessione**, non della giornata: vengono da
-               * `TotalCaloriesBurnedRecord` e comprendono il metabolismo basale
-               * del periodo. Su un'ora è una manciata di kcal e descrive bene
-               * quella seduta — ma non si somma da nessuna parte. Vedi la nota
-               * su `AllenamentiDaOrologio.kcal`.
+               * 💡 Sono le calorie **attive** della sessione, cioè lo stesso
+               * numero che mostra l'app dell'orologio. ⚠️ Fino al 20/08 erano
+               * quelle totali, col basale dentro: 835 al posto di 680. Vedi la
+               * nota su `AllenamentiDaOrologio.kcal`.
                */
               if (allenamento.kcal != null) '${allenamento.kcal} kcal',
               if ((allenamento.distanzaMetri ?? 0) > 0)

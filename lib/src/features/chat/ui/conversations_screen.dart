@@ -22,6 +22,7 @@ import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
 import 'widgets/documento_in_chat.dart';
 import 'widgets/foto_in_chat.dart';
+import 'widgets/usa_e_getta.dart';
 
 /// L'elenco delle conversazioni — A7.1.
 class ConversationsScreen extends ConsumerWidget {
@@ -216,6 +217,14 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   bool _inCorso = false;
 
+  /// «Una volta sola» — N16.1.
+  ///
+  /// 🚨 **Si spegne dopo ogni invio.** Un interruttore che resta acceso
+  /// farebbe mandare effimero anche il messaggio dopo, che nessuno voleva cosi'
+  /// — e il difetto si scoprirebbe solo quando qualcosa di importante e' gia'
+  /// sparito.
+  bool _usaEGetta = false;
+
   @override
   void dispose() {
     _testo.dispose();
@@ -283,7 +292,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final messaggeria = ScaffoldMessenger.of(context);
 
     try {
-      await ref.read(threadProvider(widget.id).notifier).inviaFoto(foto);
+      await ref
+          .read(threadProvider(widget.id).notifier)
+          .inviaFoto(foto, usaEGetta: _usaEGetta);
+
+      // 🚨 Come per il testo: l'interruttore si spegne dopo l'invio.
+      if (mounted) setState(() => _usaEGetta = false);
     } on Object catch (e) {
       messaggeria.showSnackBar(
         SnackBar(content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString())),
@@ -389,6 +403,37 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
   }
 
+  /// Accende o spegne «una volta sola», dicendo **prima** cosa comporta.
+  ///
+  /// ── 🚨 Il limite si dichiara qui, non dopo — N16.9 ─────────────────
+  ///
+  /// Non possiamo impedire che chi riceve conservi quello che ha visto: si puo'
+  /// fotografare lo schermo con un altro telefono, e un programma modificato
+  /// tiene tutto. ⚠️ **Promettere una sicurezza che non c'e' e' peggio che non
+  /// offrire la funzione**, perche' qualcuno manderebbe qualcosa che non
+  /// avrebbe mandato.
+  ///
+  /// 💡 Si dice **quando si accende**, non dopo l'invio: dopo sarebbe una
+  /// spiegazione, prima e' una scelta.
+  void _cambiaUsaEGetta() {
+    setState(() => _usaEGetta = !_usaEGetta);
+
+    if (!_usaEGetta) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 6),
+          content: Text(
+            'Si potrà aprire una volta sola, poi sparisce da qui e dal server '
+            '(comunque entro 24 ore). Non possiamo però impedire che venga '
+            'fotografato con un altro dispositivo.',
+          ),
+        ),
+      );
+  }
+
   Future<void> _invia() async {
     final testo = _testo.text;
 
@@ -401,7 +446,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     _testo.clear();
 
     try {
-      await ref.read(threadProvider(widget.id).notifier).invia(testo);
+      await ref.read(threadProvider(widget.id).notifier).invia(testo, usaEGetta: _usaEGetta);
+
+      /*
+       * 🚨 **L'interruttore si spegne dopo ogni invio.**
+       *
+       * ⚠️ Lasciarlo acceso farebbe mandare effimero anche il messaggio dopo,
+       * che nessuno voleva cosi' — e il difetto si scoprirebbe solo quando
+       * qualcosa di importante e' gia' sparito. Il costo dell'errore e'
+       * asimmetrico: riaccenderlo e' un tocco, recuperare un messaggio
+       * bruciato non si puo'.
+       */
+      if (mounted) setState(() => _usaEGetta = false);
+
       _inFondo();
     } on Object catch (errore) {
       if (mounted) {
@@ -670,6 +727,31 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   final m = elenco[index];
                   final contenuto = m.contenuto;
 
+                  /*
+                   * 🆕 N16 — l'usa e getta viene **prima di tutto il resto**.
+                   *
+                   * 🚨 Non e' un tipo di contenuto: e' un modo di consegnarlo.
+                   * Una foto effimera resta una foto, ma non va disegnata come
+                   * tale — disegnarla vorrebbe dire mostrarla, e mostrarla senza
+                   * che nessuno l'abbia aperta e' esattamente cio' che la
+                   * funzione impedisce.
+                   */
+                  if (m.spenta) {
+                    return UsaEGettaSpenta(
+                      messaggio: m,
+                      mio: m.senderId == mioId,
+                    );
+                  }
+
+                  if (m.usaEGetta && contenuto != null) {
+                    return UsaEGettaCoperta(
+                      messaggio: m,
+                      contenuto: contenuto,
+                      mio: m.senderId == mioId,
+                      conversationId: widget.id,
+                    );
+                  }
+
                   // 🚨 S7 — una scheda si disegna come una scheda, non come una
                   // nuvoletta con dentro un titolo: ha un pulsante, e quel
                   // pulsante è tutto il punto della fase.
@@ -779,6 +861,27 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       ),
                       onSubmitted: (_) => _invia(),
                     ),
+                  ),
+                  /*
+                   * 🆕 N16.1 — «una volta sola».
+                   *
+                   * 🚨 **Un interruttore, non un menu nascosto.** Chi lo
+                   * accende deve vedere che e' acceso mentre scrive: una scelta
+                   * sepolta in un foglio si dimentica, e ci si dimentica sempre
+                   * nella direzione sbagliata — mandando in chiaro quello che si
+                   * voleva effimero.
+                   *
+                   * 💡 Vale per il testo **e** per la foto: e' il modo di
+                   * consegnare, non il tipo di contenuto.
+                   */
+                  IconButton(
+                    onPressed: _inCorso ? null : _cambiaUsaEGetta,
+                    isSelected: _usaEGetta,
+                    icon: const Icon(Icons.local_fire_department_outlined),
+                    selectedIcon: const Icon(Icons.local_fire_department),
+                    tooltip: _usaEGetta
+                        ? 'Una volta sola: attivo'
+                        : 'Manda una volta sola',
                   ),
                   const SizedBox(width: Gap.sm),
                   IconButton.filled(

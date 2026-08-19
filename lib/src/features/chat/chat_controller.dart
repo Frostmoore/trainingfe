@@ -10,6 +10,7 @@ import '../../core/crypto/cifratura_allegati.dart';
 import '../../core/crypto/contenuto_messaggio.dart';
 import '../../core/crypto/providers_crypto.dart';
 import '../../core/crypto/servizio_chiavi.dart';
+import '../../core/media/archivio_foto.dart';
 import '../../core/providers.dart';
 import '../health/health_controller.dart';
 import '../training/schede_ricevute_controller.dart';
@@ -66,7 +67,29 @@ class ChatMessage {
     this.createdAt,
     this.leggibile = true,
     this.contenuto,
+    this.usaEGetta = false,
+    this.spenta = false,
   });
+
+  /// La traccia di cio' che non c'e' piu' — N16.4b.
+  ///
+  /// 🚨 **Non e' un errore e non va mostrata come tale.** Il messaggio ha
+  /// fatto esattamente quello che chi l'ha mandato ha chiesto: e' stato visto una
+  /// volta, e adesso non c'e' piu'. Una riga sparita farebbe pensare a un guasto;
+  /// una che dice «Messaggio effimero» dice quello che e' successo.
+  factory ChatMessage.effimeraSpenta({
+    required int id,
+    required int senderId,
+    required bool eraFoto,
+    DateTime? createdAt,
+  }) => ChatMessage(
+    id: id,
+    senderId: senderId,
+    body: eraFoto ? 'Foto effimera' : 'Messaggio effimero',
+    createdAt: createdAt,
+    usaEGetta: true,
+    spenta: true,
+  );
 
   final int id;
   final int senderId;
@@ -91,6 +114,17 @@ class ChatMessage {
   /// persona ha perso la propria chiave maestra e ne ha generata una nuova.
   /// L'interfaccia deve dirlo così, non gridare alla manomissione.
   final bool leggibile;
+
+  /// «Una volta sola» — N16.
+  final bool usaEGetta;
+
+  /// La busta non c'e' piu': si mostra la traccia.
+  ///
+  /// 💡 Lo decide **il server**, che sa chi sta guardando e quando e' stato
+  /// aperto. L'app non deve indovinarlo: due orologi calcolati in due posti
+  /// diversi divergono, e quello sbagliato sarebbe sempre quello del telefono,
+  /// che si puo' spostare a mano.
+  final bool spenta;
 
   /// Il messaggio che non si è potuto aprire.
   ///
@@ -191,6 +225,19 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   ThreadController(this._ref, this.conversationId) : super(const AsyncValue.loading()) {
     _carica();
     _timer = Timer.periodic(const Duration(seconds: 15), (_) => _cercaNuovi());
+
+    /*
+     * 🧹 **La spazzata delle effimere scadute, all'apertura** — N16.4c.
+     *
+     * 🚨 Un solo punto di pulizia non basta. Le ventiquattro ore scadono
+     * anche ad app chiusa: chi la tiene aperta per giorni non passerebbe mai
+     * dall'avvio, e si terrebbe sul telefono foto che dovevano sparire.
+     *
+     * 💡 `unawaited` e con l'errore ingoiato: e' un giro di disco su cartelle
+     * quasi sempre vuote, e non deve rallentare l'apertura della chat. Se
+     * fallisce, riprova alla prossima.
+     */
+    unawaited(const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0));
   }
 
   final Ref _ref;
@@ -233,6 +280,28 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     // A3: l'orario sotto la nuvoletta e' quello dell'orologio di chi legge.
     final quando = DateTime.tryParse(j['created_at']?.toString() ?? '')?.toLocal();
 
+    /*
+     * 🚨 **Prima di tutto il resto** — N16.4b.
+     *
+     * Una busta spenta e' vuota: provare a decifrarla darebbe un errore di
+     * decifratura, e l'app mostrerebbe «questo messaggio non e' piu' leggibile
+     * su questo dispositivo» — che manderebbe qualcuno a cercare un guasto
+     * inesistente. Il messaggio non e' rotto: e' stato usato.
+     *
+     * 💡 `usa_e_getta` viaggia anche a busta spenta, ed e' l'unico modo per
+     * sapere se dire «Foto effimera» o «Messaggio effimero»: il contenuto non
+     * c'e' piu', quindi la distinzione deve venire da fuori. Il server manda
+     * `era_foto` proprio per questo.
+     */
+    if (j['spenta'] == true) {
+      return ChatMessage.effimeraSpenta(
+        id: id,
+        senderId: mittente,
+        eraFoto: j['era_foto'] == true,
+        createdAt: quando,
+      );
+    }
+
     if (_sua == null) {
       return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
     }
@@ -261,7 +330,22 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
        * della conversazione, e se fallisce il messaggio resta comunque
        * leggibile — la scrittura si ritenta alla prossima apertura.
        */
-      unawaited(_conserva(id, mittente, contenuto));
+      /*
+       * 🚨 **Niente di usa e getta entra in archivio** — N16.6.
+       *
+       * ⚠️ L'archivio locale finisce nel backup: una riga effimera che ci
+       * entrasse sopravviverebbe **per sempre su Drive**, che e' l'esatto
+       * contrario di quello che ha chiesto chi l'ha mandata — e nessuno se ne
+       * accorgerebbe, perche' nella chat sarebbe sparita regolarmente.
+       *
+       * 💡 Oggi il caso non si presenta: l'interruttore vale per testo e foto,
+       * e nessuna delle due si archivia. E' scritto lo stesso perche' il giorno
+       * che qualcuno rendesse effimera anche una scheda, il difetto sarebbe
+       * silenzioso e permanente.
+       */
+      if (j['usa_e_getta'] != true) {
+        unawaited(_conserva(id, mittente, contenuto));
+      }
 
       return ChatMessage(
         id: id,
@@ -280,6 +364,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
         },
         contenuto: contenuto,
         createdAt: quando,
+        usaEGetta: j['usa_e_getta'] == true,
       );
     } on Object {
       // 🚨 Qualunque cosa vada storta qui — MAC che non torna, base64
@@ -383,12 +468,12 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   /// rumorosamente invece di mandare in chiaro.
   ///
   /// ⚠️ Lancia [ChatSenzaChiave] se l'altra persona non ne ha ancora una.
-  Future<void> invia(String testo) async {
+  Future<void> invia(String testo, {bool usaEGetta = false}) async {
     final pulito = testo.trim();
 
     if (pulito.isEmpty) return;
 
-    await inviaContenuto(ContenutoTesto(pulito));
+    await inviaContenuto(ContenutoTesto(pulito), usaEGetta: usaEGetta);
   }
 
   /// Manda **qualunque cosa** il canale sappia trasportare — S7.
@@ -398,7 +483,10 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   /// instradare buste senza sapere che una di esse è un programma di
   /// allenamento — ed è la prova che S6 non era un costo, ma l'infrastruttura
   /// su cui questo si appoggia gratis.
-  Future<void> inviaContenuto(ContenutoMessaggio contenuto) async {
+  Future<void> inviaContenuto(
+    ContenutoMessaggio contenuto, {
+    bool usaEGetta = false,
+  }) async {
     await _preparaChiavi();
 
     if (_sua == null) throw const ChatSenzaChiave();
@@ -413,7 +501,23 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
           '/conversations/$conversationId/messages',
-          body: busta.perApi(),
+          body: {
+            ...busta.perApi(),
+
+            /*
+             * 🚨 **Questi due viaggiano in chiaro, ed e' inevitabile** — N16.
+             *
+             * Il server deve sapere **quale** busta smettere di consegnare e
+             * quando: se non lo sapesse, la cancellazione dipenderebbe solo
+             * dall'obbedienza del programma sull'altro telefono, cioe' da niente.
+             *
+             * 💡 `era_foto` serve a scegliere la traccia quando la busta sara'
+             * spenta — «Foto effimera» invece di «Messaggio effimero» — perche' a
+             * quel punto il contenuto che lo diceva non c'e' piu'.
+             */
+            if (usaEGetta) 'usa_e_getta': true,
+            if (usaEGetta && contenuto is ContenutoFoto) 'era_foto': true,
+          },
         );
 
     // 💡 Il messaggio appena scritto si rilegge **dalla stessa identica busta**:
@@ -444,6 +548,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   Future<void> inviaFoto(
     Uint8List foto, {
     void Function(double)? avanzamento,
+    bool usaEGetta = false,
   }) async {
     final busta = await AllegatoDiChat(
       api: _ref.read(apiClientProvider),
@@ -458,7 +563,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     // fallire adesso, mentre chi ha premuto sta ancora guardando.
     if (!busta.completa) throw const AllegatoNonSiApre();
 
-    await inviaContenuto(busta);
+    await inviaContenuto(busta, usaEGetta: usaEGetta);
   }
 
   /// Manda un documento — N21.4.
@@ -478,6 +583,36 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     if (!busta.completa) throw const AllegatoNonSiApre();
 
     await inviaContenuto(busta);
+  }
+
+  /// «L'ho aperto»: da qui in poi la busta effimera non torna piu' — N16.4.
+  ///
+  /// ── 🚨 Si chiama alla CHIUSURA del visualizzatore, non all'apertura ──
+  ///
+  /// Un messaggio in una lista e' gia' letto nell'istante in cui la lista si
+  /// disegna: legare la cancellazione a quel momento avrebbe bruciato messaggi
+  /// che nessuno ha davvero guardato. 💡 Il momento in cui «e' stato visto»
+  /// va **costruito**, e questo e' il punto in cui esiste davvero.
+  ///
+  /// ⚠️ **Non lancia.** Se la chiamata fallisce il messaggio resta consegnabile
+  /// e si ritentera' alla prossima apertura: e' meglio di una schermata che si
+  /// rifiuta di chiudersi perche' la rete e' caduta.
+  Future<void> segnaVista(int messaggioId) async {
+    try {
+      await _ref
+          .read(apiClientProvider)
+          .post<dynamic>('/conversations/$conversationId/messages/$messaggioId/vista');
+    } on Object {
+      // Vedi il dartdoc: si tace di proposito.
+    }
+
+    /*
+     * 💡 Si rilegge **subito**: senza, la nuvoletta continuerebbe a mostrare
+     * il contenuto finche' il polling non passa, e chi ha appena chiuso la foto
+     * la vedrebbe ancora li' — che e' il contrario di quello che gli e' appena
+     * stato promesso.
+     */
+    await _carica();
   }
 
   Future<void> _segnaLetti() async {

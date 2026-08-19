@@ -76,6 +76,19 @@ class AllegatoDiChat {
 
   /// Scarica, decifra e mette la foto in `Documents/foto/chat/`.
   ///
+  /// ── 🚨 [dove] non e' una comodita': e' cio' che tiene le foto usa e
+  /// getta FUORI dal backup — N16.6 ──────────────────────────────────────
+  ///
+  /// Una foto effimera va in `TipoFoto.effimere`, che vive nella **cache**.
+  /// Android esclude sempre `getCacheDir()` dal backup e quell'esclusione non e'
+  /// sovrascrivibile: quindi non ci finisce **per costruzione**, non perche'
+  /// qualcuno si e' ricordato di scriverlo da qualche parte.
+  ///
+  /// ⚠️ Il caso contrario e' il guasto peggiore possibile: una foto mandata
+  /// «una volta sola» che sopravvive per sempre su Drive, cioe' l'esatto
+  /// contrario di quello che ha chiesto chi l'ha mandata — e nessuno se ne
+  /// accorgerebbe.
+  ///
   /// ── ⚠️ Si scarica UNA VOLTA SOLA ───────────────────────────────────────
   ///
   /// Il server cancella il blob appena lo consegna. 💡 Per questo il file viene
@@ -83,10 +96,10 @@ class AllegatoDiChat {
   /// non c'è più niente da scaricare, e la foto deve venire da lì.
   ///
   /// @return il percorso relativo, o `null` se sul server non c'è più.
-  Future<String?> riprendi(ContenutoFoto busta) async {
+  Future<String?> riprendi(ContenutoFoto busta, {TipoFoto dove = TipoFoto.chat}) async {
     if (!busta.completa) return null;
 
-    final gia = await _giaScaricata(busta.token);
+    final gia = await _giaScaricata(busta.token, dove);
 
     if (gia != null) return gia;
 
@@ -110,7 +123,7 @@ class AllegatoDiChat {
     try {
       final chiara = await cripto.decifra(chiave: chiave, contenuto: cifrata);
 
-      return _riponi(busta.token, chiara);
+      return _riponi(busta.token, chiara, dove);
     } finally {
       chiave.dispose();
     }
@@ -203,21 +216,26 @@ class AllegatoDiChat {
 
   /// 🚨 Il nome sul disco **è il token**: è già casuale e unico, e permette di
   /// riconoscere una foto già scaricata senza tenere un secondo indice.
-  Future<String> _riponi(String token, Uint8List byte) async {
-    final cartella = await archivio.cartellaDi(TipoFoto.chat);
-    final nome = '$token.jpg';
+  /// Dove finisce sul telefono l'allegato di questo token.
+  ///
+  /// 🚨 **Sta qui e in nessun altro posto.** La convenzione
+  /// `<token>.jpg` la conosce questa classe: chi la ricalcolasse altrove
+  /// scriverebbe la stessa stringa una seconda volta, e il giorno che cambia —
+  /// un'estensione, una sottocartella — una delle due copie resterebbe indietro
+  /// e cercherebbe un file che non c'e' piu'.
+  static String percorsoDi(String token, TipoFoto dove) =>
+      p.url.join(ArchivioFoto.madre, dove.cartella, '$token.jpg');
 
-    await File(p.join(cartella.path, nome)).writeAsBytes(byte);
+  Future<String> _riponi(String token, Uint8List byte, TipoFoto dove) async {
+    final cartella = await archivio.cartellaDi(dove);
 
-    return p.url.join(ArchivioFoto.madre, TipoFoto.chat.cartella, nome);
+    await File(p.join(cartella.path, '$token.jpg')).writeAsBytes(byte);
+
+    return percorsoDi(token, dove);
   }
 
-  Future<String?> _giaScaricata(String token) async {
-    final relativo = p.url.join(
-      ArchivioFoto.madre,
-      TipoFoto.chat.cartella,
-      '$token.jpg',
-    );
+  Future<String?> _giaScaricata(String token, TipoFoto dove) async {
+    final relativo = percorsoDi(token, dove);
 
     return (await archivio.fileDi(relativo)).existsSync() ? relativo : null;
   }

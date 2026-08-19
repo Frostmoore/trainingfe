@@ -22,6 +22,25 @@ final ponteSaluteProvider = Provider<PonteSalute>(
   (ref) => PonteSalute(ref.watch(archivioSaluteProvider)),
 );
 
+/// Quante volte l'archivio degli allenamenti è cambiato — FASE 1.10.
+///
+/// ── 🚨 Il difetto che chiude, trovato guardando l'app il 20/08 ────────────
+///
+/// La sincronizzazione scriveva l'allenamento nell'archivio e **non lo diceva a
+/// nessuno**. Sul telefono del committente il ponte ha scritto la seduta di
+/// pesi alle `00:18:29`, con lo storico già aperto davanti: la schermata è
+/// rimasta su «Nessun allenamento» mentre nel database la riga c'era.
+///
+/// ⚠️ **È un difetto invisibile a chi lo prova male**: chi cambia scheda e
+/// torna indietro vede il dato comparire — il provider è `autoDispose`, quindi
+/// si ricrea — e conclude che funziona. Non funziona **al primo avvio**, che è
+/// esattamente il momento in cui uno guarda.
+///
+/// 💡 Sta qui e non nella cartella `training` perché a scrivere è la
+/// sincronizzazione, che è un fatto di salute. Il verso giusto è che chi mostra
+/// dipenda da chi scrive, non il contrario.
+final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
+
 /// Le calorie bruciate con l'attività in un giorno, lette da Google Health —
 /// FASE 1.
 ///
@@ -122,11 +141,27 @@ class StatoSalute {
 
 /// Chi governa il collegamento e la sincronizzazione — S3.4 / A5.
 class HealthController extends StateNotifier<StatoSalute> {
-  HealthController(this._ponte, this._archivio, this._consensoSanitario)
-    : super(const StatoSalute());
+  HealthController(
+    this._ponte,
+    this._archivio,
+    this._consensoSanitario,
+    this._segnalaAllenamenti,
+  ) : super(const StatoSalute());
 
   final PonteSalute _ponte;
   final ArchivioSalute _archivio;
+
+  /// Come si avvisa che l'archivio degli allenamenti è cambiato — FASE 1.10.
+  ///
+  /// 🚨 **Una chiusura e non un `Ref`**, come `AuthController._svuotaLArchivio`
+  /// e per la stessa ragione pagata il 19/08: un controller che tiene un `Ref`
+  /// finisce per dipendere dal grafo dei provider, e allora qualunque cosa lo
+  /// tocchi può ricrearlo. Qui serve **un solo gesto**, e si passa quello.
+  ///
+  /// 💡 Effetto collaterale utile: nei test si passa una funzione che conta le
+  /// chiamate, e si può verificare che dopo una sincronizzazione l'avviso parta
+  /// davvero — senza montare mezzo Riverpod.
+  final void Function() _segnalaAllenamenti;
 
   /// Se la persona ha dato il consenso al trattamento dei dati sanitari — S9.
   ///
@@ -196,6 +231,8 @@ class HealthController extends StateNotifier<StatoSalute> {
      */
     final quanti = await _ponte.sincronizza(giorniIndietro: 30);
 
+    _diCheCiSonoAllenamentiNuovi();
+
     state = state.copyWith(
       inCorso: false,
       collegato: true,
@@ -241,6 +278,8 @@ class HealthController extends StateNotifier<StatoSalute> {
 
     final quanti = await _ponte.sincronizza();
 
+    _diCheCiSonoAllenamentiNuovi();
+
     if (!mounted) return;
 
     state = state.copyWith(
@@ -250,6 +289,19 @@ class HealthController extends StateNotifier<StatoSalute> {
           : state.ultimaSincronizzazione,
     );
   }
+
+  /// Dice allo storico che l'archivio è cambiato — FASE 1.10.
+  ///
+  /// 🚨 **Scrivere non basta**: il ponte scrive nel database, ma chi guarda ha
+  /// già in mano una lista letta prima. Senza questa riga la seduta compare
+  /// solo cambiando schermata e tornando indietro — cioè **non** al primo
+  /// avvio, che è il momento in cui uno guarda.
+  ///
+  /// 💡 Si chiama **sempre**, anche quando la sincronizzazione non ha portato
+  /// niente: costa una lettura di una tabella piccola, e il ragionamento
+  /// «bumpa solo se `quanti > 0`» sarebbe sbagliato — `quanti` conta anche
+  /// letture e sonno, e non dice se gli **allenamenti** sono cambiati.
+  void _diCheCiSonoAllenamentiNuovi() => _segnalaAllenamenti();
 
   /// Cancella tutto quello che c'è sul telefono.
   ///
@@ -281,6 +333,15 @@ final healthControllerProvider =
      * `recuperoProvider`, e due implementazioni divergono sempre.
      */
     () => ref.read(consensoSaluteProvider.future),
+
+    /*
+     * 🚨 `ref.read` e non `ref.watch` — la stessa distinzione che il 19/08 è
+     * costata l'utente che spariva dopo un ripristino. Con `watch` questo
+     * controller si ricreerebbe **a ogni incremento del contatore**, cioè a ogni
+     * sincronizzazione: si ricrea il controller che ha appena finito di
+     * sincronizzare, e la cosa si morde la coda.
+     */
+    () => ref.read(revisioneAllenamentiProvider.notifier).state++,
   ),
 );
 

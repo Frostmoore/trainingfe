@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/archivio_salute.dart';
@@ -5,14 +6,6 @@ import '../health/health_controller.dart';
 import 'data/storico_unificato.dart';
 import 'schede_ricevute_controller.dart';
 import 'session_controller.dart';
-
-/// Quante volte gli allenamenti dell'orologio sono cambiati.
-///
-/// 💡 Stesso meccanismo di `revisioneSchedeProvider`: l'archivio è un database
-/// locale, non una sorgente reattiva. Dopo un'assegnazione o un «nascondi»
-/// bisogna dire a chi guarda di rileggere, e questo contatore è il modo che il
-/// progetto usa già.
-final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
 
 /// Gli allenamenti registrati dall'orologio, dal telefono — FASE 1.9.
 ///
@@ -42,14 +35,29 @@ final storicoUnificatoProvider =
     FutureProvider.autoDispose<List<VoceStorico>>((ref) async {
   final sessioni = await ref.watch(sessionsProvider.future);
 
+  /*
+   * ⚠️ **Il `debugPrint` non è decorazione.** Una ricaduta silenziosa su lista
+   * vuota è la stessa forma del difetto del 20/08: la schermata diceva «Nessun
+   * allenamento» e nel database la riga c'era. Se un giorno la lettura locale
+   * fallisce davvero, «vuoto» e «rotto» devono essere distinguibili almeno da
+   * chi ha il telefono attaccato al cavo.
+   */
   final dalPolso = await ref
       .watch(allenamentiDalPolsoProvider.future)
-      .catchError((Object _) => const <AllenamentoDaOrologio>[]);
+      .catchError((Object e) {
+    debugPrint('storicoUnificato: gli allenamenti locali non si leggono — $e');
+
+    return const <AllenamentoDaOrologio>[];
+  });
 
   final schede = await ref
       .watch(schedeRicevuteProvider.future)
       .then((v) => {for (final s in v) s.id: s})
-      .catchError((Object _) => const <int, SchedaRicevuta>{});
+      .catchError((Object e) {
+    debugPrint('storicoUnificato: le schede non si leggono — $e');
+
+    return const <int, SchedaRicevuta>{};
+  });
 
   return StoricoUnificato.fondi(
     sessioni: sessioni,

@@ -20,8 +20,15 @@ void main() {
   late _PonteFinto ponte;
   late _ArchivioFinto archivio;
 
+  /// Quante volte il controller ha detto «gli allenamenti sono cambiati».
+  ///
+  /// 🚨 Serve al test del difetto del 20/08: il ponte scriveva l'allenamento e
+  /// **non lo diceva a nessuno**, quindi lo storico restava su «Nessun
+  /// allenamento» con la riga già nel database.
+  late int avvisi;
+
   HealthController conConsenso(bool dato) =>
-      HealthController(ponte, archivio, () async => dato);
+      HealthController(ponte, archivio, () async => dato, () => avvisi++);
 
   // ⚠️ `DateFormat(…, 'it')` lancia se i dati della lingua non sono stati
   // caricati. Nell'app lo fa `main()`; qui va rifatto, o l'etichetta
@@ -31,6 +38,72 @@ void main() {
   setUp(() {
     ponte = _PonteFinto();
     archivio = _ArchivioFinto();
+    avvisi = 0;
+  });
+
+  /// ══ 🚨 Il difetto del 20/08, guardando l'app ═════════════════════════════
+  ///
+  /// Il ponte scriveva l'allenamento nell'archivio e **non lo diceva a
+  /// nessuno**. Sul telefono del committente la seduta di pesi è entrata nel
+  /// database alle `00:18:29`, con lo storico già aperto davanti: la schermata
+  /// è rimasta su «Nessun allenamento» mentre la riga c'era.
+  ///
+  /// ⚠️ **È invisibile a chi lo prova male**: cambiando scheda e tornando
+  /// indietro il provider `autoDispose` si ricrea e il dato compare, quindi
+  /// sembra funzionare. Non funziona **al primo avvio**, che è il momento in
+  /// cui uno guarda.
+  group('l avviso che l archivio è cambiato', () {
+    test('parte dopo una sincronizzazione silenziosa', () async {
+      final c = conConsenso(true);
+      ponte.permessiGiaCe = true;
+
+      await c.aggiornaInSilenzio();
+
+      expect(avvisi, 1);
+    });
+
+    test('parte anche dopo un collegamento a mano', () async {
+      ponte.concede = true;
+
+      final c = conConsenso(true);
+
+      await c.collega();
+
+      expect(avvisi, 1);
+    });
+
+    /// ⚠️ E **non** se il permesso è stato negato: lì `collega()` esce prima di
+    /// sincronizzare, quindi non c'è niente di nuovo nell'archivio.
+    test('non parte se il permesso è stato negato', () async {
+      ponte.concede = false;
+
+      await conConsenso(true).collega();
+
+      expect(avvisi, 0);
+    });
+
+    /// 💡 Anche a mani vuote: `quanti` conta pure letture e sonno, quindi non
+    /// dice se gli **allenamenti** sono cambiati. Non avvisare quando il ponte
+    /// non riporta niente vorrebbe dire indovinare.
+    test('parte anche se non è arrivato niente', () async {
+      final c = conConsenso(true);
+      ponte.permessiGiaCe = true;
+      ponte.campioni = 0;
+
+      await c.aggiornaInSilenzio();
+
+      expect(avvisi, 1);
+    });
+
+    /// 🚨 Ma **non** quando la sincronizzazione non è nemmeno partita: senza
+    /// consenso non si legge niente, quindi non c'è niente di nuovo da dire.
+    test('non parte se senza consenso non si è letto niente', () async {
+      final c = conConsenso(false);
+
+      await c.aggiornaInSilenzio();
+
+      expect(avvisi, 0);
+    });
   });
 
   group('collega()', () {

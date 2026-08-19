@@ -144,11 +144,12 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
                   ),
                   const SizedBox(height: Gap.sm),
                   const Text(
-                    'Sonno, variabilità cardiaca e battito a riposo vengono letti '
-                    'dal tuo telefono e salvati qui dentro. Non vengono inviati ai '
-                    'nostri server, non li vede la tua palestra, non li vede il tuo '
-                    'trainer e non vengono mandati a nessun servizio di '
-                    'intelligenza artificiale.',
+                    'Sonno, variabilità cardiaca, battito a riposo, calorie '
+                    'bruciate e allenamenti vengono letti dal tuo telefono e '
+                    'salvati qui dentro. Non vengono inviati ai nostri server, '
+                    'non li vede la tua palestra, non li vede il tuo trainer e '
+                    'non vengono mandati a nessun servizio di intelligenza '
+                    'artificiale.',
                   ),
                   const SizedBox(height: Gap.sm),
                   Text(
@@ -180,6 +181,31 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
             testo: 'Anche questo letto come scostamento dalla tua media, non come voto.',
           ),
 
+          /*
+           * 🆕 FASE 1.8→1.10 — le due voci nuove.
+           *
+           * 🚨 **Vanno dette prima di chiedere il permesso**, non dopo. Questa
+           * schermata è quella che convince: se l'elenco di Health Connect
+           * mostra «Allenamenti», «Distanza», «Passi» e «Calorie totali» e qui
+           * si parlava solo di sonno e battito, la richiesta sembra più larga di
+           * quello che si era detto — ed è il modo più rapido per farsela negare
+           * **per sempre**, perché su Android un rifiuto ripetuto non si
+           * ripropone più.
+           */
+          const _Voce(
+            icona: Icons.local_fire_department_outlined,
+            titolo: 'Calorie bruciate con l\'attività',
+            testo: 'Si sommano al tuo obiettivo del giorno, così mangi in base a '
+                'quanto ti sei mosso davvero.',
+          ),
+          const _Voce(
+            icona: Icons.fitness_center_outlined,
+            titolo: 'Gli allenamenti',
+            testo: 'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
+                'storico anche quando ti alleni senza aprire l\'app, e puoi dire '
+                'quale scheda hai fatto.',
+          ),
+
           const SizedBox(height: Gap.md),
           Card(
             color: theme.colorScheme.surfaceContainerHighest,
@@ -189,6 +215,45 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
                 'Non scriviamo niente: chiediamo il permesso di sola lettura. '
                 'Puoi revocarlo quando vuoi dalle impostazioni di Health Connect, '
                 'e i dati già salvati li cancelli da qui.',
+              ),
+            ),
+          ),
+
+          /*
+           * ⚠️ **Perché questo riquadro esiste.** Health Connect chiede anche
+           * distanza, passi e calorie totali, e chi legge quella lista si chiede
+           * legittimamente perché. La risposta onesta è «li pretende il
+           * pacchetto per consegnarci un allenamento completo», e va detta —
+           * altrimenti l'unica spiegazione disponibile è quella che uno si
+           * immagina da solo.
+           *
+           * 🚨 E la promessa che c'è scritta è **vera e verificabile**:
+           * `PonteSalute` tiene due liste apposta, e un test diventa rosso se
+           * qualcuno le unisce.
+           */
+          const SizedBox(height: Gap.sm),
+          Card(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.all(Gap.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Perché ti chiede anche distanza e passi',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Gap.xs),
+                  const Text(
+                    'Health Connect consegna un allenamento solo se può darci '
+                    'anche la distanza, i passi e le calorie della sessione: '
+                    'senza quei permessi non arriva niente del tutto.\n\n'
+                    'Il conto delle calorie della giornata resta però basato '
+                    'solo su quelle bruciate con l\'attività, mai sul totale '
+                    'che comprende il metabolismo basale — altrimenti ti '
+                    'diremmo che puoi mangiare molto più di quanto è vero.',
+                  ),
+                ],
               ),
             ),
           ),
@@ -261,7 +326,8 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
       builder: (context) => AlertDialog(
         title: const Text('Cancellare i dati?'),
         content: const Text(
-          'Sonno, HRV e battito salvati su questo telefono vengono cancellati. '
+          'Sonno, HRV, battito, calorie e allenamenti salvati su questo telefono '
+          'vengono cancellati. '
           'Non si possono recuperare: non ne esiste nessuna copia altrove.',
         ),
         actions: [

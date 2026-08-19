@@ -5,12 +5,17 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/storage/archivio_salute.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
+import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
+import '../data/storico_unificato.dart';
+import '../schede_ricevute_controller.dart';
 import '../session_controller.dart';
+import '../storico_unificato_controller.dart';
 
 /// Lo storico degli allenamenti — C10.
 ///
@@ -38,13 +43,24 @@ class StoricoAllenamenti extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessioni = ref.watch(sessionsProvider);
+    /*
+     * 🆕 FASE 1.10 — non più `sessionsProvider`, ma lo storico **fuso**.
+     *
+     * 🚨 Perché una corsa registrata dall'orologio è un allenamento, e prima di
+     * oggi non compariva da nessuna parte: *«molta gente probabilmente o non
+     * userà l'app quando si allena o non userà l'orologio»*.
+     *
+     * ⚠️ La fusione non è concatenazione: chi si allena con l'app aperta **e**
+     * l'orologio al polso registra la stessa ora due volte, e le due
+     * registrazioni vanno riconosciute come una. Vedi `StoricoUnificato`.
+     */
+    final voci = ref.watch(storicoUnificatoProvider);
 
-    return sessioni.when(
+    return voci.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           error: ApiClient.unwrapError(e),
-          onRetry: () => ref.invalidate(sessionsProvider),
+          onRetry: () => ref.invalidate(storicoUnificatoProvider),
         ),
         data: (lista) => lista.isEmpty
             ? const EmptyState(
@@ -53,17 +69,20 @@ class StoricoAllenamenti extends ConsumerWidget {
                 message: 'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(sessionsProvider),
-                child: _PerSettimana(sessioni: lista),
+                onRefresh: () async {
+                  ref.invalidate(sessionsProvider);
+                  ref.invalidate(allenamentiDalPolsoProvider);
+                },
+                child: _PerSettimana(voci: lista),
               ),
     );
   }
 }
 
 class _PerSettimana extends StatelessWidget {
-  const _PerSettimana({required this.sessioni});
+  const _PerSettimana({required this.voci});
 
-  final List<WorkoutSession> sessioni;
+  final List<VoceStorico> voci;
 
   /// Il lunedì della settimana di una data.
   ///
@@ -79,10 +98,10 @@ class _PerSettimana extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gruppi = <DateTime, List<WorkoutSession>>{};
+    final gruppi = <DateTime, List<VoceStorico>>{};
 
-    for (final s in sessioni) {
-      gruppi.putIfAbsent(_lunedi(s.startedAt), () => []).add(s);
+    for (final v in voci) {
+      gruppi.putIfAbsent(_lunedi(v.quando), () => []).add(v);
     }
 
     final settimane = gruppi.keys.toList()..sort((a, b) => b.compareTo(a));
@@ -110,7 +129,17 @@ class _PerSettimana extends StatelessWidget {
                 ),
               ),
             ),
-            for (final s in delle) _CardSessione(sessione: s),
+            for (final v in delle)
+              switch (v) {
+                /*
+                 * 💡 `switch` esaustivo su una gerarchia `sealed`: se domani
+                 * nasce una terza origine — un allenamento inserito a mano — il
+                 * compilatore ferma qui invece di lasciarla sparire dallo
+                 * schermo senza un errore.
+                 */
+                VoceSeduta() => _CardSessione(voce: v),
+                VoceOrologio() => _CardOrologio(voce: v),
+              },
           ],
         );
       },
@@ -119,9 +148,11 @@ class _PerSettimana extends StatelessWidget {
 }
 
 class _CardSessione extends ConsumerWidget {
-  const _CardSessione({required this.sessione});
+  const _CardSessione({required this.voce});
 
-  final WorkoutSession sessione;
+  final VoceSeduta voce;
+
+  WorkoutSession get sessione => voce.sessione;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -149,16 +180,40 @@ class _CardSessione extends ConsumerWidget {
           sessione.titolo,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(
-          [
-            DateFormat('EEE d/MM · HH:mm', 'it').format(sessione.startedAt),
-            if (sessione.isOpen)
-              'in corso'
-            else if (sessione.durationMinutes != null)
-              '${sessione.durationMinutes} min',
-            if (sessione.kcal != null) '${sessione.kcal} kcal (${sessione.etichettaKcal})',
-          ].join(' · '),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                DateFormat('EEE d/MM · HH:mm', 'it').format(sessione.startedAt),
+                if (sessione.isOpen)
+                  'in corso'
+                else if (sessione.durationMinutes != null)
+                  '${sessione.durationMinutes} min',
+                if (sessione.kcal != null) '${sessione.kcal} kcal (${sessione.etichettaKcal})',
+              ].join(' · '),
+            ),
+
+            /*
+             * 🆕 FASE 1.10 — l'orologio che ha visto la stessa ora.
+             *
+             * 🚨 **Non è un doppione da nascondere**: è la stessa cosa vista da
+             * due strumenti. Il player sa quali esercizi hai fatto, l'orologio
+             * sa quanto ti è costato. Una riga sola che li tiene insieme dice
+             * più di quanto ognuno dei due saprebbe dire.
+             *
+             * ⚠️ E soprattutto: **non fa numero a parte**. Prima di questa
+             * fusione la settimana avrebbe contato due sedute dove ce n'è stata
+             * una.
+             */
+            if (voce.orologio != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: _RigaOrologio(allenamento: voce.orologio!),
+              ),
+          ],
         ),
+        isThreeLine: voce.orologio != null,
         trailing: sessione.isOpen
             ? FilledButton(
                 onPressed: () => _apri(context),
@@ -234,4 +289,221 @@ class _CardSessione extends ConsumerWidget {
         .read(sessionActionsProvider)
         .setKcal(sessione.id, valore.isEmpty ? null : int.tryParse(valore));
   }
+}
+
+/// La riga che dice cosa ha visto l'orologio — FASE 1.10.
+///
+/// 💡 Piccola e grigia di proposito: sotto una seduta del player è un
+/// **complemento**, non la notizia. Sopra una card sua invece è tutto quello che
+/// c'è, e infatti lì la si legge da sola.
+class _RigaOrologio extends StatelessWidget {
+  const _RigaOrologio({required this.allenamento});
+
+  final AllenamentoDaOrologio allenamento;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final minuti = allenamento.finitoIl.difference(allenamento.iniziatoIl).inMinutes;
+
+    return Row(
+      children: [
+        Icon(
+          Icons.watch_outlined,
+          size: 14,
+          color: tema.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            [
+              'dall\'orologio',
+              '$minuti min',
+              /*
+               * ⚠️ Le calorie della **sessione**, non della giornata: vengono da
+               * `TotalCaloriesBurnedRecord` e comprendono il metabolismo basale
+               * del periodo. Su un'ora è una manciata di kcal e descrive bene
+               * quella seduta — ma non si somma da nessuna parte. Vedi la nota
+               * su `AllenamentiDaOrologio.kcal`.
+               */
+              if (allenamento.kcal != null) '${allenamento.kcal} kcal',
+              if ((allenamento.distanzaMetri ?? 0) > 0)
+                _distanza(allenamento.distanzaMetri!),
+            ].join(' · '),
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 💡 Sotto il chilometro si scrivono i metri: «0,2 km» per una camminata in
+  /// palestra sarebbe una precisione finta.
+  static String _distanza(int metri) => metri < 1000
+      ? '$metri m'
+      : '${(metri / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
+}
+
+/// Un allenamento che esiste **solo** perché l'orologio l'ha registrato.
+///
+/// ── 🚨 Perché sta nello stesso elenco delle sedute ────────────────────────
+///
+/// Perché è un allenamento. *«Se un utente si vuole allenare è fighissimo fare
+/// in modo che possa registrare sia una corsetta che un allenamento in palestra
+/// che — che ne so — un allenamento in bicicletta»*: tenerli in due liste
+/// diverse vorrebbe dire chiedere a chi guarda di sommare a mente.
+class _CardOrologio extends ConsumerWidget {
+  const _CardOrologio({required this.voce});
+
+  final VoceOrologio voce;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final allenamento = voce.allenamento;
+    final tipo = TipoAllenamento.da(allenamento.tipo);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: Gap.sm),
+      child: ListTile(
+        leading: SizedBox(
+          width: 52,
+          height: 52,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: tema.colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(Gap.radiusSm),
+            ),
+            child: Icon(tipo.icona, color: tema.colorScheme.onSecondaryContainer),
+          ),
+        ),
+        title: Text(
+          tipo.nome,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(DateFormat('EEE d/MM · HH:mm', 'it').format(allenamento.iniziatoIl)),
+            _RigaOrologio(allenamento: allenamento),
+
+            /*
+             * 💡 La scheda assegnata si vede **senza aprire niente**: è
+             * l'informazione che questa persona ha aggiunto di sua mano, ed è
+             * l'unica cosa in questa riga che non viene da un sensore.
+             */
+            if (voce.scheda != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.assignment_turned_in_outlined,
+                      size: 14,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        voce.scheda!.nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: tema.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        isThreeLine: true,
+        trailing: IconButton(
+          onPressed: () => _scegliScheda(context, ref),
+          icon: const Icon(Icons.assignment_outlined),
+          tooltip: 'Assegna una scheda',
+        ),
+        onTap: () => _scegliScheda(context, ref),
+      ),
+    );
+  }
+
+  /// «Ok, ho fatto questa scheda» — la richiesta del 19/08.
+  ///
+  /// ⚠️ **Si può sempre togliere.** Una scelta che non si disfa è una trappola,
+  /// e qui è facilissimo toccare la riga sbagliata: le corse di due giorni
+  /// diversi si somigliano molto.
+  Future<void> _scegliScheda(BuildContext context, WidgetRef ref) async {
+    final schede = await ref.read(schedeRicevuteProvider.future);
+
+    if (!context.mounted) return;
+
+    if (schede.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Non hai ancora nessuna scheda da assegnare. '
+            'Quelle che crei o che ricevi dal trainer compaiono qui.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    final scelta = await showModalBottomSheet<_Scelta>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+              child: Text(
+                'Che scheda hai fatto?',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final s in schede)
+              ListTile(
+                leading: const Icon(Icons.assignment_outlined),
+                title: Text(s.nome),
+                selected: s.id == voce.allenamento.schedaAssegnata,
+                onTap: () => Navigator.of(context).pop(_Scelta(s.id)),
+              ),
+            if (voce.allenamento.schedaAssegnata != null) ...[
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Togli l\'assegnazione'),
+                onTap: () => Navigator.of(context).pop(const _Scelta(null)),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    if (scelta == null) return;
+
+    await assegnaSchedaAllAllenamento(
+      ref,
+      allenamentoId: voce.allenamento.id,
+      schedaId: scelta.schedaId,
+    );
+  }
+}
+
+/// 💡 Un tipo apposta perché `null` dal bottom sheet vuol dire «ho chiuso senza
+/// scegliere», e `_Scelta(null)` vuol dire «togli l'assegnazione». ⚠️ Senza
+/// questa distinzione chiudere il foglio cancellerebbe la scheda assegnata.
+class _Scelta {
+  const _Scelta(this.schedaId);
+
+  final int? schedaId;
 }

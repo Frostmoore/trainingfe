@@ -3141,6 +3141,672 @@ class ContenutiRifiutatiCompanion extends UpdateCompanion<ContenutoRifiutato> {
   }
 }
 
+class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
+    with TableInfo<$AllenamentiDaOrologioTable, AllenamentoDaOrologio> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AllenamentiDaOrologioTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _fonteMeta = const VerificationMeta('fonte');
+  @override
+  late final GeneratedColumn<String> fonte = GeneratedColumn<String>(
+    'fonte',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 64,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 48,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iniziatoIlMeta = const VerificationMeta(
+    'iniziatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> iniziatoIl = GeneratedColumn<DateTime>(
+    'iniziato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _finitoIlMeta = const VerificationMeta(
+    'finitoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> finitoIl = GeneratedColumn<DateTime>(
+    'finito_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kcalMeta = const VerificationMeta('kcal');
+  @override
+  late final GeneratedColumn<int> kcal = GeneratedColumn<int>(
+    'kcal',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _distanzaMetriMeta = const VerificationMeta(
+    'distanzaMetri',
+  );
+  @override
+  late final GeneratedColumn<int> distanzaMetri = GeneratedColumn<int>(
+    'distanza_metri',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _passiMeta = const VerificationMeta('passi');
+  @override
+  late final GeneratedColumn<int> passi = GeneratedColumn<int>(
+    'passi',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _schedaAssegnataMeta = const VerificationMeta(
+    'schedaAssegnata',
+  );
+  @override
+  late final GeneratedColumn<int> schedaAssegnata = GeneratedColumn<int>(
+    'scheda_assegnata',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nascostoMeta = const VerificationMeta(
+    'nascosto',
+  );
+  @override
+  late final GeneratedColumn<bool> nascosto = GeneratedColumn<bool>(
+    'nascosto',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("nascosto" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fonte,
+    tipo,
+    iniziatoIl,
+    finitoIl,
+    kcal,
+    distanzaMetri,
+    passi,
+    schedaAssegnata,
+    nascosto,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'allenamenti_da_orologio';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AllenamentoDaOrologio> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('fonte')) {
+      context.handle(
+        _fonteMeta,
+        fonte.isAcceptableOrUnknown(data['fonte']!, _fonteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fonteMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tipoMeta);
+    }
+    if (data.containsKey('iniziato_il')) {
+      context.handle(
+        _iniziatoIlMeta,
+        iniziatoIl.isAcceptableOrUnknown(data['iniziato_il']!, _iniziatoIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_iniziatoIlMeta);
+    }
+    if (data.containsKey('finito_il')) {
+      context.handle(
+        _finitoIlMeta,
+        finitoIl.isAcceptableOrUnknown(data['finito_il']!, _finitoIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_finitoIlMeta);
+    }
+    if (data.containsKey('kcal')) {
+      context.handle(
+        _kcalMeta,
+        kcal.isAcceptableOrUnknown(data['kcal']!, _kcalMeta),
+      );
+    }
+    if (data.containsKey('distanza_metri')) {
+      context.handle(
+        _distanzaMetriMeta,
+        distanzaMetri.isAcceptableOrUnknown(
+          data['distanza_metri']!,
+          _distanzaMetriMeta,
+        ),
+      );
+    }
+    if (data.containsKey('passi')) {
+      context.handle(
+        _passiMeta,
+        passi.isAcceptableOrUnknown(data['passi']!, _passiMeta),
+      );
+    }
+    if (data.containsKey('scheda_assegnata')) {
+      context.handle(
+        _schedaAssegnataMeta,
+        schedaAssegnata.isAcceptableOrUnknown(
+          data['scheda_assegnata']!,
+          _schedaAssegnataMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nascosto')) {
+      context.handle(
+        _nascostoMeta,
+        nascosto.isAcceptableOrUnknown(data['nascosto']!, _nascostoMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {fonte, iniziatoIl},
+  ];
+  @override
+  AllenamentoDaOrologio map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AllenamentoDaOrologio(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      fonte: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fonte'],
+      )!,
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      )!,
+      iniziatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}iniziato_il'],
+      )!,
+      finitoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}finito_il'],
+      )!,
+      kcal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kcal'],
+      ),
+      distanzaMetri: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}distanza_metri'],
+      ),
+      passi: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}passi'],
+      ),
+      schedaAssegnata: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scheda_assegnata'],
+      ),
+      nascosto: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}nascosto'],
+      )!,
+    );
+  }
+
+  @override
+  $AllenamentiDaOrologioTable createAlias(String alias) {
+    return $AllenamentiDaOrologioTable(attachedDatabase, alias);
+  }
+}
+
+class AllenamentoDaOrologio extends DataClass
+    implements Insertable<AllenamentoDaOrologio> {
+  final int id;
+
+  /// Il pacchetto dell'app che l'ha scritto in Health Connect.
+  final String fonte;
+
+  /// Il codice originale del tipo: `RUNNING`, `STRENGTH_TRAINING`, `BIKING`.
+  ///
+  /// 🚨 **Si salva il codice, non la traduzione.** Le etichette italiane vivono
+  /// in `TipoAllenamento` e possono cambiare; il codice no. ⚠️ Salvando «Pesi»
+  /// perderemmo la differenza fra `STRENGTH_TRAINING` e `WEIGHTLIFTING`, e
+  /// nessuna correzione futura potrebbe recuperarla.
+  final String tipo;
+  final DateTime iniziatoIl;
+  final DateTime finitoIl;
+
+  /// Le calorie della **singola sessione**, come le dà l'orologio.
+  ///
+  /// ══ 🚨 NON SONO LE CALORIE DELLA GIORNATA ═══════════════════════════════
+  ///
+  /// Arrivano da `TotalCaloriesBurnedRecord`, che comprende il **metabolismo
+  /// basale** del periodo. Su un'ora di allenamento è una manciata di kcal, e
+  /// per descrivere quella seduta va benissimo.
+  ///
+  /// ⚠️ **Non si sommano al totale del giorno.** Quello resta
+  /// `ACTIVE_ENERGY_BURNED` letto a parte: sommare queste vorrebbe dire contare
+  /// due volte sia il basale sia l'attività, che in quella finestra è già
+  /// dentro le calorie attive.
+  final int? kcal;
+
+  /// Metri percorsi, quando ha senso: una corsa sì, i pesi quasi no.
+  final int? distanzaMetri;
+  final int? passi;
+
+  /// La scheda che questa persona dice di aver fatto — richiesta del 19/08:
+  /// *«devo poter scegliere di assegnarvi una mia scheda»*.
+  ///
+  /// 💡 È l'`id` locale di `SchedeRicevute`. `null` vuol dire «non l'ho
+  /// assegnata», che è lo stato normale: la maggior parte delle corse non
+  /// corrisponde a nessuna scheda.
+  ///
+  /// 🚨 **Una risincronizzazione non la cancella**: `scriviAllenamenti()` usa
+  /// `insertOrIgnore`, quindi una riga già presente non viene riscritta. ⚠️ Con
+  /// `insertOrReplace` l'orologio sovrascriverebbe una scelta della persona
+  /// ogni volta che si rileggono gli ultimi sette giorni — cioè a ogni avvio.
+  final int? schedaAssegnata;
+
+  /// Nascosto dallo storico perché è il doppione di una seduta del player.
+  ///
+  /// ⚠️ Chi si allena in palestra **con l'app aperta e l'orologio al polso**
+  /// produce due registrazioni della stessa ora. Non si cancella quella
+  /// dell'orologio — è un dato vero, e cancellarlo renderebbe la scelta
+  /// irreversibile — si smette di mostrarla.
+  final bool nascosto;
+  const AllenamentoDaOrologio({
+    required this.id,
+    required this.fonte,
+    required this.tipo,
+    required this.iniziatoIl,
+    required this.finitoIl,
+    this.kcal,
+    this.distanzaMetri,
+    this.passi,
+    this.schedaAssegnata,
+    required this.nascosto,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['fonte'] = Variable<String>(fonte);
+    map['tipo'] = Variable<String>(tipo);
+    map['iniziato_il'] = Variable<DateTime>(iniziatoIl);
+    map['finito_il'] = Variable<DateTime>(finitoIl);
+    if (!nullToAbsent || kcal != null) {
+      map['kcal'] = Variable<int>(kcal);
+    }
+    if (!nullToAbsent || distanzaMetri != null) {
+      map['distanza_metri'] = Variable<int>(distanzaMetri);
+    }
+    if (!nullToAbsent || passi != null) {
+      map['passi'] = Variable<int>(passi);
+    }
+    if (!nullToAbsent || schedaAssegnata != null) {
+      map['scheda_assegnata'] = Variable<int>(schedaAssegnata);
+    }
+    map['nascosto'] = Variable<bool>(nascosto);
+    return map;
+  }
+
+  AllenamentiDaOrologioCompanion toCompanion(bool nullToAbsent) {
+    return AllenamentiDaOrologioCompanion(
+      id: Value(id),
+      fonte: Value(fonte),
+      tipo: Value(tipo),
+      iniziatoIl: Value(iniziatoIl),
+      finitoIl: Value(finitoIl),
+      kcal: kcal == null && nullToAbsent ? const Value.absent() : Value(kcal),
+      distanzaMetri: distanzaMetri == null && nullToAbsent
+          ? const Value.absent()
+          : Value(distanzaMetri),
+      passi: passi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(passi),
+      schedaAssegnata: schedaAssegnata == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedaAssegnata),
+      nascosto: Value(nascosto),
+    );
+  }
+
+  factory AllenamentoDaOrologio.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AllenamentoDaOrologio(
+      id: serializer.fromJson<int>(json['id']),
+      fonte: serializer.fromJson<String>(json['fonte']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      iniziatoIl: serializer.fromJson<DateTime>(json['iniziatoIl']),
+      finitoIl: serializer.fromJson<DateTime>(json['finitoIl']),
+      kcal: serializer.fromJson<int?>(json['kcal']),
+      distanzaMetri: serializer.fromJson<int?>(json['distanzaMetri']),
+      passi: serializer.fromJson<int?>(json['passi']),
+      schedaAssegnata: serializer.fromJson<int?>(json['schedaAssegnata']),
+      nascosto: serializer.fromJson<bool>(json['nascosto']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'fonte': serializer.toJson<String>(fonte),
+      'tipo': serializer.toJson<String>(tipo),
+      'iniziatoIl': serializer.toJson<DateTime>(iniziatoIl),
+      'finitoIl': serializer.toJson<DateTime>(finitoIl),
+      'kcal': serializer.toJson<int?>(kcal),
+      'distanzaMetri': serializer.toJson<int?>(distanzaMetri),
+      'passi': serializer.toJson<int?>(passi),
+      'schedaAssegnata': serializer.toJson<int?>(schedaAssegnata),
+      'nascosto': serializer.toJson<bool>(nascosto),
+    };
+  }
+
+  AllenamentoDaOrologio copyWith({
+    int? id,
+    String? fonte,
+    String? tipo,
+    DateTime? iniziatoIl,
+    DateTime? finitoIl,
+    Value<int?> kcal = const Value.absent(),
+    Value<int?> distanzaMetri = const Value.absent(),
+    Value<int?> passi = const Value.absent(),
+    Value<int?> schedaAssegnata = const Value.absent(),
+    bool? nascosto,
+  }) => AllenamentoDaOrologio(
+    id: id ?? this.id,
+    fonte: fonte ?? this.fonte,
+    tipo: tipo ?? this.tipo,
+    iniziatoIl: iniziatoIl ?? this.iniziatoIl,
+    finitoIl: finitoIl ?? this.finitoIl,
+    kcal: kcal.present ? kcal.value : this.kcal,
+    distanzaMetri: distanzaMetri.present
+        ? distanzaMetri.value
+        : this.distanzaMetri,
+    passi: passi.present ? passi.value : this.passi,
+    schedaAssegnata: schedaAssegnata.present
+        ? schedaAssegnata.value
+        : this.schedaAssegnata,
+    nascosto: nascosto ?? this.nascosto,
+  );
+  AllenamentoDaOrologio copyWithCompanion(AllenamentiDaOrologioCompanion data) {
+    return AllenamentoDaOrologio(
+      id: data.id.present ? data.id.value : this.id,
+      fonte: data.fonte.present ? data.fonte.value : this.fonte,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      iniziatoIl: data.iniziatoIl.present
+          ? data.iniziatoIl.value
+          : this.iniziatoIl,
+      finitoIl: data.finitoIl.present ? data.finitoIl.value : this.finitoIl,
+      kcal: data.kcal.present ? data.kcal.value : this.kcal,
+      distanzaMetri: data.distanzaMetri.present
+          ? data.distanzaMetri.value
+          : this.distanzaMetri,
+      passi: data.passi.present ? data.passi.value : this.passi,
+      schedaAssegnata: data.schedaAssegnata.present
+          ? data.schedaAssegnata.value
+          : this.schedaAssegnata,
+      nascosto: data.nascosto.present ? data.nascosto.value : this.nascosto,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AllenamentoDaOrologio(')
+          ..write('id: $id, ')
+          ..write('fonte: $fonte, ')
+          ..write('tipo: $tipo, ')
+          ..write('iniziatoIl: $iniziatoIl, ')
+          ..write('finitoIl: $finitoIl, ')
+          ..write('kcal: $kcal, ')
+          ..write('distanzaMetri: $distanzaMetri, ')
+          ..write('passi: $passi, ')
+          ..write('schedaAssegnata: $schedaAssegnata, ')
+          ..write('nascosto: $nascosto')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fonte,
+    tipo,
+    iniziatoIl,
+    finitoIl,
+    kcal,
+    distanzaMetri,
+    passi,
+    schedaAssegnata,
+    nascosto,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AllenamentoDaOrologio &&
+          other.id == this.id &&
+          other.fonte == this.fonte &&
+          other.tipo == this.tipo &&
+          other.iniziatoIl == this.iniziatoIl &&
+          other.finitoIl == this.finitoIl &&
+          other.kcal == this.kcal &&
+          other.distanzaMetri == this.distanzaMetri &&
+          other.passi == this.passi &&
+          other.schedaAssegnata == this.schedaAssegnata &&
+          other.nascosto == this.nascosto);
+}
+
+class AllenamentiDaOrologioCompanion
+    extends UpdateCompanion<AllenamentoDaOrologio> {
+  final Value<int> id;
+  final Value<String> fonte;
+  final Value<String> tipo;
+  final Value<DateTime> iniziatoIl;
+  final Value<DateTime> finitoIl;
+  final Value<int?> kcal;
+  final Value<int?> distanzaMetri;
+  final Value<int?> passi;
+  final Value<int?> schedaAssegnata;
+  final Value<bool> nascosto;
+  const AllenamentiDaOrologioCompanion({
+    this.id = const Value.absent(),
+    this.fonte = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.iniziatoIl = const Value.absent(),
+    this.finitoIl = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.distanzaMetri = const Value.absent(),
+    this.passi = const Value.absent(),
+    this.schedaAssegnata = const Value.absent(),
+    this.nascosto = const Value.absent(),
+  });
+  AllenamentiDaOrologioCompanion.insert({
+    this.id = const Value.absent(),
+    required String fonte,
+    required String tipo,
+    required DateTime iniziatoIl,
+    required DateTime finitoIl,
+    this.kcal = const Value.absent(),
+    this.distanzaMetri = const Value.absent(),
+    this.passi = const Value.absent(),
+    this.schedaAssegnata = const Value.absent(),
+    this.nascosto = const Value.absent(),
+  }) : fonte = Value(fonte),
+       tipo = Value(tipo),
+       iniziatoIl = Value(iniziatoIl),
+       finitoIl = Value(finitoIl);
+  static Insertable<AllenamentoDaOrologio> custom({
+    Expression<int>? id,
+    Expression<String>? fonte,
+    Expression<String>? tipo,
+    Expression<DateTime>? iniziatoIl,
+    Expression<DateTime>? finitoIl,
+    Expression<int>? kcal,
+    Expression<int>? distanzaMetri,
+    Expression<int>? passi,
+    Expression<int>? schedaAssegnata,
+    Expression<bool>? nascosto,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fonte != null) 'fonte': fonte,
+      if (tipo != null) 'tipo': tipo,
+      if (iniziatoIl != null) 'iniziato_il': iniziatoIl,
+      if (finitoIl != null) 'finito_il': finitoIl,
+      if (kcal != null) 'kcal': kcal,
+      if (distanzaMetri != null) 'distanza_metri': distanzaMetri,
+      if (passi != null) 'passi': passi,
+      if (schedaAssegnata != null) 'scheda_assegnata': schedaAssegnata,
+      if (nascosto != null) 'nascosto': nascosto,
+    });
+  }
+
+  AllenamentiDaOrologioCompanion copyWith({
+    Value<int>? id,
+    Value<String>? fonte,
+    Value<String>? tipo,
+    Value<DateTime>? iniziatoIl,
+    Value<DateTime>? finitoIl,
+    Value<int?>? kcal,
+    Value<int?>? distanzaMetri,
+    Value<int?>? passi,
+    Value<int?>? schedaAssegnata,
+    Value<bool>? nascosto,
+  }) {
+    return AllenamentiDaOrologioCompanion(
+      id: id ?? this.id,
+      fonte: fonte ?? this.fonte,
+      tipo: tipo ?? this.tipo,
+      iniziatoIl: iniziatoIl ?? this.iniziatoIl,
+      finitoIl: finitoIl ?? this.finitoIl,
+      kcal: kcal ?? this.kcal,
+      distanzaMetri: distanzaMetri ?? this.distanzaMetri,
+      passi: passi ?? this.passi,
+      schedaAssegnata: schedaAssegnata ?? this.schedaAssegnata,
+      nascosto: nascosto ?? this.nascosto,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (fonte.present) {
+      map['fonte'] = Variable<String>(fonte.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (iniziatoIl.present) {
+      map['iniziato_il'] = Variable<DateTime>(iniziatoIl.value);
+    }
+    if (finitoIl.present) {
+      map['finito_il'] = Variable<DateTime>(finitoIl.value);
+    }
+    if (kcal.present) {
+      map['kcal'] = Variable<int>(kcal.value);
+    }
+    if (distanzaMetri.present) {
+      map['distanza_metri'] = Variable<int>(distanzaMetri.value);
+    }
+    if (passi.present) {
+      map['passi'] = Variable<int>(passi.value);
+    }
+    if (schedaAssegnata.present) {
+      map['scheda_assegnata'] = Variable<int>(schedaAssegnata.value);
+    }
+    if (nascosto.present) {
+      map['nascosto'] = Variable<bool>(nascosto.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AllenamentiDaOrologioCompanion(')
+          ..write('id: $id, ')
+          ..write('fonte: $fonte, ')
+          ..write('tipo: $tipo, ')
+          ..write('iniziatoIl: $iniziatoIl, ')
+          ..write('finitoIl: $finitoIl, ')
+          ..write('kcal: $kcal, ')
+          ..write('distanzaMetri: $distanzaMetri, ')
+          ..write('passi: $passi, ')
+          ..write('schedaAssegnata: $schedaAssegnata, ')
+          ..write('nascosto: $nascosto')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -3152,6 +3818,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   late final $PianiRicevutiTable pianiRicevuti = $PianiRicevutiTable(this);
   late final $ContenutiRifiutatiTable contenutiRifiutati =
       $ContenutiRifiutatiTable(this);
+  late final $AllenamentiDaOrologioTable allenamentiDaOrologio =
+      $AllenamentiDaOrologioTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3164,6 +3832,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     schedeRicevute,
     pianiRicevuti,
     contenutiRifiutati,
+    allenamentiDaOrologio,
   ];
 }
 
@@ -4807,6 +5476,320 @@ typedef $$ContenutiRifiutatiTableProcessedTableManager =
       ContenutoRifiutato,
       PrefetchHooks Function()
     >;
+typedef $$AllenamentiDaOrologioTableCreateCompanionBuilder =
+    AllenamentiDaOrologioCompanion Function({
+      Value<int> id,
+      required String fonte,
+      required String tipo,
+      required DateTime iniziatoIl,
+      required DateTime finitoIl,
+      Value<int?> kcal,
+      Value<int?> distanzaMetri,
+      Value<int?> passi,
+      Value<int?> schedaAssegnata,
+      Value<bool> nascosto,
+    });
+typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
+    AllenamentiDaOrologioCompanion Function({
+      Value<int> id,
+      Value<String> fonte,
+      Value<String> tipo,
+      Value<DateTime> iniziatoIl,
+      Value<DateTime> finitoIl,
+      Value<int?> kcal,
+      Value<int?> distanzaMetri,
+      Value<int?> passi,
+      Value<int?> schedaAssegnata,
+      Value<bool> nascosto,
+    });
+
+class $$AllenamentiDaOrologioTableFilterComposer
+    extends Composer<_$ArchivioSalute, $AllenamentiDaOrologioTable> {
+  $$AllenamentiDaOrologioTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fonte => $composableBuilder(
+    column: $table.fonte,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get iniziatoIl => $composableBuilder(
+    column: $table.iniziatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get finitoIl => $composableBuilder(
+    column: $table.finitoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get distanzaMetri => $composableBuilder(
+    column: $table.distanzaMetri,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get passi => $composableBuilder(
+    column: $table.passi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schedaAssegnata => $composableBuilder(
+    column: $table.schedaAssegnata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nascosto => $composableBuilder(
+    column: $table.nascosto,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AllenamentiDaOrologioTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $AllenamentiDaOrologioTable> {
+  $$AllenamentiDaOrologioTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fonte => $composableBuilder(
+    column: $table.fonte,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get iniziatoIl => $composableBuilder(
+    column: $table.iniziatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get finitoIl => $composableBuilder(
+    column: $table.finitoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get distanzaMetri => $composableBuilder(
+    column: $table.distanzaMetri,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get passi => $composableBuilder(
+    column: $table.passi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schedaAssegnata => $composableBuilder(
+    column: $table.schedaAssegnata,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nascosto => $composableBuilder(
+    column: $table.nascosto,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AllenamentiDaOrologioTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $AllenamentiDaOrologioTable> {
+  $$AllenamentiDaOrologioTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fonte =>
+      $composableBuilder(column: $table.fonte, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get iniziatoIl => $composableBuilder(
+    column: $table.iniziatoIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get finitoIl =>
+      $composableBuilder(column: $table.finitoIl, builder: (column) => column);
+
+  GeneratedColumn<int> get kcal =>
+      $composableBuilder(column: $table.kcal, builder: (column) => column);
+
+  GeneratedColumn<int> get distanzaMetri => $composableBuilder(
+    column: $table.distanzaMetri,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get passi =>
+      $composableBuilder(column: $table.passi, builder: (column) => column);
+
+  GeneratedColumn<int> get schedaAssegnata => $composableBuilder(
+    column: $table.schedaAssegnata,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nascosto =>
+      $composableBuilder(column: $table.nascosto, builder: (column) => column);
+}
+
+class $$AllenamentiDaOrologioTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $AllenamentiDaOrologioTable,
+          AllenamentoDaOrologio,
+          $$AllenamentiDaOrologioTableFilterComposer,
+          $$AllenamentiDaOrologioTableOrderingComposer,
+          $$AllenamentiDaOrologioTableAnnotationComposer,
+          $$AllenamentiDaOrologioTableCreateCompanionBuilder,
+          $$AllenamentiDaOrologioTableUpdateCompanionBuilder,
+          (
+            AllenamentoDaOrologio,
+            BaseReferences<
+              _$ArchivioSalute,
+              $AllenamentiDaOrologioTable,
+              AllenamentoDaOrologio
+            >,
+          ),
+          AllenamentoDaOrologio,
+          PrefetchHooks Function()
+        > {
+  $$AllenamentiDaOrologioTableTableManager(
+    _$ArchivioSalute db,
+    $AllenamentiDaOrologioTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AllenamentiDaOrologioTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$AllenamentiDaOrologioTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AllenamentiDaOrologioTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> fonte = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<DateTime> iniziatoIl = const Value.absent(),
+                Value<DateTime> finitoIl = const Value.absent(),
+                Value<int?> kcal = const Value.absent(),
+                Value<int?> distanzaMetri = const Value.absent(),
+                Value<int?> passi = const Value.absent(),
+                Value<int?> schedaAssegnata = const Value.absent(),
+                Value<bool> nascosto = const Value.absent(),
+              }) => AllenamentiDaOrologioCompanion(
+                id: id,
+                fonte: fonte,
+                tipo: tipo,
+                iniziatoIl: iniziatoIl,
+                finitoIl: finitoIl,
+                kcal: kcal,
+                distanzaMetri: distanzaMetri,
+                passi: passi,
+                schedaAssegnata: schedaAssegnata,
+                nascosto: nascosto,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String fonte,
+                required String tipo,
+                required DateTime iniziatoIl,
+                required DateTime finitoIl,
+                Value<int?> kcal = const Value.absent(),
+                Value<int?> distanzaMetri = const Value.absent(),
+                Value<int?> passi = const Value.absent(),
+                Value<int?> schedaAssegnata = const Value.absent(),
+                Value<bool> nascosto = const Value.absent(),
+              }) => AllenamentiDaOrologioCompanion.insert(
+                id: id,
+                fonte: fonte,
+                tipo: tipo,
+                iniziatoIl: iniziatoIl,
+                finitoIl: finitoIl,
+                kcal: kcal,
+                distanzaMetri: distanzaMetri,
+                passi: passi,
+                schedaAssegnata: schedaAssegnata,
+                nascosto: nascosto,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AllenamentiDaOrologioTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $AllenamentiDaOrologioTable,
+      AllenamentoDaOrologio,
+      $$AllenamentiDaOrologioTableFilterComposer,
+      $$AllenamentiDaOrologioTableOrderingComposer,
+      $$AllenamentiDaOrologioTableAnnotationComposer,
+      $$AllenamentiDaOrologioTableCreateCompanionBuilder,
+      $$AllenamentiDaOrologioTableUpdateCompanionBuilder,
+      (
+        AllenamentoDaOrologio,
+        BaseReferences<
+          _$ArchivioSalute,
+          $AllenamentiDaOrologioTable,
+          AllenamentoDaOrologio
+        >,
+      ),
+      AllenamentoDaOrologio,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -4825,4 +5808,6 @@ class $ArchivioSaluteManager {
       $$PianiRicevutiTableTableManager(_db, _db.pianiRicevuti);
   $$ContenutiRifiutatiTableTableManager get contenutiRifiutati =>
       $$ContenutiRifiutatiTableTableManager(_db, _db.contenutiRifiutati);
+  $$AllenamentiDaOrologioTableTableManager get allenamentiDaOrologio =>
+      $$AllenamentiDaOrologioTableTableManager(_db, _db.allenamentiDaOrologio);
 }

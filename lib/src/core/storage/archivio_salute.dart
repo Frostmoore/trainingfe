@@ -36,6 +36,7 @@ part 'archivio_salute.g.dart';
     SchedeRicevute,
     PianiRicevuti,
     ContenutiRifiutati,
+    AllenamentiDaOrologio,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -45,7 +46,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +114,22 @@ class ArchivioSalute extends _$ArchivioSalute {
             await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
             await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
           }
+
+          /*
+           * v8 -> v9 (FASE 1.8): gli allenamenti registrati dall'orologio.
+           *
+           * 🚨 **Una tabella nuova e non due colonne**, al contrario di v7->v8:
+           * li' un piano importato *era* un piano, qui una seduta rilevata dal
+           * polso **non e'** una seduta del player. Non ha serie, non ha
+           * ripetizioni, non ha un carico — ha un tipo, una durata e delle
+           * calorie. Metterle nella stessa tabella vorrebbe dire una tabella
+           * per meta' vuota qualunque riga si guardi.
+           *
+           * 💡 E finisce nel backup **da sola**: `esportaPerBackup()` enumera
+           * `allTables` invece di elencare a mano, proprio perche' una tabella
+           * aggiunta dopo non resti fuori senza che nessuno se ne accorga.
+           */
+          if (da < 9) await m.createTable(allenamentiDaOrologio);
         },
       );
 
@@ -220,6 +237,54 @@ class ArchivioSalute extends _$ArchivioSalute {
     return campioni.length;
   }
 
+  /// Scrive gli allenamenti letti dall'orologio — FASE 1.8.
+  ///
+  /// ── 🚨 `insertOrIgnore`, e qui non è solo per non duplicare ───────────────
+  ///
+  /// Sulle letture e sul sonno serve a non riscrivere lo stesso campione. Qui
+  /// difende **una scelta della persona**: `schedaAssegnata` e `nascosto` sono
+  /// gli unici due campi che non arrivano dall'orologio, e si rileggono sempre
+  /// gli ultimi sette giorni.
+  ///
+  /// ⚠️ Con `insertOrReplace` l'assegnazione fatta ieri sparirebbe al prossimo
+  /// avvio dell'app, sostituita dal record originale. Il sintomo sarebbe «ogni
+  /// tanto si dimentica la scheda che gli ho detto», che è la specie di difetto
+  /// che nessuno riesce a riprodurre.
+  Future<int> scriviAllenamenti(List<AllenamentoDaOrologio> allenamenti) async {
+    if (allenamenti.isEmpty) return 0;
+
+    await batch((b) => b.insertAll(
+          allenamentiDaOrologio,
+          allenamenti.map(_companionAllenamento).toList(),
+          mode: InsertMode.insertOrIgnore,
+        ));
+
+    return allenamenti.length;
+  }
+
+  /// Gli allenamenti dell'orologio, dal più recente.
+  ///
+  /// 💡 `nascosto` non si filtra qui: lo storico vuole nasconderli, la schermata
+  /// che permette di **rimetterli** deve poterli vedere. Filtrare alla fonte
+  /// renderebbe la scelta irreversibile.
+  Future<List<AllenamentoDaOrologio>> allenamentiDellOrologio({int quanti = 200}) =>
+      (select(allenamentiDaOrologio)
+            ..orderBy([(t) => OrderingTerm.desc(t.iniziatoIl)])
+            ..limit(quanti))
+          .get();
+
+  /// Assegna (o toglie) la scheda che questa persona dice di aver fatto.
+  Future<void> assegnaSchedaAllenamento(int id, int? schedaId) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(schedaAssegnata: Value(schedaId)),
+      );
+
+  /// Nasconde o rimette un allenamento nello storico.
+  Future<void> nascondiAllenamento(int id, {required bool nascosto}) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(nascosto: Value(nascosto)),
+      );
+
   /*
    * 🚨 **L'`id` va lasciato ASSENTE, non messo a zero.**
    *
@@ -248,6 +313,20 @@ class ArchivioSalute extends _$ArchivioSalute {
         iniziatoIl: c.iniziatoIl,
         finitoIl: c.finitoIl,
         fase: c.fase,
+      );
+
+  /// ⚠️ `schedaAssegnata` e `nascosto` **non si passano**: sono di chi usa
+  /// l'app, non dell'orologio. Lasciarli assenti li fa nascere `null` e `false`,
+  /// e — insieme a `insertOrIgnore` — garantisce che una rilettura non li tocchi.
+  AllenamentiDaOrologioCompanion _companionAllenamento(AllenamentoDaOrologio a) =>
+      AllenamentiDaOrologioCompanion.insert(
+        fonte: a.fonte,
+        tipo: a.tipo,
+        iniziatoIl: a.iniziatoIl,
+        finitoIl: a.finitoIl,
+        kcal: Value(a.kcal),
+        distanzaMetri: Value(a.distanzaMetri),
+        passi: Value(a.passi),
       );
 
   // ─────────────────────────── lettura ───────────────────────────
@@ -1194,4 +1273,89 @@ class SchedeRicevute extends Table {
   DateTimeColumn get ricevutaIl => dateTime()();
 
   DateTimeColumn get aggiornatoIl => dateTime().nullable()();
+}
+
+/// Gli allenamenti che ha registrato l'orologio — FASE 1.8.
+///
+/// ── 🚨 Perché stanno sul telefono e non sul server ────────────────────────
+///
+/// Perché sono dati sanitari, e la regola del 19/08 non ha eccezioni: *«tutti i
+/// dati che possono essere anche lontanamente sensibili devono restare solo
+/// on-device, con il backup»*. Un elenco di quando e quanto ti alleni dice
+/// molto, e non ci serve altrove.
+///
+/// 💡 Nel backup ci finisce **da sola**: `esportaPerBackup()` enumera
+/// `allTables`.
+///
+/// ── ⚠️ Health Connect è il magazzino, non la fonte ────────────────────────
+///
+/// Ci scrivono l'app dell'orologio, Strava, Google Fit. Per questo `fonte` è la
+/// cosa più importante dopo la data: `com.huami.watch.hmwatchmanager` è Zepp,
+/// cioè un Amazfit. 🚨 Senza, due app che scrivono lo stesso allenamento
+/// sarebbero indistinguibili — e la chiave unica non potrebbe funzionare.
+@DataClassName('AllenamentoDaOrologio')
+class AllenamentiDaOrologio extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Il pacchetto dell'app che l'ha scritto in Health Connect.
+  TextColumn get fonte => text().withLength(min: 1, max: 64)();
+
+  /// Il codice originale del tipo: `RUNNING`, `STRENGTH_TRAINING`, `BIKING`.
+  ///
+  /// 🚨 **Si salva il codice, non la traduzione.** Le etichette italiane vivono
+  /// in `TipoAllenamento` e possono cambiare; il codice no. ⚠️ Salvando «Pesi»
+  /// perderemmo la differenza fra `STRENGTH_TRAINING` e `WEIGHTLIFTING`, e
+  /// nessuna correzione futura potrebbe recuperarla.
+  TextColumn get tipo => text().withLength(min: 1, max: 48)();
+
+  DateTimeColumn get iniziatoIl => dateTime()();
+  DateTimeColumn get finitoIl => dateTime()();
+
+  /// Le calorie della **singola sessione**, come le dà l'orologio.
+  ///
+  /// ══ 🚨 NON SONO LE CALORIE DELLA GIORNATA ═══════════════════════════════
+  ///
+  /// Arrivano da `TotalCaloriesBurnedRecord`, che comprende il **metabolismo
+  /// basale** del periodo. Su un'ora di allenamento è una manciata di kcal, e
+  /// per descrivere quella seduta va benissimo.
+  ///
+  /// ⚠️ **Non si sommano al totale del giorno.** Quello resta
+  /// `ACTIVE_ENERGY_BURNED` letto a parte: sommare queste vorrebbe dire contare
+  /// due volte sia il basale sia l'attività, che in quella finestra è già
+  /// dentro le calorie attive.
+  IntColumn get kcal => integer().nullable()();
+
+  /// Metri percorsi, quando ha senso: una corsa sì, i pesi quasi no.
+  IntColumn get distanzaMetri => integer().nullable()();
+
+  IntColumn get passi => integer().nullable()();
+
+  /// La scheda che questa persona dice di aver fatto — richiesta del 19/08:
+  /// *«devo poter scegliere di assegnarvi una mia scheda»*.
+  ///
+  /// 💡 È l'`id` locale di `SchedeRicevute`. `null` vuol dire «non l'ho
+  /// assegnata», che è lo stato normale: la maggior parte delle corse non
+  /// corrisponde a nessuna scheda.
+  ///
+  /// 🚨 **Una risincronizzazione non la cancella**: `scriviAllenamenti()` usa
+  /// `insertOrIgnore`, quindi una riga già presente non viene riscritta. ⚠️ Con
+  /// `insertOrReplace` l'orologio sovrascriverebbe una scelta della persona
+  /// ogni volta che si rileggono gli ultimi sette giorni — cioè a ogni avvio.
+  IntColumn get schedaAssegnata => integer().nullable()();
+
+  /// Nascosto dallo storico perché è il doppione di una seduta del player.
+  ///
+  /// ⚠️ Chi si allena in palestra **con l'app aperta e l'orologio al polso**
+  /// produce due registrazioni della stessa ora. Non si cancella quella
+  /// dell'orologio — è un dato vero, e cancellarlo renderebbe la scelta
+  /// irreversibile — si smette di mostrarla.
+  BoolColumn get nascosto => boolean().withDefault(const Constant(false))();
+
+  /// 🚨 `fonte` + `iniziatoIl`: la stessa chiave del sonno, per la stessa
+  /// ragione. Si rileggono sempre gli ultimi sette giorni, e senza questa
+  /// coppia ogni avvio dell'app aggiungerebbe di nuovo tutto.
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {fonte, iniziatoIl},
+  ];
 }

@@ -4,6 +4,7 @@ import 'package:health/health.dart';
 import '../../core/storage/archivio_salute.dart';
 import 'dati_salute.dart';
 import 'sessioni_di_sonno.dart';
+import 'tipo_allenamento.dart';
 
 /// Il ponte fra il telefono e l'archivio locale — S3.3.
 ///
@@ -25,9 +26,11 @@ class PonteSalute {
   final ArchivioSalute _archivio;
   final Health _salute;
 
-  /// I tipi che chiediamo. Meno se ne chiedono, più è probabile che vengano
-  /// concessi: ogni voce in più in quella schermata è un motivo per dire di no.
-  static const _tipi = <HealthDataType>[
+  /// I tipi che **leggiamo davvero**.
+  ///
+  /// 🚨 Non coincide con quelli che **chiediamo**: vedi `_tipiDaAutorizzare`.
+  /// La differenza non e' una svista, e' la difesa descritta piu' sotto.
+  static const _tipiDaLeggere = <HealthDataType>[
     HealthDataType.HEART_RATE_VARIABILITY_RMSSD,
     HealthDataType.RESTING_HEART_RATE,
     HealthDataType.SLEEP_ASLEEP,
@@ -37,23 +40,94 @@ class PonteSalute {
     HealthDataType.SLEEP_AWAKE,
 
     /*
-     * 🆕 FASE 1 — le calorie bruciate con l'attività.
+     * 🆕 FASE 1 — le calorie bruciate con l'attivita'.
      *
      * 🚨 **`ACTIVE_ENERGY_BURNED`, mai `TOTAL_CALORIES_BURNED`**: il totale
-     * comprende il metabolismo basale, e il nostro obiettivo è già un TDEE che
+     * comprende il metabolismo basale, e il nostro obiettivo e' gia' un TDEE che
      * il basale ce l'ha dentro. Sommarlo lo conterebbe due volte — circa
      * +1.600 kcal al giorno, con un numero che resta plausibile.
-     *
-     * ⚠️ E **mai** `WORKOUT_ROUTE`: è la traccia GPS.
      */
     HealthDataType.ACTIVE_ENERGY_BURNED,
+
+    /*
+     * 🆕 FASE 1.8 — gli allenamenti.
+     *
+     * 💡 Health Connect e' il **magazzino**, non la fonte: ci scrivono l'app
+     * dell'orologio, Strava, Google Fit. Per questo prendiamo **tutti** i tipi e
+     * non solo la palestra — una corsa e un giro in bici arrivano dallo stesso
+     * canale, e chi si allena senza aprire la nostra app li ha solo li'.
+     *
+     * ⚠️ E **mai** `WORKOUT_ROUTE`, che e' la traccia GPS: dice dove abiti e che
+     * giro fai la domenica. E' il dato piu' identificante che il telefono
+     * possieda, e non serve a niente di quello che facciamo.
+     */
+    HealthDataType.WORKOUT,
   ];
+
+  /// I tre tipi che **chiediamo senza leggerli**, perche' li pretende il
+  /// pacchetto per consegnare un allenamento completo.
+  ///
+  /// ── 🚨 Perche' esistono ───────────────────────────────────────────────────
+  ///
+  /// `handleWorkoutData` non si limita a `ExerciseSessionRecord`: per ogni
+  /// sessione legge anche `DistanceRecord`, `StepsRecord` e
+  /// `TotalCaloriesBurnedRecord` dentro l'intervallo dell'allenamento. Se **uno
+  /// solo** dei permessi manca, cattura l'eccezione e restituisce lista
+  /// **vuota**.
+  ///
+  /// ⚠️ Il sintomo e' «zero allenamenti», che somiglia a «l'orologio non ne
+  /// manda» ed e' invece un permesso negato. E' precisamente l'errore del
+  /// 19/08: `SecurityException: Caller requires READ_DISTANCE`.
+  ///
+  /// 💡 Dichiararli nel manifest **non basta**: `preparePermissionsListInternal`
+  /// costruisce l'elenco da chiedere **dai tipi**, uno a uno, e `WORKOUT`
+  /// traduce nel solo `READ_EXERCISE`. Senza queste tre righe restano
+  /// `granted=false` per sempre, senza che a nessuno venga chiesto niente.
+  ///
+  /// ══ 🚨 REGOLA NON NEGOZIABILE ════════════════════════════════════════════
+  ///
+  /// **`TOTAL_CALORIES_BURNED` non entra in `_tipiDaLeggere`. Mai.**
+  ///
+  /// Quel record contiene il metabolismo basale. Qui serve solo perche' il
+  /// pacchetto lo legge **da solo**, dentro l'intervallo di una sessione, per
+  /// riempirne le calorie. Il totale della **giornata** resta
+  /// `ACTIVE_ENERGY_BURNED`.
+  ///
+  /// 💡 Ed e' per questo che le due liste sono separate invece di essere una
+  /// sola: cosi' la regola non e' un commento che qualcuno puo' non leggere, e'
+  /// il fatto che il tipo **non c'e'** nella lista che legge. Per sbagliare
+  /// bisogna spostarlo a mano, e a quel punto si passa di qui.
+  static const _tipiInPiuPerGliAllenamenti = <HealthDataType>[
+    HealthDataType.DISTANCE_DELTA,
+    HealthDataType.STEPS,
+    HealthDataType.TOTAL_CALORIES_BURNED,
+  ];
+
+  /// Quello che compare nella schermata del consenso.
+  ///
+  /// ⚠️ Ogni voce in piu' e' un motivo per dire di no, e queste tre sono il
+  /// prezzo degli allenamenti. Si pagano una volta sola, all'inizio.
+  static const _tipiDaAutorizzare = <HealthDataType>[
+    ..._tipiDaLeggere,
+    ..._tipiInPiuPerGliAllenamenti,
+  ];
+
+  /// Le due liste, aperte al test.
+  ///
+  /// 💡 Non e' una comodita': la regola qui sopra vive in una **differenza fra
+  /// due elenchi**, e una differenza si controlla solo se la si puo' guardare.
+  /// Senza questi due getter la regola resterebbe un commento, cioe' niente.
+  @visibleForTesting
+  static List<HealthDataType> get tipiDaLeggere => _tipiDaLeggere;
+
+  @visibleForTesting
+  static List<HealthDataType> get tipiDaAutorizzare => _tipiDaAutorizzare;
 
   /// 🚨 **Solo lettura.** Non scriviamo niente in Health Connect: l'app non ha
   /// nessun motivo per farlo, e chiedere il permesso di scrittura raddoppierebbe
   /// la superficie del consenso in cambio di niente.
   static final _permessi = List<HealthDataAccess>.filled(
-    _tipi.length,
+    _tipiDaAutorizzare.length,
     HealthDataAccess.READ,
   );
 
@@ -76,7 +150,7 @@ class PonteSalute {
     try {
       await _salute.configure();
 
-      return await _salute.hasPermissions(_tipi, permissions: _permessi) ??
+      return await _salute.hasPermissions(_tipiDaAutorizzare, permissions: _permessi) ??
           false;
     } on Object {
       // Un telefono senza Health Connect: non è un errore, è una funzione che
@@ -93,11 +167,11 @@ class PonteSalute {
       // anche peggio — si toccava il pacchetto vero.
       await _salute.configure();
 
-      final gia = await _salute.hasPermissions(_tipi, permissions: _permessi);
+      final gia = await _salute.hasPermissions(_tipiDaAutorizzare, permissions: _permessi);
 
       if (gia ?? false) return true;
 
-      return await _salute.requestAuthorization(_tipi, permissions: _permessi);
+      return await _salute.requestAuthorization(_tipiDaAutorizzare, permissions: _permessi);
     } on Object catch (errore, stack) {
       // Un telefono senza Health Connect non è un errore da mostrare: è una
       // funzione che quel telefono non ha.
@@ -128,7 +202,7 @@ class PonteSalute {
 
     try {
       punti = await _salute.getHealthDataFromTypes(
-        types: _tipi,
+        types: _tipiDaLeggere,
         startTime: da,
         endTime: a,
       );
@@ -139,6 +213,8 @@ class PonteSalute {
 
     final letture = <LetturaSalute>[];
     final campioni = <CampioneSonno>[];
+
+    final allenamenti = _allenamentiDa(punti);
 
     for (final punto in punti) {
       final metrica = _metricaDi(punto.type);
@@ -188,8 +264,63 @@ class PonteSalute {
 
     final a1 = await _archivio.scriviLetture(letture);
     final a2 = await _archivio.scriviCampioniSonno(conLaGiornataGiusta);
+    final a3 = await _archivio.scriviAllenamenti(allenamenti);
 
-    return a1 + a2;
+    return a1 + a2 + a3;
+  }
+
+  /// Gli allenamenti, ripuliti — FASE 1.8.
+  ///
+  /// ── 🚨 Cosa si scarta, e perché ───────────────────────────────────────────
+  ///
+  /// | Scartato | Perché |
+  /// |---|---|
+  /// | Valore che non è un `WorkoutHealthValue` | non è un allenamento |
+  /// | Tipo in `_nonSonoAllenamenti` | è un esito di **elettrocardiogramma** |
+  /// | Durata nulla o negativa | un allenamento di zero minuti non è successo |
+  ///
+  /// 💡 Il terzo caso sembra teorico e non lo è: un'app che scrive male, o una
+  /// sessione interrotta sul nascere, producono record con inizio e fine
+  /// identici. ⚠️ Nello storico diventerebbero righe «0 min · 0 kcal» che
+  /// nessuno sa da dove vengano e che non si possono cancellare.
+  @visibleForTesting
+  static List<AllenamentoDaOrologio> allenamentiDa(List<HealthDataPoint> punti) =>
+      _allenamentiDa(punti);
+
+  static List<AllenamentoDaOrologio> _allenamentiDa(List<HealthDataPoint> punti) {
+    final fuori = <AllenamentoDaOrologio>[];
+
+    for (final punto in punti) {
+      if (punto.type != HealthDataType.WORKOUT) continue;
+
+      final valore = punto.value;
+      if (valore is! WorkoutHealthValue) continue;
+
+      final codice = valore.workoutActivityType.name;
+      if (!TipoAllenamento.eUnAllenamento(codice)) continue;
+
+      if (!punto.dateTo.isAfter(punto.dateFrom)) continue;
+
+      fuori.add(AllenamentoDaOrologio(
+        /*
+         * ⚠️ L'`id` a zero e' costretto dalla classe generata, e va bene
+         * **solo** perche' `_companionAllenamento` non lo passa: vedi la nota
+         * lunga in `ArchivioSalute`, dove lo stesso zero aveva prodotto un
+         * archivio con una riga sola per sincronizzazione.
+         */
+        id: 0,
+        fonte: _fonte(punto),
+        tipo: codice,
+        iniziatoIl: punto.dateFrom,
+        finitoIl: punto.dateTo,
+        kcal: valore.totalEnergyBurned,
+        distanzaMetri: valore.totalDistance,
+        passi: valore.totalSteps,
+        nascosto: false,
+      ));
+    }
+
+    return fuori;
   }
 
   /// Ricompone i segmenti in dormite e da' a ognuno la giornata della sua.

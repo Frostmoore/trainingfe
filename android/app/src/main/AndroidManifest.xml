@@ -38,6 +38,39 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
 
     <!--
+      🆕 FASE 1.8 — i tre permessi che gli ALLENAMENTI si portano dietro.
+
+      🚨 Non li chiediamo perché ci servono: li chiede il pacchetto `health`.
+      Per ogni sessione legge anche DistanceRecord, StepsRecord e
+      TotalCaloriesBurnedRecord dentro l'intervallo dell'allenamento — e se
+      UNO SOLO manca, cattura l'eccezione e restituisce lista VUOTA. Il
+      sintomo è «zero allenamenti», che somiglia a «l'orologio non ne manda»
+      e invece è un permesso negato.
+
+      💡 Distanza e passi sono comunque il dato buono per una corsa o un giro
+      in bici, che è la ragione per cui prendiamo TUTTI i tipi di allenamento e
+      non solo le sedute di palestra.
+
+      ══ 🚨 REGOLA NON NEGOZIABILE su READ_TOTAL_CALORIES_BURNED ══════════════
+
+      Quel record contiene il METABOLISMO BASALE. Qui serve solo a riempire le
+      calorie della SINGOLA SESSIONE, cioè dentro l'intervallo di un
+      allenamento.
+
+      ⚠️ NON SI LEGGE MAI PER LA GIORNATA. Il totale giornaliero resta
+      ACTIVE_ENERGY_BURNED: il nostro obiettivo calorico è già un TDEE, che il
+      basale ce l'ha dentro, e sommarcelo lo conterebbe due volte — circa
+      +1.600 kcal al giorno, con un numero che resta plausibile e un difetto
+      che non si vede.
+
+      💡 Avere il permesso non obbliga a usarlo. Questa nota esiste perché fra
+      sei mesi qualcuno lo troverà disponibile e penserà che sia lì per quello.
+    -->
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+
+    <!--
       🚨 LA RETE — 14/08/2026.
 
       ⚠️ **Il template di Flutter mette `INTERNET` solo in `debug` e `profile`**,

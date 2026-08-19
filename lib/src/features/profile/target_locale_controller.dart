@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../health/health_controller.dart';
 import 'corpo_controller.dart';
 import 'data/calcolatore_calorie.dart';
+import 'data/target_scelto.dart';
 import 'profile_controller.dart';
 
 /// Il fabbisogno calorico, **calcolato sul telefono** — S5.1 / correzione S7.
@@ -32,12 +33,29 @@ class TargetLocale {
     required this.macro,
     required this.bmr,
     required this.tdee,
+    required this.kcalStimato,
+    required this.macroStimato,
+    this.aMano = false,
   });
 
+  /// Quello **in uso**: la scelta della persona se c'è, altrimenti la stima.
   final int kcal;
+
   final Macro macro;
   final double bmr;
   final double tdee;
+
+  /// 🚨 **La stima resta visibile accanto alla scelta** — N18.2.
+  ///
+  /// ⚠️ Nasconderla trasformerebbe una scelta informata in una a caso: chi
+  /// scrive 1.500 deve poter vedere che la formula ne diceva 2.100, e decidere
+  /// sapendolo. È anche l'unico modo di accorgersi di uno zero di troppo.
+  final int kcalStimato;
+
+  final Macro macroStimato;
+
+  /// Se i valori in uso li ha scelti la persona.
+  final bool aMano;
 }
 
 /// Il pezzo che manca per poter calcolare.
@@ -190,12 +208,27 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((ref) async
   final tdee = calcolatore.tdee(bmr, profilo.attivitaPerFormula);
   final kcal = calcolatore.targetCalorico(tdee, profilo.obiettivoPerFormula);
 
+  final macroStimato = calcolatore.macro(kcal, profilo.obiettivoPerFormula);
+
+  /*
+   * 🚨 **La scelta della persona vince sulla formula** — N18.1.
+   *
+   * ⚠️ E vince **sempre**, anche quando l'obiettivo automatico cambia: chi ha
+   * messo un numero a mano non deve ritrovarselo sovrascritto perché ha
+   * aggiornato il peso o ha cambiato «dimagrire» in «mantenere». Un valore che
+   * si azzera da solo è peggio di un valore che non si può cambiare.
+   */
+  final scelto = await TargetScelto.leggi();
+
   return EsitoTarget.calcolato(
     TargetLocale(
-      kcal: kcal,
-      macro: calcolatore.macro(kcal, profilo.obiettivoPerFormula),
+      kcal: scelto?.kcal ?? kcal,
+      macro: scelto?.macro ?? macroStimato,
       bmr: bmr,
       tdee: tdee,
+      kcalStimato: kcal,
+      macroStimato: macroStimato,
+      aMano: scelto != null,
     ),
   );
 });

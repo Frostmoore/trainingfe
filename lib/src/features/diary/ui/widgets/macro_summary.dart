@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../data/diary_models.dart';
@@ -132,6 +133,16 @@ class MacroSummary extends ConsumerWidget {
                   ),
                 ],
               ),
+
+              /*
+               * 🚨 N17.2 — l'avvertenza **accanto al numero**, non nei termini
+               * d'uso.
+               *
+               * ⚠️ Solo quando il numero e' il NOSTRO: se l'obiettivo arriva
+               * dal piano del trainer, l'avvertenza sulle formule generiche
+               * parlerebbe di un calcolo che non abbiamo fatto noi.
+               */
+              if (!day.hasTarget) const AvvertenzaNutrizionale(compatta: true),
             ] else ...[
               const SizedBox(height: Gap.sm),
 

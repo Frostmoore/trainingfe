@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
+import '../data/target_scelto.dart';
 import '../profile_controller.dart';
 import '../target_locale_controller.dart';
 import 'widgets/manca_per_il_target.dart';
@@ -333,10 +335,56 @@ class _ObiettivoCalcolato extends ConsumerWidget {
 
                 // 💡 Da dove viene il numero: senza, sembra deciso dall'app.
                 Text(
-                  'Calcolato sul tuo peso più recente, con Mifflin-St Jeor.',
+                  t.aMano
+                      ? 'Questi valori li hai scelti tu.'
+                      : 'Calcolato sul tuo peso più recente, con Mifflin-St Jeor.',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
+                ),
+
+                /*
+                 * 🚨 **La stima resta visibile accanto alla scelta** — N18.2.
+                 *
+                 * ⚠️ Nasconderla trasformerebbe una scelta informata in una a
+                 * caso. Ed è anche l'unico modo di accorgersi di uno zero di
+                 * troppo: «la stima diceva 2.100» accanto a un 210 scritto per
+                 * sbaglio salta all'occhio.
+                 */
+                if (t.aMano)
+                  Text(
+                    'La stima diceva ${t.kcalStimato} kcal.',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+
+                const SizedBox(height: Gap.sm),
+
+                // 🚨 N17.2 — accanto al numero, ogni volta che il numero si vede.
+                const AvvertenzaNutrizionale(compatta: true),
+
+                const SizedBox(height: Gap.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _CambiaObiettivo.mostra(context, ref, t),
+                      icon: const Icon(Icons.tune_rounded, size: 18),
+                      label: const Text('Cambia i valori'),
+                    ),
+                    // 💡 N18.3 — «torna alla stima» in un tocco. Senza, chi ha
+                    // provato a cambiare resterebbe legato alla propria scelta,
+                    // o dovrebbe ricopiare i numeri a mano — cioè sbagliarli.
+                    if (t.aMano)
+                      TextButton(
+                        onPressed: () async {
+                          await TargetScelto.dimentica();
+                          ref.invalidate(targetLocaleProvider);
+                        },
+                        child: const Text('Torna alla stima'),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -430,4 +478,153 @@ class TendinaProfilo extends StatelessWidget {
       onChanged: onCambio,
     );
   }
+}
+
+/// Cambiare a mano calorie e macro — N18.1.
+///
+/// ── ⚠️ Un valore fuori scala si COMMENTA, non si blocca ──────────────────
+///
+/// Impedire di scrivere 900 kcal sarebbe un giudizio clinico — cioè esattamente
+/// la cosa da cui l'avvertenza di N17 ci sta togliendo. E ci sono ragioni
+/// legittime per numeri insoliti: un piano fatto da un professionista, una
+/// condizione particolare, un periodo specifico.
+///
+/// 💡 Quello che si può fare è **dirlo**: un numero molto lontano dalla stima
+/// merita una riga che lo faccia notare, non un divieto.
+class _CambiaObiettivo extends StatefulWidget {
+  const _CambiaObiettivo(this.attuale);
+
+  final TargetLocale attuale;
+
+  static Future<void> mostra(
+    BuildContext context,
+    WidgetRef ref,
+    TargetLocale attuale,
+  ) async {
+    final scelto = await showDialog<TargetScelto>(
+      context: context,
+      builder: (_) => _CambiaObiettivo(attuale),
+    );
+
+    if (scelto == null) return;
+
+    await scelto.salva();
+    ref.invalidate(targetLocaleProvider);
+  }
+
+  @override
+  State<_CambiaObiettivo> createState() => _CambiaObiettivoState();
+}
+
+class _CambiaObiettivoState extends State<_CambiaObiettivo> {
+  late final _kcal = TextEditingController(text: '${widget.attuale.kcal}');
+  late final _pro =
+      TextEditingController(text: '${widget.attuale.macro.proteineG}');
+  late final _car =
+      TextEditingController(text: '${widget.attuale.macro.carboidratiG}');
+  late final _gra =
+      TextEditingController(text: '${widget.attuale.macro.grassiG}');
+
+  @override
+  void dispose() {
+    for (final c in [_kcal, _pro, _car, _gra]) {
+      c.dispose();
+    }
+
+    super.dispose();
+  }
+
+  int? get _kcalScritte => int.tryParse(_kcal.text.trim());
+
+  /// 💡 Quanto ci si allontana dalla stima, per poterlo dire.
+  bool get _lontano {
+    final k = _kcalScritte;
+
+    if (k == null || widget.attuale.kcalStimato == 0) return false;
+
+    final scarto = (k - widget.attuale.kcalStimato).abs() /
+        widget.attuale.kcalStimato;
+
+    return scarto > 0.35;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    Widget campo(TextEditingController c, String etichetta) => Padding(
+      padding: const EdgeInsets.only(bottom: Gap.sm),
+      child: TextField(
+        controller: c,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: etichetta),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+
+    return AlertDialog(
+      title: const Text('I tuoi valori'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'La stima dice ${widget.attuale.kcalStimato} kcal, '
+              '${widget.attuale.macroStimato.proteineG} g di proteine, '
+              '${widget.attuale.macroStimato.carboidratiG} g di carboidrati e '
+              '${widget.attuale.macroStimato.grassiG} g di grassi.',
+              style: tema.textTheme.bodySmall,
+            ),
+            const SizedBox(height: Gap.md),
+            campo(_kcal, 'kcal al giorno'),
+            campo(_pro, 'proteine (g)'),
+            campo(_car, 'carboidrati (g)'),
+            campo(_gra, 'grassi (g)'),
+            if (_lontano)
+              Padding(
+                padding: const EdgeInsets.only(top: Gap.sm),
+                child: Text(
+                  'È parecchio distante dalla stima. Se è quello che ti ha '
+                  'indicato un professionista va benissimo; se l\'hai scritto '
+                  'per sbaglio, controlla.',
+                  style: tema.textTheme.labelSmall?.copyWith(
+                    color: tema.colorScheme.error,
+                  ),
+                ),
+              ),
+            const SizedBox(height: Gap.md),
+            const AvvertenzaNutrizionale(),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          // ⚠️ Si salva solo se i quattro numeri ci sono: metà obiettivo
+          // sarebbe peggio di nessun obiettivo.
+          onPressed: _valido ? _salva : null,
+          child: const Text('Usa questi'),
+        ),
+      ],
+    );
+  }
+
+  bool get _valido => [_kcal, _pro, _car, _gra].every((c) {
+    final n = int.tryParse(c.text.trim());
+
+    return n != null && n >= 0;
+  });
+
+  void _salva() => Navigator.of(context).pop(
+    TargetScelto(
+      kcal: int.parse(_kcal.text.trim()),
+      proteineG: int.parse(_pro.text.trim()),
+      carboidratiG: int.parse(_car.text.trim()),
+      grassiG: int.parse(_gra.text.trim()),
+    ),
+  );
 }

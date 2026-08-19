@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../../../core/backup/backup_controller.dart';
+import '../../../../core/crypto/providers_crypto.dart';
+import '../../../../core/crypto/servizio_chiavi.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../chiavi/ui/schermata_ripresa_dati.dart';
@@ -184,74 +184,40 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     await blocco.imposta(acceso: true);
   }
 
-  /// 1. C'è un backup su Drive? Allora si chiede **prima di scrivere**.
+  /// 2. Questo account ha già usato l'app? Allora si va a riprendere i dati.
+  ///
+  /// ── 🚨 Il segnale lo dà il SERVER, non Google Drive ──────────────────
+  ///
+  /// Qui prima si chiamava `cercaNelCloud()`, che per rispondere **si collega a
+  /// Drive** — e quindi apriva l'accesso a Google **prima** che la persona
+  /// avesse deciso alcunché. ⚠️ Il committente: *«ancora cerca di fare l'accesso
+  /// a google drive prima che si apra l'interfaccia di recupero. Non va bene»*.
+  ///
+  /// 💡 La domanda *«questo account ha già usato l'app?»* ha una risposta che
+  /// **il server conosce già**: `StatoChiavi.daRipristinare` vuol dire «sul
+  /// server c'è un pacchetto di chiavi, su questo telefono no» — cioè qualcuno
+  /// che ha cambiato dispositivo o reinstallato. Nessun bisogno di Drive per
+  /// saperlo.
+  ///
+  /// 🚨 **E niente dialogo che chiede «vuoi ripristinare?».** Si va dritti
+  /// alla schermata, che quella domanda la fa già — con davanti il modulo della
+  /// password e il «Più tardi». Chiedere due volte la stessa cosa è il motivo
+  /// per cui la sequenza sembrava un interrogatorio.
+  ///
+  /// ⚠️ **Drive si tocca solo là dentro**, e solo dopo la password: è l'unico
+  /// momento in cui serve davvero.
   Future<void> _forseRipristina() async {
-    final DateTime? quando;
+    final StatoChiavi stato;
 
     try {
-      quando = await ref.read(backupAutomaticoProvider.notifier).cercaNelCloud();
+      stato = await ref.read(statoChiaviProvider.future);
     } on Object {
-      // ⚠️ Nessun cloud, nessun permesso, nessuna rete: non è un errore da
-      // mostrare. Chi vuole ripristinare ha la strada nel profilo.
+      // Rete assente o server muto: non è il momento di insistere.
       return;
     }
 
-    if (quando == null || !mounted) return;
+    if (stato != StatoChiavi.daRipristinare || !mounted) return;
 
-    final vuole = await showDialog<bool>(
-      context: context,
-      // 🚨 Non si chiude toccando fuori: è la domanda che protegge i dati, e
-      // sfiorare lo schermo non è una risposta.
-      barrierDismissible: false,
-      builder: (dialogo) => AlertDialog(
-        icon: const Icon(Icons.cloud_download_outlined, size: 32),
-        title: const Text('Hai già usato questa app'),
-        content: Text(
-          'Su Google Drive c\'è una copia dei tuoi dati del '
-          '${DateFormat('d MMMM y', 'it').format(quando!.toLocal())}.\n\n'
-          'Conviene riprenderla adesso: se cominci a usare l\'app e la '
-          'ripristini dopo, quello che avrai scritto nel frattempo verrà '
-          'sostituito.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogo).pop(false),
-            child: const Text('Ricomincio da zero'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogo).pop(true),
-            child: const Text('Riprendi i miei dati'),
-          ),
-        ],
-      ),
-    );
-
-    if (vuole != true || !mounted) return;
-
-    /*
-     * 🚨 **La password si chiede QUI** — richiesta del committente, 19/08.
-     *
-     * *«LÌ mi deve chiedere la password di sblocco, non che devo PER FORZA
-     * andare sulla schermata della chat»*. ⚠️ Mandare al profilo → copia di
-     * sicurezza vuol dire far attraversare tre schermate a chi ha appena detto
-     * «sì, riprendi i miei dati»: la risposta l'ha già data, e chiedergli di
-     * ripeterla altrove è il modo di farlo desistere.
-     *
-     * 💡 Il file è avvolto con la **chiave maestra**, e per aprirlo serve la
-     * password di recupero: è l'unica cosa che manca, e si chiede qui.
-     */
-    if (!mounted) return;
-
-    /*
-     * 🚨 **Una schermata, non un dialogo** — 19/08/2026, sera.
-     *
-     * Il dialogo spariva appena si toccava «Riprendi», e poi partivano in fila
-     * la chiave, lo scarico da Drive e la riscrittura di diecimila righe **con
-     * lo schermo fermo e niente sopra**. ⚠️ Non era lento: era **muto**, e
-     * un'attesa muta di dieci secondi non si distingue da un guasto.
-     *
-     * 💡 `SchermataRipresaDati` si prende tutto il ciclo e lo racconta.
-     */
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const SchermataRipresaDati()),
     );

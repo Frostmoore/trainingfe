@@ -2,7 +2,13 @@ import 'dart:typed_data';
 
 import 'package:sodium/sodium_sumo.dart';
 
-/// Una foto cifrata con una chiave **a caso, sua e di nessun altro** — N13.1.
+/// Un allegato cifrato con una chiave **a caso, sua e di nessun altro** — N13.1.
+///
+/// 📌 **Si chiamava `FotoCifrata` fino alla `v7.11.0`**, ed era un nome giusto
+/// finché passavano solo foto. ⚠️ Da N21 passano anche i PDF, e un nome che dice
+/// «foto» su una classe che cifra qualunque cosa è il tipo di deriva che, fra
+/// sei mesi, fa cercare a qualcuno una seconda classe per i documenti — e
+/// trovarne due che fanno la stessa cosa in modi leggermente diversi.
 ///
 /// ── 🚨 Perché una chiave nuova per ogni foto ───────────────────────────────
 ///
@@ -18,8 +24,8 @@ import 'package:sodium/sodium_sumo.dart';
 /// 💡 Il server riceve byte cifrati con una chiave che non ha mai visto, e
 /// consegna un messaggio cifrato che non sa aprire. Non è una promessa
 /// organizzativa: non ha nessuno dei due pezzi.
-class FotoCifrata {
-  const FotoCifrata(this._sodium);
+class CifraturaAllegati {
+  const CifraturaAllegati(this._sodium);
 
   final SodiumSumo _sodium;
 
@@ -30,7 +36,7 @@ class FotoCifrata {
   /// Una chiave nuova, per una foto sola.
   SecureKey generaChiave() => _sodium.crypto.secretStream.keygen();
 
-  /// Cifra i byte con [chiave].
+  /// Cifra i byte con [chiave]. 💡 Non guarda cosa sono: foto, PDF, o altro.
   Future<Uint8List> cifra({
     required SecureKey chiave,
     required Uint8List contenuto,
@@ -49,7 +55,7 @@ class FotoCifrata {
 
   /// Riapre i byte cifrati.
   ///
-  /// ⚠️ Lancia [FotoNonSiApre] se la chiave è sbagliata **o** se i byte sono
+  /// ⚠️ Lancia [AllegatoNonSiApre] se la chiave è sbagliata **o** se i byte sono
   /// rovinati: da fuori sono indistinguibili, e va detta la cosa vera.
   Future<Uint8List> decifra({
     required SecureKey chiave,
@@ -67,7 +73,7 @@ class FotoCifrata {
 
       return Uint8List.fromList(blocchi);
     } on Object {
-      throw const FotoNonSiApre();
+      throw const AllegatoNonSiApre();
     }
   }
 
@@ -83,8 +89,8 @@ class FotoCifrata {
 }
 
 /// Questi byte non si aprono con questa chiave.
-class FotoNonSiApre implements Exception {
-  const FotoNonSiApre();
+class AllegatoNonSiApre implements Exception {
+  const AllegatoNonSiApre();
 
   @override
   String toString() => 'Non riesco ad aprire questa foto.';

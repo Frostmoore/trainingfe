@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/core/crypto/cifratura_allegati.dart';
 import 'package:training_companion/src/core/crypto/contenuto_messaggio.dart';
-import 'package:training_companion/src/core/crypto/foto_cifrata.dart';
 
 import '../aiuto/libsodium.dart';
 
@@ -13,9 +13,9 @@ import '../aiuto/libsodium.dart';
 /// i byte cifrati vanno su una strada, la chiave sull'altra, e il server non
 /// tiene nessuno dei due in chiaro.
 void main() {
-  late FotoCifrata cripto;
+  late CifraturaAllegati cripto;
 
-  setUpAll(() async => cripto = FotoCifrata(await libsodiumPerTest()));
+  setUpAll(() async => cripto = CifraturaAllegati(await libsodiumPerTest()));
 
   Uint8List foto(int quanti) =>
       Uint8List.fromList(List.generate(quanti, (i) => (i * 7) % 256));
@@ -60,7 +60,7 @@ void main() {
 
       await expectLater(
         cripto.decifra(chiave: altra, contenuto: cifrata),
-        throwsA(isA<FotoNonSiApre>()),
+        throwsA(isA<AllegatoNonSiApre>()),
       );
     });
 
@@ -73,7 +73,7 @@ void main() {
           chiave: chiave,
           contenuto: Uint8List.fromList(List.filled(300, 0)),
         ),
-        throwsA(isA<FotoNonSiApre>()),
+        throwsA(isA<AllegatoNonSiApre>()),
       );
     });
 

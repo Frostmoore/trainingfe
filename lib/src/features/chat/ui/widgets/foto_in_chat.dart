@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/crypto/cifratura_allegati.dart';
 import '../../../../core/crypto/contenuto_messaggio.dart';
-import '../../../../core/crypto/foto_cifrata.dart';
 import '../../../../core/crypto/providers_crypto.dart';
 import '../../../../core/media/archivio_foto.dart';
 import '../../../../core/providers.dart';
@@ -30,7 +30,7 @@ final _fotoDiChatProvider = FutureProvider.autoDispose
     .family<String?, ContenutoFoto>((ref, busta) async {
       return AllegatoDiChat(
         api: ref.watch(apiClientProvider),
-        cripto: FotoCifrata(await ref.watch(sodiumProvider.future)),
+        cripto: CifraturaAllegati(await ref.watch(sodiumProvider.future)),
       ).riprendi(busta);
     });
 

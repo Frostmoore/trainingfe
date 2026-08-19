@@ -6,8 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/api/api_client.dart';
+import '../../../core/crypto/cifratura_allegati.dart';
 import '../../../core/crypto/contenuto_messaggio.dart';
-import '../../../core/crypto/foto_cifrata.dart';
 import '../../../core/media/archivio_foto.dart';
 import '../../../core/media/tipo_foto.dart';
 
@@ -31,7 +31,7 @@ class AllegatoDiChat {
   });
 
   final ApiClient api;
-  final FotoCifrata cripto;
+  final CifraturaAllegati cripto;
   final ArchivioFoto archivio;
 
   /// Cifra, carica, e torna la busta da mettere nel messaggio.

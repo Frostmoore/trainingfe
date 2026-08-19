@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sodium/sodium_sumo.dart';
 
 import '../../core/crypto/busta_messaggio.dart';
+import '../../core/crypto/cifratura_allegati.dart';
 import '../../core/crypto/contenuto_messaggio.dart';
-import '../../core/crypto/foto_cifrata.dart';
 import '../../core/crypto/providers_crypto.dart';
 import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/providers.dart';
@@ -446,7 +446,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   }) async {
     final busta = await AllegatoDiChat(
       api: _ref.read(apiClientProvider),
-      cripto: FotoCifrata(await _ref.read(sodiumProvider.future)),
+      cripto: CifraturaAllegati(await _ref.read(sodiumProvider.future)),
     ).carica(
       conversationId: conversationId,
       foto: foto,
@@ -455,7 +455,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
 
     // ⚠️ Un token vuoto vorrebbe dire un messaggio che punta al nulla: meglio
     // fallire adesso, mentre chi ha premuto sta ancora guardando.
-    if (!busta.completa) throw const FotoNonSiApre();
+    if (!busta.completa) throw const AllegatoNonSiApre();
 
     await inviaContenuto(busta);
   }

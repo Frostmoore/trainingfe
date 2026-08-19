@@ -20,7 +20,13 @@ enum TipoFoto {
   ///
   /// 💡 Nel backup perché il server le tiene solo 24 ore (§4.8 del piano):
   /// passate quelle, l'unica copia è quella sul telefono.
-  chat(cartella: 'chat', permanente: true, nelBackup: true),
+  chat(
+    cartella: 'chat',
+    permanente: true,
+    nelBackup: true,
+    // 🚨 N21: in chat passano anche i PDF, e devono entrare nel backup.
+    accettaDocumenti: true,
+  ),
 
   /// La foto del piatto mandata al modello.
   ///
@@ -65,6 +71,7 @@ enum TipoFoto {
     required this.permanente,
     required this.nelBackup,
     this.scadenza,
+    this.accettaDocumenti = false,
   });
 
   /// Il nome della sottocartella, sotto `foto/`.
@@ -86,6 +93,39 @@ enum TipoFoto {
   /// e un tipo futuro potrebbe voler stare in `Documents` **senza** essere
   /// salvato. Tenerle separate costa un campo ed evita di doverle scucire dopo.
   final bool nelBackup;
+
+  /// 🚨 Se in questa cartella possono stare anche **documenti**, non solo
+  /// immagini — N21.
+  ///
+  /// ── ⚠️ Il guasto che questo campo ha chiuso ─────────────────────────────
+  ///
+  /// I PDF della chat finivano in `foto/chat/`, ma l'elenco delle estensioni
+  /// ammesse era **uno solo per tutti** e conteneva solo immagini. Risultato:
+  /// **il backup li saltava in silenzio**, e non li avrebbe nemmeno saputi
+  /// riprendere. Nessun errore, da nessuna parte.
+  ///
+  /// 💡 Sta sul tipo come `nelBackup` e `scadenza`, e per la stessa ragione:
+  /// aggiungendo un tipo si è costretti a rispondere «cosa ci può stare
+  /// dentro?». Un elenco globale è quello che ci si dimentica di allargare.
+  ///
+  /// ⚠️ E resta `false` per i progressi: un PDF fra le foto di progresso non
+  /// vuol dire niente, e accettarlo vorrebbe dire farlo comparire in galleria.
+  final bool accettaDocumenti;
+
+  /// Le estensioni che questo tipo accetta.
+  ///
+  /// 🚨 **Elenco di ammessi, non di esclusi.** Un elenco di esclusi lascia
+  /// passare il formato a cui nessuno aveva pensato — e nel caso dei video quel
+  /// formato pesa cento volte una foto, sul piano dati di qualcun altro.
+  Set<String> get estensioni => accettaDocumenti
+      ? {..._immagini, ..._documenti}
+      : _immagini;
+
+  static const _immagini = <String>{'.jpg', '.jpeg', '.png', '.webp', '.heic'};
+
+  /// 💡 Solo PDF: è l'unico formato che il canale sa mandare, e allargarlo
+  /// «per comodità» vorrebbe dire accettare file che nessuno sa aprire.
+  static const _documenti = <String>{'.pdf'};
 
   /// Dopo quanto una foto di questo tipo va buttata, se c'è ancora.
   ///

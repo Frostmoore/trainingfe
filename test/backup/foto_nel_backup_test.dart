@@ -65,6 +65,52 @@ void main() {
       expect(nomi, {'progressi~a.jpg', 'chat~b.jpg'});
     });
 
+    test('🚨 un PDF di chat FINISCE nel backup — N21', () async {
+      /*
+       * ⚠️ **Il guasto che questo test chiude, e che nessuno aveva visto.**
+       *
+       * I PDF della chat finivano in `foto/chat/`, ma l'elenco delle estensioni
+       * ammesse era **uno solo per tutti** e conteneva solo immagini. Il backup
+       * li **saltava in silenzio**, e non li avrebbe nemmeno saputi riprendere:
+       * nessun errore, da nessuna parte.
+       *
+       * 💡 L'ha trovato una domanda del committente — «i PDF come vengono messi
+       * nel backup?» — non un test. Adesso c'è il test.
+       */
+      await metti(TipoFoto.chat, 'piano.pdf');
+      await metti(TipoFoto.chat, 'foto.jpg');
+
+      final nomi = (await raccolta.elenca()).map((f) => f.nome).toSet();
+
+      expect(nomi, {'piano.pdf', 'foto.jpg'});
+    });
+
+    test('🚨 ma un PDF fra i progressi NO', () async {
+      /*
+       * 💡 Un PDF fra le foto di progresso non vuol dire niente, e accettarlo
+       * vorrebbe dire farlo comparire in galleria. ⚠️ Per questo l'elenco delle
+       * estensioni sta **sul tipo** e non è globale: allargarlo per la chat non
+       * deve allargarlo per tutti.
+       */
+      await metti(TipoFoto.progressi, 'documento.pdf');
+      await metti(TipoFoto.progressi, 'a.jpg');
+
+      expect((await raccolta.elenca()).map((f) => f.nome), ['a.jpg']);
+    });
+
+    test('🚨 e un PDF di chat si sa anche RIPRENDERE', () async {
+      // ⚠️ L'altra metà dello stesso guasto: `leggi()` usava lo stesso elenco,
+      // quindi un `chat~piano.pdf` nel cloud sarebbe stato ignorato al
+      // ripristino — con il file lassù e nessuno che lo scaricasse.
+      final letto = FotoDaSalvare.leggi('chat~abc.pdf');
+
+      expect(letto?.tipo, TipoFoto.chat);
+      expect(letto?.nome, 'abc.pdf');
+
+      // E dai progressi resta rifiutato.
+      expect(FotoDaSalvare.leggi('progressi~abc.pdf'), isNull);
+    });
+
     test('i video restano fuori — N5.3', () async {
       await metti(TipoFoto.progressi, 'a.jpg');
       await metti(TipoFoto.progressi, 'filmato.mp4', byte(9000));

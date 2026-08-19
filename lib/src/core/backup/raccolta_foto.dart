@@ -27,20 +27,14 @@ class RaccoltaFoto {
 
   final ArchivioFoto archivio;
 
-  /// 🚨 Solo immagini, e l'elenco è **di ammessi**.
+  /// 📌 **L'elenco vive su `TipoFoto`, non più qui** — N21.
   ///
-  /// **N5.3: i video non entrano mai nel backup automatico.** ⚠️ È scritto come
-  /// elenco di ciò che passa e non di ciò che si scarta, perché le due forme
-  /// sbagliano in direzioni opposte: un elenco di esclusi lascia passare il
-  /// formato a cui nessuno aveva pensato — e nel caso dei video quel formato
-  /// pesa cento volte una foto, sul piano dati di qualcun altro.
-  static const estensioniAmmesse = <String>{
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.webp',
-    '.heic',
-  };
+  /// ⚠️ Un elenco unico per tutti i tipi ha causato un guasto silenzioso: i PDF
+  /// della chat finivano in `foto/chat/` e il backup **li saltava**, perché
+  /// `.pdf` non era fra le estensioni ammesse. Nessun errore da nessuna parte.
+  ///
+  /// 💡 Ogni tipo dice cosa accetta, e chi ne aggiunge uno è costretto a
+  /// rispondere. **N5.3 resta**: i video non entrano da nessuna parte.
 
   /// Le foto da salvare, ordinate per tipo e poi per nome.
   ///
@@ -56,7 +50,7 @@ class RaccoltaFoto {
 
       for (final voce in await cartella.list().toList()) {
         if (voce is! File) continue;
-        if (!ammessa(voce.path)) continue;
+        if (!ammessa(voce.path, tipo)) continue;
 
         trovate.add(FotoDaSalvare(tipo: tipo, file: voce));
       }
@@ -78,9 +72,10 @@ class RaccoltaFoto {
     return somma;
   }
 
-  /// 💡 Un file è una foto se lo dice **l'estensione**, minuscola o maiuscola.
-  static bool ammessa(String percorso) =>
-      estensioniAmmesse.contains(p.extension(percorso).toLowerCase());
+  /// 💡 Un file entra se lo dice **l'estensione**, minuscola o maiuscola —
+  /// e se quel **tipo** la accetta.
+  static bool ammessa(String percorso, TipoFoto tipo) =>
+      tipo.estensioni.contains(p.extension(percorso).toLowerCase());
 
   /// «240 MB», «1,4 GB», «856 kB» — da mostrare accanto alla spunta.
   ///
@@ -148,7 +143,7 @@ class FotoDaSalvare {
 
     final nome = p.basename(nomeNelCloud.substring(taglio + 1));
 
-    if (nome.isEmpty || !RaccoltaFoto.ammessa(nome)) return null;
+    if (nome.isEmpty || !RaccoltaFoto.ammessa(nome, tipo)) return null;
 
     return (tipo: tipo, nome: nome);
   }

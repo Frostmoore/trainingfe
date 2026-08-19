@@ -90,10 +90,18 @@ class _SchermataRipresaDatiState extends ConsumerState<SchermataRipresaDati> {
           .ripristinaDalCloudERiaccendi();
 
       /*
-       * ⚠️ **L'utente si ricarica dopo**, e non è un dettaglio estetico:
-       * `authControllerProvider` osserva l'archivio locale, e riaprirlo lo fa
-       * ricreare **senza utente**. Senza questa riga il nome e la foto
-       * sparivano dall'intestazione.
+       * 💡 **Si ricarica l'utente, ma non e' piu' un cerotto.**
+       *
+       * Fino al 19/08 serviva **per forza**: `authControllerProvider` osservava
+       * l'archivio locale, e riaprirlo lo faceva ricreare **senza utente** —
+       * nome e foto sparivano dall'intestazione. 🚨 Quella dipendenza e'
+       * stata **tolta** (vedi `AuthController._svuotaLArchivio`), quindi adesso
+       * il controller sopravvive al ripristino.
+       *
+       * ⚠️ La riga resta perche' e' **giusta comunque**: un ripristino puo'
+       * riportare un profilo cambiato altrove, e richiederlo al server dopo e'
+       * il modo di mostrarlo aggiornato. Prima era una pezza, adesso e' una
+       * scelta.
        */
       await ref.read(authControllerProvider.notifier).refresh();
 

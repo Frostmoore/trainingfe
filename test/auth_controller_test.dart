@@ -256,7 +256,7 @@ void main() {
     test('uscire NON cancella i dati locali', () async {
       adapter.onPost('/auth/logout', (s) => s.reply(200, {}), data: Matchers.any);
 
-      final auth = AuthController(client, token, archivio, null, cache);
+      final auth = AuthController(client, token, archivio.svuota, null, cache);
 
       await auth.login(login: 'mario.rossi', password: 'x');
       await auth.logout();
@@ -275,7 +275,7 @@ void main() {
     /// battito: vivono qui. Senza questo, i dati più personali del sistema
     /// sopravvivrebbero a una richiesta di cancellazione.
     test('cancellare l\'account cancella tutto', () async {
-      final auth = AuthController(client, token, archivio, null, cache);
+      final auth = AuthController(client, token, archivio.svuota, null, cache);
 
       await auth.login(login: 'mario.rossi', password: 'x');
       await auth.forgetSession();
@@ -288,7 +288,7 @@ void main() {
     test('entrando una persona diversa, l\'archivio si azzera', () async {
       cache.ultima = 999; // qualcun altro ha usato questo telefono
 
-      final auth = AuthController(client, token, archivio, null, cache);
+      final auth = AuthController(client, token, archivio.svuota, null, cache);
 
       await auth.login(login: 'mario.rossi', password: 'x');
 
@@ -301,7 +301,7 @@ void main() {
     test('rientrando la stessa persona non si tocca niente', () async {
       cache.ultima = 7;
 
-      final auth = AuthController(client, token, archivio, null, cache);
+      final auth = AuthController(client, token, archivio.svuota, null, cache);
 
       await auth.login(login: 'mario.rossi', password: 'x');
 
@@ -312,7 +312,7 @@ void main() {
     /// e cancellare comunque sarebbe innocuo, ma l'id va scritto per la
     /// prossima volta.
     test('al primo accesso non si cancella, ma si prende nota', () async {
-      final auth = AuthController(client, token, archivio, null, cache);
+      final auth = AuthController(client, token, archivio.svuota, null, cache);
 
       await auth.login(login: 'mario.rossi', password: 'x');
 

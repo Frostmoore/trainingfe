@@ -68,11 +68,15 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
 
   /// 🚨 **Chi ha già fatto l'accoglienza in QUESTA sessione dell'app.**
   ///
-  /// Statica, e non basta il flag su disco. ⚠️ Il ripristino riapre l'archivio,
-  /// e `authControllerProvider` lo **osserva**: quando l'archivio cambia il
-  /// controller viene ricreato, la shell con lui, e nasce un
-  /// `_AccoglienzaState` nuovo con `_inCorso` a `false`. La sequenza ripartiva
-  /// da capo — impronta compresa — subito dopo aver ripristinato.
+  /// Statica, e non basta il flag su disco. ⚠️ Nasceva perché il ripristino
+  /// faceva ricreare la shell — e con lei questo stato, con le guardie
+  /// azzerate: la sequenza ripartiva da capo, impronta compresa, subito dopo
+  /// aver ripristinato.
+  ///
+  /// 💡 La causa di **quella** ricreazione è stata poi tolta alla radice
+  /// (`AuthController` non osserva più l'archivio). Questa guardia resta lo
+  /// stesso: costa una riga, e protegge da qualunque **altro** motivo per cui
+  /// la shell possa rinascere durante una sessione.
   ///
   /// 💡 È il difetto riferito il 19/08 sera, ed è la stessa famiglia della
   /// «race condition» che il ripristino esiste per evitare: uno stato scritto

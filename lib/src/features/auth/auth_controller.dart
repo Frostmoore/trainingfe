@@ -6,7 +6,6 @@ import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/sicurezza/blocco_biometrico.dart';
-import '../../core/storage/archivio_salute.dart';
 import '../../core/storage/local_cache.dart';
 import '../../core/storage/token_store.dart';
 import '../../core/tempo/fuso_del_dispositivo.dart';
@@ -64,7 +63,7 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController(
     this._api,
     this._tokens, [
-    this._archivio,
+    this._svuotaLArchivio,
     this._blocco,
     this._cache,
   ]) : super(const AuthState.unknown()) {
@@ -82,7 +81,26 @@ class AuthController extends StateNotifier<AuthState> {
   /// ⚠️ **Facoltativo di proposito**: i test del controller non hanno un
   /// database `drift` sotto, e pretenderlo li costringerebbe a montarne uno per
   /// verificare cose che con l'archivio non c'entrano niente.
-  final ArchivioSalute? _archivio;
+  /// Come si svuota l'archivio locale, **senza sapere qual e'**.
+  ///
+  /// ── 🚨 Perche' una funzione e non l'archivio ──────────────────────────
+  ///
+  /// Qui prima c'era `ArchivioSalute`, preso con `ref.watch`. ⚠️ **Quella riga
+  /// legava l'identita' della persona al database locale**, che sono due cose
+  /// che non c'entrano niente l'una con l'altra — e il legame si e' visto
+  /// eccome: il ripristino riapre l'archivio, il provider dell'archivio cambia,
+  /// e con lui veniva **buttato e ricostruito da zero anche questo
+  /// controller**. Nasceva senza utente, e nome e foto sparivano
+  /// dall'intestazione finche' qualcuno non li richiedeva al server.
+  ///
+  /// 💡 Cosi' invece la dipendenza non esiste: si tiene **come** svuotare, non
+  /// **cosa**. La funzione va a prendere l'archivio corrente nel momento in cui
+  /// serve — che e' anche piu' corretto di prima, perche' un archivio preso una
+  /// volta sola diventerebbe quello vecchio dopo un ripristino.
+  ///
+  /// ⚠️ Si svuota in un caso solo: **quando entra un'altra persona** su questo
+  /// telefono. Non e' un'operazione da fare per sbaglio.
+  final Future<void> Function()? _svuotaLArchivio;
   final TokenStore _tokens;
 
   /// Il blocco con l'impronta — A1.
@@ -127,7 +145,7 @@ class AuthController extends StateNotifier<AuthState> {
 
     if (precedente != null && precedente != utente.id) {
       try {
-        await _archivio?.svuota();
+        await _svuotaLArchivio?.call();
       } on Object {
         // Come altrove: peggio fallire la pulizia che bloccare l'accesso.
       }
@@ -513,7 +531,7 @@ class AuthController extends StateNotifier<AuthState> {
      */
     if (cancellaIDati) {
       try {
-        await _archivio?.svuota();
+        await _svuotaLArchivio?.call();
       } on Object {
         // Volutamente silenzioso: vedi sopra.
       }
@@ -549,7 +567,26 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     ref.watch(apiClientProvider),
     ref.watch(tokenStoreProvider),
-    ref.watch(archivioSaluteProvider),
+
+    /*
+     * 🚨 **`ref.read` dentro una funzione, non `ref.watch`** — 19/08/2026.
+     *
+     * Con `ref.watch(archivioSaluteProvider)` questo controller **dipendeva**
+     * dall'archivio locale: bastava che l'archivio venisse ricreato — e il
+     * ripristino lo ricrea — perche' Riverpod buttasse via anche il controller
+     * dell'autenticazione e lo rifacesse da zero, **senza utente**.
+     *
+     * ⚠️ Il sintomo era: dopo un ripristino, nome e avatar sparivano
+     * dall'intestazione e dal profilo. La causa non somigliava per niente al
+     * sintomo, ed e' il motivo per cui la prima correzione fu un cerotto —
+     * ricaricare l'utente dopo il ripristino — invece della cura.
+     *
+     * 💡 Adesso non c'e' nessuna dipendenza: si passa **come** svuotare
+     * l'archivio, e la `ref.read` avviene **al momento della chiamata**, quindi
+     * prende sempre quello corrente.
+     */
+    () => ref.read(archivioSaluteProvider).svuota(),
+
     ref.watch(bloccoBiometricoProvider),
     ref.watch(localCacheProvider),
   ),

@@ -208,6 +208,7 @@ class PianoAlimentare {
     this.id,
     this.origineId,
     this.nome = '',
+    this.tipo = TipoPiano.consigli,
     this.rifAllievo,
     this.note,
     this.targetKcal,
@@ -218,6 +219,7 @@ class PianoAlimentare {
     id: (json['id'] as num?)?.toInt(),
     origineId: json['origine_id']?.toString(),
     nome: json['name']?.toString() ?? '',
+    tipo: TipoPiano.da(json['tipo']?.toString()),
     // 🚨 La chiave **manca del tutto** se chi guarda non è chi l'ha scritto
     // (R4): `null` qui vuol dire «non è mio», non «non l'ha compilato».
     rifAllievo: json['rif_allievo']?.toString(),
@@ -237,6 +239,14 @@ class PianoAlimentare {
   final String? origineId;
 
   String nome;
+
+  /// Consigli o piano vero — N19.
+  ///
+  /// 🚨 **Non è un'etichetta: decide cosa si può scriverci dentro.** Un trainer
+  /// compone `consigli` — un elenco di alimenti — e il server rifiuta con 422
+  /// una richiesta che porti giorni o grammi. La regola vera vive lì; qui c'è
+  /// solo quanto basta a non mandarla.
+  TipoPiano tipo;
 
   /// Il promemoria privato — D3.
   ///
@@ -265,9 +275,32 @@ class PianoAlimentare {
 
   Map<String, dynamic> toJson() => {
     'name': nome,
+    'tipo': tipo.name,
     if (rifAllievo != null) 'rif_allievo': rifAllievo,
     if (note != null && note!.trim().isNotEmpty) 'notes': note,
     if (targetKcal != null) 'target_kcal': targetKcal,
     'days': giorni.map((g) => g.toJson()).toList(),
   };
+}
+
+/// Consigli o piano vero — N19.
+///
+/// ── 🚨 La differenza non è di nome, è di forma ─────────────────────────────
+///
+/// «Mangia pollo, riso e broccoli» è un **consiglio**; «200 g di pollo alle
+/// 13:00, giorno 3» è una **dieta**, comunque la si chiami — e l'elaborazione
+/// di una dieta è riservata a medici, biologi nutrizionisti e dietisti.
+///
+/// ⚠️ **Il vincolo vero sta sul server**, che rifiuta una richiesta di tipo
+/// `consigli` con dentro dei giorni. Qui c'è solo quanto basta a non mandarla:
+/// un client non è un posto dove far vivere una regola del genere.
+enum TipoPiano {
+  consigli,
+  piano;
+
+  /// 💡 Sconosciuto o mancante → `consigli`, cioè il tipo **più povero**. Un
+  /// campo che manca non deve promuovere un documento a qualcosa che chi l'ha
+  /// scritto non aveva il titolo di scrivere.
+  static TipoPiano da(String? valore) =>
+      valore == 'piano' ? TipoPiano.piano : TipoPiano.consigli;
 }

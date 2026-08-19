@@ -576,6 +576,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   // 🆕 N13.4 — una foto si disegna come una foto. La busta
                   // porta solo il riferimento e la chiave: i byte se li va a
                   // prendere il riquadro, una volta sola.
+                  /*
+                   * 🆕 N19.3 — i consigli alimentari si disegnano come un
+                   * elenco, non come una nuvoletta con dentro un titolo.
+                   *
+                   * ⚠️ E **diversi da un piano vero**: sono due cose diverse, e
+                   * una delle due e' un atto riservato. Farli sembrare uguali
+                   * sarebbe la cosa sbagliata proprio dove abbiamo appena
+                   * lavorato per distinguerli.
+                   */
+                  if (contenuto is ContenutoConsigliAlimentari) {
+                    return _ConsigliInChat(messaggio: m, contenuto: contenuto);
+                  }
+
                   if (contenuto is ContenutoFoto) {
                     return FotoInChat(
                       messaggio: m,
@@ -871,6 +884,78 @@ class _SchedaInChat extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// I consigli alimentari, dentro la conversazione — N19.3.
+class _ConsigliInChat extends StatelessWidget {
+  const _ConsigliInChat({required this.messaggio, required this.contenuto});
+
+  final ChatMessage messaggio;
+  final ContenutoConsigliAlimentari contenuto;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final alimenti = contenuto.alimenti;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: Gap.xs),
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.eco_outlined, color: tema.colorScheme.primary),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    contenuto.titolo,
+                    style: tema.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.sm),
+
+            if (alimenti.isEmpty)
+              Text('Nessun alimento indicato.', style: tema.textTheme.bodySmall)
+            else
+              ...alimenti.map(
+                (a) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('· \$a', style: tema.textTheme.bodyMedium),
+                ),
+              ),
+
+            if (contenuto.note?.trim().isNotEmpty ?? false) ...[
+              const SizedBox(height: Gap.sm),
+              Text(contenuto.note!, style: tema.textTheme.bodySmall),
+            ],
+
+            const SizedBox(height: Gap.sm),
+
+            /*
+             * 🚨 **Detto qui, dove si legge.** Un elenco di alimenti mandato
+             * da chi ti allena somiglia abbastanza a una dieta da poter essere
+             * scambiato per una: la riga che dice che non lo e' vale piu' di
+             * qualunque nota nei termini d'uso.
+             */
+            Text(
+              'Sono consigli, non un piano alimentare. Per un piano vero '
+              'rivolgiti a un biologo nutrizionista o a un dietista.',
+              style: tema.textTheme.labelSmall?.copyWith(
+                color: tema.colorScheme.outline,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

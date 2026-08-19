@@ -68,6 +68,7 @@ sealed class ContenutoMessaggio {
       'text' => ContenutoTesto(decodificato['body']?.toString() ?? ''),
       'plan' when dati != null => ContenutoScheda(dati),
       'meal_plan' when dati != null => ContenutoPianoAlimentare(dati),
+      'food_advice' when dati != null => ContenutoConsigliAlimentari(dati),
       'photo' when dati != null => ContenutoFoto.daiDati(dati),
       _ => ContenutoSconosciuto(decodificato['t']?.toString() ?? '?'),
     };
@@ -214,5 +215,40 @@ class ContenutoFoto extends ContenutoMessaggio {
       'k': chiaveBase64,
       if (byteTotali != null) 'bytes': byteTotali,
     },
+  });
+}
+
+/// Consigli alimentari: un elenco di alimenti — N19.3.
+///
+/// ── 🚨 Perche' e' un tipo SUO e non un piano con meno campi ─────────────
+///
+/// Un `ContenutoPianoAlimentare` con i giorni vuoti sarebbe stato piu' rapido,
+/// e sbagliato: chi lo riceve non saprebbe se e' un elenco di consigli o un
+/// piano arrivato monco. ⚠️ E il giorno che un nutrizionista mandera' un piano
+/// vero (N22), i due dovranno **disegnarsi in modo diverso** — perche' sono due
+/// cose diverse, e una delle due e' un atto riservato.
+///
+/// 💡 Dentro c'e' quello che un trainer puo' dare: **nomi di alimenti**.
+/// Niente grammi, niente orari, niente giorni.
+class ContenutoConsigliAlimentari extends ContenutoMessaggio {
+  const ContenutoConsigliAlimentari(this.consigli);
+
+  final Map<String, dynamic> consigli;
+
+  String get titolo => consigli['name']?.toString() ?? 'Consigli alimentari';
+
+  /// Gli alimenti consigliati, in ordine.
+  List<String> get alimenti => ((consigli['foods'] as List?) ?? const [])
+      .map((e) => e.toString())
+      .where((e) => e.trim().isNotEmpty)
+      .toList(growable: false);
+
+  String? get note => consigli['notes']?.toString();
+
+  @override
+  String perLaBusta() => json.encode({
+    't': 'food_advice',
+    'v': ContenutoMessaggio.versione,
+    'data': consigli,
   });
 }

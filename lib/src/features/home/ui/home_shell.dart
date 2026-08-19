@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/ui/widgets/accoglienza.dart';
 import '../../auth/ui/widgets/proposta_sblocco.dart';
 
 /// La shell con la barra di navigazione — A3.3.
@@ -63,7 +64,18 @@ class HomeShell extends StatelessWidget {
      * scheda**: dentro «Oggi» la proposta ricomparirebbe ogni volta che si
      * torna su quella scheda.
      */
-    body: Stack(children: [shell, const PropostaSblocco()]),
+    /*
+     * 🚨 **`Accoglienza` PRIMA di `PropostaSblocco`** — FASE 2-bis.
+     *
+     * ⚠️ L'ordine nello `Stack` non decide chi parte prima — lo decidono i due
+     * `postFrameCallback` — ma il primo passo dell'accoglienza e' il
+     * **ripristino**, e va offerto prima che l'app scriva qualunque cosa. La
+     * proposta dell'impronta non scrive niente, quindi convive senza danno.
+     *
+     * 💡 Se un giorno servisse la certezza dell'ordine, la strada e' spostare
+     * l'impronta **dentro** la sequenza, non riordinare lo `Stack`.
+     */
+    body: Stack(children: [shell, const Accoglienza(), const PropostaSblocco()]),
     bottomNavigationBar: NavigationBar(
       selectedIndex: shell.currentIndex,
       destinations: _destinazioni,

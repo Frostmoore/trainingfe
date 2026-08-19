@@ -30,6 +30,7 @@ class LocalCache {
   static const _branding = 'gym.branding';
   static const _senzaPalestra = 'gym.senza_palestra';
   static const _ultimaPersona = 'sessione.ultima_persona';
+  static const _accoglienzaFatta = 'sessione.accoglienza_fatta';
 
   // ───────────────────────── chi c'era prima ─────────────────────────
 
@@ -52,6 +53,31 @@ class LocalCache {
   Future<void> setUltimaPersona(int id) => _prefs.setInt(_ultimaPersona, id);
 
   Future<void> dimenticaUltimaPersona() => _prefs.remove(_ultimaPersona);
+
+  // ───────────────────── l'accoglienza dopo l'accesso ─────────────────────
+
+  /// A chi è già stata fatta la sequenza d'accoglienza, su questo telefono.
+  ///
+  /// ── 🚨 Perché per PERSONA e non un booleano solo ────────────────────
+  ///
+  /// Il telefono può essere di due persone — quello di casa, la tavoletta in
+  /// reception — e la seconda deve vedersi offrire il ripristino e i consensi
+  /// come la prima. ⚠️ Con un booleano unico, chi entra per secondo si
+  /// ritroverebbe l'app che dà per scontate risposte che non ha mai dato.
+  ///
+  /// 💡 Un id numerico e non un'email: questo file è in chiaro, e un id non
+  /// dice a chi legge il telefono **chi** ci sia stato dentro.
+  bool accoglienzaFatta(int utenteId) =>
+      (_prefs.getStringList(_accoglienzaFatta) ?? const [])
+          .contains(utenteId.toString());
+
+  Future<void> segnaAccoglienzaFatta(int utenteId) async {
+    final fatti = (_prefs.getStringList(_accoglienzaFatta) ?? const <String>[])
+        .toSet()
+      ..add(utenteId.toString());
+
+    await _prefs.setStringList(_accoglienzaFatta, fatti.toList());
+  }
 
   // ───────────────────────── palestra ─────────────────────────
 

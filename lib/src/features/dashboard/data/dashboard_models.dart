@@ -83,6 +83,7 @@ class NutritionToday {
     required this.carbs,
     required this.fat,
     required this.burnedKcal,
+    this.burnedManuale = false,
     required this.entriesCount,
     this.targetKcal,
     this.targetProtein,
@@ -104,6 +105,7 @@ class NutritionToday {
       carbs: n(totali, 'carbs'),
       fat: n(totali, 'fat'),
       burnedKcal: (bruciate['kcal'] as num?)?.toInt() ?? 0,
+      burnedManuale: bruciate['source'] == 'manual',
       entriesCount: (j['entries_count'] as num?)?.toInt() ?? 0,
       targetKcal: (target?['kcal'] as num?)?.toDouble(),
       targetProtein: (target?['protein_g'] as num?)?.toDouble(),
@@ -115,6 +117,13 @@ class NutritionToday {
 
   final double kcal, protein, carbs, fat;
   final int burnedKcal;
+
+  /// Dichiarato a mano nella scheda cibo — serve a distinguere «0 dichiarato»
+  /// da «non lo so». Vedi `DiaryDay.burnedManuale`.
+  final bool burnedManuale;
+
+  /// Il valore manuale, o `null` se non è stato dichiarato.
+  int? get bruciateAMano => burnedManuale ? burnedKcal : null;
   final int entriesCount;
   final double? targetKcal, targetProtein, targetCarbs, targetFat;
 

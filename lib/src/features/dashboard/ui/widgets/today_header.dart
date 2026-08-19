@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
+import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
+import '../../../health/health_controller.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
@@ -49,10 +51,25 @@ class TodayHeader extends ConsumerWidget {
      * anche quando **non** sommare, perche' se il numero viene dal piano del
      * trainer le bruciate ci sono gia' dentro.
      */
+    /*
+     * 🚨 **La catena, non il numero del server** — difetto del 19/08 sera.
+     *
+     * ⚠️ Qui passava `n.burnedKcal`, cioe' la stima della formula: l'intestazione
+     * mostrava «0 bruciate» e un obiettivo senza le calorie dell'orologio,
+     * mentre la scheda cibo — che la catena ce l'aveva — ne mostrava altre. Due
+     * numeri diversi nella stessa app, che e' il modo piu' rapido per far
+     * smettere qualcuno di fidarsi di entrambi.
+     */
+    final bruciate = BruciateDelGiorno.scegli(
+      manuale: n.bruciateAMano,
+      daHealth: ref.watch(kcalAttiveDelGiornoProvider(DateTime.now())).valueOrNull ?? 0,
+      stimate: n.burnedKcal,
+    );
+
     final obiettivo = TargetDelGiorno.scegli(
       dalServer: n.haTarget ? n.targetKcal : null,
       locale: ref.watch(targetLocaleProvider).valueOrNull?.target?.kcal.toDouble(),
-      bruciate: n.burnedKcal,
+      bruciate: bruciate.kcal,
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -194,7 +211,7 @@ class TodayHeader extends ConsumerWidget {
                           : 'kcal',
                     ),
                     _Valore(
-                      valore: n.burnedKcal.toString(),
+                      valore: bruciate.kcal.toString(),
                       etichetta: 'bruciate',
                       icona: Icons.local_fire_department_rounded,
                     ),

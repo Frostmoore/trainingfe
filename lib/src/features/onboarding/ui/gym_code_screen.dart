@@ -80,7 +80,21 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
 
     if (mounted) {
       setState(() => _inCorso = false);
-      context.go(AppRoutes.register);
+
+      /*
+       * 🚨 **All'ACCESSO, non alla registrazione** — difetto riferito il
+       * 19/08/2026.
+       *
+       * Chi non ha una palestra e ha gia' un account e' il caso **piu' comune**,
+       * non quello raro: mandarlo a registrarsi gli fa credere di dover creare
+       * un secondo utente. ⚠️ E chi lo crea davvero si ritrova i dati divisi
+       * fra due utenze, che e' un guasto che non si ripara.
+       *
+       * 💡 La strada opposta resta aperta: la schermata di accesso ha gia' il
+       * rimando alla registrazione. Si perde un tocco a chi si iscrive, se ne
+       * guadagna uno a chi entra, e si evita un danno a chi sbaglia.
+       */
+      context.go(AppRoutes.login);
     }
   }
 

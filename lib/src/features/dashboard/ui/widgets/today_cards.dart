@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
 import '../../../health/dati_salute.dart';
+import '../../../health/health_controller.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../profile/corpo_controller.dart';
@@ -52,10 +54,24 @@ class CaloriesCard extends ConsumerWidget {
     // 🚨 Le bruciate entrano nell'obiettivo — N23.B1. La regola sta in
     // `TargetDelGiorno` e in nessun altro posto: le schermate che mostrano un
     // obiettivo calorico sono tre, e tre copie divergono.
+    /*
+     * 🚨 **La catena, non il numero del server** — difetto del 19/08 sera.
+     *
+     * ⚠️ Qui passava `n.burnedKcal`, che e' la **stima della nostra formula**:
+     * l'orologio non lo conosceva, e chi lasciava il campo vuoto vedeva
+     * l'obiettivo senza le calorie che aveva davvero bruciato. La catena era
+     * agganciata a **una sola** delle tre schermate.
+     */
+    final bruciate = BruciateDelGiorno.scegli(
+      manuale: n.bruciateAMano,
+      daHealth: ref.watch(kcalAttiveDelGiornoProvider(DateTime.now())).valueOrNull ?? 0,
+      stimate: n.burnedKcal,
+    );
+
     final delGiorno = TargetDelGiorno.scegli(
       dalServer: n.haTarget ? n.targetKcal : null,
       locale: locale?.kcal.toDouble(),
-      bruciate: n.burnedKcal,
+      bruciate: bruciate.kcal,
     );
 
     final target = delGiorno.kcal ?? 0;
@@ -85,7 +101,7 @@ class CaloriesCard extends ConsumerWidget {
                   style: theme.textTheme.titleMedium,
                 ),
                 const Spacer(),
-                if (n.burnedKcal > 0)
+                if (bruciate.esistono)
                   Row(
                     children: [
                       Icon(
@@ -93,7 +109,7 @@ class CaloriesCard extends ConsumerWidget {
                         size: 18,
                         color: theme.colorScheme.tertiary,
                       ),
-                      Text('${n.burnedKcal}', style: theme.textTheme.titleSmall),
+                      Text('${bruciate.kcal}', style: theme.textTheme.titleSmall),
                     ],
                   ),
               ],

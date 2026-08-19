@@ -68,6 +68,7 @@ sealed class ContenutoMessaggio {
       'text' => ContenutoTesto(decodificato['body']?.toString() ?? ''),
       'plan' when dati != null => ContenutoScheda(dati),
       'meal_plan' when dati != null => ContenutoPianoAlimentare(dati),
+      'photo' when dati != null => ContenutoFoto.daiDati(dati),
       _ => ContenutoSconosciuto(decodificato['t']?.toString() ?? '?'),
     };
   }
@@ -155,5 +156,63 @@ class ContenutoSconosciuto extends ContenutoMessaggio {
   String perLaBusta() => json.encode({
     't': tipo,
     'v': ContenutoMessaggio.versione,
+  });
+}
+
+/// Una foto: **il riferimento e la chiave, non i byte** — N13.2.
+///
+/// ── 🚨 Perche' i byte non stanno qui dentro ────────────────────────────
+///
+/// Una conversazione si carica tutta insieme. Con le foto dentro le buste,
+/// aprire una chat con venti foto vorrebbe dire scaricare otto megabyte **ogni
+/// volta**, anche solo per rileggere una riga di testo. E un invio interrotto
+/// ricomincerebbe da capo invece di riprendere.
+///
+/// 💡 Quindi la busta porta due cose piccolissime: **dove** sono i byte
+/// (`token`) e **come si aprono** (`chiave`). I byte viaggiano per conto loro,
+/// gia' cifrati con quella chiave.
+///
+/// 🚨 **Il server non ha nessuno dei due pezzi in chiaro**: tiene un blob
+/// cifrato con una chiave che non ha mai visto, e un messaggio cifrato che non
+/// sa aprire.
+///
+/// ⚠️ **Vive 24 ore.** Passate quelle il server butta il blob, e questa busta
+/// resta come una porta senza stanza dietro. Chi la mostra deve dirlo — non
+/// lasciare un riquadro che gira all'infinito.
+class ContenutoFoto extends ContenutoMessaggio {
+  const ContenutoFoto({
+    required this.token,
+    required this.chiaveBase64,
+    this.byteTotali,
+  });
+
+  factory ContenutoFoto.daiDati(Map<String, dynamic> dati) => ContenutoFoto(
+    token: dati['token']?.toString() ?? '',
+    chiaveBase64: dati['k']?.toString() ?? '',
+    byteTotali: (dati['bytes'] as num?)?.toInt(),
+  );
+
+  /// Dove stanno i byte, sul server. 💡 Casuale: un id progressivo si indovina.
+  final String token;
+
+  /// La chiave che li apre, in base64.
+  final String chiaveBase64;
+
+  /// Quanto pesano, per poterlo dire prima di cominciare a scaricare.
+  final int? byteTotali;
+
+  /// ⚠️ Una busta senza uno dei due pezzi non e' apribile: meglio accorgersene
+  /// mostrando «questa foto non c'e' piu'» che provare a scaricare `''`.
+  bool get completa => token.isNotEmpty && chiaveBase64.isNotEmpty;
+
+  @override
+  String perLaBusta() => json.encode({
+    't': 'photo',
+    'v': ContenutoMessaggio.versione,
+    'data': {
+      'token': token,
+      'k': chiaveBase64,
+      if (byteTotali != null) 'bytes': byteTotali,
+    },
   });
 }

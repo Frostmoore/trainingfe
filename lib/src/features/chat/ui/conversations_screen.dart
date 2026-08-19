@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
@@ -9,11 +12,14 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../fotocamera/ui/schermata_fotocamera.dart';
+import '../../fotocamera/ui/schermata_ingrandimento.dart';
 import '../../nutrition/compositore_piano_controller.dart';
 import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
+import 'widgets/foto_in_chat.dart';
 
 /// L'elenco delle conversazioni — A7.1.
 class ConversationsScreen extends ConsumerWidget {
@@ -213,6 +219,101 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     _testo.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Manda una foto — N13.3.
+  ///
+  /// 💡 Passa dal **canale unico**: stessa fotocamera, stesso quadrato, stessa
+  /// misura di tutte le altre foto dell'app. ⚠️ Una seconda strada per
+  /// scattare avrebbe portato a una seconda idea di quanto debba pesare una
+  /// foto — che è esattamente il difetto che il canale unico ha chiuso.
+  Future<void> _allegaFoto() async {
+    final scelta = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (foglio) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Scatta una foto'),
+              onTap: () => Navigator.of(foglio).pop(true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Scegli dalla galleria'),
+              onTap: () => Navigator.of(foglio).pop(false),
+            ),
+            /*
+             * 🚨 N13.5 — **si dice PRIMA, non dopo.**
+             *
+             * Se chi deve riceverla non apre l'app entro un giorno, quella
+             * foto è persa. ⚠️ Scoprirlo dopo averla mandata sarebbe il modo
+             * peggiore: qui è una riga, lì sarebbe una fiducia persa.
+             */
+            const Padding(
+              padding: EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, Gap.md),
+              child: Text(
+                'Le foto restano disponibili 24 ore: dopo, se non le ha '
+                'ancora aperte, non si possono più scaricare.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (scelta == null || !mounted) return;
+
+    // ⚠️ Il `context` si prende **prima** di ogni altra pausa: fra un `await` e
+    // l'altro la schermata puo' sparire, e usarne uno vecchio e' il difetto che
+    // `use_build_context_synchronously` esiste per fermare.
+    final foto = scelta
+        ? await SchermataFotocamera.apri(context, titolo: 'Manda una foto')
+        : await _dallaGalleria();
+
+    if (!mounted) return;
+
+    if (foto == null) return;
+
+    setState(() => _inCorso = true);
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(threadProvider(widget.id).notifier).inviaFoto(foto);
+    } on Object catch (e) {
+      messaggeria.showSnackBar(
+        SnackBar(content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  Future<Uint8List?> _dallaGalleria() async {
+    final scelta = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (scelta == null) return null;
+
+    /*
+     * ⚠️ **La lettura dei byte PRIMA, e il `mounted` dopo.**
+     *
+     * Scritta come argomento di `apri(context, byte: await …)` c'era un `await`
+     * fra il controllo e l'uso del contesto: una pausa in cui la schermata puo'
+     * sparire. E' esattamente cio' che `use_build_context_synchronously`
+     * segnala, e non e' pedanteria — e' un crash quando qualcuno esce dalla
+     * chat mentre la galleria sta ancora leggendo un file grande.
+     */
+    final byte = await scelta.readAsBytes();
+
+    if (!mounted) return null;
+
+    return SchermataIngrandimento.apri(
+      context,
+      byte: byte,
+      titolo: 'Scegli il quadrato',
+    );
   }
 
   Future<void> _invia() async {
@@ -472,6 +573,17 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     return _SchedaInChat(messaggio: m, contenuto: contenuto);
                   }
 
+                  // 🆕 N13.4 — una foto si disegna come una foto. La busta
+                  // porta solo il riferimento e la chiave: i byte se li va a
+                  // prendere il riquadro, una volta sola.
+                  if (contenuto is ContenutoFoto) {
+                    return FotoInChat(
+                      messaggio: m,
+                      contenuto: contenuto,
+                      mio: m.senderId == mioId,
+                    );
+                  }
+
                   return _Bolla(messaggio: m, mio: m.senderId == mioId);
                 },
               ),
@@ -502,6 +614,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       icon: const Icon(Icons.restaurant_menu_outlined),
                       tooltip: 'Manda un piano alimentare',
                     ),
+                  /*
+                   * 🆕 N13.3 — la foto, e questo lo vedono **tutti e due**.
+                   *
+                   * 💡 A differenza della scheda e del piano, mandare una foto
+                   * non è un gesto da chi allena: un iscritto fotografa un
+                   * infortunio, un'etichetta, la propria postura. Anzi, è più
+                   * spesso lui a volerlo fare.
+                   */
+                  IconButton(
+                    onPressed: _inCorso ? null : _allegaFoto,
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    tooltip: 'Manda una foto',
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _testo,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -146,6 +147,21 @@ class ApiClient {
     final response = await _dio.post<dynamic>(path, data: form);
 
     return _unwrap<T>(response, unwrap);
+  }
+
+  /// Scarica byte grezzi — N13.4.
+  ///
+  /// 🚨 **Non passa da `_unwrap`**, e non e' una dimenticanza: la risposta
+  /// non e' JSON. E' un flusso cifrato, e provare a interpretarlo come un
+  /// inviluppo `{data: ...}` lo trasformerebbe in un errore di formato su byte
+  /// perfettamente validi.
+  Future<Uint8List> scaricaByte(String path) async {
+    final risposta = await _dio.get<List<int>>(
+      path,
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    return Uint8List.fromList(risposta.data ?? const []);
   }
 
   // ───────────────────────── interni ─────────────────────────

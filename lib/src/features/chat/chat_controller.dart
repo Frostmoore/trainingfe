@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sodium/sodium_sumo.dart';
 
 import '../../core/crypto/busta_messaggio.dart';
 import '../../core/crypto/contenuto_messaggio.dart';
+import '../../core/crypto/foto_cifrata.dart';
 import '../../core/crypto/providers_crypto.dart';
 import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/providers.dart';
 import '../health/health_controller.dart';
 import '../training/schede_ricevute_controller.dart';
+import 'data/allegato_di_chat.dart';
 
 /// L'altra persona non ha ancora pubblicato una chiave.
 ///
@@ -267,6 +270,9 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
           ContenutoTesto(:final testo) => testo,
           ContenutoScheda(:final titolo) => titolo,
           ContenutoPianoAlimentare(:final titolo) => titolo,
+          // 💡 L'anteprima testuale serve alle notifiche e all'elenco delle
+          // conversazioni, dove non si disegna nessuna immagine.
+          ContenutoFoto() => 'Foto',
           ContenutoSconosciuto() =>
             'Questo messaggio richiede una versione più recente dell\'app.',
         },
@@ -416,6 +422,41 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
 
     _ultimoId = messaggio.id;
     state = AsyncValue.data([...state.value ?? const [], messaggio]);
+  }
+
+  /// Manda una foto — N13.3.
+  ///
+  /// ── 🚨 L'ordine: prima i byte, poi il messaggio ──────────────────────
+  ///
+  /// Si carica il blob, si ottiene il token, e **solo allora** parte il
+  /// messaggio che lo nomina.
+  ///
+  /// ⚠️ Nell'ordine inverso esisterebbe una finestra in cui la conversazione
+  /// mostra una foto il cui blob non c'è ancora — e se il caricamento
+  /// fallisse, quel messaggio resterebbe lì per sempre a puntare al nulla.
+  /// Così invece un caricamento fallito non lascia **niente**: nessun
+  /// messaggio, nessun riferimento rotto.
+  ///
+  /// 💡 [avanzamento] va da 0 a 1: su rete mobile una foto impiega qualche
+  /// secondo, e senza una barra sembra che l'app si sia piantata.
+  Future<void> inviaFoto(
+    Uint8List foto, {
+    void Function(double)? avanzamento,
+  }) async {
+    final busta = await AllegatoDiChat(
+      api: _ref.read(apiClientProvider),
+      cripto: FotoCifrata(await _ref.read(sodiumProvider.future)),
+    ).carica(
+      conversationId: conversationId,
+      foto: foto,
+      avanzamento: avanzamento,
+    );
+
+    // ⚠️ Un token vuoto vorrebbe dire un messaggio che punta al nulla: meglio
+    // fallire adesso, mentre chi ha premuto sta ancora guardando.
+    if (!busta.completa) throw const FotoNonSiApre();
+
+    await inviaContenuto(busta);
   }
 
   Future<void> _segnaLetti() async {

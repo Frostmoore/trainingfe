@@ -461,6 +461,25 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     await inviaContenuto(busta);
   }
 
+  /// Manda un documento — N21.4.
+  ///
+  /// 💡 Stessa strada della foto: prima i byte, poi il messaggio che li nomina.
+  /// L'unica differenza e' che la busta porta anche **il nome**.
+  Future<void> inviaDocumento(Uint8List byte, {required String nome}) async {
+    final busta = await AllegatoDiChat(
+      api: _ref.read(apiClientProvider),
+      cripto: CifraturaAllegati(await _ref.read(sodiumProvider.future)),
+    ).caricaDocumento(
+      conversationId: conversationId,
+      byte: byte,
+      nome: nome,
+    );
+
+    if (!busta.completa) throw const AllegatoNonSiApre();
+
+    await inviaContenuto(busta);
+  }
+
   Future<void> _segnaLetti() async {
     try {
       await _ref.read(apiClientProvider).post<dynamic>('/conversations/$conversationId/read');

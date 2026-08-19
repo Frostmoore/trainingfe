@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
+import 'widgets/documento_in_chat.dart';
 import 'widgets/foto_in_chat.dart';
 
 /// L'elenco delle conversazioni — A7.1.
@@ -290,6 +292,77 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       if (mounted) setState(() => _inCorso = false);
     }
   }
+
+  /// Manda un documento — N21.4.
+  ///
+  /// ⚠️ **Si legge in memoria**, e va bene: il tetto del server e' 10 MB, e
+  /// oltre quello la richiesta viene respinta comunque. Un flusso servirebbe
+  /// per file grandi, che qui non possono esistere.
+  Future<void> _allegaDocumento() async {
+    /*
+     * 📌 **`FilePicker.platform`, e siamo fermi alla 8.x** — 19/08/2026.
+     *
+     * ⚠️ La 11 ha metodi statici (`FilePicker.pickFiles`) ma **non compila su
+     * Android** con questa versione di Flutter: il suo plugin e' in Kotlin e
+     * non ha fatto la migrazione a «Built-in Kotlin», quindi il registrant
+     * Java generato non trova la classe e la build muore con «cannot find
+     * symbol».
+     *
+     * 💡 Quando il pacchetto si aggiornera', qui va rimesso
+     * `FilePicker.pickFiles` senza `.platform`.
+     */
+    final scelta = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+      withData: true,
+    );
+
+    final file = scelta?.files.firstOrNull;
+    final byte = file?.bytes;
+
+    if (byte == null || !mounted) return;
+
+    /*
+     * 🚨 Il tetto si controlla **prima di caricare**, non dopo.
+     *
+     * ⚠️ Mandare dieci megabyte per poi ricevere un 422 vuol dire aver
+     * consumato il piano dati di qualcuno per niente — e su rete mobile ci
+     * mette anche un minuto prima di dirglielo.
+     */
+    if (byte.length > _tettoAllegato) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Questo file supera i 10 MB: non riesco a mandarlo.'),
+        ),
+      );
+
+      return;
+    }
+
+    setState(() => _inCorso = true);
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    try {
+      await ref
+          .read(threadProvider(widget.id).notifier)
+          .inviaDocumento(byte, nome: file!.name);
+      _inFondo();
+    } on Object catch (e) {
+      messaggeria.showSnackBar(
+        SnackBar(content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  /// 🚨 Deve restare allineato a `AllegatoCifrato::BYTE_MASSIMI` sul server.
+  ///
+  /// ⚠️ Duplicato di proposito: il client non puo' chiedere al server quanto
+  /// vale, e chiederlo a ogni invio sarebbe una richiesta in piu' per un numero
+  /// che cambia una volta ogni due anni. 💡 Se un giorno diverge, il server
+  /// respinge — cioe' si sbaglia dalla parte giusta.
+  static const _tettoAllegato = 10 * 1024 * 1024;
 
   Future<Uint8List?> _dallaGalleria() async {
     final scelta = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -620,6 +693,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     return _ConsigliInChat(messaggio: m, contenuto: contenuto);
                   }
 
+                  // 🆕 N21.3 — un documento non si disegna: si apre.
+                  if (contenuto is ContenutoDocumento) {
+                    return DocumentoInChat(
+                      messaggio: m,
+                      contenuto: contenuto,
+                      mio: m.senderId == mioId,
+                    );
+                  }
+
                   if (contenuto is ContenutoFoto) {
                     return FotoInChat(
                       messaggio: m,
@@ -670,6 +752,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     onPressed: _inCorso ? null : _allegaFoto,
                     icon: const Icon(Icons.photo_camera_outlined),
                     tooltip: 'Manda una foto',
+                  ),
+                  /*
+                   * 🆕 N21.4 — un documento.
+                   *
+                   * 💡 Separato dalla foto e non nascosto dentro lo stesso
+                   * foglio: sono due gesti diversi. Chi manda un PDF sa gia'
+                   * di volerlo fare, e non deve passare da «scatta / galleria»
+                   * per scoprire che c'e' anche una terza voce.
+                   */
+                  IconButton(
+                    onPressed: _inCorso ? null : _allegaDocumento,
+                    icon: const Icon(Icons.attach_file_rounded),
+                    tooltip: 'Manda un documento',
                   ),
                   Expanded(
                     child: TextField(

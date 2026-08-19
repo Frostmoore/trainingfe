@@ -6,7 +6,22 @@ plugins {
 
 android {
     namespace = "com.smp.mytrainingcompanion"
-    compileSdk = flutter.compileSdkVersion
+    /*
+     * 🚨 compileSdk fissato a 36 e non ereditato da Flutter — N21.4.
+     *
+     * `flutter_plugin_android_lifecycle`, che arriva con `file_picker`,
+     * pretende «version 36 or later of the Android APIs» e fa fallire la build
+     * con un errore sui metadati dell'AAR.
+     *
+     * 💡 `maxOf` e non un 36 secco, per la stessa ragione del `minSdk` qui
+     * sotto: il giorno che Flutter alzera' il suo default oltre il 36, questa
+     * riga lo **abbasserebbe in silenzio**.
+     *
+     * ⚠️ compileSdk dice contro quali API si **compila**, non come l'app si
+     * comporta: quello lo decide `targetSdk`, che resta quello di Flutter.
+     * Alzarlo non cambia il comportamento su nessun telefono.
+     */
+    compileSdk = maxOf(36, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

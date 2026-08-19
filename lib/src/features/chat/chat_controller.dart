@@ -274,6 +274,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
           // 💡 L'anteprima testuale serve alle notifiche e all'elenco delle
           // conversazioni, dove non si disegna nessuna immagine.
           ContenutoFoto() => 'Foto',
+          ContenutoDocumento(:final nome) => nome,
           ContenutoSconosciuto() =>
             'Questo messaggio richiede una versione più recente dell\'app.',
         },

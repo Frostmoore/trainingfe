@@ -169,4 +169,85 @@ void main() {
       expect(riletta.completa, isTrue);
     });
   });
+
+  group('la busta di un documento', () {
+    test('porta anche il NOME, che una foto non ha', () {
+      /*
+       * 🚨 È l'unica differenza vera fra le due buste, e serve: «piano-marzo.pdf»
+       * dice cosa si sta per aprire, mentre una foto si riconosce guardandola.
+       */
+      const busta = ContenutoDocumento(
+        token: 'tok',
+        chiaveBase64: 'a2s=',
+        nome: 'piano-marzo.pdf',
+        byteTotali: 2_400_000,
+      );
+
+      final riletta =
+          ContenutoMessaggio.daChiaro(busta.perLaBusta()) as ContenutoDocumento;
+
+      expect(riletta.nome, 'piano-marzo.pdf');
+      expect(riletta.token, 'tok');
+      expect(riletta.completa, isTrue);
+    });
+
+    test('il peso si legge, e su un documento serve piu che su una foto', () {
+      // 💡 Una foto la si scarica e la si guarda; un PDF da otto megabyte su
+      // rete mobile è una decisione.
+      expect(
+        const ContenutoDocumento(
+          token: 't',
+          chiaveBase64: 'k',
+          nome: 'x.pdf',
+          byteTotali: 2_400_000,
+        ).pesoLeggibile,
+        '2,4 MB',
+      );
+
+      expect(
+        const ContenutoDocumento(token: 't', chiaveBase64: 'k', nome: 'x.pdf')
+            .pesoLeggibile,
+        isNull,
+      );
+    });
+
+    test('senza nome ne inventa uno invece di restare vuota', () {
+      final letta = ContenutoMessaggio.daChiaro(
+        json.encode({
+          't': 'document',
+          'v': 2,
+          'data': {'token': 'a', 'k': 'b'},
+        }),
+      ) as ContenutoDocumento;
+
+      expect(letta.nome, 'documento.pdf');
+      expect(letta.completa, isTrue);
+    });
+
+    test('⚠️ una busta a metà si dichiara incompleta', () {
+      expect(
+        const ContenutoDocumento(token: '', chiaveBase64: 'k', nome: 'x.pdf')
+            .completa,
+        isFalse,
+      );
+    });
+
+    test('🚨 un documento NON è una foto, e viceversa', () {
+      /*
+       * ⚠️ Viaggiano nello stesso modo ma si **mostrano** in modo opposto: un
+       * riquadro che provasse a disegnare un PDF darebbe un rettangolo grigio,
+       * e chi lo guarda penserebbe che la foto non è arrivata.
+       */
+      const doc = ContenutoDocumento(
+        token: 't',
+        chiaveBase64: 'k',
+        nome: 'x.pdf',
+      );
+
+      final riletto = ContenutoMessaggio.daChiaro(doc.perLaBusta());
+
+      expect(riletto, isA<ContenutoDocumento>());
+      expect(riletto, isNot(isA<ContenutoFoto>()));
+    });
+  });
 }

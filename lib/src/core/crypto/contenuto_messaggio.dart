@@ -70,6 +70,7 @@ sealed class ContenutoMessaggio {
       'meal_plan' when dati != null => ContenutoPianoAlimentare(dati),
       'food_advice' when dati != null => ContenutoConsigliAlimentari(dati),
       'photo' when dati != null => ContenutoFoto.daiDati(dati),
+      'document' when dati != null => ContenutoDocumento.daiDati(dati),
       _ => ContenutoSconosciuto(decodificato['t']?.toString() ?? '?'),
     };
   }
@@ -250,5 +251,79 @@ class ContenutoConsigliAlimentari extends ContenutoMessaggio {
     't': 'food_advice',
     'v': ContenutoMessaggio.versione,
     'data': consigli,
+  });
+}
+
+/// Un documento — N21.
+///
+/// ── 💡 Perche' non e' una `ContenutoFoto` con un nome diverso ─────────────
+///
+/// Viaggiano nello stesso modo — token, chiave, byte cifrati altrove — ma si
+/// **mostrano** in modo opposto: una foto si disegna, un documento no. ⚠️ Un
+/// riquadro che prova a disegnare un PDF darebbe un rettangolo grigio, e chi lo
+/// guarda penserebbe che la foto non e' arrivata.
+///
+/// 🚨 E qui il **nome del file conta**: «piano-marzo.pdf» dice cosa si sta
+/// per aprire, mentre una foto si riconosce guardandola. E' l'unica differenza
+/// vera nella busta.
+class ContenutoDocumento extends ContenutoMessaggio {
+  const ContenutoDocumento({
+    required this.token,
+    required this.chiaveBase64,
+    required this.nome,
+    this.byteTotali,
+  });
+
+  factory ContenutoDocumento.daiDati(Map<String, dynamic> dati) =>
+      ContenutoDocumento(
+        token: dati['token']?.toString() ?? '',
+        chiaveBase64: dati['k']?.toString() ?? '',
+        nome: dati['nome']?.toString() ?? 'documento.pdf',
+        byteTotali: (dati['bytes'] as num?)?.toInt(),
+      );
+
+  final String token;
+  final String chiaveBase64;
+
+  /// 🚨 Il nome che si mostra, **non un percorso**. Chi lo scrive su disco
+  /// deve passarlo comunque da `basename`: arriva dall'altro telefono.
+  final String nome;
+
+  final int? byteTotali;
+
+  bool get completa => token.isNotEmpty && chiaveBase64.isNotEmpty;
+
+  /// «2,4 MB» — per dirlo prima di cominciare a scaricare.
+  ///
+  /// 💡 Su un documento serve piu' che su una foto: una foto la si scarica
+  /// e la si guarda, un PDF da otto megabyte su rete mobile e' una decisione.
+  String? get pesoLeggibile {
+    final b = byteTotali;
+
+    if (b == null) return null;
+    if (b < 1000) return '$b byte';
+
+    const unita = ['kB', 'MB', 'GB'];
+    var v = b / 1000;
+    var i = 0;
+
+    while (v >= 1000 && i < unita.length - 1) {
+      v /= 1000;
+      i++;
+    }
+
+    return '${v.toStringAsFixed(1).replaceAll('.', ',')} ${unita[i]}';
+  }
+
+  @override
+  String perLaBusta() => json.encode({
+    't': 'document',
+    'v': ContenutoMessaggio.versione,
+    'data': {
+      'token': token,
+      'k': chiaveBase64,
+      'nome': nome,
+      if (byteTotali != null) 'bytes': byteTotali,
+    },
   });
 }

@@ -116,6 +116,91 @@ class AllegatoDiChat {
     }
   }
 
+  // ─────────────────────────── i documenti ───────────────────────────
+  //
+  // 💡 Stesso viaggio delle foto — cifrati con una chiave a caso, i byte da una
+  // parte e la chiave dall'altra — e stesso codice. ⚠️ Cambia solo che un
+  // documento porta con sé **un nome**: «piano-marzo.pdf» dice cosa si sta per
+  // aprire, mentre una foto si riconosce guardandola.
+
+  /// Cifra e carica un documento.
+  Future<ContenutoDocumento> caricaDocumento({
+    required int conversationId,
+    required Uint8List byte,
+    required String nome,
+  }) async {
+    final chiave = cripto.generaChiave();
+
+    try {
+      final cifrato = await cripto.cifra(chiave: chiave, contenuto: byte);
+
+      final risposta = await api.upload<Map<String, dynamic>>(
+        '/conversations/$conversationId/allegati',
+        FormData.fromMap({
+          'file': MultipartFile.fromBytes(cifrato, filename: 'a.bin'),
+        }),
+      );
+
+      return ContenutoDocumento(
+        token: risposta['token']?.toString() ?? '',
+        chiaveBase64: base64Encode(cripto.byteDi(chiave)),
+        // ⚠️ `basename` anche in salita: un nome con dentro un percorso
+        // arriverebbe intatto all'altro telefono, e li' sarebbe un problema suo.
+        nome: p.basename(nome),
+        byteTotali: byte.length,
+      );
+    } finally {
+      chiave.dispose();
+    }
+  }
+
+  /// Scarica un documento e lo mette accanto alle foto della chat.
+  ///
+  /// @return il percorso relativo, o `null` se sul server non c'è più.
+  Future<String?> riprendiDocumento(ContenutoDocumento busta) async {
+    if (!busta.completa) return null;
+
+    /*
+     * 🚨 Il nome sul disco resta **il token**, non quello del documento.
+     *
+     * ⚠️ Due persone possono mandare due «piano.pdf» diversi, e il secondo
+     * sovrascriverebbe il primo. Il token è già unico; il nome vero vive nella
+     * busta, che è dove serve — cioè quando lo si mostra.
+     */
+    final estensione = p.extension(busta.nome);
+    final relativo = p.url.join(
+      ArchivioFoto.madre,
+      TipoFoto.chat.cartella,
+      '${busta.token}$estensione',
+    );
+
+    if ((await archivio.fileDi(relativo)).existsSync()) return relativo;
+
+    final Uint8List cifrato;
+
+    try {
+      cifrato = await api.scaricaByte('/allegati/${busta.token}');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+
+      rethrow;
+    }
+
+    final chiave = cripto.chiaveDa(base64Decode(busta.chiaveBase64));
+
+    try {
+      final chiaro = await cripto.decifra(chiave: chiave, contenuto: cifrato);
+      final cartella = await archivio.cartellaDi(TipoFoto.chat);
+
+      await File(p.join(cartella.path, '${busta.token}$estensione'))
+          .writeAsBytes(chiaro);
+
+      return relativo;
+    } finally {
+      chiave.dispose();
+    }
+  }
+
   /// 🚨 Il nome sul disco **è il token**: è già casuale e unico, e permette di
   /// riconoscere una foto già scaricata senza tenere un secondo indice.
   Future<String> _riponi(String token, Uint8List byte) async {

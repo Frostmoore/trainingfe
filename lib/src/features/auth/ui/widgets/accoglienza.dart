@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/backup/backup_controller.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../chiavi/ui/schermata_ripresa_dati.dart';
 import '../../../health/health_controller.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../auth_controller.dart';
@@ -16,9 +19,20 @@ import '../../auth_controller.dart';
 ///
 /// | # | Passo | Perché lì |
 /// |---|---|---|
-/// | 1 | **Il ripristino dal backup** | Va **prima che l'app scriva qualunque cosa** |
-/// | 2 | I consensi | Solo se **nessuno** è stato dato, e solo la prima volta |
+/// | 1 | **L'impronta** | È l'unico che riguarda l'accesso stesso, e non tocca dati |
+/// | 2 | **Il ripristino dal backup** | Va **prima che l'app scriva qualunque cosa** |
 /// | 3 | Health Connect | Dopo aver spiegato a cosa serve |
+/// | 4 | I consensi | Ultimi: sono la decisione più lunga, e non bloccano niente |
+///
+/// 🚨 **L'ordine è quello chiesto dal committente il 19/08**, dopo aver provato
+/// la versione precedente: *«quando accedo mi fa un botto di richieste tutte
+/// insieme, non va bene così, devono partire una dopo l'altra con una logica»*.
+///
+/// ⚠️ **Prima erano due widget separati** — questo e `PropostaSblocco` — e
+/// partivano **insieme**, ognuno col proprio `postFrameCallback`. Due dialoghi
+/// nello stesso frame: quello che arrivava secondo si apriva **sopra** il primo,
+/// o veniva scartato. 💡 Adesso l'impronta è **dentro** la sequenza, ed è il
+/// primo passo.
 ///
 /// 🚨 **Il primo è quello che conta.** *«altrimenti mi si aggiungono cose nuove e
 /// si crea una race condition che non avrebbe senso avere»* — il committente,
@@ -52,6 +66,19 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
   /// partirebbe due volte sovrapposta.
   bool _inCorso = false;
 
+  /// 🚨 **Chi ha già fatto l'accoglienza in QUESTA sessione dell'app.**
+  ///
+  /// Statica, e non basta il flag su disco. ⚠️ Il ripristino riapre l'archivio,
+  /// e `authControllerProvider` lo **osserva**: quando l'archivio cambia il
+  /// controller viene ricreato, la shell con lui, e nasce un
+  /// `_AccoglienzaState` nuovo con `_inCorso` a `false`. La sequenza ripartiva
+  /// da capo — impronta compresa — subito dopo aver ripristinato.
+  ///
+  /// 💡 È il difetto riferito il 19/08 sera, ed è la stessa famiglia della
+  /// «race condition» che il ripristino esiste per evitare: uno stato scritto
+  /// prima del ripristino e riletto dopo.
+  static final Set<int> _fattaInQuestaSessione = <int>{};
+
   Future<void> _avvia() async {
     if (_inCorso) return;
 
@@ -66,6 +93,10 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     // `LocalCache.accoglienzaFatta`.
     if (cache.accoglienzaFatta(utente.id)) return;
 
+    // 🚨 E una volta sola **in questa sessione**, anche se il ripristino
+    // ricrea la shell: vedi `_fattaInQuestaSessione`.
+    if (!_fattaInQuestaSessione.add(utente.id)) return;
+
     _inCorso = true;
 
     /*
@@ -78,13 +109,79 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
      */
     await cache.segnaAccoglienzaFatta(utente.id);
 
+    await _forseImpronta();
+    if (!mounted) return;
+
     await _forseRipristina();
     if (!mounted) return;
 
-    await _forseConsensi();
+    await _forseHealth();
     if (!mounted) return;
 
-    await _forseHealth();
+    await _forseConsensi();
+  }
+
+  /// 1. L'impronta — era `PropostaSblocco`, ora è il primo passo della sequenza.
+  ///
+  /// 🚨 **Le sue tre regole valgono ancora, e non sono cambiate**: una volta
+  /// sola per dispositivo, mai se il telefono non sa farlo, e «più tardi» è una
+  /// risposta legittima. `daProporre()` e `segnaProposto()` fanno tutto il
+  /// lavoro; qui cambia solo **quando** viene chiamato.
+  Future<void> _forseImpronta() async {
+    final blocco = ref.read(bloccoBiometricoProvider);
+
+    if (!await blocco.daProporre()) return;
+    if (!mounted) return;
+
+    final vuole = await showDialog<bool>(
+      context: context,
+      builder: (dialogo) => AlertDialog(
+        icon: const Icon(Icons.fingerprint_rounded, size: 32),
+        title: const Text('Sblocco rapido'),
+        content: const Text(
+          "La prossima volta puoi riaprire l'app con l'impronta, invece di "
+          'ridigitare la password.\n\n'
+          'Puoi cambiare idea quando vuoi dal profilo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(false),
+            child: const Text('Più tardi'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogo).pop(true),
+            child: const Text('Attiva'),
+          ),
+        ],
+      ),
+    );
+
+    /*
+     * 🚨 Si segna **prima** di provare ad attivare, e vale per entrambe le
+     * risposte: la domanda a cui questo flag risponde è «gliel'ho già
+     * chiesto?», non «ha funzionato?».
+     */
+    await blocco.segnaProposto();
+
+    /*
+     * 🚨 **«Più tardi» vuol dire NO, e lo si scrive** — 19/08/2026.
+     *
+     * *«se faccio "più tardi" vuol dire "NO", la devo abilitare a mano dopo»* —
+     * il committente. ⚠️ Non basta non accendere: se l'interruttore era rimasto
+     * acceso da prima — da un'installazione precedente, o da un passo andato
+     * storto — chi risponde «più tardi» se lo ritrova **attivo**, ed è quello
+     * che è successo stasera.
+     *
+     * 💡 Quindi un no lo **spegne**: la risposta della persona vince su
+     * qualunque stato ereditato.
+     */
+    if (vuole != true) {
+      await blocco.imposta(acceso: false);
+
+      return;
+    }
+
+    await blocco.imposta(acceso: true);
   }
 
   /// 1. C'è un backup su Drive? Allora si chiede **prima di scrivere**.
@@ -132,18 +229,35 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     if (vuole != true || !mounted) return;
 
     /*
-     * 💡 Si manda alla **schermata della copia di sicurezza** invece di
-     * ripristinare qui.
+     * 🚨 **La password si chiede QUI** — richiesta del committente, 19/08.
      *
-     * ⚠️ Quella schermata ha già tutto: cerca nel cloud, mostra la data, chiede
-     * conferma prima di sovrascrivere e riporta quante righe sono tornate.
-     * 🚨 Rifare qui lo stesso percorso dentro un dialogo vorrebbe dire una
-     * seconda copia della stessa logica — e la copia diverge sempre.
+     * *«LÌ mi deve chiedere la password di sblocco, non che devo PER FORZA
+     * andare sulla schermata della chat»*. ⚠️ Mandare al profilo → copia di
+     * sicurezza vuol dire far attraversare tre schermate a chi ha appena detto
+     * «sì, riprendi i miei dati»: la risposta l'ha già data, e chiedergli di
+     * ripeterla altrove è il modo di farlo desistere.
+     *
+     * 💡 Il file è avvolto con la **chiave maestra**, e per aprirlo serve la
+     * password di recupero: è l'unica cosa che manca, e si chiede qui.
      */
-    context.push(AppRoutes.backup);
+    if (!mounted) return;
+
+    /*
+     * 🚨 **Una schermata, non un dialogo** — 19/08/2026, sera.
+     *
+     * Il dialogo spariva appena si toccava «Riprendi», e poi partivano in fila
+     * la chiave, lo scarico da Drive e la riscrittura di diecimila righe **con
+     * lo schermo fermo e niente sopra**. ⚠️ Non era lento: era **muto**, e
+     * un'attesa muta di dieci secondi non si distingue da un guasto.
+     *
+     * 💡 `SchermataRipresaDati` si prende tutto il ciclo e lo racconta.
+     */
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const SchermataRipresaDati()),
+    );
   }
 
-  /// 2. I consensi, **solo se nessuno è stato dato**.
+  /// 4. I consensi, **solo se nessuno è stato dato**.
   Future<void> _forseConsensi() async {
     final Consensi consensi;
 
@@ -154,15 +268,25 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     }
 
     /*
-     * 🚨 **Solo se NESSUNO è approvato**, alla lettera — richiesta del
-     * committente.
+     * 🚨 **Due condizioni, e servono entrambe.**
      *
-     * ⚠️ Chi ne ha già dato uno ha **già visto** quella schermata e ha deciso:
-     * riproporgliela perché ne manca un altro vuol dire chiedergli di nuovo una
-     * cosa a cui aveva già risposto — e la seconda volta si tocca «no» per
-     * levarsela di torno, perdendo anche quello che avrebbe dato.
+     * 1. **Nessun consenso dato**, alla lettera — richiesta del committente.
+     *    ⚠️ Chi ne ha già dato uno ha **già visto** quella schermata e ha
+     *    deciso: riproporgliela perché ne manca un altro vuol dire chiedergli
+     *    di nuovo una cosa a cui aveva già risposto, e la seconda volta si
+     *    tocca «no» per levarsela di torno — perdendo anche quello che avrebbe
+     *    dato.
+     * 2. **Non gliel'abbiamo mai chiesta** (`chiesti_il`, sul server).
+     *    🚨 Senza la seconda, chi rifiuta **tutto** resta indistinguibile da
+     *    chi non è mai stato interpellato — sono tre `null` in entrambi i casi
+     *    — e si vedrebbe riproporre la domanda **a ogni reinstallazione**.
+     *
+     * 💡 Ed è il motivo per cui il segnale sta sul **server** e non nelle
+     * preferenze locali: quelle muoiono con l'app, ed è esattamente quello che è
+     * successo il 19/08, due volte in una sera.
      */
-    if (consensi.saluteDato || consensi.aiDato || consensi.recuperoDato) return;
+    if (!consensi.nessunoDato) return;
+    if (!consensi.maiChiesti) return;
     if (!mounted) return;
 
     final vuole = await showDialog<bool>(
@@ -189,9 +313,32 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
       ),
     );
 
+    /*
+     * 🚨 **Si segna appena la domanda è stata MOSTRATA**, non dopo la
+     * risposta, e vale anche per «Più tardi».
+     *
+     * ⚠️ Segnandolo solo dopo un sì, chi dice di no se la ritroverebbe la
+     * prossima volta — che è esattamente il difetto che questa data esiste per
+     * chiudere.
+     *
+     * 💡 Non si aspetta l'esito: se la chiamata fallisce, al massimo la
+     * domanda ricompare una volta. Bloccare qui la sequenza per una rete lenta
+     * sarebbe peggio.
+     */
+    unawaited(_segnaConsensiChiesti());
+
     if (vuole != true || !mounted) return;
 
     context.push(AppRoutes.consensi);
+  }
+
+  Future<void> _segnaConsensiChiesti() async {
+    try {
+      await ref.read(apiClientProvider).post<dynamic>('/account/consents/chiesti');
+      ref.invalidate(consensiProvider);
+    } on Object {
+      // Vedi il dartdoc: si tace di proposito.
+    }
   }
 
   /// 3. Health Connect, e la schermata di consenso di Google.

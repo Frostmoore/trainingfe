@@ -14,6 +14,7 @@ class Consensi {
     this.ai,
     this.recupero,
     this.consiglioAutomatico = true,
+    this.chiestiIl,
   });
 
   factory Consensi.fromJson(Map<String, dynamic> j) => Consensi(
@@ -21,6 +22,7 @@ class Consensi {
     ai: DateTime.tryParse(j['ai']?.toString() ?? ''),
     recupero: DateTime.tryParse(j['sleep_ai']?.toString() ?? ''),
     consiglioAutomatico: j['consiglio_automatico'] as bool? ?? true,
+    chiestiIl: DateTime.tryParse(j['chiesti_il']?.toString() ?? ''),
   );
 
   /// Quando è stato concesso, oppure `null` se non lo è.
@@ -43,6 +45,22 @@ class Consensi {
   /// 💡 **Preferenza, non consenso**: un booleano, non una data. Di una
   /// preferenza non serve sapere *quando* è stata cambiata, di un consenso sì.
   final bool consiglioAutomatico;
+
+  /// Quando la schermata dei consensi e' stata **mostrata** — FASE 2-bis.
+  ///
+  /// 🚨 **«Chiesti» non e' «dati».** Senza questa data, «non gliel'ho mai
+  /// chiesto» e «ha detto no a tutto» sono lo stesso stato — tre `null` — e chi
+  /// rifiuta si vede riproporre la domanda a ogni reinstallazione.
+  ///
+  /// 💡 Sta sul **server** e non nelle preferenze locali proprio per questo:
+  /// un flag nell'app muore con l'app.
+  final DateTime? chiestiIl;
+
+  /// Non e' mai stata mostrata la schermata dei consensi a questa persona.
+  bool get maiChiesti => chiestiIl == null;
+
+  /// Non ha dato **nessun** consenso.
+  bool get nessunoDato => !saluteDato && !aiDato && !recuperoDato;
 
   bool get saluteDato => salute != null;
 

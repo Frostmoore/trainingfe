@@ -37,6 +37,61 @@ final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
       return ref.watch(archivioSaluteProvider).kcalAttiveDi(giorno);
     });
 
+/// Le calorie attive **di oggi**.
+///
+/// ── 🚨 Perché un provider a parte e non `…DelGiorno(DateTime.now())` ──
+///
+/// **Perché quella riga non funziona, e non lo dice.** La chiave di una `family`
+/// è il valore passato: `DateTime.now()` cambia a **ogni millisecondo**, quindi
+/// ogni `build` creava un provider **nuovo** — appena nato, quindi in
+/// caricamento, quindi `valueOrNull == null`, quindi `?? 0`.
+///
+/// ⚠️ **Il numero non compariva mai**, e non c'era nessun errore da nessuna
+/// parte: la schermata mostrava zero come se zero fosse la risposta. È il
+/// difetto riferito dal committente la sera del 19/08 — *«nell'header della
+/// pagina oggi non le somma e non le mostra»* — e la prima correzione non lo
+/// aveva chiuso proprio per questo.
+///
+/// 💡 Qui la data si calcola **dentro**, e l'identità del provider è una sola.
+/// La scheda cibo invece usa `…DelGiorno(day.date)`, che è stabile perché è la
+/// giornata che si sta sfogliando — e infatti lì funzionava.
+/// Le calorie attive per un elenco di giornate (`yyyy-mm-dd`) — 19/08/2026.
+///
+/// 🚨 Serve al **grafico**, che mostrava zero bruciate mentre l'intestazione
+/// ne mostrava 680. Non erano due numeri diversi: erano **due fonti diverse** —
+/// il grafico legge la serie del server, che le calorie dell'orologio non le ha
+/// e non le puo' avere, perche' restano sul telefono.
+///
+/// 💡 La chiave e' la lista delle date **gia' formattate**, cosi' l'identita'
+/// del provider e' stabile: e' l'errore che avevo fatto con `DateTime.now()`,
+/// che cambiava a ogni millisecondo e teneva il provider per sempre in
+/// caricamento.
+final kcalAttivePerGiorniProvider = FutureProvider.autoDispose
+    .family<Map<String, int>, String>((ref, giorniUnitiDaVirgole) async {
+      final archivio = ref.watch(archivioSaluteProvider);
+      final esito = <String, int>{};
+
+      for (final etichetta in giorniUnitiDaVirgole.split(',')) {
+        final giorno = DateTime.tryParse(etichetta);
+
+        if (giorno == null) continue;
+
+        esito[etichetta] = await archivio.kcalAttiveDi(giorno);
+      }
+
+      return esito;
+    });
+
+final kcalAttiveOggiProvider = FutureProvider.autoDispose<int>((ref) async {
+  final adesso = DateTime.now();
+
+  return ref.watch(
+    kcalAttiveDelGiornoProvider(
+      DateTime(adesso.year, adesso.month, adesso.day),
+    ).future,
+  );
+});
+
 /// Lo stato del collegamento con Health Connect.
 class StatoSalute {
   const StatoSalute({

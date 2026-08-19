@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/ui/widgets/accoglienza.dart';
-import '../../auth/ui/widgets/proposta_sblocco.dart';
 
 /// La shell con la barra di navigazione — A3.3.
 ///
@@ -56,26 +55,22 @@ class HomeShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     /*
-     * 🔒 `PropostaSblocco` sta qui e non in una schermata — A1.
+     * 🚨 **`Accoglienza` e basta** — 19/08/2026, sera.
      *
-     * È un widget **invisibile** (`SizedBox.shrink`) che al primo frame decide
-     * se proporre lo sblocco con l'impronta. Sta nella shell perché è l'unico
-     * punto che esiste **subito dopo l'accesso** e **sopravvive al cambio di
-     * scheda**: dentro «Oggi» la proposta ricomparirebbe ogni volta che si
-     * torna su quella scheda.
+     * Qui c'era **anche** `PropostaSblocco`, ed e' rimasta quando l'impronta e'
+     * stata spostata **dentro** la sequenza. Risultato: due widget invisibili
+     * che proponevano la stessa cosa nello stesso fotogramma, e mentre il
+     * dialogo era aperto la sequenza tirava dritto e apriva il selettore
+     * account di Google **sotto**.
+     *
+     * ⚠️ Il committente l'ha descritto cosi': *«appena mi chiede l'impronta,
+     * parte subito sotto una specie di piccola interfaccia di google»*. Non era
+     * Google: era il passo 2 che partiva mentre il passo 1 era ancora aperto.
+     *
+     * 💡 **Spostare un passo dentro una sequenza vuol dire toglierlo da dove
+     * stava.** Sembra ovvio scritto qui; non lo e' stato.
      */
-    /*
-     * 🚨 **`Accoglienza` PRIMA di `PropostaSblocco`** — FASE 2-bis.
-     *
-     * ⚠️ L'ordine nello `Stack` non decide chi parte prima — lo decidono i due
-     * `postFrameCallback` — ma il primo passo dell'accoglienza e' il
-     * **ripristino**, e va offerto prima che l'app scriva qualunque cosa. La
-     * proposta dell'impronta non scrive niente, quindi convive senza danno.
-     *
-     * 💡 Se un giorno servisse la certezza dell'ordine, la strada e' spostare
-     * l'impronta **dentro** la sequenza, non riordinare lo `Stack`.
-     */
-    body: Stack(children: [shell, const Accoglienza(), const PropostaSblocco()]),
+    body: Stack(children: [shell, const Accoglienza()]),
     bottomNavigationBar: NavigationBar(
       selectedIndex: shell.currentIndex,
       destinations: _destinazioni,

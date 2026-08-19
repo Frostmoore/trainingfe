@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
+import '../../health/health_controller.dart';
 import '../../profile/corpo_controller.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
@@ -332,6 +333,19 @@ class _GraficoCalorie extends ConsumerWidget {
     final finestra = ref.watch(caloriesWindowProvider);
     final theme = Theme.of(context);
 
+    /*
+     * 💡 Le date come **una stringa sola**: e' la chiave della `family`, e una
+     * lista non va bene — due liste con lo stesso contenuto non sono uguali per
+     * Riverpod, e il provider si ricreerebbe a ogni ridisegno. E' la stessa
+     * trappola di `DateTime.now()`, in un'altra forma.
+     */
+    final giorni = serie.valueOrNull?.dates ?? const <String>[];
+
+    final daHealth = giorni.isEmpty
+        ? const <String, int>{}
+        : (ref.watch(kcalAttivePerGiorniProvider(giorni.join(','))).valueOrNull ??
+              const <String, int>{});
+
     return _Riquadro(
       titolo: 'Calorie',
       sottotitolo: 'assunte contro bruciate',
@@ -394,7 +408,22 @@ class _GraficoCalorie extends ConsumerWidget {
                               width: 6,
                             ),
                             BarChartRodData(
-                              toY: i < s.burned.length ? s.burned[i] : 0,
+                              /*
+                               * 🚨 **Le bruciate vengono dalla stessa fonte
+                               * dell'intestazione** — 19/08/2026.
+                               *
+                               * Qui c'era `s.burned[i]`, cioe' la serie del
+                               * **server**: quello calcola con la formula sulle
+                               * sedute registrate e le calorie dell'orologio non
+                               * le ha — restano sul telefono per decisione del
+                               * committente.
+                               *
+                               * ⚠️ Risultato: l'intestazione diceva 680 e il
+                               * grafico zero. Non due numeri sbagliati: **due
+                               * fonti diverse per lo stesso numero**, e ne avevo
+                               * corretta una sola.
+                               */
+                              toY: _bruciateDi(s, i, daHealth),
                               color: theme.colorScheme.tertiary,
                               width: 6,
                             ),
@@ -594,4 +623,20 @@ class _ConsensoAiMancante extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Le bruciate della colonna `i`: quelle dell'orologio se ci sono, altrimenti
+/// quelle della serie del server.
+///
+/// 🚨 **Si sostituiscono, non si sommano.** L'orologio ha gia' misurato
+/// l'allenamento che la formula del server sta stimando: sommarli darebbe il
+/// doppio, con un numero che resta plausibile. E' la stessa regola di
+/// `BruciateDelGiorno`, applicata al grafico.
+double _bruciateDi(Series s, int i, Map<String, int> daHealth) {
+  final data = i < s.dates.length ? s.dates[i] : null;
+  final orologio = data == null ? null : daHealth[data];
+
+  if (orologio != null && orologio > 0) return orologio.toDouble();
+
+  return i < s.burned.length ? s.burned[i] : 0;
 }

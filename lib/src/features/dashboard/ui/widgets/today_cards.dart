@@ -64,7 +64,7 @@ class CaloriesCard extends ConsumerWidget {
      */
     final bruciate = BruciateDelGiorno.scegli(
       manuale: n.bruciateAMano,
-      daHealth: ref.watch(kcalAttiveDelGiornoProvider(DateTime.now())).valueOrNull ?? 0,
+      daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
       stimate: n.burnedKcal,
     );
 

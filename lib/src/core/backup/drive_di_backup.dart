@@ -38,6 +38,29 @@ class DriveDiBackup implements CloudDiBackup {
 
   bool _avviato = false;
 
+  /// Il client Drive gia' autorizzato, tenuto da parte per qualche minuto.
+  ///
+  /// ── 🚨 Perche' esiste: senza, Google appariva «duemila volte» ────────
+  ///
+  /// **Ogni** operazione su Drive passava da `_api()`, che chiama
+  /// `attemptLightweightAuthentication()` — e su Android quella disegna il
+  /// riquadro con l'indirizzo email che «carica». Un ripristino fa **decine** di
+  /// operazioni (il file, l'elenco degli allegati, ogni foto): il riquadro
+  /// compariva e spariva a ogni giro, in momenti e forme diverse.
+  ///
+  /// ⚠️ Il committente l'ha descritto cosi': *«appare duemila volte, in tempi
+  /// diversi e in modi diversi. Da' un'impressione di poca cura»*. Aveva
+  /// ragione, e non era un problema di Google: era il nostro codice che
+  /// richiedeva l'autorizzazione a ogni chiamata invece che una volta.
+  ///
+  /// 💡 Cinque minuti e non di piu': un token di accesso dura circa un'ora, ma
+  /// tenerlo troppo vorrebbe dire non accorgersi di una revoca. Cinque minuti
+  /// coprono un ripristino intero e restano onesti.
+  drive.DriveApi? _clientTenuto;
+  DateTime? _tenutoDal;
+
+  static const _duraLaTenuta = Duration(minutes: 5);
+
   /// 🚨 Solo `drive.appdata`, e mai altro.
   ///
   /// ⚠️ Aggiungere `drive` o `drive.readonly` — anche «per comodità», anche
@@ -104,6 +127,12 @@ class DriveDiBackup implements CloudDiBackup {
   @override
   Future<void> scollega() async {
     await _avvia();
+
+    // ⚠️ Scollegandosi si butta anche il client tenuto: riusarlo dopo vorrebbe
+    // dire continuare a scrivere su un account da cui si e' appena usciti.
+    _clientTenuto = null;
+    _tenutoDal = null;
+
     await GoogleSignIn.instance.disconnect();
   }
 
@@ -325,6 +354,18 @@ class DriveDiBackup implements CloudDiBackup {
 
   /// Il client di Drive, con il token in testa a ogni richiesta.
   Future<drive.DriveApi> _api() async {
+    /*
+     * 🚨 Se ce l'abbiamo gia', si riusa: e' l'unica riga che toglie di mezzo
+     * il riquadro di Google che compariva a ogni operazione. Vedi
+     * `_clientTenuto`.
+     */
+    final tenuto = _clientTenuto;
+    final dal = _tenutoDal;
+
+    if (tenuto != null && dal != null && DateTime.now().difference(dal) < _duraLaTenuta) {
+      return tenuto;
+    }
+
     await _avvia();
 
     final conto = await GoogleSignIn.instance.attemptLightweightAuthentication();
@@ -343,7 +384,12 @@ class DriveDiBackup implements CloudDiBackup {
       );
     }
 
-    return drive.DriveApi(_ClientConToken(autorizzazione.accessToken));
+    final api = drive.DriveApi(_ClientConToken(autorizzazione.accessToken));
+
+    _clientTenuto = api;
+    _tenutoDal = DateTime.now();
+
+    return api;
   }
 
   /// Cerca un file **dentro `appDataFolder`**.

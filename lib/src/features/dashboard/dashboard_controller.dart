@@ -28,6 +28,7 @@ class Series {
   const Series({
     required this.labels,
     required this.granularity,
+    this.dates = const [],
     this.values = const [],
     this.consumed = const [],
     this.burned = const [],
@@ -46,6 +47,7 @@ class Series {
 
     return Series(
       labels: ((j['labels'] as List?) ?? const []).map((e) => e.toString()).toList(),
+      dates: ((j['dates'] as List?) ?? const []).map((e) => e.toString()).toList(),
       values: numeri('values'),
       consumed: numeri('consumed'),
       burned: numeri('burned'),
@@ -66,6 +68,17 @@ class Series {
   /// Solo per le calorie.
   final List<double> consumed;
   final List<double> burned;
+
+  /// Le date vere delle colonne (`yyyy-mm-dd`) — 19/08/2026.
+  ///
+  /// 🚨 `labels` e' testo da mostrare (`d/m`): non ci si ricostruisce sopra un
+  /// giorno. Queste servono a unire alla serie le calorie **misurate
+  /// dall'orologio**, che stanno solo sul telefono e vanno accostate **per
+  /// giorno**.
+  ///
+  /// ⚠️ Vuota sulle serie vecchie, e va bene: senza date non si fonde niente e
+  /// resta quello che manda il server.
+  final List<String> dates;
 
   final String granularity;
   final String? period;

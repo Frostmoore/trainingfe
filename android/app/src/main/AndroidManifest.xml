@@ -17,6 +17,27 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
 
     <!--
+      🆕 FASE 1 (19/08/2026) — le calorie bruciate con l'attività.
+
+      🚨 READ_ACTIVE_CALORIES_BURNED, **mai** READ_TOTAL_CALORIES_BURNED.
+
+      Il totale comprende il **metabolismo basale**. Il nostro obiettivo calorico
+      è già un TDEE, che il basale ce l'ha dentro: sommarci il totale lo
+      conterebbe due volte — circa **+1.600 kcal al giorno** di margine
+      regalato, tutti i giorni, con un numero che resta plausibile e un difetto
+      che non si vede.
+
+      ⚠️ E **mai** la traccia dell'allenamento (WORKOUT_ROUTE): è il GPS, dice
+      dove abiti e che giro fai la domenica. Non serve a niente di quello che
+      facciamo, ed è il dato più identificante che il telefono possieda.
+
+      💡 READ_EXERCISE serve a leggere gli allenamenti registrati dall'orologio,
+      per poterli mostrare e farci assegnare una scheda.
+    -->
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+
+    <!--
       🚨 LA RETE — 14/08/2026.
 
       ⚠️ **Il template di Flutter mette `INTERNET` solo in `debug` e `profile`**,

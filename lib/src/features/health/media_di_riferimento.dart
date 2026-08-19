@@ -42,6 +42,20 @@ class LetturaConMedia {
     return switch (metrica) {
       MetricaSalute.hrv => s <= -15,
       MetricaSalute.battitoARiposo || MetricaSalute.battitoMedio => s >= 15,
+
+      /*
+       * 🚨 **Le calorie attive non sono mai un'anomalia** — FASE 1.
+       *
+       * ⚠️ Non e' una dimenticanza: e' una decisione, e lo switch esaustivo ha
+       * fatto il suo mestiere costringendo a prenderla invece di lasciarla
+       * cadere in un `default`.
+       *
+       * Bruciare piu' del solito e' un allenamento, non un segnale di
+       * recupero; bruciarne meno e' un giorno di riposo. 💡 Portarlo nel
+       * giudizio del recupero direbbe «attenzione» a chi si e' allenato bene e
+       * a chi si e' riposato apposta — cioe' a tutti, nel verso sbagliato.
+       */
+      MetricaSalute.calorieAttive => false,
     };
   }
 }

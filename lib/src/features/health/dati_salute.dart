@@ -16,7 +16,27 @@ library;
 enum MetricaSalute {
   hrv('hrv', 'Variabilità cardiaca', 'ms', 5.0, 300.0),
   battitoARiposo('resting_hr', 'Battito a riposo', 'bpm', 25.0, 120.0),
-  battitoMedio('hr', 'Battito medio', 'bpm', 30.0, 220.0);
+  battitoMedio('hr', 'Battito medio', 'bpm', 30.0, 220.0),
+
+  /// Le calorie bruciate **con l'attività** — FASE 1, 19/08/2026.
+  ///
+  /// ── 🚨 ATTIVE, non totali ──────────────────────────────────────────
+  ///
+  /// Health Connect espone due record, e la parola «totali» porta su quello
+  /// sbagliato: `TotalCaloriesBurnedRecord` comprende il **metabolismo basale**,
+  /// `ActiveCaloriesBurnedRecord` solo l'attività.
+  ///
+  /// ⚠️ Il nostro obiettivo è già un **TDEE**, che il basale ce l'ha dentro:
+  /// sommarci il totale lo conterebbe **due volte** — circa +1.600 kcal al
+  /// giorno, tutti i giorni, con un numero che resta credibile.
+  ///
+  /// ── ⚠️ E i limiti servono più che altrove ────────────────────────────────
+  ///
+  /// Arrivano **tanti campioni brevi**, non un numero al giorno: qualche kcal
+  /// per volta. Il tetto è per **singolo campione**, non per la giornata — e un
+  /// valore assurdo qui non sposta una media come farebbe un HRV sbagliato:
+  /// sposta **quanto qualcuno può mangiare**.
+  calorieAttive('active_kcal', 'Calorie attive', 'kcal', 0.0, 5000.0);
 
   const MetricaSalute(this.codice, this.etichetta, this.unita, this._min, this._max);
 

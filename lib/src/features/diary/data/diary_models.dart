@@ -141,6 +141,7 @@ class DiaryDay {
     required this.carbs,
     required this.fat,
     required this.burnedKcal,
+    this.burnedManuale = false,
     this.targetKcal,
     this.targetProtein,
     this.targetCarbs,
@@ -163,6 +164,7 @@ class DiaryDay {
       carbs: _num(totals['carbs']) ?? 0,
       fat: _num(totals['fat']) ?? 0,
       burnedKcal: (burned['kcal'] as num?)?.toInt() ?? 0,
+      burnedManuale: burned['source'] == 'manual',
       targetKcal: _num(targets?['kcal']),
       targetProtein: _num(targets?['protein_g']),
       targetCarbs: _num(targets?['carbs_g']),
@@ -175,6 +177,21 @@ class DiaryDay {
   final List<DiaryMeal> meals;
   final double kcal, protein, carbs, fat;
   final int burnedKcal;
+
+  /// Il valore è stato **dichiarato a mano** nella scheda cibo — FASE 1.
+  ///
+  /// 🚨 **Serve a distinguere «0 dichiarato» da «non lo so»**, e senza di
+  /// esso la catena non si può risolvere: chi scrive zero — «oggi non ho
+  /// bruciato niente» — deve vincere sull'orologio, mentre chi non ha scritto
+  /// niente deve lasciarlo passare. Guardando solo [burnedKcal] i due casi sono
+  /// lo stesso numero.
+  ///
+  /// 💡 Arriva da `burned.source` del server, che vale `manual` quando esiste
+  /// una riga in `daily_burns`.
+  final bool burnedManuale;
+
+  /// Il valore manuale, o `null` se non è stato dichiarato.
+  int? get bruciateAMano => burnedManuale ? burnedKcal : null;
 
   /// `null` quando il backend non ha abbastanza dati per calcolarlo: manca il
   /// profilo o il piano. **Non si inventa**, perché l'utente ci costruirebbe

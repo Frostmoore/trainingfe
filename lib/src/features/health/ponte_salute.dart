@@ -35,6 +35,18 @@ class PonteSalute {
     HealthDataType.SLEEP_REM,
     HealthDataType.SLEEP_LIGHT,
     HealthDataType.SLEEP_AWAKE,
+
+    /*
+     * 🆕 FASE 1 — le calorie bruciate con l'attività.
+     *
+     * 🚨 **`ACTIVE_ENERGY_BURNED`, mai `TOTAL_CALORIES_BURNED`**: il totale
+     * comprende il metabolismo basale, e il nostro obiettivo è già un TDEE che
+     * il basale ce l'ha dentro. Sommarlo lo conterebbe due volte — circa
+     * +1.600 kcal al giorno, con un numero che resta plausibile.
+     *
+     * ⚠️ E **mai** `WORKOUT_ROUTE`: è la traccia GPS.
+     */
+    HealthDataType.ACTIVE_ENERGY_BURNED,
   ];
 
   /// 🚨 **Solo lettura.** Non scriviamo niente in Health Connect: l'app non ha
@@ -217,6 +229,7 @@ class PonteSalute {
     HealthDataType.HEART_RATE_VARIABILITY_RMSSD => MetricaSalute.hrv,
     HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
     HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
+    HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
     _ => null,
   };
 

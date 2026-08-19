@@ -337,6 +337,44 @@ class ArchivioSalute extends _$ArchivioSalute {
         .get();
   }
 
+  /// Le calorie bruciate con l'attività in un giorno — FASE 1.
+  ///
+  /// ── 🚨 Perché il MASSIMO fra le sorgenti, e non la somma ─────────────
+  ///
+  /// Health Connect può ricevere le calorie attive da **più applicazioni
+  /// insieme**: l'orologio le misura, e intanto il telefono le stima dai passi.
+  /// Sommando tutto, una camminata verrebbe contata **due volte** — e il numero
+  /// resterebbe plausibile.
+  ///
+  /// 💡 Si somma **dentro ogni sorgente** e si tiene la **più alta**: chi ha
+  /// misurato di più è quasi sempre il dispositivo che la persona indossava,
+  /// mentre la stima dai passi del telefono in tasca è la più povera. ⚠️ Non è
+  /// perfetto — due orologi diversi darebbero comunque il maggiore invece della
+  /// realtà — ma sbaglia **per difetto**, che sul margine calorico è il verso
+  /// giusto.
+  ///
+  /// ── ⚠️ E non esce mai da questo telefono ─────────────────────────────────
+  ///
+  /// È un dato di salute: vive qui e finisce **nel backup**, e il server non lo
+  /// vede. La somma con l'obiettivo si fa **a runtime** nell'app.
+  Future<int> kcalAttiveDi(DateTime giorno) async {
+    final righe = await (select(lettureSalute)
+          ..where((t) =>
+              t.metrica.equals(MetricaSalute.calorieAttive.codice) &
+              t.giorno.equals(_soloGiorno(giorno))))
+        .get();
+
+    if (righe.isEmpty) return 0;
+
+    final perSorgente = <String, double>{};
+
+    for (final r in righe) {
+      perSorgente[r.fonte] = (perSorgente[r.fonte] ?? 0) + r.valore;
+    }
+
+    return perSorgente.values.reduce((a, b) => a > b ? a : b).round();
+  }
+
   /// I campioni di una notte, in ordine di inizio.
   Future<List<CampioneSonno>> campioniDellaNotte(DateTime notte) {
     return (select(campioniSonno)

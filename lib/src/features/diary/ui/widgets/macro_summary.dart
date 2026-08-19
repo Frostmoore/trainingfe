@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/avvertenza_nutrizionale.dart';
+import '../../../health/health_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
+import '../../data/bruciate_del_giorno.dart';
 import '../../data/diary_models.dart';
 import '../../data/target_del_giorno.dart';
 import '../../diary_controller.dart';
@@ -40,6 +42,24 @@ class MacroSummary extends ConsumerWidget {
     final locale = esito?.target;
 
     /*
+     * 🆕 **La catena delle bruciate** — FASE 1: manuale → orologio → stima.
+     *
+     * 🚨 Le calorie di Google Health **non escono dal telefono**: si leggono
+     * dall'archivio locale e la somma si fa qui, a runtime. Il server non le
+     * vede.
+     *
+     * 💡 `valueOrNull ?? 0` e non un caricamento bloccante: se l'archivio non
+     * ha ancora risposto si mostra la stima, e al giro dopo il numero si
+     * aggiorna. Una rotellina al posto dell'obiettivo calorico sarebbe peggio
+     * di un numero che si corregge da solo in mezzo secondo.
+     */
+    final bruciate = BruciateDelGiorno.scegli(
+      manuale: day.bruciateAMano,
+      daHealth: ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
+      stimate: day.burnedKcal,
+    );
+
+    /*
      * 🚨 **Le bruciate entrano nell'obiettivo QUI** — N23.B1, 19/08/2026.
      *
      * Fino a oggi la somma esisteva solo sul server, e dopo D9-bis il server
@@ -55,7 +75,7 @@ class MacroSummary extends ConsumerWidget {
     final target = TargetDelGiorno.scegli(
       dalServer: day.hasTarget ? day.targetKcal : null,
       locale: locale?.kcal.toDouble(),
-      bruciate: day.burnedKcal,
+      bruciate: bruciate.kcal,
     );
 
     // 💡 `?? 0` e non `!`: il numero si usa solo dentro rami protetti da
@@ -105,11 +125,22 @@ class MacroSummary extends ConsumerWidget {
                 // C15 — ed è toccabile: il totale bruciato si può dichiarare a
                 // mano, per chi porta un orologio che conta meglio della nostra
                 // stima o per chi ha fatto qualcosa che non ha registrato.
+                /*
+                 * 🆕 **Si vede da dove viene il numero** — FASE 1.6.
+                 *
+                 * 💡 Senza, chi vede 310 invece dei 400 che si aspettava non
+                 * ha nessun modo di capire perché — e l'unica spiegazione che
+                 * gli resta è «l'app sbaglia». L'etichetta costa una riga.
+                 */
                 ActionChip(
                   avatar: const Icon(Icons.local_fire_department_rounded, size: 16),
-                  label: Text('${day.burnedKcal}'),
+                  label: Text(
+                    bruciate.fonte == FonteBruciate.nessuna
+                        ? '${bruciate.kcal}'
+                        : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
+                  ),
                   visualDensity: VisualDensity.compact,
-                  onPressed: () => _bruciateAMano(context, ref, day.burnedKcal),
+                  onPressed: () => _bruciateAMano(context, ref, day.bruciateAMano),
                 ),
               ],
             ),
@@ -227,8 +258,15 @@ class MacroSummary extends ConsumerWidget {
 /// ⚠️ **Svuotare il campo rimette la stima**, non azzera: è la differenza fra
 /// «non lo so» e «oggi ho bruciato zero», e il backend la rispetta. Va detto nel
 /// modulo, o l'unico modo per scoprirlo è provare.
-Future<void> _bruciateAMano(BuildContext context, WidgetRef ref, int attuale) async {
-  final controller = TextEditingController(text: attuale > 0 ? attuale.toString() : '');
+Future<void> _bruciateAMano(BuildContext context, WidgetRef ref, int? attuale) async {
+  /*
+   * 🚨 **`int?` e non `int`**: il campo parte vuoto quando non c'è un valore
+   * dichiarato, e parte con **zero scritto** se qualcuno ha davvero dichiarato
+   * zero. Con un `int` i due casi erano lo stesso, e riaprendo il modulo dopo
+   * aver scritto 0 si sarebbe trovato il campo vuoto — cioè il contrario di
+   * quello che si era detto.
+   */
+  final controller = TextEditingController(text: attuale?.toString() ?? '');
 
   final valore = await showDialog<String>(
     context: context,
@@ -240,7 +278,7 @@ Future<void> _bruciateAMano(BuildContext context, WidgetRef ref, int attuale) as
         keyboardType: TextInputType.number,
         decoration: const InputDecoration(
           labelText: 'kcal',
-          helperText: 'Vuoto = usa la stima degli allenamenti',
+          helperText: "Vuoto = usa l'orologio, o la stima degli allenamenti",
         ),
       ),
       actions: [

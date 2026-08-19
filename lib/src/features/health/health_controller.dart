@@ -22,6 +22,21 @@ final ponteSaluteProvider = Provider<PonteSalute>(
   (ref) => PonteSalute(ref.watch(archivioSaluteProvider)),
 );
 
+/// Le calorie bruciate con l'attività in un giorno, lette da Google Health —
+/// FASE 1.
+///
+/// 🚨 **Non escono mai da questo telefono.** Vivono in `ArchivioSalute` (che
+/// finisce nel backup) e la somma con l'obiettivo calorico si fa **a runtime**,
+/// qui nell'app: il server non le vede e non deve vederle.
+///
+/// 💡 `family` sul giorno perché la scheda cibo si può sfogliare indietro, e
+/// il numero è quello **di quel giorno** — non quello di oggi mostrato accanto a
+/// una data di tre giorni fa.
+final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
+    .family<int, DateTime>((ref, giorno) async {
+      return ref.watch(archivioSaluteProvider).kcalAttiveDi(giorno);
+    });
+
 /// Lo stato del collegamento con Health Connect.
 class StatoSalute {
   const StatoSalute({

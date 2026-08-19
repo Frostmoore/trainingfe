@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/states.dart';
 import '../../../nutrition/data/piano_alimentare.dart';
@@ -41,10 +43,28 @@ class DalPianoTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Non riesco a leggere i tuoi piani.\n$e')),
       data: (piani) {
         if (piani.isEmpty) {
-          return const EmptyState(
-            icon: Icons.restaurant_menu_outlined,
-            title: 'Nessun piano',
-            message: 'Quando il tuo trainer te ne manda uno, lo trovi qui.',
+          /*
+           * 💡 **Da qui si importa** — N20. E' il punto in cui la mancanza
+           * si sente: chi apre questa scheda un piano lo sta cercando, e chi
+           * ce l'ha su carta non ha nessun altro posto dove dirlo.
+           */
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const EmptyState(
+                  icon: Icons.restaurant_menu_outlined,
+                  title: 'Nessun piano',
+                  message: 'Quando il tuo trainer te ne manda uno, lo trovi qui.',
+                ),
+                const SizedBox(height: Gap.md),
+                FilledButton.tonalIcon(
+                  onPressed: () => context.push(AppRoutes.importaPiano),
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Ho un piano su PDF: importalo'),
+                ),
+              ],
+            ),
           );
         }
 

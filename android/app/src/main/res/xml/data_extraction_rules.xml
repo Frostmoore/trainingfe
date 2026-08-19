@@ -40,7 +40,8 @@
         <!--
           N12.3 - la stessa riga copre le SOTTOCARTELLE.
 
-          Da `v7.4.0` sotto `foto/` ci sono `progressi/` e `chat/`. #! `path`
+          Da `v7.4.0` sotto `foto/` ci sono `progressi/` e `chat/`, e da
+          `v7.14.0` anche `piani/` (gli originali dei piani importati). #! `path`
           e' un PREFISSO, quindi valgono gia' entrambe: non serve una riga per
           cartella. /!\ Ma se qualcuno rinominasse `ArchivioFoto.madre`,
           questa regola smetterebbe di valere IN SILENZIO - ed e' scritto anche

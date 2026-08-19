@@ -2321,6 +2321,32 @@ class $PianiRicevutiTable extends PianiRicevuti
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pdfOriginaleMeta = const VerificationMeta(
+    'pdfOriginale',
+  );
+  @override
+  late final GeneratedColumn<String> pdfOriginale = GeneratedColumn<String>(
+    'pdf_originale',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _importatoMeta = const VerificationMeta(
+    'importato',
+  );
+  @override
+  late final GeneratedColumn<bool> importato = GeneratedColumn<bool>(
+    'importato',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("importato" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2331,6 +2357,8 @@ class $PianiRicevutiTable extends PianiRicevuti
     piano,
     ricevutaIl,
     aggiornatoIl,
+    pdfOriginale,
+    importato,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2405,6 +2433,21 @@ class $PianiRicevutiTable extends PianiRicevuti
         ),
       );
     }
+    if (data.containsKey('pdf_originale')) {
+      context.handle(
+        _pdfOriginaleMeta,
+        pdfOriginale.isAcceptableOrUnknown(
+          data['pdf_originale']!,
+          _pdfOriginaleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('importato')) {
+      context.handle(
+        _importatoMeta,
+        importato.isAcceptableOrUnknown(data['importato']!, _importatoMeta),
+      );
+    }
     return context;
   }
 
@@ -2446,6 +2489,14 @@ class $PianiRicevutiTable extends PianiRicevuti
         DriftSqlType.dateTime,
         data['${effectivePrefix}aggiornato_il'],
       ),
+      pdfOriginale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pdf_originale'],
+      ),
+      importato: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}importato'],
+      )!,
     );
   }
 
@@ -2481,6 +2532,23 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
 
   /// Quando e' stato sostituito l'ultima volta. `null` = mai.
   final DateTime? aggiornatoIl;
+
+  /// Il PDF originale da cui e' stato importato — N20.4.
+  ///
+  /// 🚨 **Percorso relativo dentro `Documents/foto/piani`**, cioe' dentro
+  /// il backup. L'originale deve restare consultabile anche quando la riga sul
+  /// server e' scaduta: senza, fra un mese non c'e' piu' niente con cui
+  /// confrontare i numeri che si stanno seguendo.
+  ///
+  /// ⚠️ `null` per i piani arrivati via chat, che un originale non ce l'hanno.
+  final String? pdfOriginale;
+
+  /// L'ha importato la persona da un PDF, non l'ha mandato un trainer.
+  ///
+  /// 💡 Serve a **dirlo in faccia** nell'elenco: un piano importato lo ha
+  /// trascritto un modello e riletto una persona, e chi lo guarda fra sei mesi
+  /// deve sapere da dove viene.
+  final bool importato;
   const PianoRicevuto({
     required this.id,
     required this.messaggioId,
@@ -2490,6 +2558,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
     required this.piano,
     required this.ricevutaIl,
     this.aggiornatoIl,
+    this.pdfOriginale,
+    required this.importato,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2506,6 +2576,10 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
     if (!nullToAbsent || aggiornatoIl != null) {
       map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl);
     }
+    if (!nullToAbsent || pdfOriginale != null) {
+      map['pdf_originale'] = Variable<String>(pdfOriginale);
+    }
+    map['importato'] = Variable<bool>(importato);
     return map;
   }
 
@@ -2523,6 +2597,10 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
       aggiornatoIl: aggiornatoIl == null && nullToAbsent
           ? const Value.absent()
           : Value(aggiornatoIl),
+      pdfOriginale: pdfOriginale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pdfOriginale),
+      importato: Value(importato),
     );
   }
 
@@ -2540,6 +2618,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
       piano: serializer.fromJson<String>(json['piano']),
       ricevutaIl: serializer.fromJson<DateTime>(json['ricevutaIl']),
       aggiornatoIl: serializer.fromJson<DateTime?>(json['aggiornatoIl']),
+      pdfOriginale: serializer.fromJson<String?>(json['pdfOriginale']),
+      importato: serializer.fromJson<bool>(json['importato']),
     );
   }
   @override
@@ -2554,6 +2634,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
       'piano': serializer.toJson<String>(piano),
       'ricevutaIl': serializer.toJson<DateTime>(ricevutaIl),
       'aggiornatoIl': serializer.toJson<DateTime?>(aggiornatoIl),
+      'pdfOriginale': serializer.toJson<String?>(pdfOriginale),
+      'importato': serializer.toJson<bool>(importato),
     };
   }
 
@@ -2566,6 +2648,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
     String? piano,
     DateTime? ricevutaIl,
     Value<DateTime?> aggiornatoIl = const Value.absent(),
+    Value<String?> pdfOriginale = const Value.absent(),
+    bool? importato,
   }) => PianoRicevuto(
     id: id ?? this.id,
     messaggioId: messaggioId ?? this.messaggioId,
@@ -2575,6 +2659,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
     piano: piano ?? this.piano,
     ricevutaIl: ricevutaIl ?? this.ricevutaIl,
     aggiornatoIl: aggiornatoIl.present ? aggiornatoIl.value : this.aggiornatoIl,
+    pdfOriginale: pdfOriginale.present ? pdfOriginale.value : this.pdfOriginale,
+    importato: importato ?? this.importato,
   );
   PianoRicevuto copyWithCompanion(PianiRicevutiCompanion data) {
     return PianoRicevuto(
@@ -2594,6 +2680,10 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
       aggiornatoIl: data.aggiornatoIl.present
           ? data.aggiornatoIl.value
           : this.aggiornatoIl,
+      pdfOriginale: data.pdfOriginale.present
+          ? data.pdfOriginale.value
+          : this.pdfOriginale,
+      importato: data.importato.present ? data.importato.value : this.importato,
     );
   }
 
@@ -2607,7 +2697,9 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
           ..write('nome: $nome, ')
           ..write('piano: $piano, ')
           ..write('ricevutaIl: $ricevutaIl, ')
-          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write('aggiornatoIl: $aggiornatoIl, ')
+          ..write('pdfOriginale: $pdfOriginale, ')
+          ..write('importato: $importato')
           ..write(')'))
         .toString();
   }
@@ -2622,6 +2714,8 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
     piano,
     ricevutaIl,
     aggiornatoIl,
+    pdfOriginale,
+    importato,
   );
   @override
   bool operator ==(Object other) =>
@@ -2634,7 +2728,9 @@ class PianoRicevuto extends DataClass implements Insertable<PianoRicevuto> {
           other.nome == this.nome &&
           other.piano == this.piano &&
           other.ricevutaIl == this.ricevutaIl &&
-          other.aggiornatoIl == this.aggiornatoIl);
+          other.aggiornatoIl == this.aggiornatoIl &&
+          other.pdfOriginale == this.pdfOriginale &&
+          other.importato == this.importato);
 }
 
 class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
@@ -2646,6 +2742,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
   final Value<String> piano;
   final Value<DateTime> ricevutaIl;
   final Value<DateTime?> aggiornatoIl;
+  final Value<String?> pdfOriginale;
+  final Value<bool> importato;
   const PianiRicevutiCompanion({
     this.id = const Value.absent(),
     this.messaggioId = const Value.absent(),
@@ -2655,6 +2753,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
     this.piano = const Value.absent(),
     this.ricevutaIl = const Value.absent(),
     this.aggiornatoIl = const Value.absent(),
+    this.pdfOriginale = const Value.absent(),
+    this.importato = const Value.absent(),
   });
   PianiRicevutiCompanion.insert({
     this.id = const Value.absent(),
@@ -2665,6 +2765,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
     required String piano,
     required DateTime ricevutaIl,
     this.aggiornatoIl = const Value.absent(),
+    this.pdfOriginale = const Value.absent(),
+    this.importato = const Value.absent(),
   }) : messaggioId = Value(messaggioId),
        mittenteId = Value(mittenteId),
        nome = Value(nome),
@@ -2679,6 +2781,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
     Expression<String>? piano,
     Expression<DateTime>? ricevutaIl,
     Expression<DateTime>? aggiornatoIl,
+    Expression<String>? pdfOriginale,
+    Expression<bool>? importato,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2689,6 +2793,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
       if (piano != null) 'piano': piano,
       if (ricevutaIl != null) 'ricevuta_il': ricevutaIl,
       if (aggiornatoIl != null) 'aggiornato_il': aggiornatoIl,
+      if (pdfOriginale != null) 'pdf_originale': pdfOriginale,
+      if (importato != null) 'importato': importato,
     });
   }
 
@@ -2701,6 +2807,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
     Value<String>? piano,
     Value<DateTime>? ricevutaIl,
     Value<DateTime?>? aggiornatoIl,
+    Value<String?>? pdfOriginale,
+    Value<bool>? importato,
   }) {
     return PianiRicevutiCompanion(
       id: id ?? this.id,
@@ -2711,6 +2819,8 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
       piano: piano ?? this.piano,
       ricevutaIl: ricevutaIl ?? this.ricevutaIl,
       aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
+      pdfOriginale: pdfOriginale ?? this.pdfOriginale,
+      importato: importato ?? this.importato,
     );
   }
 
@@ -2741,6 +2851,12 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
     if (aggiornatoIl.present) {
       map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl.value);
     }
+    if (pdfOriginale.present) {
+      map['pdf_originale'] = Variable<String>(pdfOriginale.value);
+    }
+    if (importato.present) {
+      map['importato'] = Variable<bool>(importato.value);
+    }
     return map;
   }
 
@@ -2754,7 +2870,9 @@ class PianiRicevutiCompanion extends UpdateCompanion<PianoRicevuto> {
           ..write('nome: $nome, ')
           ..write('piano: $piano, ')
           ..write('ricevutaIl: $ricevutaIl, ')
-          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write('aggiornatoIl: $aggiornatoIl, ')
+          ..write('pdfOriginale: $pdfOriginale, ')
+          ..write('importato: $importato')
           ..write(')'))
         .toString();
   }
@@ -4223,6 +4341,8 @@ typedef $$PianiRicevutiTableCreateCompanionBuilder =
       required String piano,
       required DateTime ricevutaIl,
       Value<DateTime?> aggiornatoIl,
+      Value<String?> pdfOriginale,
+      Value<bool> importato,
     });
 typedef $$PianiRicevutiTableUpdateCompanionBuilder =
     PianiRicevutiCompanion Function({
@@ -4234,6 +4354,8 @@ typedef $$PianiRicevutiTableUpdateCompanionBuilder =
       Value<String> piano,
       Value<DateTime> ricevutaIl,
       Value<DateTime?> aggiornatoIl,
+      Value<String?> pdfOriginale,
+      Value<bool> importato,
     });
 
 class $$PianiRicevutiTableFilterComposer
@@ -4282,6 +4404,16 @@ class $$PianiRicevutiTableFilterComposer
 
   ColumnFilters<DateTime> get aggiornatoIl => $composableBuilder(
     column: $table.aggiornatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pdfOriginale => $composableBuilder(
+    column: $table.pdfOriginale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get importato => $composableBuilder(
+    column: $table.importato,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4334,6 +4466,16 @@ class $$PianiRicevutiTableOrderingComposer
     column: $table.aggiornatoIl,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get pdfOriginale => $composableBuilder(
+    column: $table.pdfOriginale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get importato => $composableBuilder(
+    column: $table.importato,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PianiRicevutiTableAnnotationComposer
@@ -4376,6 +4518,14 @@ class $$PianiRicevutiTableAnnotationComposer
     column: $table.aggiornatoIl,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get pdfOriginale => $composableBuilder(
+    column: $table.pdfOriginale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get importato =>
+      $composableBuilder(column: $table.importato, builder: (column) => column);
 }
 
 class $$PianiRicevutiTableTableManager
@@ -4423,6 +4573,8 @@ class $$PianiRicevutiTableTableManager
                 Value<String> piano = const Value.absent(),
                 Value<DateTime> ricevutaIl = const Value.absent(),
                 Value<DateTime?> aggiornatoIl = const Value.absent(),
+                Value<String?> pdfOriginale = const Value.absent(),
+                Value<bool> importato = const Value.absent(),
               }) => PianiRicevutiCompanion(
                 id: id,
                 messaggioId: messaggioId,
@@ -4432,6 +4584,8 @@ class $$PianiRicevutiTableTableManager
                 piano: piano,
                 ricevutaIl: ricevutaIl,
                 aggiornatoIl: aggiornatoIl,
+                pdfOriginale: pdfOriginale,
+                importato: importato,
               ),
           createCompanionCallback:
               ({
@@ -4443,6 +4597,8 @@ class $$PianiRicevutiTableTableManager
                 required String piano,
                 required DateTime ricevutaIl,
                 Value<DateTime?> aggiornatoIl = const Value.absent(),
+                Value<String?> pdfOriginale = const Value.absent(),
+                Value<bool> importato = const Value.absent(),
               }) => PianiRicevutiCompanion.insert(
                 id: id,
                 messaggioId: messaggioId,
@@ -4452,6 +4608,8 @@ class $$PianiRicevutiTableTableManager
                 piano: piano,
                 ricevutaIl: ricevutaIl,
                 aggiornatoIl: aggiornatoIl,
+                pdfOriginale: pdfOriginale,
+                importato: importato,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

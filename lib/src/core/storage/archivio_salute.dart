@@ -45,7 +45,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -93,6 +93,26 @@ class ArchivioSalute extends _$ArchivioSalute {
            * zero, cioe' a noi.
            */
           if (da < 7) await _riaccreditaLeNotti();
+
+          /*
+           * v7 -> v8 (N20): il piano importato da PDF, e il suo originale.
+           *
+           * 🚨 **Due colonne nullable e nessuna tabella nuova**, di
+           * proposito: un piano importato e' un piano, e tenerlo altrove
+           * vorrebbe dire due elenchi da mostrare, due backup da fare e due
+           * posti dove cercarlo. Le colonne dicono *da dove viene*, non
+           * *cos'e'*.
+           *
+           * ⚠️ `pdfOriginale` e' il percorso relativo dentro
+           * `Documents/foto/piani`, che e' **nel backup**: l'originale deve
+           * restare consultabile anche quando la riga sul server e' scaduta,
+           * altrimenti fra un mese non c'e' piu' niente con cui confrontare i
+           * numeri che si stanno seguendo.
+           */
+          if (da < 8) {
+            await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
+            await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
+          }
         },
       );
 
@@ -630,6 +650,46 @@ class ArchivioSalute extends _$ArchivioSalute {
     return true;
   }
 
+  /// Salva un piano che la persona ha **importato da un PDF** — N20.
+  ///
+  /// ── 🚨 Perche' finisce nella STESSA tabella dei piani ricevuti ────
+  ///
+  /// Perche' un piano importato **e' un piano**. Metterlo altrove vorrebbe dire
+  /// due elenchi da mostrare, due strade nel backup e due posti dove cercarlo —
+  /// e il giorno che una delle due si dimentica di una colonna, il difetto si
+  /// vede solo su meta' dei piani.
+  ///
+  /// ── ⚠️ L'id del messaggio, che qui un messaggio non c'e' ────────────────
+  ///
+  /// `messaggioId` e' `unique` e serve a non duplicare un piano toccando due
+  /// volte lo stesso messaggio. Un'importazione non ha un messaggio: si usa
+  /// **l'id dell'importazione col segno meno**, che non puo' collidere con
+  /// nessun id di messaggio (quelli sono positivi) e resta stabile se si
+  /// riprova.
+  ///
+  /// 💡 `mittenteId: 0` vuol dire «nessuno me l'ha mandato, l'ho portato
+  /// io»: e' l'unico valore che non somiglia all'id di una persona vera.
+  Future<void> salvaPianoImportato({
+    required int importazioneId,
+    required String nome,
+    required String piano,
+    String? pdfOriginale,
+  }) async {
+    await into(pianiRicevuti).insert(
+      PianiRicevutiCompanion.insert(
+        messaggioId: -importazioneId,
+        mittenteId: 0,
+        nome: nome,
+        piano: piano,
+        origineId: Value('importato:$importazioneId'),
+        pdfOriginale: Value(pdfOriginale),
+        importato: const Value(true),
+        ricevutaIl: DateTime.now(),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
   Future<List<PianoRicevuto>> piani() {
     return (select(pianiRicevuti)
           ..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
@@ -1036,6 +1096,23 @@ class PianiRicevuti extends Table {
 
   /// Quando e' stato sostituito l'ultima volta. `null` = mai.
   DateTimeColumn get aggiornatoIl => dateTime().nullable()();
+
+  /// Il PDF originale da cui e' stato importato — N20.4.
+  ///
+  /// 🚨 **Percorso relativo dentro `Documents/foto/piani`**, cioe' dentro
+  /// il backup. L'originale deve restare consultabile anche quando la riga sul
+  /// server e' scaduta: senza, fra un mese non c'e' piu' niente con cui
+  /// confrontare i numeri che si stanno seguendo.
+  ///
+  /// ⚠️ `null` per i piani arrivati via chat, che un originale non ce l'hanno.
+  TextColumn get pdfOriginale => text().nullable()();
+
+  /// L'ha importato la persona da un PDF, non l'ha mandato un trainer.
+  ///
+  /// 💡 Serve a **dirlo in faccia** nell'elenco: un piano importato lo ha
+  /// trascritto un modello e riletto una persona, e chi lo guarda fra sei mesi
+  /// deve sapere da dove viene.
+  BoolColumn get importato => boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('ContenutoRifiutato')

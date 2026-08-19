@@ -17,6 +17,7 @@ import '../../features/diary/ui/diary_screen.dart';
 import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/nutrition/ui/compositore_consigli.dart';
+import '../../features/nutrition/ui/importa_piano_screen.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
@@ -107,6 +108,13 @@ class AppRoutes {
   static const mieiPiani = '/profilo/i-miei-piani';
 
   static const compositorePiano = '/profilo/i-miei-piani/nuovo';
+
+  /// Importare un piano alimentare da un PDF — N20.
+  ///
+  /// 🚨 **Non sta sotto `/profilo/i-miei-piani`**, che e' la roba di chi
+  /// allena. Questa e' una funzione **della persona**: importa il piano che le
+  /// ha dato il suo professionista, e nessun trainer la vede o la usa.
+  static const importaPiano = '/diario/importa-piano';
 
   /// Le schede scritte dal trainer — G7.2.
   ///
@@ -372,6 +380,18 @@ final routerProvider = Provider<GoRouter>((ref) {
        * nutrizionista (N22) e all'importazione di un piano vero (N20). Resta
        * li', senza una rotta che ci porti, finche' non ci sara' chi puo' usarlo.
        */
+      /*
+       * N20 - l'importazione di un piano da PDF.
+       *
+       * 🚨 E' della persona, non del trainer: il piano lo ha redatto un
+       * professionista abilitato fuori di qui, e chi lo importa e'
+       * l'interessato. Il server non ha nessuna rotta che permetta a un
+       * trainer di leggerlo, nemmeno impersonando (N20.6).
+       */
+      GoRoute(
+        path: AppRoutes.importaPiano,
+        builder: (_, _) => const PortaDelleChiavi(child: ImportaPianoScreen()),
+      ),
       GoRoute(
         path: AppRoutes.compositorePiano,
         builder: (_, _) => const PortaDelleChiavi(child: CompositoreConsigli()),

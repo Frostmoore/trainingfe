@@ -25,11 +25,11 @@ class MieiPianiScreen extends ConsumerWidget {
     final stato = ref.watch(mieiPianiProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('I miei piani alimentari')),
+      appBar: AppBar(title: const Text('I miei consigli alimentari')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.compositorePiano),
         icon: const Icon(Icons.add),
-        label: const Text('Nuovo piano'),
+        label: const Text('Nuovi consigli'),
       ),
       body: stato.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -40,7 +40,7 @@ class MieiPianiScreen extends ConsumerWidget {
         data: (piani) => piani.isEmpty
             ? const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
-                title: 'Nessun piano',
+                title: 'Nessun consiglio',
                 message: 'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
               )
             : RefreshIndicator(

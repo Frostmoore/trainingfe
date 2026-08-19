@@ -445,35 +445,66 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   ///
   /// 💡 Va tolto **qui**, nell'app, e non basta che il server non lo mandi agli
   /// altri: il trainer **è** l'autore, il campo ce l'ha, ed è lui che spedisce.
+  /// Manda dei consigli alimentari — N19.3.
+  ///
+  /// ── 🚨 Parte un `food_advice`, non un `meal_plan` ──────────────────────
+  ///
+  /// Fino alla `v7.9.0` da qui usciva un piano alimentare completo. ⚠️ Un
+  /// elenco di alimenti mandato dentro la busta di un piano sarebbe arrivato
+  /// come **un piano con i giorni vuoti**: chi lo riceve non saprebbe se è un
+  /// consiglio o una dieta arrivata monca — e il giorno che un nutrizionista
+  /// manderà una dieta vera, i due si disegnerebbero uguali.
   Future<void> _allegaPiano() async {
-    final piano = await showModalBottomSheet<Map<String, dynamic>>(
+    final consigli = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       showDragHandle: true,
       builder: (_) => const _SceltaPiano(),
     );
 
-    if (piano == null || !mounted) return;
+    if (consigli == null || !mounted) return;
 
     setState(() => _inCorso = true);
 
     try {
-      // 🚨 R4 — la copia che parte non ha il promemoria di chi l'ha scritta.
-      final perLAllievo = Map<String, dynamic>.from(piano)..remove('rif_allievo');
+      /*
+       * 🚨 R4 — la copia che parte non ha il promemoria di chi l'ha scritta.
+       *
+       * 💡 E nemmeno i giorni: se anche il server ne restituisse (un documento
+       * vecchio, o uno importato), quello che si manda da qui resta un elenco.
+       * Chi puo' mandare una dieta non passa da questo bottone.
+       */
+      final perLAllievo = Map<String, dynamic>.from(consigli)
+        ..remove('rif_allievo')
+        ..remove('days');
+
+      perLAllievo['foods'] = _alimentiDa(perLAllievo);
 
       await ref
           .read(threadProvider(widget.id).notifier)
-          .inviaContenuto(ContenutoPianoAlimentare(perLAllievo));
+          .inviaContenuto(ContenutoConsigliAlimentari(perLAllievo));
       _inFondo();
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Piano non inviato. Riprova.')),
+          const SnackBar(content: Text('Consigli non inviati. Riprova.')),
         );
       }
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
   }
+
+  /// Gli alimenti, che il compositore semplice scrive dentro `notes`.
+  ///
+  /// 💡 Una riga per alimento: e' la forma piu' povera che sopravvive a
+  /// qualunque cosa, ed e' esattamente il punto — non c'e' una struttura da
+  /// interpretare male.
+  List<String> _alimentiDa(Map<String, dynamic> consigli) =>
+      (consigli['notes']?.toString() ?? '')
+          .split('\n')
+          .map((r) => r.trim())
+          .where((r) => r.isNotEmpty)
+          .toList(growable: false);
 
   /// «Manda una scheda» — S7.3, e lo spoglio di G7.
   ///
@@ -624,8 +655,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
                     IconButton(
                       onPressed: _inCorso ? null : _allegaPiano,
-                      icon: const Icon(Icons.restaurant_menu_outlined),
-                      tooltip: 'Manda un piano alimentare',
+                      icon: const Icon(Icons.eco_outlined),
+                      tooltip: 'Manda dei consigli alimentari',
                     ),
                   /*
                    * 🆕 N13.3 — la foto, e questo lo vedono **tutti e due**.

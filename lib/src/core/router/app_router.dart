@@ -16,7 +16,7 @@ import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
-import '../../features/nutrition/ui/compositore_piano.dart';
+import '../../features/nutrition/ui/compositore_consigli.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/gym_code_screen.dart';
@@ -360,14 +360,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.mieiPiani,
         builder: (_, _) => const PortaDelleChiavi(child: MieiPianiScreen()),
       ),
+      /*
+       * 🚨 **N19.2 — qui ci va il compositore SEMPLICE.**
+       *
+       * Quello completo (`CompositorePiano`) sa comporre giorni, pasti e
+       * grammi: e' un atto riservato, e il server lo rifiuta a un trainer con
+       * un 422. ⚠️ Lasciarlo raggiungibile vorrebbe dire far compilare a
+       * qualcuno un modulo di venti campi per poi dirgli di no alla fine.
+       *
+       * 💡 Il compositore completo **non e' stato cancellato**: serve al
+       * nutrizionista (N22) e all'importazione di un piano vero (N20). Resta
+       * li', senza una rotta che ci porti, finche' non ci sara' chi puo' usarlo.
+       */
       GoRoute(
         path: AppRoutes.compositorePiano,
-        builder: (_, _) => const PortaDelleChiavi(child: CompositorePiano()),
+        builder: (_, _) => const PortaDelleChiavi(child: CompositoreConsigli()),
       ),
       GoRoute(
         path: '${AppRoutes.mieiPiani}/:id',
         builder: (_, stato) => PortaDelleChiavi(
-          child: CompositorePiano(
+          child: CompositoreConsigli(
             pianoId: int.tryParse(stato.pathParameters['id'] ?? ''),
           ),
         ),

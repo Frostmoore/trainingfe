@@ -28,6 +28,30 @@ enum TipoFoto {
     accettaDocumenti: true,
   ),
 
+  /// I PDF dei piani alimentari importati — N20.
+  ///
+  /// ── 🚨 La domanda del backup, fatta PRIMA di scrivere il resto ────────
+  ///
+  /// *«Ogni volta che abbiamo un nuovo dato o un nuovo file, questo deve
+  /// comunque finire in qualche modo nel backup»* — il committente, 19/08/2026.
+  ///
+  /// 💡 **Va nel backup, e non e' scontato.** Il piano importato lo si e'
+  /// fatto fare da un professionista, e **si e' pagato**: perderlo cambiando
+  /// telefono sarebbe come perdere una ricetta medica. E l'originale serve
+  /// anche dopo, perche' e' contro quello che si controlla cio' che l'AI ha
+  /// trascritto (N20.4).
+  ///
+  /// ⚠️ **Permanente, quindi in `Documents`**: non e' una cache, non si
+  /// riscarica da nessuna parte. Il server non lo conserva — una dieta legata a
+  /// una persona sui nostri sistemi sarebbe un dato dell'art. 9 con un nome
+  /// sopra, ed e' esattamente cio' che D9-bis evita.
+  piani(
+    cartella: 'piani',
+    permanente: true,
+    nelBackup: true,
+    accettaDocumenti: true,
+  ),
+
   /// La foto del piatto mandata al modello.
   ///
   /// 🚨 **Vive dallo scatto alla conferma, e poi muore.** Serve a una cosa

@@ -184,10 +184,23 @@ void main() {
   });
 
   group('le decisioni sul tipo', () {
-    test('🚨 solo progressi e chat entrano nel backup', () async {
+    test('🚨 nel backup entrano progressi, chat e piani, e nessun altro', () async {
+      /*
+       * 🚨 **Questo test si rompe apposta quando si aggiunge un tipo.**
+       *
+       * Non e' un test sulla correttezza: e' il gancio che costringe chi ne
+       * aggiunge uno a fermarsi e rispondere alla domanda del committente —
+       * *«ogni volta che abbiamo un nuovo dato o un nuovo file, questo deve
+       * comunque finire in qualche modo nel backup»*.
+       *
+       * 💡 Ha gia' funzionato una volta: aggiungendo `piani` (N20) e' diventato
+       * rosso, e la risposta e' stata **si', ci va** — un piano importato lo si
+       * e' fatto fare da un professionista e si e' pagato, quindi perderlo
+       * cambiando telefono sarebbe come perdere una ricetta medica.
+       */
       expect(
         TipoFoto.daSalvare.map((t) => t.name).toSet(),
-        {'progressi', 'chat'},
+        {'progressi', 'chat', 'piani'},
       );
     });
 

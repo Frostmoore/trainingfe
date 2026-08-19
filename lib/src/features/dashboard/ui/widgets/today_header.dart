@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
+import '../../../diary/data/target_del_giorno.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
 import '../../../profile/corpo_controller.dart';
+import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/bottone_profilo.dart';
 import '../../data/dashboard_models.dart';
 import '../../gettoni_controller.dart';
@@ -35,6 +37,23 @@ class TodayHeader extends ConsumerWidget {
     final palestra = ref.watch(brandingControllerProvider).branding;
     final utente = ref.watch(authControllerProvider).user;
     final n = riepilogo.nutrition;
+
+    /*
+     * 🚨 **L'obiettivo comprende le bruciate** — N23.B1, 19/08/2026.
+     *
+     * Era il difetto riferito dal committente: la somma esisteva **solo sul
+     * server**, che dopo D9-bis non conosce il peso e restituisce `null`. Qui
+     * si vedeva quindi il target senza bruciate, o nessun target affatto.
+     *
+     * 💡 La regola sta in `TargetDelGiorno` e in nessun altro posto: decide
+     * anche quando **non** sommare, perche' se il numero viene dal piano del
+     * trainer le bruciate ci sono gia' dentro.
+     */
+    final obiettivo = TargetDelGiorno.scegli(
+      dalServer: n.haTarget ? n.targetKcal : null,
+      locale: ref.watch(targetLocaleProvider).valueOrNull?.target?.kcal.toDouble(),
+      bruciate: n.burnedKcal,
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // 🚨 A2 — le icone di sistema sopra il gradiente della palestra.
@@ -170,8 +189,8 @@ class TodayHeader extends ConsumerWidget {
                   children: [
                     _Valore(
                       valore: n.kcal.round().toString(),
-                      etichetta: n.haTarget
-                          ? 'di ${n.targetKcal!.round()} kcal'
+                      etichetta: obiettivo.esiste
+                          ? 'di ${obiettivo.kcal!.round()} kcal'
                           : 'kcal',
                     ),
                     _Valore(

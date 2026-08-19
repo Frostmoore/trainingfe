@@ -6,6 +6,7 @@ import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../data/diary_models.dart';
+import '../../data/target_del_giorno.dart';
 import '../../diary_controller.dart';
 
 /// Il riepilogo in cima al diario — A4.1.
@@ -38,11 +39,30 @@ class MacroSummary extends ConsumerWidget {
     final esito = day.hasTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
-    final targetKcal = day.hasTarget
-        ? day.targetKcal
-        : locale?.kcal.toDouble();
+    /*
+     * 🚨 **Le bruciate entrano nell'obiettivo QUI** — N23.B1, 19/08/2026.
+     *
+     * Fino a oggi la somma esisteva solo sul server, e dopo D9-bis il server
+     * non conosce piu' il peso: `targets` torna `null` a chiunque non abbia un
+     * piano del trainer, e questo ramo cadeva sul calcolo locale — che le
+     * bruciate non le guardava. ⚠️ Il committente lo ha riferito il 19/08, ed
+     * era vero.
+     *
+     * 💡 `TargetDelGiorno` decide **anche** quando NON sommare: se il numero
+     * arriva dal server le bruciate ci sono gia' dentro, e risommarle darebbe a
+     * chi ha un trainer il doppio del margine.
+     */
+    final target = TargetDelGiorno.scegli(
+      dalServer: day.hasTarget ? day.targetKcal : null,
+      locale: locale?.kcal.toDouble(),
+      bruciate: day.burnedKcal,
+    );
 
-    final haTarget = targetKcal != null && targetKcal > 0;
+    // 💡 `?? 0` e non `!`: il numero si usa solo dentro rami protetti da
+    // `haTarget`, e uno zero non fa esplodere niente se un giorno uno di quei
+    // rami cambia. Un `!` invece diventerebbe un guasto a schermo.
+    final targetKcal = target.kcal ?? 0;
+    final haTarget = target.esiste;
     final sforato = haTarget && day.kcal > targetKcal;
 
     // ⚠️ Ricalcolati sull'obiettivo **che si sta mostrando**: `day.progresso` e

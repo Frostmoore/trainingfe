@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../diary/data/target_del_giorno.dart';
 import '../../../health/dati_salute.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
@@ -48,8 +49,17 @@ class CaloriesCard extends ConsumerWidget {
     final esito = n.haTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
-    final target = n.haTarget ? n.targetKcal : locale?.kcal.toDouble();
-    final haObiettivo = target != null && target > 0;
+    // 🚨 Le bruciate entrano nell'obiettivo — N23.B1. La regola sta in
+    // `TargetDelGiorno` e in nessun altro posto: le schermate che mostrano un
+    // obiettivo calorico sono tre, e tre copie divergono.
+    final delGiorno = TargetDelGiorno.scegli(
+      dalServer: n.haTarget ? n.targetKcal : null,
+      locale: locale?.kcal.toDouble(),
+      bruciate: n.burnedKcal,
+    );
+
+    final target = delGiorno.kcal ?? 0;
+    final haObiettivo = delGiorno.esiste;
 
     return Card(
       margin: EdgeInsets.zero,

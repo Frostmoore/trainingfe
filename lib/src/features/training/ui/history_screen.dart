@@ -298,20 +298,21 @@ class _CardAllenamento extends ConsumerWidget {
   ///
   /// 🚨 **La correzione a mano resta sopra a tutto**: chi ha scritto un numero
   /// l'ha scritto apposta, e un sensore non lo sconfessa.
+  /// ⚠️ **Tutto si somma sul gruppo, da entrambe le parti.** Fino al 20/08 i
+  /// tratti dell'orologio si sommavano e le sedute no — si prendeva solo la
+  /// prima — e chi si fermava a metà si vedeva contare metà allenamento.
   int? _kcal() {
-    final seduta = voce.seduta;
+    if (voce.kcalCorrettaAMano) return voce.kcalDalleSedute;
 
-    if (seduta?.kcalSource == 'manual') return seduta!.kcal;
-
-    return voce.kcalDalPolso ?? seduta?.kcal;
+    return voce.kcalDalPolso ?? voce.kcalDalleSedute;
   }
 
   String _fonteKcal() {
-    final seduta = voce.seduta;
-
-    if (seduta?.kcalSource == 'manual') return ' (a mano)';
+    if (voce.kcalCorrettaAMano) return ' (a mano)';
     if (voce.kcalDalPolso != null) return ' (dall\'orologio)';
-    if (seduta?.kcal != null) return ' (${seduta!.etichettaKcal})';
+    if (voce.kcalDalleSedute != null) {
+      return ' (${voce.seduta!.etichettaKcal})';
+    }
 
     return '';
   }

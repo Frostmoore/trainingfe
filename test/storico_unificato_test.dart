@@ -26,6 +26,8 @@ void main() {
     required DateTime inizio,
     int? durataMinuti = 60,
     bool aperta = false,
+    int? kcal,
+    bool aMano = false,
   }) =>
       WorkoutSession(
         id: id,
@@ -33,6 +35,11 @@ void main() {
         endedAt: durataMinuti == null ? null : inizio.add(Duration(minutes: durataMinuti)),
         durationMinutes: durataMinuti,
         isOpen: aperta,
+        kcal: kcal,
+        // 💡 `kcal` è già il valore **che vale**: il server ci mette la
+        // correzione a mano se c'è, altrimenti la stima. `kcalSource` dice solo
+        // quale delle due storie raccontare.
+        kcalSource: aMano ? 'manual' : 'estimate',
         sets: const [],
         photos: const [],
       );
@@ -282,6 +289,50 @@ void main() {
       );
 
       expect(voci.single.kcalDalPolso, 450);
+    });
+
+    /// ══ 🚨 Anche le SEDUTE si sommano ═══════════════════════════════════
+    ///
+    /// 📌 Trovato dal committente il 20/08 chiedendo *«le calorie come le
+    /// calcola?»*. ⚠️ I tratti dell'orologio si sommavano e le sedute no — si
+    /// prendeva `sedute.first` — quindi chi si fermava a metà si vedeva contare
+    /// **metà allenamento**, senza nessun segnale che mancasse qualcosa.
+    test('anche le calorie delle sedute si sommano sul gruppo', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180),
+          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25, kcal: 150),
+        ],
+        dallOrologio: const [],
+      );
+
+      expect(voci.single.kcalDalleSedute, 330);
+    });
+
+    /// 🚨 Basta **una** seduta corretta a mano perché il gruppo lo sia: chi ha
+    /// scritto un numero l'ha scritto apposta. ⚠️ Guardare solo la prima
+    /// vorrebbe dire ignorare in silenzio una correzione fatta sul secondo
+    /// tratto.
+    test('basta un tratto corretto a mano perché il gruppo lo sia', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180),
+          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25, kcal: 900, aMano: true),
+        ],
+        dallOrologio: const [],
+      );
+
+      expect(voci.single.kcalCorrettaAMano, isTrue);
+      expect(voci.single.kcalDalleSedute, 1080);
+    });
+
+    test('e senza nessuna correzione il gruppo non è a mano', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180)],
+        dallOrologio: const [],
+      );
+
+      expect(voci.single.kcalCorrettaAMano, isFalse);
     });
 
     /// ⚠️ «Non lo so» e «non hai bruciato niente» sono due cose diverse.

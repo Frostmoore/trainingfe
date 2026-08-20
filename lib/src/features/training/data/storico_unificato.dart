@@ -85,6 +85,42 @@ class VoceStorico {
     return trovato ? somma : null;
   }
 
+  /// Le calorie **delle sedute dell'app**, sommate su tutto il gruppo.
+  ///
+  /// ── 🚨 Perché sommate e non solo la prima ─────────────────────────────────
+  ///
+  /// Perché un gruppo può contenere più sedute — è il caso «fermo per sbaglio e
+  /// riparto» — e quelle sono **pezzi dello stesso allenamento**. ⚠️ Fino al
+  /// 20/08 qui si prendeva `sedute.first.kcal`: i tratti dell'orologio si
+  /// sommavano e quelli dell'app no, e chi si fermava a metà si vedeva contare
+  /// solo la prima parte.
+  ///
+  /// 💡 `WorkoutSession.kcal` è già il valore **che vale** per quella seduta: il
+  /// server ci mette la correzione a mano se c'è, altrimenti la stima. Sommarlo
+  /// è quindi giusto in entrambi i casi, e `kcalCorrettaAMano` dice quale delle
+  /// due storie raccontare.
+  int? get kcalDalleSedute {
+    var somma = 0;
+    var trovato = false;
+
+    for (final s in sedute) {
+      final k = s.kcal;
+      if (k == null) continue;
+
+      somma += k;
+      trovato = true;
+    }
+
+    return trovato ? somma : null;
+  }
+
+  /// Se **almeno una** delle sedute del gruppo è stata corretta a mano.
+  ///
+  /// 🚨 Basta una: chi ha scritto un numero l'ha scritto apposta, e un sensore
+  /// non lo sconfessa. ⚠️ Guardare solo la prima vorrebbe dire che una
+  /// correzione fatta sul secondo tratto viene ignorata senza dirlo.
+  bool get kcalCorrettaAMano => sedute.any((s) => s.kcalSource == 'manual');
+
   int? get distanzaMetri {
     var somma = 0;
     var trovato = false;

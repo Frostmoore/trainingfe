@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +6,7 @@ import '../../features/health/health_controller.dart';
 import '../crypto/file_di_backup.dart';
 import '../crypto/providers_crypto.dart';
 import '../providers.dart';
+import 'backup_in_background.dart';
 import 'cloud_di_backup.dart';
 import 'drive_di_backup.dart';
 import 'raccolta_foto.dart';
@@ -141,6 +141,28 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     await prefs.setBool(_chiaveAcceso, true);
 
     await adesso();
+
+    /*
+     * 🆕 FASE 2.1 — da qui in poi ci pensa Android.
+     *
+     * 🚨 **Si pianifica quando si accende, non all'avvio dell'app.** Un lavoro
+     * periodico registrato per chi ha il backup spento sarebbe un risveglio al
+     * giorno per non fare niente.
+     *
+     * ⚠️ **Non fa fallire l'accensione.** Se la pianificazione non riesce — un
+     * telefono che non la concede, un produttore che la blocca — il backup
+     * resta acceso: c'e' comunque quello che parte all'apertura dell'app, ed e'
+     * la rete di sicurezza che non dipende da Android.
+     */
+    try {
+      await const BackupInBackground().pianifica();
+    } on Object catch (errore, stack) {
+      debugPrintStack(
+        label: 'BackupAutomatico: la pianificazione non e riuscita — $errore',
+        stackTrace: stack,
+      );
+    }
+
     ref.invalidateSelf();
 
     return true;
@@ -168,6 +190,19 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
       }
 
       await cloud.scollega();
+    }
+
+    /*
+     * 🚨 **Spegnere vuol dire smettere davvero.** Senza questa riga il lavoro
+     * periodico resterebbe registrato presso Android e continuerebbe a
+     * svegliarsi ogni giorno — per trovare l'interruttore spento e non fare
+     * niente. ⚠️ Consumo di batteria per un servizio che qualcuno ha rifiutato.
+     */
+    try {
+      await const BackupInBackground().ferma();
+    } on Object {
+      // 💡 Chi ha detto «basta» non deve restare acceso perche' una chiamata
+      // ad Android non e' riuscita: lo spegnimento vale comunque.
     }
 
     ref.invalidateSelf();

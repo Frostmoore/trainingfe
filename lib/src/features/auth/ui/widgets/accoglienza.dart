@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/backup/backup_che_gira_da_solo.dart';
 import '../../../../core/crypto/providers_crypto.dart';
 import '../../../../core/crypto/servizio_chiavi.dart';
 import '../../../../core/providers.dart';
@@ -123,6 +124,21 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     if (!mounted) return;
 
     await _forseConsensi();
+    if (!mounted) return;
+
+    /*
+     * 🆕 FASE 2.1 — la copia di sicurezza, se è ora.
+     *
+     * 🚨 **In fondo alla sequenza, e non all'avvio dell'app.** Prima di qui la
+     * persona non ha ancora deciso se ripristinare: fare un backup **mentre**
+     * sta per riprendere i dati vuol dire salvare un archivio quasi vuoto sopra
+     * quello pieno. ⚠️ È la stessa race condition che il ripristino esiste per
+     * evitare, presa dall'altro verso.
+     *
+     * 💡 Non si aspetta e non si mostra niente: se è passato meno di un giorno
+     * non fa nulla, e se lo fa la schermata «Copia di sicurezza» lo racconta.
+     */
+    unawaited(ref.read(backupCheGiraDaSoloProvider).forse());
   }
 
   /// 1. L'impronta — era `PropostaSblocco`, ora è il primo passo della sequenza.

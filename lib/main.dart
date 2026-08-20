@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'src/app.dart';
+import 'src/core/backup/backup_in_background.dart';
 import 'src/core/config/app_config.dart';
 import 'src/core/media/archivio_foto.dart';
 import 'src/core/notifications/notifications.dart';
@@ -45,6 +46,27 @@ Future<void> main() async {
 
       final config = AppConfig.fromEnvironment();
       final cache = await LocalCache.open();
+
+      /*
+       * 🆕 FASE 2.1 — si dice ad Android **a chi** dare il lavoro in background.
+       *
+       * 🚨 `initialize` registra il punto d'ingresso, **non pianifica niente**:
+       * la pianificazione la fa `accendi()` sull'interruttore del backup. Qui
+       * si prepara solo il canale, e va fatto a ogni avvio perche' e' il
+       * processo che nasce, non il lavoro.
+       *
+       * ⚠️ **Non deve poter impedire l'apertura dell'app.** Se il telefono non
+       * concede WorkManager, si apre lo stesso: c'e' il backup che parte
+       * all'accesso, e quello non dipende da Android.
+       */
+      try {
+        await const BackupInBackground().avvia();
+      } on Object catch (errore, stack) {
+        debugPrintStack(
+          label: 'WorkManager non disponibile: $errore',
+          stackTrace: stack,
+        );
+      }
 
       final container = ProviderContainer(
         overrides: [

@@ -1,0 +1,179 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:training_companion/src/core/backup/backup_che_gira_da_solo.dart';
+import 'package:training_companion/src/core/backup/backup_controller.dart';
+
+/// Il backup che gira da solo — FASE 2.1 (`N4.1`), 20/08/2026.
+///
+/// ══ 🚨 COSA DIFENDE QUESTO FILE ═══════════════════════════════════════════
+///
+/// Il difetto più grave del piano: fino al 20/08 la copia di sicurezza girava
+/// **solo** a mano o all'accensione dell'interruttore. Poi mai più.
+///
+/// ⚠️ Tutto il progetto sta su «i dati stanno sul telefono», e quella scelta
+/// regge **solo se il backup funziona**. Chi non ce l'ha lo sa; chi ce l'ha e
+/// non funziona **crede di essere al sicuro** — e lo scopre quando il telefono è
+/// già rotto.
+void main() {
+  late _BackupFinto finto;
+  late DateTime adesso;
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    finto = _BackupFinto();
+    adesso = DateTime(2026, 8, 20, 12);
+  });
+
+  ProviderContainer conta() {
+    final c = ProviderContainer(
+      overrides: [backupAutomaticoProvider.overrideWith(() => finto)],
+    );
+
+    addTearDown(c.dispose);
+
+    return c;
+  }
+
+  BackupCheGiraDaSolo daSolo(ProviderContainer c) => BackupCheGiraDaSolo(
+        c.read(_refProvider),
+        adesso: () => adesso,
+      );
+
+  Future<void> segnaFattoIl(DateTime quando) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setInt(
+      BackupCheGiraDaSolo.chiaveUltimo,
+      quando.millisecondsSinceEpoch,
+    );
+  }
+
+  group('Quando NON deve fare niente', () {
+    /// 🚨 Spento vuol dire spento: non si fa un backup a chi non l'ha chiesto,
+    /// e caricare su Drive di nascosto sarebbe imperdonabile.
+    test('con l interruttore spento', () async {
+      finto.stato = const StatoBackup(acceso: false, disponibile: true);
+
+      expect(await daSolo(conta()).forse(), isFalse);
+      expect(finto.quanti, 0);
+    });
+
+    test('senza nessun cloud configurato', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: false);
+
+      expect(await daSolo(conta()).forse(), isFalse);
+      expect(finto.quanti, 0);
+    });
+
+    /// 💡 Un giorno, come chiede `plan_backup.md` §N4.1. Rifarlo a ogni
+    /// apertura vorrebbe dire caricare su Drive dieci volte al giorno.
+    test('se ne ha già fatto uno due ore fa', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+      await segnaFattoIl(adesso.subtract(const Duration(hours: 2)));
+
+      expect(await daSolo(conta()).forse(), isFalse);
+      expect(finto.quanti, 0);
+    });
+  });
+
+  group('Quando lo fa', () {
+    /// 🚨 Il caso vero: l'app si apre il giorno dopo.
+    test('se l ultimo è di venticinque ore fa', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+      await segnaFattoIl(adesso.subtract(const Duration(hours: 25)));
+
+      expect(await daSolo(conta()).forse(), isTrue);
+      expect(finto.quanti, 1);
+    });
+
+    /// ⚠️ Nessuna data salvata vuol dire «non l'ho mai fatto **da qui**»: chi
+    /// ha acceso l'interruttore prima che questo meccanismo esistesse deve
+    /// esserne coperto **subito**, non fra un giorno.
+    test('e se non ne ha mai fatto uno', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+
+      expect(await daSolo(conta()).forse(), isTrue);
+      expect(finto.quanti, 1);
+    });
+
+    test('e poi si ricorda quando', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+
+      await daSolo(conta()).forse();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(prefs.getInt(BackupCheGiraDaSolo.chiaveUltimo), isNotNull);
+    });
+  });
+
+  group('Quando va storto', () {
+    /// ⚠️ Lo chiama la sequenza di accesso: un backup che fallisce **non è una
+    /// buona ragione** per far crollare l'apertura dell'app.
+    test('non lancia mai', () async {
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      await expectLater(daSolo(conta()).forse(), completion(isFalse));
+    });
+
+    /// ══ 🚨 IL TEST CHE CONTA DI PIÙ ═══════════════════════════════════════
+    ///
+    /// La data si scrive **solo se è andata bene**. ⚠️ Scrivendola comunque, un
+    /// backup fallito comprerebbe **ventiquattro ore di silenzio**: si
+    /// riproverebbe domani invece che alla prossima apertura, e chi ha la rete
+    /// che va e viene resterebbe scoperto proprio nei giorni storti.
+    test('un fallimento NON consuma la giornata', () async {
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      await daSolo(conta()).forse();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(
+        prefs.getInt(BackupCheGiraDaSolo.chiaveUltimo),
+        isNull,
+        reason: 'Senza data salvata, alla prossima apertura ci riprova.',
+      );
+    });
+
+    /// 💡 E infatti ci riprova subito dopo, senza aspettare domani.
+    test('e alla riapertura ci riprova', () async {
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      final c = conta();
+
+      await daSolo(c).forse();
+      finto.esplode = false;
+
+      expect(await daSolo(c).forse(), isTrue);
+      expect(finto.quanti, 1);
+    });
+  });
+}
+
+/// 💡 Serve solo a farsi dare un `Ref` da dentro il contenitore: la classe ne
+/// vuole uno, e in un test non c'è nessuna schermata che glielo passi.
+final _refProvider = Provider<Ref>((ref) => ref);
+
+class _BackupFinto extends BackupAutomatico {
+  StatoBackup stato = const StatoBackup(acceso: false, disponibile: false);
+  bool esplode = false;
+  int quanti = 0;
+
+  @override
+  Future<StatoBackup> build() async => stato;
+
+  @override
+  Future<void> adesso() async {
+    if (esplode) throw StateError('Drive non risponde');
+
+    quanti++;
+  }
+}

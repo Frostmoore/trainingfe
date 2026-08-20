@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
 import '../../health/tipo_allenamento.dart';
@@ -67,10 +68,10 @@ class StoricoAllenamenti extends ConsumerWidget {
                 message: 'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
               )
             : RefreshIndicator(
-                onRefresh: () async {
+                onRefresh: () => aggiornaTutto(ref, () {
                   ref.invalidate(sessionsProvider);
                   ref.invalidate(allenamentiDalPolsoProvider);
-                },
+                }),
                 child: _PerSettimana(voci: lista),
               ),
     );

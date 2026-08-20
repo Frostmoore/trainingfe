@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../../profile/ui/widgets/bottone_profilo.dart';
@@ -116,7 +117,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(schedeUniteProvider),
+                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(schedeUniteProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
                   itemCount: elenco.length + 1,

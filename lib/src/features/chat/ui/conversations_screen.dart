@@ -11,6 +11,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/crypto/contenuto_messaggio.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
 import '../../fotocamera/ui/schermata_fotocamera.dart';
@@ -76,7 +77,7 @@ class ConversationsScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(conversationsProvider),
+                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(conversationsProvider)),
                 child: ListView.builder(
                   itemCount: conversazioni.length,
                   itemBuilder: (context, index) {

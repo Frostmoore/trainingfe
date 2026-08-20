@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../data/diary_models.dart';
@@ -54,7 +55,7 @@ class DiaryScreen extends ConsumerWidget {
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
         data: (day) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(diaryProvider),
+          onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(diaryProvider)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
             children: [

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
@@ -44,7 +45,7 @@ class MieSchedeScreen extends ConsumerWidget {
                 message: 'Scrivine una: potrai mandarla a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(mieSchedeProvider),
+                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieSchedeProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: schede.length,

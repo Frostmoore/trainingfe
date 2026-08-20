@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
 import '../progress_controller.dart';
@@ -41,7 +42,7 @@ class ProgressScreen extends ConsumerWidget {
                     'stessa luce, racconta i progressi meglio della bilancia.',
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(progressPhotosProvider),
+                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(progressPhotosProvider)),
                 child: GridView.builder(
                   padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

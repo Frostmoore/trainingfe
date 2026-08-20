@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../data/utente_seguito.dart';
 import '../trainer_controller.dart';
@@ -44,7 +45,7 @@ class _Elenco extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(mieiUtentiProvider),
+      onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieiUtentiProvider)),
       child: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

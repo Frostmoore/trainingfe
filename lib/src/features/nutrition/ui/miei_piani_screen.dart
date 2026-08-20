@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_piano_controller.dart';
 import '../data/piano_alimentare.dart';
@@ -44,7 +45,7 @@ class MieiPianiScreen extends ConsumerWidget {
                 message: 'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(mieiPianiProvider),
+                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieiPianiProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: piani.length,

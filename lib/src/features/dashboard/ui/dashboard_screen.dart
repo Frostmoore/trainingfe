@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../health/health_controller.dart';
 import '../../profile/corpo_controller.dart';
@@ -32,14 +33,25 @@ class DashboardScreen extends ConsumerWidget {
       // barra sopra di essa aggiungerebbe una seconda riga di titolo che dice
       // la stessa cosa due volte, rubando un quinto dello schermo.
       body: RefreshIndicator(
-        onRefresh: () async {
+        /*
+         * 🆕 FASE 1-ter — strisciare in giù risincronizza anche Health.
+         *
+         * 🚨 **Qui più che altrove**: è la schermata dove si guarda l'obiettivo
+         * calorico del giorno, cioè l'unico numero che le calorie bruciate
+         * cambiano. Chi torna dall'allenamento e striscia qui si aspetta di
+         * vederlo aggiornato — ed è precisamente quello che non succedeva.
+         *
+         * ⚠️ La rotellina **non aspetta** Health: si chiude con la rete, e il
+         * numero arriva quando arriva. Vedi `aggiornaTutto`.
+         */
+        onRefresh: () => aggiornaTutto(ref, () {
           ref
             ..invalidate(dashboardProvider)
             ..invalidate(weightSeriesProvider)
             ..invalidate(storicoCorpoProvider)
             ..invalidate(caloriesSeriesProvider)
             ..invalidate(adviceProvider);
-        },
+        }),
         child: riepilogo.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ErrorState(

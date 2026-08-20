@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
 import '../../../health/dati_salute.dart';
@@ -149,6 +150,25 @@ class CaloriesCard extends ConsumerWidget {
                     'Dal piano del tuo trainer',
                     style: theme.textTheme.labelSmall,
                   ),
+                )
+              else
+                /*
+                 * 🆕 20/08/2026 — l'avvertenza dove sta il numero.
+                 *
+                 * 🚨 **Era l'unico posto in cui mancava**, ed era il peggiore in
+                 * cui mancare: qui c'è il numero più visibile dell'app, quello
+                 * su cui una persona decide quanto mangiare oggi. Il riepilogo
+                 * macro, l'importazione del piano, la revisione e il profilo
+                 * l'avevano già.
+                 *
+                 * ⚠️ **Solo quando l'obiettivo lo calcoliamo noi.** Se il numero
+                 * viene dal piano del trainer non è una nostra stima da formule
+                 * generiche: è la scelta di un professionista, e scriverci sotto
+                 * «stima da formule generiche» sarebbe falso e gli darebbe torto.
+                 */
+                const Padding(
+                  padding: EdgeInsets.only(top: Gap.xs),
+                  child: AvvertenzaNutrizionale(compatta: true),
                 ),
             ] else ...[
               const SizedBox(height: Gap.sm),

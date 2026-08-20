@@ -82,9 +82,14 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
   /// 💡 In `SharedPreferences` e non in `flutter_secure_storage`: è una
   /// preferenza, non un segreto. E le cassette cifrate sono escluse dal backup
   /// di sistema, quindi lì si perderebbe al cambio telefono.
-  static const _chiaveAcceso = 'backup_automatico_acceso';
+  /// 🚨 **Pubblica**, perche' la legge anche `BackupInBackground.avvia()`.
+  ///
+  /// ⚠️ Non si duplica la stringa: due copie di una chiave di preferenza
+  /// divergono al primo refuso, e il sintomo sarebbe un backup che si crede
+  /// spento in un posto e acceso nell'altro.
+  static const chiaveAcceso = 'backup_automatico_acceso';
 
-  /// 🚨 Chiave separata da [_chiaveAcceso], e **il difetto è nel default**: se
+  /// 🚨 Chiave separata da [chiaveAcceso], e **il difetto è nel default**: se
   /// mancasse questa preferenza il valore è `false`. ⚠️ Un default `true`
   /// avrebbe caricato le foto di chi aveva acceso il backup **prima** che
   /// questa scelta esistesse, senza che nessuno gliel'avesse chiesto.
@@ -99,7 +104,7 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    final acceso = prefs.getBool(_chiaveAcceso) ?? false;
+    final acceso = prefs.getBool(chiaveAcceso) ?? false;
 
     return StatoBackup(
       acceso: acceso,
@@ -138,7 +143,7 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     if (!await cloud.collega()) return false;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_chiaveAcceso, true);
+    await prefs.setBool(chiaveAcceso, true);
 
     await adesso();
 
@@ -177,7 +182,7 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     final cloud = ref.read(cloudDiBackupProvider);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_chiaveAcceso, false);
+    await prefs.setBool(chiaveAcceso, false);
 
     if (cloud != null) {
       if (cancellaDalCloud) {

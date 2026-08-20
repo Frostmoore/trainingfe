@@ -35,12 +35,14 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../config/app_config.dart';
 import '../providers.dart';
 import '../storage/local_cache.dart';
 import 'backup_che_gira_da_solo.dart';
+import 'backup_controller.dart';
 
 /// Il nome con cui il lavoro è registrato presso Android.
 ///
@@ -124,6 +126,31 @@ class BackupInBackground {
     if (!_soloAndroid) return;
 
     await Workmanager().initialize(puntoDIngresso);
+
+    /*
+     * ══ 🚨 E si pianifica anche QUI, non solo su `accendi()` ══
+     *
+     * ⚠️ **Il difetto trovato sul telefono il 20/08**, e si vedeva solo
+     * guardando due cose insieme: `backup_automatico_acceso = true` nelle
+     * preferenze, e **nessun lavoro** in `dumpsys jobscheduler`.
+     *
+     * 🚨 `pianifica()` la chiamava solo `accendi()`, cioe' il **passaggio** da
+     * spento ad acceso. Chi l'interruttore l'aveva acceso ieri — o un mese fa —
+     * non lo ripassa mai, e il lavoro non veniva registrato **per nessuno degli
+     * utenti gia' esistenti**.
+     *
+     * 💡 E' la trappola del default: una funzione che si attiva su una
+     * transizione, applicata a una popolazione che quella transizione l'ha gia'
+     * fatta. Il sintomo e' «funziona sui telefoni nuovi», cioe' sui nostri.
+     *
+     * ⚠️ Ripeterlo a ogni avvio non accoda niente di doppio:
+     * `ExistingPeriodicWorkPolicy.keep` lascia stare quello che c'e' gia'.
+     */
+    final prefs = await SharedPreferences.getInstance();
+
+    if (prefs.getBool(BackupAutomatico.chiaveAcceso) ?? false) {
+      await pianifica();
+    }
   }
 
   /// 🚨 I vincoli sono quelli scritti in `plan_backup.md` §N4.1, e ognuno ha una

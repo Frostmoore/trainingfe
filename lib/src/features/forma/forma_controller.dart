@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers.dart';
+import '../dashboard/dashboard_controller.dart';
 import '../health/analizzatore_sonno.dart';
 import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
@@ -9,10 +11,24 @@ import 'indici_di_forma.dart';
 
 /// Stanchezza e carica, con i dati veri — FASE 2-sexies.
 ///
-/// 🚨 **Tutto sul telefono.** L'indice è un dato sanitario **derivato**, e
-/// calcolarlo sul server vorrebbe dire ricreare esattamente ciò che la decisione
-/// D9-bis ha smontato. ⚠️ Qui non c'è nessuna chiamata di rete, e non ce ne deve
-/// finire nessuna: chi ne aggiungesse una starebbe annullando la fase.
+/// ══ 🚨 LA REGOLA, DETTA BENE ══════════════════════════════════════════════
+///
+/// L'indice è un dato sanitario **derivato**, e **si calcola qui**: calcolarlo
+/// sul server vorrebbe dire ricreare esattamente ciò che la decisione D9-bis ha
+/// smontato.
+///
+/// ⚠️ **La regola è «non esce», non «non entra».** In una prima stesura c'era
+/// scritto *«qui non c'è nessuna chiamata di rete»*, ed era **più stretta del
+/// necessario**: leggere le proprie calorie dal nostro server — che le ha già,
+/// per T3 — non fa uscire niente di nuovo da nessuna parte.
+///
+/// 🚨 Quello che non deve succedere è che **il risultato** finisca fuori, o che
+/// a calcolarlo sia qualcun altro. Chi aggiungesse una `POST` con dentro questi
+/// numeri starebbe annullando la fase; chi legge un dato che è già nostro no.
+///
+/// 💡 La differenza conta perché la versione stretta aveva già prodotto un buco:
+/// il cibo era rimasto fuori dal calcolo **per una regola scritta male**, non per
+/// un limite vero.
 class Forma {
   const Forma({required this.stanchezza, required this.carica});
 
@@ -28,6 +44,33 @@ class Forma {
 
 /// Quanti giorni indietro si guarda: la finestra lunga dell'`ACWR`.
 const _finestra = IndiciDiForma.giorniCronici;
+
+/// La storia di quanto si è mangiato, per lo z-score del cibo.
+///
+/// ── 💡 Perché contro la PROPRIA media e non contro il target ──────────────
+///
+/// Perché «oggi hai mangiato meno del tuo solito» è un confronto fra due misure,
+/// mentre «oggi sei sotto il target» mette insieme una misura e un obiettivo —
+/// e l'obiettivo cambia con il peso, con il piano del trainer e con le calorie
+/// bruciate. ⚠️ Un indice costruito su un bersaglio mobile si muove anche quando
+/// la persona non si muove.
+///
+/// 🚨 Ed è la stessa forma degli altri tre ingredienti: uno `z` contro sé stessi.
+/// Un pezzo con una matematica diversa dagli altri sarebbe il primo posto in cui
+/// guardare quando l'indice dirà una cosa strana.
+final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((ref) async {
+  final dati = await ref.watch(apiClientProvider).get<Map<String, dynamic>>(
+    '/series',
+    query: {'metric': 'calories', 'days': _finestra, 'offset': 0},
+  );
+
+  final serie = Series.fromJson(dati);
+
+  // ⚠️ Gli zeri si buttano: sono i giorni in cui non si è segnato niente, non i
+  // giorni in cui non si è mangiato. Contarli come «zero calorie» farebbe
+  // sembrare a digiuno chi ha solo saltato il diario.
+  return serie.consumed.where((v) => v > 0).toList();
+});
 
 final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   final archivio = ref.watch(archivioSaluteProvider);
@@ -122,12 +165,41 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
     }
   }
 
+  /*
+   * ── Il cibo ──────────────────────────────────────────────────────────────
+   *
+   * 🚨 **Facoltativo davvero.** Passa dalla rete, e senza rete l'indice deve
+   * esistere lo stesso: `zCibo` resta `null` e gli altri tre ingredienti fanno
+   * il loro lavoro. ⚠️ Un numero che sparisce quando il telefono è offline
+   * sarebbe peggio di un numero un po' meno preciso.
+   */
+  double? zCibo;
+
+  try {
+    final calorie = await ref.watch(_storiaCalorieProvider.future);
+
+    if (calorie.length >= 2) {
+      final stat = IndiciDiForma.mediaEDeviazione(calorie);
+
+      if (stat != null) {
+        zCibo = IndiciDiForma.z(
+          valore: calorie.last,
+          media: stat.$1,
+          deviazione: stat.$2,
+        );
+      }
+    }
+  } on Object catch (e) {
+    debugPrint('forma: la storia delle calorie non si legge — $e');
+  }
+
   return Forma(
     stanchezza: IndiciDiForma.stanchezza(carico)._conStoria(storiaCarico),
     carica: IndiciDiForma.carica(
       zHrv: zHrv,
       zBattito: zBattito,
       zSonno: zSonno,
+      zCibo: zCibo,
       nottiDiStoria: minuti.length,
     ),
   );

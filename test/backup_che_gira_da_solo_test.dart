@@ -108,6 +108,95 @@ void main() {
     });
   });
 
+  group('Gli stati che la schermata mostra — N4.3', () {
+    /// ══ 🚨 LO STATO CHE MANCAVA ═════════════════════════════════════════
+    ///
+    /// ⚠️ Fino a FASE 2.1 «fallito» non serviva: il backup partiva solo
+    /// premendo un pulsante, e chi lo premeva vedeva l'errore. Da quando gira
+    /// **da solo**, un fallimento succede alle tre di notte e non lo vede
+    /// nessuno.
+    ///
+    /// 🚨 E la schermata continuava a dire «Ultimo backup: 3 giorni fa» — vero
+    /// e fuorviante insieme.
+    test('un fallimento si scrive, non solo si tace', () async {
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      await daSolo(conta()).forse();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(prefs.getInt(BackupCheGiraDaSolo.chiaveUltimoErrore), isNotNull);
+    });
+
+    /// 💡 Un successo cancella l'errore: una preferenza che non serve più è una
+    /// cosa che qualcuno un giorno legge senza sapere che è scaduta.
+    test('e un successo lo cancella', () async {
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      final c = conta();
+      await daSolo(c).forse();
+
+      finto.esplode = false;
+      await daSolo(c).forse();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(prefs.getInt(BackupCheGiraDaSolo.chiaveUltimoErrore), isNull);
+    });
+
+    /// 🚨 `inErrore` è vero **solo** se il fallimento è più recente del
+    /// successo. ⚠️ Un errore di due settimane fa, seguito da cinque backup
+    /// riusciti, non è una cosa da mostrare: mostrarlo insegnerebbe a ignorare
+    /// l'avviso, che è il modo di renderlo inutile per la volta in cui conta.
+    test('un errore vecchio, seguito da un successo, non si mostra', () {
+      const s = StatoBackup(
+        acceso: true,
+        disponibile: true,
+        fallitoIl: null,
+      );
+
+      expect(s.inErrore, isFalse);
+
+      final vecchio = StatoBackup(
+        acceso: true,
+        disponibile: true,
+        fallitoIl: DateTime(2026, 8, 1),
+        ultimo: DateTime(2026, 8, 15),
+      );
+
+      expect(vecchio.inErrore, isFalse, reason: 'Il successo è più recente.');
+    });
+
+    test('ma un errore dopo l ultimo successo si mostra', () {
+      final s = StatoBackup(
+        acceso: true,
+        disponibile: true,
+        ultimo: DateTime(2026, 8, 15),
+        fallitoIl: DateTime(2026, 8, 18),
+      );
+
+      expect(s.inErrore, isTrue);
+    });
+
+    /// ⚠️ «Non è mai riuscito» è uno stato a sé: chi ha acceso l'interruttore e
+    /// non ha **mai** avuto un backup è nel caso peggiore di tutti, e non deve
+    /// finire nello stesso messaggio di chi ne ha uno vecchio.
+    test('mai riuscito, e ha già fallito', () {
+      final s = StatoBackup(
+        acceso: true,
+        disponibile: true,
+        fallitoIl: DateTime(2026, 8, 18),
+      );
+
+      expect(s.inErrore, isTrue);
+      expect(s.ultimo, isNull);
+    });
+  });
+
   group('Quando va storto', () {
     /// ⚠️ Lo chiama la sequenza di accesso: un backup che fallisce **non è una
     /// buona ragione** per far crollare l'apertura dell'app.

@@ -64,6 +64,13 @@ class BackupCheGiraDaSolo {
   /// fatto» — cioè rifarlo ogni volta.
   static const chiaveUltimo = 'backup_automatico_ultimo_riuscito';
 
+  /// Quando l'ultimo tentativo è andato storto.
+  ///
+  /// 🚨 **Serve perché adesso il backup gira da solo.** Un fallimento alle tre
+  /// di notte non lo vede nessuno, e senza questa data la schermata continuerebbe
+  /// a mostrare l'ultimo riuscito — vero, e fuorviante.
+  static const chiaveUltimoErrore = 'backup_automatico_ultimo_errore';
+
   /// Fa il backup **se è ora**. Torna `true` se l'ha fatto davvero.
   ///
   /// ── ⚠️ Perché non lancia mai ──────────────────────────────────────────────
@@ -100,12 +107,38 @@ class BackupCheGiraDaSolo {
        */
       await prefs.setInt(chiaveUltimo, _adesso().millisecondsSinceEpoch);
 
+      /*
+       * 💡 Un successo **cancella** l'errore invece di lasciarlo li'. La
+       * schermata guarda quale delle due date e' piu' recente, quindi tenerlo
+       * non farebbe danni — ma una preferenza che non serve piu' e' una cosa che
+       * qualcuno un giorno legge senza sapere che e' scaduta.
+       */
+      await prefs.remove(chiaveUltimoErrore);
+
       return true;
     } on Object catch (errore, stack) {
       debugPrintStack(
         label: 'BackupCheGiraDaSolo: $errore',
         stackTrace: stack,
       );
+
+      /*
+       * 🚨 **Il fallimento si SCRIVE**, non si limita a non scrivere il
+       * successo.
+       *
+       * ⚠️ Le due cose sembrano uguali e non lo sono: «non c'e' una data di
+       * successo recente» puo' voler dire che non era ora di farlo. «C'e' una
+       * data di errore» vuol dire che ci ha provato e non ce l'ha fatta, ed e'
+       * l'unica delle due che merita di comparire a schermo.
+       */
+      try {
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setInt(chiaveUltimoErrore, _adesso().millisecondsSinceEpoch);
+      } on Object {
+        // 💡 Se non si riesce nemmeno a scrivere una preferenza, il problema
+        // non e' il backup: si lascia perdere in silenzio.
+      }
 
       return false;
     }

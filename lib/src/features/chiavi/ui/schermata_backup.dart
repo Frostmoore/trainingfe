@@ -294,7 +294,17 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
               SwitchListTile(
                 secondary: const Icon(Icons.cloud_upload_outlined),
                 title: Text('Backup automatico su ${s.nomeDelCloud}'),
-                subtitle: Text(_sottotitolo(s)),
+                subtitle: Text(
+                  _sottotitolo(s),
+                  /*
+                   * 🚨 **Rosso, e non un'icona in più.** Un guasto scritto con
+                   * lo stesso colore di «tutto bene» si legge come «tutto bene»:
+                   * chi apre questa schermata la scorre, non la studia.
+                   */
+                  style: s.inErrore
+                      ? TextStyle(color: Theme.of(context).colorScheme.error)
+                      : null,
+                ),
                 value: s.acceso,
                 onChanged: _inCorso ? null : (_) => _cambia(s),
               ),
@@ -410,16 +420,46 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
       return 'Spento. Acceso, i tuoi dati si salvano da soli nel tuo spazio.';
     }
 
+    /*
+     * ══ 🚨 L'ERRORE VIENE PRIMA DI TUTTO IL RESTO — 20/08/2026 ═════════════
+     *
+     * ⚠️ Fino a FASE 2.1 questo stato non serviva: il backup partiva solo
+     * premendo un pulsante, e chi lo premeva vedeva l'errore. Da quando gira
+     * **da solo**, un fallimento succede alle tre di notte e non lo vede
+     * nessuno.
+     *
+     * 🚨 E la riga di prima era **vera e fuorviante insieme**: «Ultimo backup:
+     * 3 giorni fa» è vero — l'ultimo *riuscito* è di tre giorni fa — ma non dice
+     * che da allora ci ha provato tre volte senza farcela.
+     *
+     * 💡 `inErrore` è vero solo se il fallimento è **più recente** dell'ultimo
+     * successo: un errore di due settimane fa, seguito da cinque backup
+     * riusciti, non è una cosa da mostrare.
+     */
+    if (s.inErrore) {
+      final tentativo = _daQuando(s.fallitoIl!);
+
+      return s.ultimo == null
+          ? 'Non è mai riuscito · ultimo tentativo $tentativo'
+          : 'Non riesce da $tentativo · l\'ultimo riuscito è ${_daQuando(s.ultimo!)}';
+    }
+
     final quando = s.ultimo;
 
     if (quando == null) return 'Acceso · non so ancora quando è stato l\'ultimo';
 
+    return 'Ultimo backup: ${_daQuando(quando)}';
+  }
+
+  /// 💡 «oggi», «ieri», «3 giorni fa» in un posto solo: la stessa frase serve
+  /// all'ultimo riuscito **e** all'ultimo tentativo, e due copie divergono.
+  static String _daQuando(DateTime quando) {
     final giorni = DateTime.now().difference(quando).inDays;
 
     return switch (giorni) {
-      0 => 'Ultimo backup: oggi',
-      1 => 'Ultimo backup: ieri',
-      _ => 'Ultimo backup: $giorni giorni fa',
+      0 => 'oggi',
+      1 => 'ieri',
+      _ => '$giorni giorni fa',
     };
   }
 

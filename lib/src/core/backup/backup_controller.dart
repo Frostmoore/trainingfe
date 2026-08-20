@@ -6,6 +6,7 @@ import '../../features/health/health_controller.dart';
 import '../crypto/file_di_backup.dart';
 import '../crypto/providers_crypto.dart';
 import '../providers.dart';
+import 'backup_che_gira_da_solo.dart';
 import 'backup_in_background.dart';
 import 'cloud_di_backup.dart';
 import 'drive_di_backup.dart';
@@ -54,6 +55,7 @@ class StatoBackup {
     this.fotoIncluse = false,
     this.ultimo,
     this.nomeDelCloud,
+    this.fallitoIl,
   });
 
   final bool acceso;
@@ -75,6 +77,37 @@ class StatoBackup {
   final DateTime? ultimo;
 
   final String? nomeDelCloud;
+
+  /// ══ 🚨 Quando l'ULTIMO tentativo è andato storto ═══════════════════════
+  ///
+  /// Aggiunto il 20/08, e non è un ornamento: **fino a FASE 2.1 questo stato non
+  /// serviva**, perché il backup partiva solo premendo un pulsante — e chi
+  /// premeva il pulsante vedeva l'errore.
+  ///
+  /// ⚠️ Da quando gira **da solo**, un fallimento succede alle tre di notte e
+  /// non lo vede nessuno. La schermata continuava a dire «Ultimo backup: 3
+  /// giorni fa», che è **vero e fuorviante insieme**: vero perché l'ultimo
+  /// riuscito è di tre giorni fa, fuorviante perché non dice che da allora ci ha
+  /// provato tre volte e non ce l'ha fatta.
+  ///
+  /// 🚨 È la forma esatta del difetto che tutta la FASE 2 combatte: **qualcuno
+  /// che crede di essere al sicuro**.
+  final DateTime? fallitoIl;
+
+  /// Se l'ultimo tentativo è fallito **dopo** l'ultimo riuscito.
+  ///
+  /// 💡 La condizione conta: un errore di due settimane fa, seguito da cinque
+  /// backup riusciti, non è una cosa da mostrare. ⚠️ Mostrarlo comunque
+  /// insegnerebbe a ignorare l'avviso — che è il modo di renderlo inutile
+  /// proprio per la volta in cui conta.
+  bool get inErrore {
+    final f = fallitoIl;
+    if (f == null) return false;
+
+    final u = ultimo;
+
+    return u == null || f.isAfter(u);
+  }
 }
 
 /// Accende, spegne e fa il backup — N3.5, N3.6.
@@ -114,7 +147,20 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
       // ⚠️ La data si chiede al cloud solo se è acceso: interrogarlo da spento
       // vorrebbe dire chiedere un accesso a chi non l'ha concesso.
       ultimo: acceso ? await _quandoLUltimo(cloud) : null,
+
+      /*
+       * 💡 L'errore invece si legge **dalle preferenze**, non dal cloud: e' un
+       * fatto nostro, e chiederlo alla rete vorrebbe dire non poterlo mostrare
+       * proprio quando la rete e' il problema.
+       */
+      fallitoIl: acceso ? _quandoEFallito(prefs) : null,
     );
+  }
+
+  static DateTime? _quandoEFallito(SharedPreferences prefs) {
+    final q = prefs.getInt(BackupCheGiraDaSolo.chiaveUltimoErrore);
+
+    return q == null ? null : DateTime.fromMillisecondsSinceEpoch(q);
   }
 
   Future<DateTime?> _quandoLUltimo(CloudDiBackup cloud) async {

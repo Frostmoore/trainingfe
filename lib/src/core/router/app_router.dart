@@ -14,6 +14,7 @@ import '../../features/chiavi/ui/porta_delle_chiavi.dart';
 import '../../features/chiavi/ui/schermata_backup.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
+import '../../features/forma/ui/schermata_forma.dart';
 import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/nutrition/ui/compositore_consigli.dart';
@@ -149,6 +150,13 @@ class AppRoutes {
   /// manifest la aggancia a `ACTION_SHOW_PERMISSIONS_RATIONALE`, ed è quello
   /// che il sistema apre quando chiede all'app di spiegarsi (S3.4).
   static const salute = '/salute';
+
+  /// Il dettaglio di carico e carica.
+  ///
+  /// 💡 Sta sotto `/salute` perché è la stessa famiglia di dati e la
+  /// stessa avvertenza: chi arriva qui deve trovarsi nello stesso posto mentale
+  /// di chi arriva dalla schermata dei permessi.
+  static const forma = '/salute/forma';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
   static const planNew = '/schede/nuova';
@@ -454,6 +462,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.salute,
         builder: (_, _) => const SchermataSalute(),
       ),
+      GoRoute(path: AppRoutes.forma, builder: (_, _) => const SchermataForma()),
       GoRoute(
         path: AppRoutes.calendar,
         builder: (_, _) => const CalendarScreen(),
@@ -606,4 +615,3 @@ class _RouterRefresh extends ChangeNotifier {
     super.dispose();
   }
 }
-

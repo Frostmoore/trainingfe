@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
@@ -32,62 +34,88 @@ class SchedaForma extends ConsumerWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.battery_charging_full_rounded,
-                    color: tema.colorScheme.primary),
-                const SizedBox(width: Gap.sm),
-                Text('Carico e carica', style: tema.textTheme.titleMedium),
-              ],
-            ),
 
-            const SizedBox(height: Gap.sm),
-            const AvvertenzaStima(),
-            const SizedBox(height: Gap.md),
+      /*
+       * 🚨 **Si tocca, e si vede che si tocca.**
+       *
+       * ⚠️ `InkWell` dentro la `Card` e non un `GestureDetector`: senza
+       * l'ondina al tocco, una card che apre una pagina è indistinguibile da una
+       * che non fa niente, e nessuno la prova due volte.
+       */
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.forma),
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.battery_charging_full_rounded,
+                    color: tema.colorScheme.primary,
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
+                      'Carico e carica',
+                      style: tema.textTheme.titleMedium,
+                    ),
+                  ),
 
-            Row(
-              children: [
-                Expanded(
-                  child: _Numero(
-                    etichetta: 'Carico',
-                    indice: forma.stanchezza,
-                    // 💡 L'ACWR è un rapporto: «142%» vuol dire «il 142% del tuo
-                    // carico abituale», che è letteralmente quello che è. ⚠️ Non
-                    // si inventa una scala: quella della carica sì, e infatti è
-                    // dichiarata.
-                    formato: (v) => '${(v * 100).round()}%',
-                    sotto: _fascia(forma.fascia),
+                  // 💡 La freccia dice «qui sotto c'è altro»: l'avvertenza
+                  // sopra i numeri promette una spiegazione, e questa è la porta.
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: tema.colorScheme.onSurfaceVariant,
                   ),
-                ),
-                const SizedBox(width: Gap.md),
-                Expanded(
-                  child: _Numero(
-                    etichetta: 'Carica',
-                    indice: forma.carica,
-                    formato: (v) => v.round().toString(),
-                    sotto: 'su 100',
+                ],
+              ),
+
+              const SizedBox(height: Gap.sm),
+              const AvvertenzaStima(),
+              const SizedBox(height: Gap.md),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _Numero(
+                      etichetta: 'Carico',
+                      indice: forma.stanchezza,
+                      // 💡 L'ACWR è un rapporto: «142%» vuol dire «il 142% del tuo
+                      // carico abituale», che è letteralmente quello che è. ⚠️ Non
+                      // si inventa una scala: quella della carica sì, e infatti è
+                      // dichiarata.
+                      formato: (v) => '${(v * 100).round()}%',
+                      sotto: _fascia(forma.fascia),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: Gap.md),
+                  Expanded(
+                    child: _Numero(
+                      etichetta: 'Carica',
+                      indice: forma.carica,
+                      formato: (v) => v.round().toString(),
+                      sotto: 'su 100',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   static String _fascia(FasciaCarico? f) => switch (f) {
-        FasciaCarico.scarico => 'sotto il tuo solito',
-        FasciaCarico.normale => 'nella tua norma',
-        FasciaCarico.inSalita => 'in salita',
-        FasciaCarico.alto => 'molto sopra il solito',
-        null => '',
-      };
+    FasciaCarico.scarico => 'sotto il tuo solito',
+    FasciaCarico.normale => 'nella tua norma',
+    FasciaCarico.inSalita => 'in salita',
+    FasciaCarico.alto => 'molto sopra il solito',
+    null => '',
+  };
 }
 
 /// Un numero, con **quanto vale** scritto sotto.

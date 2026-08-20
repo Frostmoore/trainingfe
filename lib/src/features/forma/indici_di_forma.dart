@@ -55,11 +55,11 @@ enum FasciaCarico {
   alto;
 
   static FasciaCarico da(double acwr) => switch (acwr) {
-        < 0.8 => FasciaCarico.scarico,
-        < 1.3 => FasciaCarico.normale,
-        < 1.5 => FasciaCarico.inSalita,
-        _ => FasciaCarico.alto,
-      };
+    < 0.8 => FasciaCarico.scarico,
+    < 1.3 => FasciaCarico.normale,
+    < 1.5 => FasciaCarico.inSalita,
+    _ => FasciaCarico.alto,
+  };
 }
 
 /// Un indice, con **quanto vale davvero**.
@@ -165,10 +165,7 @@ abstract final class IndiciDiForma {
   static Indice stanchezza(List<double> kcalPerGiorno) {
     final storia = kcalPerGiorno.length;
 
-    final cronico = ewma(
-      _ultimi(kcalPerGiorno, giorniCronici),
-      giorniCronici,
-    );
+    final cronico = ewma(_ultimi(kcalPerGiorno, giorniCronici), giorniCronici);
 
     if (cronico <= 0) {
       return Indice(
@@ -206,7 +203,7 @@ abstract final class IndiciDiForma {
   /// più alto vuol dire davvero meglio — ma i numeri in mezzo sono una scelta di
   /// presentazione, e va detto.
   ///
-  /// [cibo] è facoltativo e pesa poco: vedi [_pesoDelCibo].
+  /// [cibo] è facoltativo e pesa poco: vedi [pesoDelCibo].
   static Indice carica({
     required double? zHrv,
     required double? zBattito,
@@ -215,13 +212,13 @@ abstract final class IndiciDiForma {
     required int nottiDiStoria,
   }) {
     final pezzi = <(double, double)>[
-      if (zHrv != null) (zHrv, 1.0),
+      if (zHrv != null) (zHrv, pesoDellHrv),
 
       // 🚨 Invertito: sopra la media personale = peggio.
-      if (zBattito != null) (-zBattito, 1.0),
+      if (zBattito != null) (-zBattito, pesoDelBattito),
 
-      if (zSonno != null) (zSonno, 1.5),
-      if (zCibo != null) (math.min(0, zCibo), _pesoDelCibo),
+      if (zSonno != null) (zSonno, pesoDelSonno),
+      if (zCibo != null) (math.min(0, zCibo), pesoDelCibo),
     ];
 
     if (pezzi.isEmpty) {
@@ -243,7 +240,7 @@ abstract final class IndiciDiForma {
     final z = somma / pesi;
 
     return Indice(
-      valore: (50 + z * 25).clamp(0, 100).toDouble(),
+      valore: (zAlCentro + z * zQuantoPesa).clamp(0, 100).toDouble(),
       giorniDiStoria: nottiDiStoria,
       giorniPerEsserePieno: nottiPerLaCarica,
     );
@@ -259,7 +256,22 @@ abstract final class IndiciDiForma {
   /// negativo** — `math.min(0, zCibo)` sopra: mangiare tanto **non** alza la
   /// carica, mangiare troppo poco la abbassa. 🚨 Il verso asimmetrico è
   /// deliberato: del primo effetto non sappiamo niente, del secondo un po' sì.
-  static const _pesoDelCibo = 0.5;
+  static const pesoDelCibo = 0.5;
+
+  static const pesoDellHrv = 1.0;
+  static const pesoDelBattito = 1.0;
+
+  /// 💡 Il sonno pesa **più** degli altri: è l'ingrediente con la letteratura
+  /// più solida dietro, ed è quello che una persona riconosce da sola.
+  static const pesoDelSonno = 1.5;
+
+  /// ⚠️ Dove finisce uno `z` sulla scala 0–100 — la mappatura **nostra**.
+  ///
+  /// 💡 Sta qui e non sparso nel codice perché la schermata di dettaglio la deve
+  /// **scrivere per esteso**, e due copie della stessa costante diventerebbero
+  /// prima o poi due numeri diversi.
+  static const zAlCentro = 50.0;
+  static const zQuantoPesa = 25.0;
 
   /// 🚨 Lo z-score, in un posto solo.
   ///

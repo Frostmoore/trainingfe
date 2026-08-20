@@ -1,15 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../core/providers.dart';
-import '../dashboard/dashboard_controller.dart';
-import '../health/analizzatore_sonno.dart';
-import '../health/dati_salute.dart';
-import '../health/health_controller.dart';
-import '../training/data/storico_unificato.dart';
-import '../training/storico_unificato_controller.dart';
-import 'indici_di_forma.dart';
-
 /// Stanchezza e carica, con i dati veri — FASE 2-sexies.
 ///
 /// ══ 🚨 LA REGOLA, DETTA BENE ══════════════════════════════════════════════
@@ -30,11 +18,84 @@ import 'indici_di_forma.dart';
 /// 💡 La differenza conta perché la versione stretta aveva già prodotto un buco:
 /// il cibo era rimasto fuori dal calcolo **per una regola scritta male**, non per
 /// un limite vero.
+
+library;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers.dart';
+import '../dashboard/dashboard_controller.dart';
+import '../health/analizzatore_sonno.dart';
+import '../health/dati_salute.dart';
+import '../health/health_controller.dart';
+import '../training/data/storico_unificato.dart';
+import '../training/storico_unificato_controller.dart';
+import 'indici_di_forma.dart';
+
+/// Un pezzo della carica, **con i numeri che l'hanno prodotto**.
+///
+/// 🚨 Serve alla schermata di dettaglio, e non è una comodità: un indice che
+/// mostra solo il risultato chiede di essere creduto sulla parola. ⚠️ Mostrare
+/// gli ingredienti è l'unico modo perché chi legge possa **non essere
+/// d'accordo** — e su un numero che parla della sua stanchezza ne ha diritto.
+class IngredienteCarica {
+  const IngredienteCarica({
+    required this.nome,
+    required this.unita,
+    required this.peso,
+    this.z,
+    this.oggi,
+    this.media,
+    this.invertito = false,
+    this.soloInNegativo = false,
+  });
+
+  final String nome;
+  final String unita;
+  final double peso;
+
+  /// `null` quando l'ingrediente non c'è: senza dati, o senza abbastanza storia.
+  final double? z;
+
+  final double? oggi;
+  final double? media;
+
+  /// ⚠️ Il battito a riposo: sopra la media personale è **peggio**.
+  final bool invertito;
+
+  /// 🚨 Il cibo: mangiare tanto non alza la carica.
+  final bool soloInNegativo;
+
+  bool get ceLo => z != null;
+}
+
 class Forma {
-  const Forma({required this.stanchezza, required this.carica});
+  const Forma({
+    required this.stanchezza,
+    required this.carica,
+    this.acuto = 0,
+    this.cronico = 0,
+    this.ingredienti = const [],
+    this.caricoPerGiorno = const [],
+  });
 
   final Indice stanchezza;
   final Indice carica;
+
+  /// Il carico degli ultimi 7 giorni, in `EWMA`.
+  final double acuto;
+
+  /// Il carico degli ultimi 28, in `EWMA`: **il proprio normale**.
+  final double cronico;
+
+  final List<IngredienteCarica> ingredienti;
+
+  /// Le kcal per giorno, dal più vecchio al più recente.
+  ///
+  /// 💡 Serve alla schermata di dettaglio per mostrare **da dove esce** il
+  /// rapporto: due medie da sole non si possono verificare.
+  final List<double> caricoPerGiorno;
 
   FasciaCarico? get fascia {
     final v = stanchezza.valore;
@@ -59,11 +120,15 @@ const _finestra = IndiciDiForma.giorniCronici;
 /// 🚨 Ed è la stessa forma degli altri tre ingredienti: uno `z` contro sé stessi.
 /// Un pezzo con una matematica diversa dagli altri sarebbe il primo posto in cui
 /// guardare quando l'indice dirà una cosa strana.
-final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((ref) async {
-  final dati = await ref.watch(apiClientProvider).get<Map<String, dynamic>>(
-    '/series',
-    query: {'metric': 'calories', 'days': _finestra, 'offset': 0},
-  );
+final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((
+  ref,
+) async {
+  final dati = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>(
+        '/series',
+        query: {'metric': 'calories', 'days': _finestra, 'offset': 0},
+      );
 
   final serie = Series.fromJson(dati);
 
@@ -134,26 +199,37 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   final storiaCarico = _giorniDagliAllenamenti(voci, mezzanotte);
 
   // ── La carica: z-score contro le proprie medie ───────────────────────────
-  Future<double?> zDi(MetricaSalute m) async {
+  //
+  // 💡 Torna anche i numeri grezzi: alla schermata di dettaglio serve poter
+  // dire «48 contro una tua media di 65», non solo «−1.7».
+  Future<({double? z, double? oggi, double? media})> pezzoDi(
+    MetricaSalute m,
+  ) async {
     final righe = await archivio.mediePerGiorno(m, giorni: _finestra);
 
-    if (righe.length < 2) return null;
+    if (righe.length < 2) return (z: null, oggi: null, media: null);
 
     final valori = righe.map((r) => r.media).toList();
-    final ultimo = valori.last;
-
     final stat = IndiciDiForma.mediaEDeviazione(valori);
-    if (stat == null) return null;
 
-    return IndiciDiForma.z(
-      valore: ultimo,
+    if (stat == null) return (z: null, oggi: valori.last, media: null);
+
+    return (
+      z: IndiciDiForma.z(
+        valore: valori.last,
+        media: stat.$1,
+        deviazione: stat.$2,
+      ),
+      oggi: valori.last,
       media: stat.$1,
-      deviazione: stat.$2,
     );
   }
 
-  final zHrv = await zDi(MetricaSalute.hrv);
-  final zBattito = await zDi(MetricaSalute.battitoARiposo);
+  final hrv = await pezzoDi(MetricaSalute.hrv);
+  final battito = await pezzoDi(MetricaSalute.battitoARiposo);
+
+  final zHrv = hrv.z;
+  final zBattito = battito.z;
 
   // ── Il sonno ─────────────────────────────────────────────────────────────
   final minuti = <double>[];
@@ -169,11 +245,17 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   }
 
   double? zSonno;
+  double? sonnoOggi;
+  double? sonnoMedio;
+
+  if (minuti.isNotEmpty) sonnoOggi = minuti.first;
 
   if (minuti.length >= 2) {
     final stat = IndiciDiForma.mediaEDeviazione(minuti);
 
     if (stat != null) {
+      sonnoMedio = stat.$1;
+
       zSonno = IndiciDiForma.z(
         // 💡 `minuti` è dal più recente all'indietro: l'ultima notte è la prima.
         valore: minuti.first,
@@ -192,14 +274,20 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
    * sarebbe peggio di un numero un po' meno preciso.
    */
   double? zCibo;
+  double? ciboOggi;
+  double? ciboMedio;
 
   try {
     final calorie = await ref.watch(_storiaCalorieProvider.future);
+
+    if (calorie.isNotEmpty) ciboOggi = calorie.last;
 
     if (calorie.length >= 2) {
       final stat = IndiciDiForma.mediaEDeviazione(calorie);
 
       if (stat != null) {
+        ciboMedio = stat.$1;
+
         zCibo = IndiciDiForma.z(
           valore: calorie.last,
           media: stat.$1,
@@ -212,6 +300,48 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   }
 
   return Forma(
+    acuto: IndiciDiForma.ewma(
+      carico.sublist(carico.length - IndiciDiForma.giorniAcuti),
+      IndiciDiForma.giorniAcuti,
+    ),
+    cronico: IndiciDiForma.ewma(carico, IndiciDiForma.giorniCronici),
+    caricoPerGiorno: carico,
+    ingredienti: [
+      IngredienteCarica(
+        nome: 'Variabilità cardiaca',
+        unita: 'ms',
+        peso: IndiciDiForma.pesoDellHrv,
+        z: hrv.z,
+        oggi: hrv.oggi,
+        media: hrv.media,
+      ),
+      IngredienteCarica(
+        nome: 'Battito a riposo',
+        unita: 'bpm',
+        peso: IndiciDiForma.pesoDelBattito,
+        z: battito.z,
+        oggi: battito.oggi,
+        media: battito.media,
+        invertito: true,
+      ),
+      IngredienteCarica(
+        nome: 'Sonno',
+        unita: 'min',
+        peso: IndiciDiForma.pesoDelSonno,
+        z: zSonno,
+        oggi: sonnoOggi,
+        media: sonnoMedio,
+      ),
+      IngredienteCarica(
+        nome: 'Cibo',
+        unita: 'kcal',
+        peso: IndiciDiForma.pesoDelCibo,
+        z: zCibo,
+        oggi: ciboOggi,
+        media: ciboMedio,
+        soloInNegativo: true,
+      ),
+    ],
     stanchezza: IndiciDiForma.stanchezza(carico)._conStoria(storiaCarico),
     carica: IndiciDiForma.carica(
       zHrv: zHrv,
@@ -248,8 +378,8 @@ extension on Indice {
   /// 💡 `IndiciDiForma` è puro e non sa da quanto esiste l'archivio: glielo dice
   /// chi i dati li ha letti.
   Indice _conStoria(int giorni) => Indice(
-        valore: valore,
-        giorniDiStoria: giorni,
-        giorniPerEsserePieno: giorniPerEsserePieno,
-      );
+    valore: valore,
+    giorniDiStoria: giorni,
+    giorniPerEsserePieno: giorniPerEsserePieno,
+  );
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -6,6 +7,7 @@ import '../../core/providers.dart';
 import '../health/recupero_controller.dart';
 import '../profile/corpo_controller.dart';
 import '../profile/target_locale_controller.dart';
+import '../training/storico_unificato_controller.dart';
 import 'data/dashboard_models.dart';
 
 /// Il riepilogo di oggi — D5.
@@ -205,6 +207,24 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
    */
   final recupero = await ref.watch(recuperoPerIlConsiglioProvider.future);
 
+  /*
+   * 🆕 20/08 — il **tipo** degli allenamenti della settimana.
+   *
+   * 🚨 Lo sa solo il telefono: sul server il tipo non esiste, e l'unico posto
+   * dove esiste «Pesi» e' l'orologio. Vedi `tipiDegliAllenamentiProvider`.
+   *
+   * ⚠️ **Un guasto qui non deve far sparire il consiglio.** Il tipo e' un di
+   * piu': se l'archivio locale non si legge, il consiglio parte con quello che
+   * c'e' — e' la stessa regola per cui il recupero e' facoltativo.
+   */
+  final tipi = await ref
+      .watch(tipiDegliAllenamentiProvider.future)
+      .catchError((Object e) {
+    debugPrint('adviceProvider: i tipi degli allenamenti non si leggono — $e');
+
+    return const <int, String>{};
+  });
+
   try {
     final data = await ref
         .watch(apiClientProvider)
@@ -218,6 +238,14 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
               'target_fat_g': locale.macro.grassiG,
             },
             ...recupero,
+
+            /*
+             * 🚨 Il **codice**, non l'etichetta: `STRENGTH_TRAINING`, non
+             * «Pesi». Il server rifiuta tutto cio' che non e' `[A-Z_]{2,48}`,
+             * ed e' quella regex a garantire che da qui non esca testo libero.
+             */
+            for (final voce in tipi.entries)
+              'training_types[${voce.key}]': voce.value,
           },
         );
 

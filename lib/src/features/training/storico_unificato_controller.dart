@@ -66,6 +66,61 @@ final storicoUnificatoProvider =
   );
 });
 
+/// Il **tipo** delle sedute della settimana, per il consiglio del giorno —
+/// 20/08/2026.
+///
+/// ── 🚨 Perché lo sa solo il telefono ──────────────────────────────────────
+///
+/// Perché sul server il tipo **non esiste**: `workout_sessions` ha date, calorie
+/// e note, `workout_plans` ha un nome. ⚠️ L'unico posto dove esiste «Pesi» è
+/// l'orologio, che scrive `STRENGTH_TRAINING` in Health Connect — e quello sta
+/// qui dentro.
+///
+/// 📌 Richiesta del committente: *«il tipo di allenamento deve partire: se il mio
+/// allenamento è Pesi questo deve passare»*.
+///
+/// ── ⚠️ Parte il CODICE, non l'etichetta italiana ──────────────────────────
+///
+/// `STRENGTH_TRAINING`, non «Pesi». 🚨 Il codice è un **vocabolario chiuso**, e
+/// il server lo verifica con `/^[A-Z_]{2,48}$/`: è quella regex a garantire che
+/// da qui non possa uscire testo libero.
+///
+/// 💡 L'etichetta italiana serve a chi guarda lo schermo, e vive in
+/// `TipoAllenamento`. Mandarla vorrebbe dire mandare una stringa che un domani
+/// qualcuno potrebbe rendere più descrittiva senza pensarci.
+///
+/// ── 💡 Solo le sedute, non gli allenamenti a sé ───────────────────────────
+///
+/// La mappa è `id della seduta → codice`: una corsa registrata **solo**
+/// dall'orologio non ha un `id` di seduta, quindi non ha modo di entrare. È la
+/// decisione del committente — nel consiglio vanno solo gli allenamenti
+/// registrati nell'app — applicata dalla forma del dato invece che da un
+/// controllo.
+final tipiDegliAllenamentiProvider =
+    FutureProvider.autoDispose<Map<int, String>>((ref) async {
+  final voci = await ref.watch(storicoUnificatoProvider.future);
+
+  final fuori = <int, String>{};
+
+  for (final v in voci) {
+    if (v.sedute.isEmpty || v.dalPolso.isEmpty) continue;
+
+    /*
+     * ⚠️ Il tipo del **primo** tratto del gruppo. Se l'orologio è stato fermato
+     * e ripreso i tratti sono più d'uno, ma il raggruppamento li tiene insieme
+     * solo se il tipo non cambia (o se si sovrappongono): prendere il primo è
+     * quindi rappresentativo, e prendere l'ultimo non cambierebbe niente.
+     */
+    final tipo = v.dalPolso.first.tipo;
+
+    for (final s in v.sedute) {
+      fuori[s.id] = tipo;
+    }
+  }
+
+  return fuori;
+});
+
 /// La riga di storico a cui appartiene una seduta — FASE 1-bis.
 ///
 /// ── 🚨 Perché il riepilogo ne ha bisogno ──────────────────────────────────

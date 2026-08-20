@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../health/recupero_controller.dart';
+import '../health/settimana_per_il_consiglio.dart';
 import '../profile/corpo_controller.dart';
 import '../profile/target_locale_controller.dart';
 import '../training/storico_unificato_controller.dart';
@@ -217,6 +218,26 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
    * piu': se l'archivio locale non si legge, il consiglio parte con quello che
    * c'e' — e' la stessa regola per cui il recupero e' facoltativo.
    */
+  /*
+   * 🆕 20/08 — la settimana: sonno, HRV, battito e allenamenti.
+   *
+   * 🚨 Chiude due difetti con la stessa radice: il consiglio riceveva **una
+   * notte sola** e **zero allenamenti dell'orologio**, e da li' inventava il
+   * resto. *«non vede il mio allenamento di ieri»* e *«non e' vero che di
+   * solito dormo bene»* erano lo stesso problema visto da due lati.
+   *
+   * ⚠️ Anche questa e' facoltativa: se l'archivio non si legge, il consiglio
+   * parte con quello che c'e'.
+   */
+  final settimana = await ref
+      .watch(settimanaPerIlConsiglioProvider.future)
+      .then((s) => s.payload)
+      .catchError((Object e) {
+    debugPrint('adviceProvider: la settimana non si legge — $e');
+
+    return const <String, Object>{};
+  });
+
   final tipi = await ref
       .watch(tipiDegliAllenamentiProvider.future)
       .catchError((Object e) {
@@ -238,6 +259,7 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
               'target_fat_g': locale.macro.grassiG,
             },
             ...recupero,
+            ...settimana,
 
             /*
              * 🚨 Il **codice**, non l'etichetta: `STRENGTH_TRAINING`, non

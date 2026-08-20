@@ -1,5 +1,6 @@
 import '../../core/storage/archivio_salute.dart';
 import 'dati_salute.dart';
+import 'sessioni_di_sonno.dart';
 
 /// Il giudizio di una notte.
 class GiudizioNotte {
@@ -82,7 +83,47 @@ class AnalizzatoreSonno {
   /// Il riepilogo di una notte. `null` se per quella notte non c'è nessun
   /// campione — **non** un oggetto con tutti zeri.
   static Future<GiudizioNotte?> notte(ArchivioSalute archivio, DateTime quale) async {
-    final campioni = await archivio.campioniDellaNotte(quale);
+    final tutti = await archivio.campioniDellaNotte(quale);
+
+    if (tutti.isEmpty) return null;
+
+    /*
+     * ══ 🚨 IL PISOLINO NON È NOTTE — difetto del 20/08/2026 ═════════════════
+     *
+     * ⚠️ Qui si sommavano **tutti** i campioni della giornata di riposo, e una
+     * pennichella pomeridiana finiva dentro il totale della notte. Il
+     * committente l'ha visto subito: *«ho dormito sì 8:55h ma 2 di queste sono
+     * state un pisolino»*.
+     *
+     * 🚨 **Non è un arrotondamento: è un numero falso** che poi entra nel
+     * consiglio del giorno e nel giudizio sul recupero. Due ore di pennichella
+     * fanno sembrare riposante una notte da sei ore e mezza.
+     *
+     * 💡 `SessioniDiSonno` sapeva già distinguerle (`eNotte`): quello che
+     * mancava era **usarlo qui**. La classificazione c'era, il consumatore no.
+     *
+     * ⚠️ E se per quella giornata ci sono **solo** pennichelle, non si dice che
+     * ha dormito due ore: si dice che non c'è una notte. Sommare i pisolini e
+     * chiamarli notte sarebbe lo stesso difetto al contrario.
+     */
+    final notti = SessioniDiSonno.da(
+      tutti.map((c) => (inizio: c.iniziatoIl, fine: c.finitoIl)),
+    ).where((s) => s.eNotte).toList();
+
+    if (notti.isEmpty) return null;
+
+    final campioni = tutti.where((c) {
+      for (final n in notti) {
+        // 💡 Un campione appartiene alla notte se ci **comincia** dentro: gli
+        // estremi coincidono per costruzione, e il confronto sull'inizio evita
+        // di contare due volte un segmento a cavallo.
+        if (!c.iniziatoIl.isBefore(n.inizio) && !c.iniziatoIl.isAfter(n.fine)) {
+          return true;
+        }
+      }
+
+      return false;
+    }).toList();
 
     if (campioni.isEmpty) return null;
 

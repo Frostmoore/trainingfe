@@ -183,6 +183,54 @@ void main() {
       expect(g.complessivo, Giudizio.ok);
     });
 
+    /// ══ 🚨 IL PISOLINO NON È NOTTE — difetto del 20/08/2026 ═══════════════
+    ///
+    /// 📌 Il committente, leggendo il consiglio del giorno: *«ho dormito sì
+    /// 8:55h ma 2 di queste sono state un pisolino»*.
+    ///
+    /// ⚠️ Si sommavano **tutti** i campioni della giornata di riposo, e una
+    /// pennichella pomeridiana finiva dentro il totale della notte. 🚨 Non è un
+    /// arrotondamento: due ore di pisolino fanno sembrare riposante una notte da
+    /// sei ore e mezza, e quel numero falso entrava nel consiglio.
+    ///
+    /// 💡 `SessioniDiSonno` sapeva già distinguerle (`eNotte`): quello che
+    /// mancava era **usarlo qui**.
+    test('una pennichella non entra nel totale della notte', () async {
+      final sera = DateTime(2026, 8, 10, 23);
+
+      // La notte vera: 6h30.
+      await dormi(FaseSonno.leggero, da: sera, minuti: 390);
+
+      // E un pisolino di due ore il pomeriggio dopo, stessa giornata di riposo.
+      await dormi(
+        FaseSonno.leggero,
+        da: DateTime(2026, 8, 11, 15),
+        minuti: 120,
+      );
+
+      final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
+
+      expect(
+        g!.minutiDormiti,
+        390,
+        reason: 'La notte è 6h30, non 8h30: il pisolino sta fuori.',
+      );
+    });
+
+    /// ⚠️ **E l'errore opposto non deve succedere**: se per quella giornata ci
+    /// sono **solo** pennichelle, non si dice che ha dormito due ore. Si dice
+    /// che non c'è una notte — sommare i pisolini e chiamarli notte sarebbe lo
+    /// stesso difetto al contrario.
+    test('una giornata di soli pisolini non è una notte', () async {
+      await dormi(
+        FaseSonno.leggero,
+        da: DateTime(2026, 8, 11, 15),
+        minuti: 100,
+      );
+
+      expect(await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)), isNull);
+    });
+
     /// ⚠️ I minuti da svegli **non** contano come sonno, anche se il sensore li
     /// ha registrati dentro la finestra della notte: sono esattamente ciò che
     /// rende una notte lunga poco riposante.

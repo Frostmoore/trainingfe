@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
@@ -10,6 +11,7 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../health/health_controller.dart';
 import '../../profile/corpo_controller.dart';
+import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
 import 'widgets/today_cards.dart';
@@ -26,7 +28,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final riepilogo = ref.watch(dashboardProvider);
-    final consiglio = ref.watch(adviceProvider);
+    final consiglio = ref.watch(consiglioDaMostrareProvider);
 
     return Scaffold(
       // 🚨 Niente AppBar: l'intestazione **è** la scheda della palestra, e una
@@ -71,15 +73,35 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   CaloriesCard(riepilogo: r),
 
-                  // 🚨 Se manca il consenso all'AI si **porta a darlo**, invece
-                  // di tacere: il consiglio che sparisce in silenzio sembra un
-                  // guasto, ed è così che è stato segnalato.
-                  consiglio.maybeWhen(
-                    data: (c) => c.haTesto
-                        ? _Consiglio(testo: c.testo!)
-                        : (c.serveConsenso ? const _ConsensoAiMancante() : null),
-                    orElse: () => null,
-                  ),
+                  /*
+                   * 🚨 **La card non sparisce mai** — 20/08/2026.
+                   *
+                   * 📌 *«la card del consiglio del giorno si deve sempre vedere
+                   * (a meno che io non l'abbia disabilitato), al limite si
+                   * mostra il consiglio del giorno precedente, se ancora non è
+                   * pronto quello nuovo»*.
+                   *
+                   * ⚠️ Prima spariva in **quattro** modi e tre erano difetti:
+                   * mentre caricava, se l'AI non rispondeva, e — il più
+                   * frequente — mentre il server la rigenerava perché il
+                   * contesto era cambiato. Cioè spariva proprio a chi aveva
+                   * appena segnato un pasto: puniva l'uso dell'app.
+                   *
+                   * 💡 Se manca il consenso all'AI si **porta a darlo** invece
+                   * di tacere: quello non è qualcosa da aspettare, è qualcosa
+                   * da fare.
+                   */
+                  switch (consiglio.valueOrNull?.stato) {
+                    StatoConsiglio.serveConsenso => const _ConsensoAiMancante(),
+                    StatoConsiglio.spento => null,
+                    StatoConsiglio.inArrivo => const _ConsiglioInArrivo(),
+                    _ => _Consiglio(
+                        testo: consiglio.valueOrNull?.testo ?? '',
+                        generatoIl: consiglio.valueOrNull?.generatoIl,
+                        vecchio:
+                            consiglio.valueOrNull?.stato == StatoConsiglio.vecchio,
+                      ),
+                  },
 
                   const RecoveryCard(),
                   WeightCard(pesoObiettivo: r.body.targetWeightKg),
@@ -145,9 +167,19 @@ class _Blocchi extends StatelessWidget {
 /// «devi» sotto una riga che dice «non fidarti» si contraddice da solo, e a
 /// vincere è sempre il testo più grande.
 class _Consiglio extends ConsumerStatefulWidget {
-  const _Consiglio({required this.testo});
+  const _Consiglio({required this.testo, this.generatoIl, this.vecchio = false});
 
   final String testo;
+
+  final DateTime? generatoIl;
+
+  /// Se quello che si sta mostrando **non è di oggi**.
+  ///
+  /// 🚨 **Va detto, non nascosto.** Mostrare il consiglio di ieri come se fosse
+  /// di oggi vorrebbe dire far leggere una frase sul riposo a chi si è appena
+  /// allenato, senza che nulla lo avverta. ⚠️ È il tipo di bugia che non fa
+  /// danno subito e distrugge la fiducia in tutto il resto.
+  final bool vecchio;
 
   @override
   ConsumerState<_Consiglio> createState() => _ConsiglioState();
@@ -242,6 +274,35 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
             ),
 
             const SizedBox(height: Gap.sm),
+
+            /*
+             * 🚨 **Si dice che non è di oggi, e si dice PRIMA del testo.**
+             *
+             * ⚠️ Sotto lo leggerebbe chi ha già finito di leggere il consiglio,
+             * cioè troppo tardi: chi si è appena allenato deve sapere che sta
+             * per leggere una frase scritta ieri **mentre** la legge.
+             */
+            if (widget.vecchio) ...[
+              Row(
+                children: [
+                  Icon(Icons.history_rounded, size: 14, color: sopra.withValues(alpha: 0.75)),
+                  const SizedBox(width: Gap.xs),
+                  Expanded(
+                    child: Text(
+                      widget.generatoIl == null
+                          ? 'Questo è l\'ultimo che avevi: sto preparando quello di oggi.'
+                          : 'Consiglio del ${DateFormat('d MMMM', 'it').format(widget.generatoIl!)}: '
+                              'sto preparando quello di oggi.',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: sopra.withValues(alpha: 0.75),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gap.xs),
+            ],
 
             Text(
               widget.testo,
@@ -589,6 +650,54 @@ class _NienteDati extends StatelessWidget {
 /// 🚨 **Non è un errore da nascondere: è un'azione da proporre.** Prima questo
 /// caso spariva dentro un `catch` che inghiottiva tutto allo stesso modo, e la
 /// card semplicemente non compariva — indistinguibile da un guasto.
+/// La card del consiglio quando non ne abbiamo ancora **nessuno**.
+///
+/// ── 🚨 Perché uno spazio occupato è meglio di uno spazio vuoto ────────────
+///
+/// Perché la card che compare e scompare fa **saltare la schermata**: le tre
+/// card sotto si spostano su e giù a ogni caricamento, e chi stava per toccarne
+/// una tocca quella sbagliata.
+///
+/// ⚠️ E perché dice cosa sta succedendo. Uno spazio vuoto lascia a chi guarda
+/// il compito di indovinare se la funzione esiste, se è rotta o se non ha
+/// ancora finito — ed è la stessa lezione del ripristino muto (§2t.8).
+///
+/// 💡 Compare **solo la primissima volta**: dal secondo giorno in poi c'è
+/// sempre un consiglio ricordato da mostrare al suo posto.
+class _ConsiglioInArrivo extends StatelessWidget {
+  const _ConsiglioInArrivo();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final sopra = theme.colorScheme.onPrimaryContainer;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: theme.colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: sopra),
+            ),
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Text(
+                'Sto preparando il consiglio di oggi…',
+                style: theme.textTheme.bodyMedium?.copyWith(color: sopra),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ConsensoAiMancante extends StatelessWidget {
   const _ConsensoAiMancante();
 

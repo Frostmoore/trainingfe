@@ -221,7 +221,10 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
           },
         );
 
-    return Consiglio(testo: data['body']?.toString());
+    return Consiglio(
+      testo: data['body']?.toString(),
+      generatoIl: DateTime.tryParse(data['generated_at']?.toString() ?? '')?.toLocal(),
+    );
   } on ForbiddenException {
     /*
      * 🚨 **Il 403 del consenso NON è «l'AI non risponde»** — S9.
@@ -254,9 +257,16 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
 
 /// Il consiglio, o il motivo per cui non c'è.
 class Consiglio {
-  const Consiglio({this.testo, this.serveConsenso = false});
+  const Consiglio({this.testo, this.serveConsenso = false, this.generatoIl});
 
   final String? testo;
+
+  /// Quando l'ha generato il server (`generated_at`).
+  ///
+  /// 🆕 20/08 — serve a `consiglioDaMostrareProvider` per scrivere «di ieri»
+  /// invece di un generico «vecchio». 💡 Una data dice a chi legge **quanto**
+  /// fidarsi di quel testo; «vecchio» non dice niente.
+  final DateTime? generatoIl;
 
   /// L'app deve **portare al consenso**, non limitarsi a tacere.
   final bool serveConsenso;

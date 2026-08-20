@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/backup/backup_che_gira_da_solo.dart';
 import '../../../core/backup/backup_controller.dart';
+import '../../../core/backup/cloud_di_backup.dart';
 import '../../../core/backup/raccolta_foto.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
@@ -543,11 +546,66 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
       messaggeria.showSnackBar(
         const SnackBar(content: Text('Backup aggiornato.')),
       );
-    } on Object catch (errore) {
-      messaggeria.showSnackBar(SnackBar(content: Text(errore.toString())));
+    } on Object catch (errore, stack) {
+      /*
+       * ══ 🚨 IL MESSAGGIO È PER UNA PERSONA, NON PER NOI — 20/08/2026 ═══════
+       *
+       * ⚠️ Qui c'era `Text(errore.toString())`, e sul telefono del committente
+       * ha sputato **l'eccezione con lo stack** dentro il toast. *«Non va bene
+       * che mostri proprio i dettagli tecnici dell'errore»*.
+       *
+       * 🚨 Non è solo brutto: un messaggio che nessuno capisce **non dice cosa
+       * fare**, e chi lo legge conclude che l'app è rotta invece che «manca la
+       * rete». La differenza fra le due è tutta: la prima si subisce, la
+       * seconda si risolve in due secondi.
+       *
+       * 💡 Lo stack serve **a noi** e va nel log, dove lo cerchiamo noi.
+       */
+      debugPrintStack(label: 'Backup a mano: $errore', stackTrace: stack);
+
+      /*
+       * 🚨 **E si segna che è fallito** — FASE 2.2.
+       *
+       * ⚠️ Prima lo scriveva solo il backup **automatico**, e infatti provando
+       * a mano il committente ha visto «Ultimo backup: oggi» subito dopo un
+       * fallimento: vero, e fuorviante. 💡 Un tentativo è un tentativo, che a
+       * farlo sia un cron o un dito.
+       */
+      unawaited(BackupCheGiraDaSolo.segnaFallito());
+
+      ref.invalidate(backupAutomaticoProvider);
+
+      messaggeria.showSnackBar(
+        SnackBar(content: Text(_perUnaPersona(errore))),
+      );
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
+  }
+
+  /// L'errore, detto a chi lo legge.
+  ///
+  /// 💡 Tre casi e non venti: quello che conta non è **quale** guasto è, è
+  /// **cosa può fare adesso chi sta guardando**. ⚠️ Un elenco di venti messaggi
+  /// diversi sarebbe venti modi di dire le stesse tre cose.
+  static String _perUnaPersona(Object errore) {
+    if (errore is CloudNonRaggiungibile) return errore.motivo;
+
+    final t = errore.toString().toLowerCase();
+
+    if (t.contains('socket') ||
+        t.contains('network') ||
+        t.contains('connection') ||
+        t.contains('host')) {
+      return 'Non riesco a raggiungere il tuo spazio: controlla la connessione '
+          'e riprova.';
+    }
+
+    // ⚠️ Il caso generico dice comunque **cosa succede adesso**: che i dati
+    // sono ancora sul telefono. Senza, «non è riuscito» suona come «hai perso
+    // qualcosa».
+    return 'Il backup non è riuscito. I tuoi dati sono ancora sul telefono: '
+        'riprova più tardi.';
   }
 }
 

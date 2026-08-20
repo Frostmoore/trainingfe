@@ -261,6 +261,42 @@ void main() {
     });
   });
 
+  group('La nota di attendibilità — il difetto del 20/08', () {
+    /// ══ 🚨 MISURARE LA STORIA SBAGLIATA ═══════════════════════════════════
+    ///
+    /// 📌 Il committente, provando l'app: *«non vedo "mancano N giorni"»*.
+    ///
+    /// ⚠️ La causa era nel provider, non qui: si guardava da quanto tempo
+    /// l'archivio ha dati di **HRV**, e chi ripristina un backup ne ha subito
+    /// ventotto giorni. 🚨 L'indice si dichiarava **attendibile** mentre
+    /// l'`ACWR` era costruito su **un allenamento solo**.
+    ///
+    /// 💡 La finestra lunga dell'`ACWR` ha bisogno di ventotto giorni di
+    /// **allenamenti osservati**, non di ventotto giorni di battiti. Questi test
+    /// fissano la semantica che il provider deve rispettare.
+    test('due giorni di storia dicono che ne mancano 26', () {
+      final i = IndiciDiForma.stanchezza([0, 500])._come(2);
+
+      expect(i.giorniCheMancano, 26);
+      expect(i.eAttendibile, isFalse);
+    });
+
+    test('a ventotto non manca niente', () {
+      final i = IndiciDiForma.stanchezza(List.filled(28, 300))._come(28);
+
+      expect(i.giorniCheMancano, 0);
+      expect(i.eAttendibile, isTrue);
+    });
+
+    /// ⚠️ E non si va sotto zero: chi ha cinquanta giorni di storia non ha
+    /// «meno venti giorni da aspettare».
+    test('con piu di ventotto giorni non si va sotto zero', () {
+      final i = IndiciDiForma.stanchezza(List.filled(28, 300))._come(50);
+
+      expect(i.giorniCheMancano, 0);
+    });
+  });
+
   group('z-score', () {
     test('il conto giusto', () {
       expect(
@@ -287,4 +323,14 @@ void main() {
       expect(dev, closeTo(2, 0.001));
     });
   });
+}
+
+/// 💡 `IndiciDiForma` è puro e non sa da quanto esiste l'archivio: glielo dice
+/// chi i dati li ha letti. Qui si simula quello che fa `formaProvider`.
+extension on Indice {
+  Indice _come(int giorni) => Indice(
+        valore: valore,
+        giorniDiStoria: giorni,
+        giorniPerEsserePieno: giorniPerEsserePieno,
+      );
 }

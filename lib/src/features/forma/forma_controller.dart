@@ -6,6 +6,7 @@ import '../dashboard/dashboard_controller.dart';
 import '../health/analizzatore_sonno.dart';
 import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
+import '../training/data/storico_unificato.dart';
 import '../training/storico_unificato_controller.dart';
 import 'indici_di_forma.dart';
 
@@ -113,7 +114,24 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
    * qualcosa: senza, la nota direbbe «attendibile» a chi ha installato l'app
    * ieri.
    */
-  final storiaCarico = await _giorniDiArchivio(ref, oggi);
+  /*
+   * ══ 🚨 LA STORIA DEL CARICO È QUELLA DEGLI ALLENAMENTI ═══════════════════
+   *
+   * ⚠️ **Difetto trovato dal committente il 20/08**: *«non vedo "mancano N
+   * giorni"»*. La causa: qui si guardava da quanto tempo l'archivio ha dati di
+   * **HRV**, e chi ripristina un backup ne ha subito ventotto giorni. Risultato:
+   * l'indice si dichiarava **attendibile** mentre l'`ACWR` era costruito su **un
+   * allenamento solo**.
+   *
+   * 🚨 È l'errore di misurare la storia sbagliata: la finestra lunga
+   * dell'`ACWR` ha bisogno di **ventotto giorni di allenamenti osservati**, non
+   * di ventotto giorni di battiti.
+   *
+   * 💡 Si conta dal **primo allenamento** che l'archivio conosce: chi ha
+   * cominciato a registrare due giorni fa legge «mancano 26 giorni», che è la
+   * verità.
+   */
+  final storiaCarico = _giorniDagliAllenamenti(voci, mezzanotte);
 
   // ── La carica: z-score contro le proprie medie ───────────────────────────
   Future<double?> zDi(MetricaSalute m) async {
@@ -205,28 +223,25 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   );
 });
 
-/// Da quanti giorni l'archivio ha qualcosa da dire.
+/// Da quanti giorni si osservano gli **allenamenti**.
 ///
-/// 💡 Si guarda il **sonno**, che è il dato che arriva ogni notte appena Health
-/// Connect è collegato: è il modo più semplice di sapere da quando l'app
-/// raccoglie. ⚠️ Guardare gli allenamenti darebbe zero a chi non si allena, e la
-/// nota direbbe «mancano 28 giorni» per sempre.
-Future<int> _giorniDiArchivio(Ref ref, DateTime oggi) async {
-  try {
-    final righe = await ref
-        .read(archivioSaluteProvider)
-        .mediePerGiorno(MetricaSalute.hrv, giorni: _finestra);
+/// 💡 `0` quando non ce n'è nessuno: lì il carico non è «poco attendibile», è
+/// **non calcolabile** — e ci pensa `IndiciDiForma.stanchezza`.
+int _giorniDagliAllenamenti(List<VoceStorico> voci, DateTime mezzanotte) {
+  if (voci.isEmpty) return 0;
 
-    if (righe.isEmpty) return 0;
+  var piuVecchio = 0;
 
-    final primo = righe.first.giorno;
+  for (final v in voci) {
+    final giorno = DateTime(v.quando.year, v.quando.month, v.quando.day);
+    final quantiFa = mezzanotte.difference(giorno).inDays;
 
-    return DateTime(oggi.year, oggi.month, oggi.day).difference(primo).inDays + 1;
-  } on Object catch (e) {
-    debugPrint('forma: non riesco a datare l\'archivio — $e');
-
-    return 0;
+    if (quantiFa > piuVecchio) piuVecchio = quantiFa;
   }
+
+  // ⚠️ `+1` perché oggi stesso è un giorno di osservazione: chi ha registrato
+  // il primo allenamento stamattina ha **un** giorno di storia, non zero.
+  return piuVecchio + 1;
 }
 
 extension on Indice {

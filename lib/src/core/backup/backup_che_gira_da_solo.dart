@@ -71,6 +71,23 @@ class BackupCheGiraDaSolo {
   /// a mostrare l'ultimo riuscito — vero, e fuorviante.
   static const chiaveUltimoErrore = 'backup_automatico_ultimo_errore';
 
+  /// Segna che un tentativo è andato storto.
+  ///
+  /// 🚨 **Statica e pubblica** perché la chiama anche il pulsante «Aggiorna
+  /// adesso»: prima lo scriveva solo il backup automatico, e provando a mano si
+  /// vedeva «Ultimo backup: oggi» **subito dopo un fallimento**. ⚠️ Un
+  /// tentativo è un tentativo, che a farlo sia un cron o un dito.
+  static Future<void> segnaFallito() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setInt(chiaveUltimoErrore, DateTime.now().millisecondsSinceEpoch);
+    } on Object {
+      // 💡 Se non si riesce a scrivere una preferenza, il problema non e' il
+      // backup: si lascia perdere in silenzio.
+    }
+  }
+
   /// Fa il backup **se è ora**. Torna `true` se l'ha fatto davvero.
   ///
   /// ── ⚠️ Perché non lancia mai ──────────────────────────────────────────────

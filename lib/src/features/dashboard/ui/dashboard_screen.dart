@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
+import '../../forma/ui/scheda_forma.dart';
 import '../../health/health_controller.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
@@ -102,6 +103,15 @@ class DashboardScreen extends ConsumerWidget {
                             consiglio.valueOrNull?.stato == StatoConsiglio.vecchio,
                       ),
                   },
+
+                  /*
+                   * 🆕 FASE 2-sexies — carico e carica.
+                   *
+                   * 💡 Accanto al recupero e non altrove: sono la stessa
+                   * domanda vista da due distanze — come sto stanotte, e come
+                   * sto questa settimana.
+                   */
+                  const SchedaForma(),
 
                   const RecoveryCard(),
                   WeightCard(pesoObiettivo: r.body.targetWeightKg),

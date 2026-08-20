@@ -42,7 +42,7 @@ class ProgressScreen extends ConsumerWidget {
                     'stessa luce, racconta i progressi meglio della bilancia.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(progressPhotosProvider)),
+                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(progressPhotosProvider)),
                 child: GridView.builder(
                   padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

@@ -45,7 +45,7 @@ class _Elenco extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieiUtentiProvider)),
+      onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieiUtentiProvider)),
       child: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

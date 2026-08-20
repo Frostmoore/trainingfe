@@ -77,7 +77,7 @@ class ConversationsScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(conversationsProvider)),
+                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(conversationsProvider)),
                 child: ListView.builder(
                   itemCount: conversazioni.length,
                   itemBuilder: (context, index) {

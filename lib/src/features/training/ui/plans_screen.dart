@@ -117,7 +117,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(schedeUniteProvider)),
+                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(schedeUniteProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
                   itemCount: elenco.length + 1,

@@ -68,7 +68,7 @@ class StoricoAllenamenti extends ConsumerWidget {
                 message: 'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () {
+                onRefresh: () => aggiornaTutto(context, ref, () {
                   ref.invalidate(sessionsProvider);
                   ref.invalidate(allenamentiDalPolsoProvider);
                 }),

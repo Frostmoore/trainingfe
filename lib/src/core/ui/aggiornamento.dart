@@ -24,7 +24,7 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/health/health_controller.dart';
@@ -46,10 +46,65 @@ import '../../features/health/health_controller.dart';
 /// ⚠️ **`unawaited` è dichiarato, non dimenticato**: senza, l'analizzatore
 /// segnalerebbe un future non atteso e qualcuno «riparerebbe» mettendoci un
 /// `await`, cioè rimettendo l'attesa che stiamo togliendo.
-Future<void> aggiornaTutto(WidgetRef ref, void Function() invalida) async {
+Future<void> aggiornaTutto(
+  BuildContext context,
+  WidgetRef ref,
+  void Function() invalida,
+) async {
   invalida();
 
-  unawaited(ref.read(risincronizzazioneHealthProvider).forse());
+  /*
+   * 🚨 Il messaggero si prende **adesso**, non dopo.
+   *
+   * ⚠️ `ScaffoldMessenger.of(context)` dopo un `await` è il classico uso di un
+   * `BuildContext` attraverso un salto asincrono: se nel frattempo la schermata
+   * è sparita, lancia. Qui non c'è ancora nessun `await` di mezzo, e il
+   * riferimento sopravvive alla schermata.
+   */
+  final messaggero = ScaffoldMessenger.of(context);
+
+  unawaited(
+    ref.read(risincronizzazioneHealthProvider).forse(
+          annuncia: () => _diCheStaLavorando(messaggero),
+        ),
+  );
+}
+
+/// Il toast che dice che qualcosa sta succedendo — FASE 1-ter, 20/08/2026.
+///
+/// ── 🚨 Perché serve, ed è la stessa lezione di due giorni fa ──────────────
+///
+/// Togliendo l'attesa alla rotellina il gesto era diventato **muto**: si
+/// strisciava, la rotellina si chiudeva subito, e i dati dell'orologio
+/// arrivavano qualche secondo dopo senza che niente lo avesse detto. ⚠️ È
+/// esattamente la forma del difetto del ripristino silenzioso (§2t.8) — *«non
+/// era lento: era muto, e dieci secondi muti non si distinguono da un guasto»*.
+///
+/// 📌 Proposto dal committente: *«ci mettiamo un toast che dice "Aggiornamento
+/// dati in corso..."»*.
+///
+/// ── ⚠️ Solo quando parte DAVVERO ──────────────────────────────────────────
+///
+/// Se la soglia blocca la sincronizzazione il toast **non compare**. 🚨 Altrimenti
+/// cinque strisciate darebbero cinque toast su un lavoro che non sta
+/// succedendo: una bugia gentile, che è comunque una bugia — e la seconda volta
+/// che uno se ne accorge smette di credere anche ai messaggi veri.
+void _diCheStaLavorando(ScaffoldMessengerState messaggero) {
+  messaggero
+    /*
+     * 💡 Si toglie quello di prima invece di accodarlo. Senza, due
+     * strisciamenti a mezzo minuto di distanza lascerebbero il secondo messaggio
+     * in coda dietro al primo, e comparirebbe quando il lavoro è già finito.
+     */
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      const SnackBar(
+        content: Text('Aggiornamento dati in corso…'),
+        // ⚠️ Corto: descrive un lavoro che dura un paio di secondi, e un
+        // messaggio che resta più a lungo del lavoro che annuncia mente.
+        duration: Duration(seconds: 2),
+      ),
+    );
 }
 
 /// La risincronizzazione, ma non più spesso di [attesaMinima].
@@ -96,7 +151,16 @@ class RisincronizzazioneHealth {
   /// 💡 Il valore serve ai test: dal di fuori «non è partita» e «è partita e non
   /// ha trovato niente» sono indistinguibili, ed è precisamente la differenza
   /// che la soglia introduce.
-  Future<bool> forse() async {
+  ///
+  /// [annuncia] viene chiamato **nell'istante in cui si decide di partire**, e
+  /// solo allora. 🚨 Serve al toast: prima di questa riga non si sa ancora se il
+  /// lavoro ci sarà, e annunciare un lavoro che la soglia sta per bloccare
+  /// vorrebbe dire mentire.
+  ///
+  /// ⚠️ È chiamato **prima** del primo `await`, quindi in modo sincrono rispetto
+  /// a chi ha strisciato: il messaggio compare con il gesto, non un fotogramma
+  /// dopo.
+  Future<bool> forse({void Function()? annuncia}) async {
     final ora = _adesso();
     final ultima = _ultima;
 
@@ -111,6 +175,8 @@ class RisincronizzazioneHealth {
      * proteggerebbe solo da chi e' gia' lento.
      */
     _ultima = ora;
+
+    annuncia?.call();
 
     try {
       await _sincronizza();

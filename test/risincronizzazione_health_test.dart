@@ -121,6 +121,67 @@ void main() {
     expect(partite, 1, reason: 'La lettura è partita una volta sola.');
   });
 
+  group('L annuncio — il toast', () {
+    /// 📌 Proposto dal committente: *«ci mettiamo un toast che dice
+    /// "Aggiornamento dati in corso..."»*. 💡 Chiude un buco che avevo lasciato:
+    /// togliendo l'attesa alla rotellina il gesto era diventato **muto**, che è
+    /// la stessa forma del difetto del ripristino silenzioso (§2t.8).
+    test('si annuncia quando parte', () async {
+      final r = costruisci();
+      var annunci = 0;
+
+      await r.forse(annuncia: () => annunci++);
+
+      expect(annunci, 1);
+    });
+
+    /// ══ 🚨 Il test che conta ═════════════════════════════════════════════
+    ///
+    /// ⚠️ Se il toast comparisse anche quando la soglia blocca, cinque
+    /// strisciate darebbero cinque annunci su un lavoro che **non sta
+    /// succedendo**. È una bugia gentile, ed è comunque una bugia: la seconda
+    /// volta che uno se ne accorge smette di credere anche ai messaggi veri.
+    test('NON si annuncia quando la soglia blocca', () async {
+      final r = costruisci();
+      var annunci = 0;
+
+      await r.forse(annuncia: () => annunci++);
+      await r.forse(annuncia: () => annunci++);
+      await r.forse(annuncia: () => annunci++);
+
+      expect(annunci, 1);
+    });
+
+    /// ⚠️ **Prima del primo `await`**, quindi il messaggio compare insieme al
+    /// gesto e non un fotogramma dopo.
+    test('si annuncia PRIMA che la lettura finisca', () async {
+      final lenta = Completer<void>();
+      var annunciato = false;
+
+      final r = RisincronizzazioneHealth(
+        () => lenta.future,
+        adesso: () => adesso,
+      );
+
+      final futuro = r.forse(annuncia: () => annunciato = true);
+
+      expect(annunciato, isTrue, reason: 'La lettura non è ancora finita.');
+
+      lenta.complete();
+      await futuro;
+    });
+
+    /// 💡 Il toast è facoltativo: chi chiama `forse()` da un posto senza
+    /// schermata — un test, o un domani un lavoro in background — non deve
+    /// essere costretto a passarlo.
+    test('e senza annuncio funziona lo stesso', () async {
+      final r = costruisci();
+
+      expect(await r.forse(), isTrue);
+      expect(quante, 1);
+    });
+  });
+
   /// ⚠️ Un guasto di Health **non deve rompere lo strisciamento**: la parte
   /// principale dell'aggiornamento è la rete, e Health è un di più.
   test('se la lettura fallisce, non lancia', () async {

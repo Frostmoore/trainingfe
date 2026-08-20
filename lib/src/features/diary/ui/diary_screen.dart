@@ -55,7 +55,7 @@ class DiaryScreen extends ConsumerWidget {
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
         data: (day) => RefreshIndicator(
-          onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(diaryProvider)),
+          onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(diaryProvider)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
             children: [

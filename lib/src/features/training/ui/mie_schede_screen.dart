@@ -45,7 +45,7 @@ class MieSchedeScreen extends ConsumerWidget {
                 message: 'Scrivine una: potrai mandarla a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieSchedeProvider)),
+                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieSchedeProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: schede.length,

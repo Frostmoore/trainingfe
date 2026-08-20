@@ -44,7 +44,7 @@ class DashboardScreen extends ConsumerWidget {
          * ⚠️ La rotellina **non aspetta** Health: si chiude con la rete, e il
          * numero arriva quando arriva. Vedi `aggiornaTutto`.
          */
-        onRefresh: () => aggiornaTutto(ref, () {
+        onRefresh: () => aggiornaTutto(context, ref, () {
           ref
             ..invalidate(dashboardProvider)
             ..invalidate(weightSeriesProvider)

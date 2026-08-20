@@ -45,7 +45,7 @@ class MieiPianiScreen extends ConsumerWidget {
                 message: 'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(ref, () => ref.invalidate(mieiPianiProvider)),
+                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieiPianiProvider)),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: piani.length,

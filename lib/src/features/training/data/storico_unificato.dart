@@ -1,135 +1,235 @@
 import '../../../core/storage/archivio_salute.dart';
 import 'session_models.dart';
 
-/// Una riga dello storico, da qualunque parte venga — FASE 1.10.
+/// Una riga dello storico: **tutto quello che appartiene allo stesso
+/// allenamento**, da qualunque fonte venga — FASE 1-bis.
 ///
-/// ── 🚨 Perché un tipo solo per due origini diverse ────────────────────────
+/// ── 🚨 Perché una riga può contenerne molte ───────────────────────────────
 ///
-/// Perché chi guarda lo storico si chiede *«quando mi sono allenato»*, non
-/// *«quali allenamenti ha registrato il player e quali l'orologio»*. Due elenchi
-/// separati costringerebbero a fare a mente la fusione che dovremmo fare noi —
-/// e a farla ogni volta.
+/// Fino al 20/08 una riga era *una seduta più al massimo un allenamento del
+/// polso*. Le decisioni del committente hanno rotto quella forma:
 ///
-/// ⚠️ È la stessa ragione per cui la corsa e la seduta di pesi stanno nella
-/// stessa lista: il committente l'ha detto così — *«a sto punto facciamola
-/// bene […] tanto vale metterci tutti gli allenamenti»*.
-sealed class VoceStorico {
-  const VoceStorico();
+/// > *«se i timeframes si sovrappongono allora è lo stesso allenamento […]
+/// > esiste anche la possibilità che io fermi per sbaglio un allenamento sul
+/// > telefono e lo faccia ripartire, anche in tal caso è lo stesso
+/// > allenamento»*.
+///
+/// ⚠️ Se A tocca B e B tocca C, allora **A, B e C sono lo stesso allenamento**
+/// anche quando A e C non si sfiorano affatto. Con le coppie quella catena non
+/// si può rappresentare: servono liste.
+class VoceStorico {
+  const VoceStorico({
+    required this.sedute,
+    required this.dalPolso,
+    this.scheda,
+  });
 
-  /// Quando è cominciato. È la chiave con cui si ordina tutto.
-  DateTime get quando;
-}
-
-/// Una seduta registrata **nell'app**, eventualmente arricchita da quello che
-/// l'orologio ha visto nello stesso momento.
-class VoceSeduta extends VoceStorico {
-  const VoceSeduta({required this.sessione, this.orologio});
-
-  final WorkoutSession sessione;
-
-  /// L'allenamento dell'orologio che copre la stessa ora, se c'è.
+  /// Le sedute registrate **nell'app**, in ordine di tempo.
   ///
-  /// 💡 Non è un doppione da nascondere: è la **stessa cosa vista da due
-  /// strumenti**. Il player sa quali esercizi hai fatto, l'orologio sa quanto ti
-  /// è costato. Tenerli insieme dà una riga che nessuno dei due saprebbe
-  /// scrivere da solo.
-  final AllenamentoDaOrologio? orologio;
+  /// 💡 Più di una quando qualcuno ha fermato per sbaglio e ripreso.
+  final List<WorkoutSession> sedute;
 
-  @override
-  DateTime get quando => sessione.startedAt;
-}
+  /// Gli allenamenti registrati **dall'orologio**, in ordine di tempo.
+  final List<AllenamentoDaOrologio> dalPolso;
 
-/// Un allenamento che esiste **solo** perché l'orologio l'ha registrato.
-///
-/// 💡 È il caso che questa fase esiste per coprire: *«molta gente probabilmente
-/// o non userà l'app quando si allena o non userà l'orologio»*. Una corsa fatta
-/// senza toccare il telefono è comunque un allenamento, e prima di oggi non
-/// compariva da nessuna parte.
-class VoceOrologio extends VoceStorico {
-  const VoceOrologio({required this.allenamento, this.scheda});
-
-  final AllenamentoDaOrologio allenamento;
-
-  /// La scheda che questa persona ha detto di aver fatto, se l'ha assegnata.
+  /// La scheda che la persona ha detto di aver fatto, se l'ha assegnata a uno
+  /// degli allenamenti del gruppo.
   final SchedaRicevuta? scheda;
 
-  @override
-  DateTime get quando => allenamento.iniziatoIl;
+  /// La seduta principale: la **prima**, quando c'è.
+  ///
+  /// 🚨 È quella che si apre toccando la riga, e quella che dà il titolo. ⚠️ La
+  /// prima e non la più lunga: è quella che la persona ha cominciato, e le altre
+  /// del gruppo sono riprese *di quella*.
+  WorkoutSession? get seduta => sedute.isEmpty ? null : sedute.first;
+
+  /// Se questa riga esiste **solo** grazie all'orologio.
+  ///
+  /// 💡 È il caso per cui la FASE 1.8 esiste: *«molta gente probabilmente o non
+  /// userà l'app quando si allena o non userà l'orologio»*.
+  bool get soloDalPolso => sedute.isEmpty;
+
+  /// Quando è cominciato. È la chiave con cui si ordina tutto.
+  DateTime get quando => _estremi.$1;
+
+  DateTime get fine => _estremi.$2;
+
+  /// Quanto è durato **il gruppo intero**, buchi compresi.
+  ///
+  /// ⚠️ Buchi compresi di proposito: una seduta fermata alle 18:30 e ripresa
+  /// alle 18:35 è durata **dalle 18:00 alle 19:00**, non cinquantacinque
+  /// minuti. Chi guarda vuole sapere quanto tempo ci ha messo, non quanto ne ha
+  /// passato con il cronometro acceso.
+  Duration get durata => fine.difference(quando);
+
+  /// Le calorie **attive** dell'orologio, sommate su tutto il gruppo.
+  ///
+  /// 🚨 `null` — e non `0` — quando l'orologio non c'era o non le sapeva:
+  /// «non lo so» e «non hai bruciato niente» sono due cose diverse.
+  ///
+  /// ⚠️ **Attive, mai totali**: vedi la nota su `AllenamentiDaOrologio.kcal`. Il
+  /// raggruppamento cambia *a quale riga appartengono* le calorie, non *quali
+  /// sono*.
+  int? get kcalDalPolso {
+    var somma = 0;
+    var trovato = false;
+
+    for (final a in dalPolso) {
+      final k = a.kcal;
+      if (k == null) continue;
+
+      somma += k;
+      trovato = true;
+    }
+
+    return trovato ? somma : null;
+  }
+
+  int? get distanzaMetri {
+    var somma = 0;
+    var trovato = false;
+
+    for (final a in dalPolso) {
+      final d = a.distanzaMetri;
+      if (d == null) continue;
+
+      somma += d;
+      trovato = true;
+    }
+
+    return trovato ? somma : null;
+  }
+
+  (DateTime, DateTime) get _estremi {
+    DateTime? da;
+    DateTime? a;
+
+    void allarga(DateTime inizio, DateTime fine) {
+      if (da == null || inizio.isBefore(da!)) da = inizio;
+      if (a == null || fine.isAfter(a!)) a = fine;
+    }
+
+    for (final s in sedute) {
+      allarga(s.startedAt, StoricoUnificato.fineDi(s) ?? s.startedAt);
+    }
+
+    for (final w in dalPolso) {
+      allarga(w.iniziatoIl, w.finitoIl);
+    }
+
+    return (da ?? DateTime(1970), a ?? DateTime(1970));
+  }
 }
 
-/// Come si mettono insieme le due origini.
+/// Come si mette insieme lo storico — FASE 1-bis, 20/08/2026.
 ///
-/// ── 🚨 Il problema che risolve: lo stesso allenamento contato due volte ───
+/// ── 🚨 La regola, in due righe ────────────────────────────────────────────
 ///
-/// Chi si allena in palestra **con l'app aperta e l'orologio al polso** produce
-/// due registrazioni della stessa ora. Senza una regola, lo storico direbbe
-/// «due sedute» dove ce n'è stata una, e la settimana ne conterebbe il doppio.
+/// Due registrazioni sono **lo stesso allenamento** se:
+///
+/// | | Condizione |
+/// |---|---|
+/// | **(a)** | si sovrappongono, anche solo di un istante |
+/// | **(b)** | il buco fra loro è minore di [buchoAmmesso] **e** i tipi sono compatibili |
+///
+/// E la relazione è **transitiva**: se A tocca B e B tocca C, stanno tutti e
+/// tre nella stessa riga.
+///
+/// ── ⚠️ Il costo, dichiarato e accettato ───────────────────────────────────
+///
+/// Pesi 17:00–18:01 e corsa 18:00–19:00 diventano **un solo allenamento** per un
+/// minuto in comune. 🚨 Il committente l'ha valutato e ha deciso così: *«per i
+/// falsi accoppiamenti io non vedo un problema vero […] poi ci mettiamo la
+/// possibilità di splittarli e via»*.
+///
+/// 💡 Ed è una scelta difendibile: una regola che si spiega in una riga vale più
+/// di una che indovina meglio ma nessuno sa prevedere — **a patto** che l'errore
+/// sia riparabile, che è quello che fa `AllenamentiDaOrologio.staccato`.
 abstract final class StoricoUnificato {
-  /// Quanto devono sovrapporsi due registrazioni per essere la stessa cosa.
+  /// Quanto può essere lungo il buco fra due registrazioni contigue.
   ///
-  /// ── ⚠️ Perché una percentuale e non un tempo fisso ────────────────────────
-  ///
-  /// Perché la durata cambia di un ordine di grandezza: dieci minuti di
-  /// sovrapposizione sono tantissimo per una corsa di venti e pochissimo per una
-  /// seduta di due ore. Una soglia fissa sbaglierebbe da una parte o dall'altra.
-  ///
-  /// 💡 **Metà della più corta**: se l'orologio ha visto almeno metà di quello
-  /// che ha visto il player (o viceversa), stanno parlando dello stesso
-  /// allenamento. Sotto quella soglia sono due cose che si sono solo sfiorate —
-  /// tipico di chi finisce i pesi e parte subito con la corsa.
-  static const quantoSiDevonoSovrapporre = 0.5;
+  /// 📌 **Dieci minuti**, e il numero viene dal committente: *«dopo dieci minuti
+  /// mi ricordo e fermo l'allenamento sull'orologio»*. È il tempo che ci si mette
+  /// ad accorgersi di aver lasciato qualcosa acceso, o a rimettere in moto
+  /// qualcosa che si era fermato per sbaglio.
+  static const buchoAmmesso = Duration(minutes: 10);
 
-  /// Fonde le sedute dell'app e gli allenamenti dell'orologio in un elenco solo,
-  /// dal più recente.
+  /// Raggruppa sedute e allenamenti in righe di storico, dalla più recente.
   ///
-  /// ── 🚨 Le regole, in ordine ───────────────────────────────────────────────
+  /// ── 🚨 Chi resta fuori da ogni gruppo, e perché ───────────────────────────
   ///
-  /// 1. Ogni seduta dell'app diventa una riga. **Sempre**: è quella che contiene
-  ///    gli esercizi, ed è quella che la persona ha creato di sua mano.
-  /// 2. Un allenamento dell'orologio che si sovrappone a una seduta le si
-  ///    **attacca** invece di fare riga a sé.
-  /// 3. Quello che avanza diventa una riga sua.
-  /// 4. Quelli marcati `nascosto` non compaiono.
+  /// | Chi | Perché |
+  /// |---|---|
+  /// | `AllenamentoDaOrologio.nascosto` | non compare affatto |
+  /// | `AllenamentoDaOrologio.staccato` | riga sua, **sempre** — è la correzione a mano |
+  /// | `WorkoutSession.isOpen` | non è finita: la durata cresce a ogni secondo |
   ///
-  /// ⚠️ **Un allenamento dell'orologio si attacca a una sola seduta**, la prima
-  /// che incontra in ordine di tempo. Senza questo vincolo una seduta lunga e
-  /// una corta sovrapposte se lo prenderebbero entrambe, e la stessa ora
-  /// comparirebbe due volte — cioè esattamente il difetto che stiamo chiudendo.
+  /// ⚠️ Una seduta ancora aperta non si può raggruppare perché la decisione
+  /// presa adesso potrebbe essere diversa fra un minuto — e nel frattempo
+  /// avrebbe già inghiottito la riga di qualcun altro.
   static List<VoceStorico> fondi({
     required List<WorkoutSession> sessioni,
     required List<AllenamentoDaOrologio> dallOrologio,
     Map<int, SchedaRicevuta> schede = const {},
   }) {
-    final daPiazzare = dallOrologio.where((a) => !a.nascosto).toList()
-      ..sort((a, b) => a.iniziatoIl.compareTo(b.iniziatoIl));
-
-    final usati = <int>{};
     final voci = <VoceStorico>[];
 
-    for (final sessione in sessioni) {
-      AllenamentoDaOrologio? gemello;
+    // ── 1. Chi non si raggruppa esce subito, con la sua riga ────────────────
+    final daRaggruppare = <_Registrazione>[];
 
-      for (final candidato in daPiazzare) {
-        if (usati.contains(candidato.id)) continue;
-        if (!_sonoLoStesso(sessione, candidato)) continue;
+    for (final s in sessioni) {
+      if (s.isOpen || fineDi(s) == null) {
+        voci.add(VoceStorico(sedute: [s], dalPolso: const []));
 
-        gemello = candidato;
-        usati.add(candidato.id);
-        break;
+        continue;
       }
 
-      voci.add(VoceSeduta(sessione: sessione, orologio: gemello));
+      daRaggruppare.add(_Registrazione.dallApp(s));
     }
 
-    for (final avanzato in daPiazzare) {
-      if (usati.contains(avanzato.id)) continue;
+    for (final a in dallOrologio) {
+      if (a.nascosto) continue;
 
-      voci.add(VoceOrologio(
-        allenamento: avanzato,
-        scheda: avanzato.schedaAssegnata == null
-            ? null
-            : schede[avanzato.schedaAssegnata],
-      ));
+      if (a.staccato) {
+        voci.add(VoceStorico(
+          sedute: const [],
+          dalPolso: [a],
+          scheda: schede[a.schedaAssegnata],
+        ));
+
+        continue;
+      }
+
+      daRaggruppare.add(_Registrazione.dalPolso(a));
+    }
+
+    // ── 2. Le componenti connesse ───────────────────────────────────────────
+    for (final gruppo in _componenti(daRaggruppare)) {
+      final sedute = gruppo
+          .where((r) => r.sessione != null)
+          .map((r) => r.sessione!)
+          .toList()
+        ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+
+      final polso = gruppo
+          .where((r) => r.allenamento != null)
+          .map((r) => r.allenamento!)
+          .toList()
+        ..sort((a, b) => a.iniziatoIl.compareTo(b.iniziatoIl));
+
+      /*
+       * 💡 La prima scheda assegnata del gruppo. ⚠️ Non si mostrano tutte: se
+       * qualcuno ne ha assegnate due a pezzi dello stesso allenamento, mostrarne
+       * due direbbe che sono due allenamenti — cioè il contrario di quello che
+       * il raggruppamento ha appena stabilito.
+       */
+      SchedaRicevuta? scheda;
+
+      for (final a in polso) {
+        scheda ??= schede[a.schedaAssegnata];
+      }
+
+      voci.add(VoceStorico(sedute: sedute, dalPolso: polso, scheda: scheda));
     }
 
     voci.sort((a, b) => b.quando.compareTo(a.quando));
@@ -137,43 +237,115 @@ abstract final class StoricoUnificato {
     return voci;
   }
 
-  /// Se una seduta dell'app e un allenamento dell'orologio sono la stessa cosa.
+  /// La fine di una seduta, se si può sapere.
   ///
-  /// ⚠️ **Una seduta ancora aperta non si accoppia mai.** `isOpen` vuol dire che
-  /// non è finita: la sua durata è «finora», e cresce a ogni secondo. Accoppiarla
-  /// vorrebbe dire prendere una decisione che il minuto dopo può essere diversa.
-  static bool _sonoLoStesso(WorkoutSession sessione, AllenamentoDaOrologio orologio) {
-    if (sessione.isOpen) return false;
+  /// ⚠️ `null` quando non c'è né `endedAt` né `durationMinutes`: senza un
+  /// intervallo non si può dire se tocca qualcosa, e **inventarglielo sarebbe
+  /// peggio che lasciarla sola** — si finirebbe ad attaccarle l'allenamento
+  /// sbagliato.
+  static DateTime? fineDi(WorkoutSession s) {
+    if (s.endedAt != null) return s.endedAt;
 
-    final inizioA = sessione.startedAt;
-    final fineA = sessione.endedAt ??
-        (sessione.durationMinutes == null
-            ? null
-            : inizioA.add(Duration(minutes: sessione.durationMinutes!)));
+    final minuti = s.durationMinutes;
+    if (minuti == null) return null;
 
-    /*
-     * ⚠️ Una seduta senza fine **e** senza durata non ha un intervallo, e
-     * inventarglielo sarebbe peggio che lasciarla sola: si finirebbe ad
-     * attaccarle l'allenamento sbagliato.
-     */
-    if (fineA == null || !fineA.isAfter(inizioA)) return false;
-
-    final inizioB = orologio.iniziatoIl;
-    final fineB = orologio.finitoIl;
-
-    final inizioComune = inizioA.isAfter(inizioB) ? inizioA : inizioB;
-    final fineComune = fineA.isBefore(fineB) ? fineA : fineB;
-
-    if (!fineComune.isAfter(inizioComune)) return false;
-
-    final comune = fineComune.difference(inizioComune).inSeconds;
-    final piuCorta = [
-      fineA.difference(inizioA).inSeconds,
-      fineB.difference(inizioB).inSeconds,
-    ].reduce((a, b) => a < b ? a : b);
-
-    if (piuCorta <= 0) return false;
-
-    return comune / piuCorta >= quantoSiDevonoSovrapporre;
+    return s.startedAt.add(Duration(minutes: minuti));
   }
+
+  /// Se due registrazioni sono lo stesso allenamento.
+  ///
+  /// 🚨 **La compatibilità di tipo vale SOLO sul buco, non sulla
+  /// sovrapposizione.** Se si sovrappongono è lo stesso allenamento e basta: è
+  /// la decisione del committente, e metterci in mezzo il tipo la
+  /// contraddirebbe.
+  ///
+  /// 💡 Sul buco invece il tipo serve: due sessioni consecutive di dieci minuti
+  /// l'una — corsa e poi bici — sono due allenamenti, e senza il tipo
+  /// diventerebbero uno.
+  ///
+  /// ⚠️ Una seduta dell'app **non ha un tipo** (`tipo == null`): l'orologio sa
+  /// che stavi correndo, il player sa solo che stavi usando una scheda. Un
+  /// `null` è compatibile con tutto, o una ripresa dell'app non si riattaccherebbe
+  /// mai a niente.
+  static bool _stessoAllenamento(_Registrazione a, _Registrazione b) {
+    // Sovrapposizione: basta un istante.
+    if (a.inizio.isBefore(b.fine) && b.inizio.isBefore(a.fine)) return true;
+
+    final buco = a.fine.isBefore(b.inizio)
+        ? b.inizio.difference(a.fine)
+        : a.inizio.difference(b.fine);
+
+    if (buco >= buchoAmmesso) return false;
+
+    return a.tipo == null || b.tipo == null || a.tipo == b.tipo;
+  }
+
+  /// Le componenti connesse, con un union-find in piena regola.
+  ///
+  /// ── ⚠️ Perché non una passata sola ordinata per inizio ────────────────────
+  ///
+  /// Perché con la regola del buco **la catena si può riaprire**. Corsa
+  /// 18:00–18:30, bici 18:32–18:35, corsa 18:36–19:00: la bici rompe la
+  /// contiguità di tipo, ma le due corse distano sei minuti e vanno insieme. Una
+  /// passata che chiude il gruppo appena qualcosa non combacia se la perde.
+  ///
+  /// 💡 `n²` su una lista che l'archivio limita a 200 righe è **quarantamila
+  /// confronti di date**: non vale la pena essere furbi per risparmiarli.
+  static List<List<_Registrazione>> _componenti(List<_Registrazione> tutte) {
+    final padre = List<int>.generate(tutte.length, (i) => i);
+
+    int radice(int i) {
+      while (padre[i] != i) {
+        padre[i] = padre[padre[i]];
+        i = padre[i];
+      }
+
+      return i;
+    }
+
+    for (var i = 0; i < tutte.length; i++) {
+      for (var j = i + 1; j < tutte.length; j++) {
+        if (!_stessoAllenamento(tutte[i], tutte[j])) continue;
+
+        padre[radice(i)] = radice(j);
+      }
+    }
+
+    final gruppi = <int, List<_Registrazione>>{};
+
+    for (var i = 0; i < tutte.length; i++) {
+      gruppi.putIfAbsent(radice(i), () => []).add(tutte[i]);
+    }
+
+    return gruppi.values.toList();
+  }
+}
+
+/// Una registrazione qualunque, ridotta a quello che serve per raggrupparla.
+///
+/// 💡 Esiste per non scrivere due volte la stessa regola: al raggruppamento non
+/// importa da dove viene un intervallo, importa **dove comincia, dove finisce e
+/// che tipo è**.
+class _Registrazione {
+  _Registrazione.dallApp(WorkoutSession s)
+      : sessione = s,
+        allenamento = null,
+        inizio = s.startedAt,
+        fine = StoricoUnificato.fineDi(s)!,
+        // ⚠️ Il player non sa che tipo di attività stai facendo: sa che scheda
+        // stai usando. Per il raggruppamento è come non avere un tipo.
+        tipo = null;
+
+  _Registrazione.dalPolso(AllenamentoDaOrologio a)
+      : sessione = null,
+        allenamento = a,
+        inizio = a.iniziatoIl,
+        fine = a.finitoIl,
+        tipo = a.tipo;
+
+  final WorkoutSession? sessione;
+  final AllenamentoDaOrologio? allenamento;
+  final DateTime inizio;
+  final DateTime fine;
+  final String? tipo;
 }

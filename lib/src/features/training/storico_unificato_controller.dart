@@ -66,6 +66,28 @@ final storicoUnificatoProvider =
   );
 });
 
+/// La riga di storico a cui appartiene una seduta — FASE 1-bis.
+///
+/// ── 🚨 Perché il riepilogo ne ha bisogno ──────────────────────────────────
+///
+/// Perché altrimenti **si contraddice con lo storico**. La card dello storico
+/// mostra le calorie misurate dall'orologio; il riepilogo mostrava la nostra
+/// stima e la chiamava «stima calcolata dagli esercizi». ⚠️ Due schermate, la
+/// stessa ora, due numeri diversi e nessuno che dica quale vale.
+///
+/// 💡 `null` quando quella seduta non è (ancora) in nessun gruppo: il riepilogo
+/// si comporta come prima, che è la cosa giusta.
+final voceDellaSedutaProvider =
+    FutureProvider.autoDispose.family<VoceStorico?, int>((ref, sedutaId) async {
+  final voci = await ref.watch(storicoUnificatoProvider.future);
+
+  for (final v in voci) {
+    if (v.sedute.any((s) => s.id == sedutaId)) return v;
+  }
+
+  return null;
+});
+
 /// Assegna a un allenamento dell'orologio una delle proprie schede — FASE 1.10.
 ///
 /// 💡 È la richiesta del 19/08 detta così: *«devo poter scegliere di assegnarvi
@@ -83,6 +105,30 @@ Future<void> assegnaSchedaAllAllenamento(
   await ref
       .read(archivioSaluteProvider)
       .assegnaSchedaAllenamento(allenamentoId, schedaId);
+
+  ref.read(revisioneAllenamentiProvider.notifier).state++;
+}
+
+/// «Non è lo stesso allenamento» — FASE 1-bis.
+///
+/// ── 🚨 È la contropartita della regola larga ──────────────────────────────
+///
+/// Dal 20/08 basta **un istante** di sovrapposizione perché due registrazioni
+/// finiscano nella stessa riga (decisione D-1bis/A). ⚠️ Senza questo comando un
+/// raggruppamento sbagliato farebbe **sparire** un allenamento vero dallo
+/// storico, e non ci sarebbe modo di riaverlo.
+///
+/// 💡 Il committente l'ha messa proprio come uno scambio: *«se i timeframes si
+/// sovrappongono allora è lo stesso allenamento. Poi ci mettiamo la possibilità
+/// di splittarli e via»*. Le due cose stanno o cadono insieme.
+Future<void> staccaAllenamento(
+  WidgetRef ref, {
+  required int allenamentoId,
+  required bool staccato,
+}) async {
+  await ref
+      .read(archivioSaluteProvider)
+      .staccaAllenamento(allenamentoId, staccato: staccato);
 
   ref.read(revisioneAllenamentiProvider.notifier).state++;
 }

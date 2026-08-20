@@ -9,6 +9,7 @@ import '../../../core/ui/states.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
+import '../storico_unificato_controller.dart';
 
 /// Il riepilogo di fine allenamento — G7.
 ///
@@ -222,6 +223,21 @@ class _CalorieState extends ConsumerState<_Calorie> {
     final s = widget.sessione;
     final aMano = s.kcalSource == 'manual';
 
+    /*
+     * 🆕 FASE 1-bis — quello che ha visto l'orologio nella stessa ora.
+     *
+     * 🚨 Serve a **non contraddire lo storico**: là la card mostra il numero
+     * misurato, qui si mostrava la stima chiamandola «calcolata dagli
+     * esercizi». Due schermate, la stessa seduta, due numeri diversi.
+     *
+     * ⚠️ `valueOrNull` e nessuna rotellina: è un'informazione **accessoria**,
+     * e far aspettare il riepilogo per averla sarebbe sproporzionato. Se arriva
+     * tardi, arriva al fotogramma dopo.
+     */
+    final dallOrologio = aMano
+        ? null
+        : ref.watch(voceDellaSedutaProvider(s.id)).valueOrNull?.kcalDalPolso;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
@@ -237,15 +253,47 @@ class _CalorieState extends ConsumerState<_Calorie> {
             ),
             const SizedBox(height: Gap.sm),
 
-            Text(
-              // 🚨 Si dice **da dove viene** il numero. Senza, non si sa se sia
-              // una misura o un'ipotesi — e non si sa se valga la pena
-              // correggerlo.
-              aMano
-                  ? 'Valore inserito da te.'
-                  : 'Stima calcolata dagli esercizi, dalla durata e dal tuo peso.',
-              style: theme.textTheme.bodySmall,
-            ),
+            /*
+             * 🚨 Si dice **da dove viene** il numero. Senza, non si sa se sia
+             * una misura o un'ipotesi — e non si sa se valga la pena
+             * correggerlo.
+             *
+             * 💡 La catena è quella di §5 FASE 1, e le fonti si
+             * **sostituiscono**: a mano → orologio → stima.
+             */
+            if (dallOrologio != null) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.watch_outlined,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '$dallOrologio kcal misurate dal tuo orologio.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'È il numero che conta: la nostra stima '
+                '(${s.kcal ?? 0} kcal) serve solo quando l\'orologio non c\'è.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ] else
+              Text(
+                aMano
+                    ? 'Valore inserito da te.'
+                    : 'Stima calcolata dagli esercizi, dalla durata e dal tuo peso.',
+                style: theme.textTheme.bodySmall,
+              ),
 
             const SizedBox(height: Gap.md),
             Row(

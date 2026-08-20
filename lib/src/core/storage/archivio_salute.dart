@@ -46,7 +46,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +130,20 @@ class ArchivioSalute extends _$ArchivioSalute {
            * aggiunta dopo non resti fuori senza che nessuno se ne accorga.
            */
           if (da < 9) await m.createTable(allenamentiDaOrologio);
+
+          /*
+           * v9 -> v10 (FASE 1-bis): «questo allenamento non si unisce a
+           * nessuno».
+           *
+           * 🚨 Serve perche' dal 20/08 basta **un istante** di sovrapposizione
+           * perche' due registrazioni siano lo stesso allenamento. Una regola
+           * cosi' larga prima o poi unisce due cose diverse, e senza questa
+           * colonna l'errore non sarebbe riparabile: uno dei due allenamenti
+           * sparirebbe dallo storico per sempre.
+           */
+          if (da < 10) {
+            await m.addColumn(allenamentiDaOrologio, allenamentiDaOrologio.staccato);
+          }
         },
       );
 
@@ -316,6 +330,17 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> nascondiAllenamento(int id, {required bool nascosto}) =>
       (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
         AllenamentiDaOrologioCompanion(nascosto: Value(nascosto)),
+      );
+
+  /// Stacca (o riattacca) un allenamento dal gruppo — FASE 1-bis.
+  ///
+  /// 🚨 **Non e' `nascondiAllenamento` con un altro nome.** Nascondere toglie
+  /// una riga dallo storico; staccare ne aggiunge una, perche' separa due cose
+  /// che erano state messe insieme. ⚠️ Chi confonde i due gesti corregge un
+  /// raggruppamento sbagliato facendo sparire un allenamento vero.
+  Future<void> staccaAllenamento(int id, {required bool staccato}) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(staccato: Value(staccato)),
       );
 
   /*
@@ -1391,6 +1416,28 @@ class AllenamentiDaOrologio extends Table {
   /// dell'orologio — è un dato vero, e cancellarlo renderebbe la scelta
   /// irreversibile — si smette di mostrarla.
   BoolColumn get nascosto => boolean().withDefault(const Constant(false))();
+
+  /// «Questo non si unisce a nessuno» — FASE 1-bis.
+  ///
+  /// ── 🚨 È la contropartita della regola larga ──────────────────────────────
+  ///
+  /// Dal 20/08 basta **un istante** di sovrapposizione perché due registrazioni
+  /// siano lo stesso allenamento (decisione D-1bis/A). ⚠️ Una regola così larga
+  /// prima o poi unisce due cose diverse — i pesi finiti alle 18:01 e la corsa
+  /// cominciata alle 18:00 — e senza un modo di dire «no, sono due» quell'errore
+  /// farebbe **sparire** un allenamento vero dallo storico.
+  ///
+  /// 💡 Il committente l'ha messa esattamente così: *«se i timeframes si
+  /// sovrappongono allora è lo stesso allenamento. Poi ci mettiamo la
+  /// possibilità di splittarli e via»*.
+  ///
+  /// ── ⚠️ Perché NON si riusa `nascosto` ─────────────────────────────────────
+  ///
+  /// Sono due gesti opposti. Chi nasconde vuole vedere **una riga in meno**; chi
+  /// stacca vuole vederne **una in più**. Riusare la stessa colonna vorrebbe
+  /// dire che l'unico modo di correggere un raggruppamento sbagliato è far
+  /// sparire uno dei due allenamenti — cioè il difetto che si stava correggendo.
+  BoolColumn get staccato => boolean().withDefault(const Constant(false))();
 
   /// 🚨 `fonte` + `iniziatoIl`: la stessa chiave del sonno, per la stessa
   /// ragione. Si rileggono sempre gli ultimi sette giorni, e senza questa

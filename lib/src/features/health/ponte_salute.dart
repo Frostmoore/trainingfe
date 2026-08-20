@@ -336,6 +336,13 @@ class PonteSalute {
         distanzaMetri: valore.totalDistance,
         passi: valore.totalSteps,
         nascosto: false,
+
+        /*
+         * ⚠️ Sempre `false` da qui: `staccato` e' una **scelta di chi usa
+         * l'app**, non un dato dell'orologio. Non viene nemmeno passato a
+         * `_companionAllenamento`, quindi una rilettura non puo' cancellarlo.
+         */
+        staccato: false,
       ));
     }
 

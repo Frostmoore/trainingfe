@@ -31,6 +31,7 @@ void main() {
         finitoIl: (quando ?? DateTime(2026, 8, 19, 7)).add(const Duration(minutes: 40)),
         kcal: kcal,
         nascosto: false,
+        staccato: false,
       );
 
   group('La rilettura non duplica', () {
@@ -134,6 +135,35 @@ void main() {
       await archivio.scriviAllenamenti([corsa()]);
 
       expect((await archivio.allenamentiDellOrologio()).single.nascosto, isTrue);
+    });
+
+    /// 🚨 **Nemmeno lo scollegamento** — FASE 1-bis. È la contropartita della
+    /// regola larga: se una risincronizzazione lo cancellasse, un
+    /// raggruppamento corretto a mano si rifarebbe da solo al prossimo avvio, e
+    /// l'allenamento tornerebbe a sparire.
+    test('e nemmeno lo staccato si perde', () async {
+      await archivio.scriviAllenamenti([corsa()]);
+
+      final salvato = (await archivio.allenamentiDellOrologio()).single;
+      await archivio.staccaAllenamento(salvato.id, staccato: true);
+      await archivio.scriviAllenamenti([corsa(kcal: 680)]);
+
+      final dopo = (await archivio.allenamentiDellOrologio()).single;
+
+      expect(dopo.staccato, isTrue, reason: 'La correzione a mano resta.');
+      expect(dopo.kcal, 680, reason: 'Ma il dato del sensore si aggiorna comunque.');
+    });
+
+    /// 💡 E si può rimettere insieme: *«Puoi rimetterlo insieme quando vuoi»* è
+    /// scritto nel dialogo, quindi deve essere vero.
+    test('e si può riattaccare', () async {
+      await archivio.scriviAllenamenti([corsa()]);
+
+      final salvato = (await archivio.allenamentiDellOrologio()).single;
+      await archivio.staccaAllenamento(salvato.id, staccato: true);
+      await archivio.staccaAllenamento(salvato.id, staccato: false);
+
+      expect((await archivio.allenamentiDellOrologio()).single.staccato, isFalse);
     });
   });
 

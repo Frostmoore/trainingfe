@@ -3263,6 +3263,21 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _staccatoMeta = const VerificationMeta(
+    'staccato',
+  );
+  @override
+  late final GeneratedColumn<bool> staccato = GeneratedColumn<bool>(
+    'staccato',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("staccato" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3275,6 +3290,7 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     passi,
     schedaAssegnata,
     nascosto,
+    staccato,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3359,6 +3375,12 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
         nascosto.isAcceptableOrUnknown(data['nascosto']!, _nascostoMeta),
       );
     }
+    if (data.containsKey('staccato')) {
+      context.handle(
+        _staccatoMeta,
+        staccato.isAcceptableOrUnknown(data['staccato']!, _staccatoMeta),
+      );
+    }
     return context;
   }
 
@@ -3412,6 +3434,10 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
         DriftSqlType.bool,
         data['${effectivePrefix}nascosto'],
       )!,
+      staccato: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}staccato'],
+      )!,
     );
   }
 
@@ -3438,18 +3464,26 @@ class AllenamentoDaOrologio extends DataClass
   final DateTime iniziatoIl;
   final DateTime finitoIl;
 
-  /// Le calorie della **singola sessione**, come le dà l'orologio.
+  /// Le calorie **attive** bruciate durante la sessione.
   ///
-  /// ══ 🚨 NON SONO LE CALORIE DELLA GIORNATA ═══════════════════════════════
+  /// ══ 🚨 ATTIVE, non totali — corretto il 20/08 ═══════════════════════════
   ///
-  /// Arrivano da `TotalCaloriesBurnedRecord`, che comprende il **metabolismo
-  /// basale** del periodo. Su un'ora di allenamento è una manciata di kcal, e
-  /// per descrivere quella seduta va benissimo.
+  /// Prima venivano da `WorkoutHealthValue.totalEnergyBurned`, cioè da
+  /// `TotalCaloriesBurnedRecord`, che comprende il **metabolismo basale**.
+  /// ⚠️ Il committente se n'è accorto in un minuto: l'app dell'orologio diceva
+  /// **680 kcal** per quella seduta, la nostra ne mostrava **835**.
   ///
-  /// ⚠️ **Non si sommano al totale del giorno.** Quello resta
-  /// `ACTIVE_ENERGY_BURNED` letto a parte: sommare queste vorrebbe dire contare
-  /// due volte sia il basale sia l'attività, che in quella finestra è già
-  /// dentro le calorie attive.
+  /// 💡 Adesso si sommano i campioni di `ACTIVE_ENERGY_BURNED` che cadono nella
+  /// finestra dell'allenamento — vedi `PonteSalute._attiveDentro`. Non è solo
+  /// più corretto: è **la stessa fonte** delle calorie della giornata, quindi
+  /// due schermate dell'app non possono più dire numeri diversi sulla stessa
+  /// ora.
+  ///
+  /// 🚨 **`null` quando non si sa**, e non uno zero: nessun ripiego su
+  /// `totalEnergyBurned`, che rimetterebbe dentro il basale di nascosto.
+  ///
+  /// ⚠️ **Non si sommano comunque al totale del giorno.** Quello si calcola già
+  /// dagli stessi campioni: sommare anche queste li conterebbe due volte.
   final int? kcal;
 
   /// Metri percorsi, quando ha senso: una corsa sì, i pesi quasi no.
@@ -3476,6 +3510,28 @@ class AllenamentoDaOrologio extends DataClass
   /// dell'orologio — è un dato vero, e cancellarlo renderebbe la scelta
   /// irreversibile — si smette di mostrarla.
   final bool nascosto;
+
+  /// «Questo non si unisce a nessuno» — FASE 1-bis.
+  ///
+  /// ── 🚨 È la contropartita della regola larga ──────────────────────────────
+  ///
+  /// Dal 20/08 basta **un istante** di sovrapposizione perché due registrazioni
+  /// siano lo stesso allenamento (decisione D-1bis/A). ⚠️ Una regola così larga
+  /// prima o poi unisce due cose diverse — i pesi finiti alle 18:01 e la corsa
+  /// cominciata alle 18:00 — e senza un modo di dire «no, sono due» quell'errore
+  /// farebbe **sparire** un allenamento vero dallo storico.
+  ///
+  /// 💡 Il committente l'ha messa esattamente così: *«se i timeframes si
+  /// sovrappongono allora è lo stesso allenamento. Poi ci mettiamo la
+  /// possibilità di splittarli e via»*.
+  ///
+  /// ── ⚠️ Perché NON si riusa `nascosto` ─────────────────────────────────────
+  ///
+  /// Sono due gesti opposti. Chi nasconde vuole vedere **una riga in meno**; chi
+  /// stacca vuole vederne **una in più**. Riusare la stessa colonna vorrebbe
+  /// dire che l'unico modo di correggere un raggruppamento sbagliato è far
+  /// sparire uno dei due allenamenti — cioè il difetto che si stava correggendo.
+  final bool staccato;
   const AllenamentoDaOrologio({
     required this.id,
     required this.fonte,
@@ -3487,6 +3543,7 @@ class AllenamentoDaOrologio extends DataClass
     this.passi,
     this.schedaAssegnata,
     required this.nascosto,
+    required this.staccato,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3509,6 +3566,7 @@ class AllenamentoDaOrologio extends DataClass
       map['scheda_assegnata'] = Variable<int>(schedaAssegnata);
     }
     map['nascosto'] = Variable<bool>(nascosto);
+    map['staccato'] = Variable<bool>(staccato);
     return map;
   }
 
@@ -3530,6 +3588,7 @@ class AllenamentoDaOrologio extends DataClass
           ? const Value.absent()
           : Value(schedaAssegnata),
       nascosto: Value(nascosto),
+      staccato: Value(staccato),
     );
   }
 
@@ -3549,6 +3608,7 @@ class AllenamentoDaOrologio extends DataClass
       passi: serializer.fromJson<int?>(json['passi']),
       schedaAssegnata: serializer.fromJson<int?>(json['schedaAssegnata']),
       nascosto: serializer.fromJson<bool>(json['nascosto']),
+      staccato: serializer.fromJson<bool>(json['staccato']),
     );
   }
   @override
@@ -3565,6 +3625,7 @@ class AllenamentoDaOrologio extends DataClass
       'passi': serializer.toJson<int?>(passi),
       'schedaAssegnata': serializer.toJson<int?>(schedaAssegnata),
       'nascosto': serializer.toJson<bool>(nascosto),
+      'staccato': serializer.toJson<bool>(staccato),
     };
   }
 
@@ -3579,6 +3640,7 @@ class AllenamentoDaOrologio extends DataClass
     Value<int?> passi = const Value.absent(),
     Value<int?> schedaAssegnata = const Value.absent(),
     bool? nascosto,
+    bool? staccato,
   }) => AllenamentoDaOrologio(
     id: id ?? this.id,
     fonte: fonte ?? this.fonte,
@@ -3594,6 +3656,7 @@ class AllenamentoDaOrologio extends DataClass
         ? schedaAssegnata.value
         : this.schedaAssegnata,
     nascosto: nascosto ?? this.nascosto,
+    staccato: staccato ?? this.staccato,
   );
   AllenamentoDaOrologio copyWithCompanion(AllenamentiDaOrologioCompanion data) {
     return AllenamentoDaOrologio(
@@ -3613,6 +3676,7 @@ class AllenamentoDaOrologio extends DataClass
           ? data.schedaAssegnata.value
           : this.schedaAssegnata,
       nascosto: data.nascosto.present ? data.nascosto.value : this.nascosto,
+      staccato: data.staccato.present ? data.staccato.value : this.staccato,
     );
   }
 
@@ -3628,7 +3692,8 @@ class AllenamentoDaOrologio extends DataClass
           ..write('distanzaMetri: $distanzaMetri, ')
           ..write('passi: $passi, ')
           ..write('schedaAssegnata: $schedaAssegnata, ')
-          ..write('nascosto: $nascosto')
+          ..write('nascosto: $nascosto, ')
+          ..write('staccato: $staccato')
           ..write(')'))
         .toString();
   }
@@ -3645,6 +3710,7 @@ class AllenamentoDaOrologio extends DataClass
     passi,
     schedaAssegnata,
     nascosto,
+    staccato,
   );
   @override
   bool operator ==(Object other) =>
@@ -3659,7 +3725,8 @@ class AllenamentoDaOrologio extends DataClass
           other.distanzaMetri == this.distanzaMetri &&
           other.passi == this.passi &&
           other.schedaAssegnata == this.schedaAssegnata &&
-          other.nascosto == this.nascosto);
+          other.nascosto == this.nascosto &&
+          other.staccato == this.staccato);
 }
 
 class AllenamentiDaOrologioCompanion
@@ -3674,6 +3741,7 @@ class AllenamentiDaOrologioCompanion
   final Value<int?> passi;
   final Value<int?> schedaAssegnata;
   final Value<bool> nascosto;
+  final Value<bool> staccato;
   const AllenamentiDaOrologioCompanion({
     this.id = const Value.absent(),
     this.fonte = const Value.absent(),
@@ -3685,6 +3753,7 @@ class AllenamentiDaOrologioCompanion
     this.passi = const Value.absent(),
     this.schedaAssegnata = const Value.absent(),
     this.nascosto = const Value.absent(),
+    this.staccato = const Value.absent(),
   });
   AllenamentiDaOrologioCompanion.insert({
     this.id = const Value.absent(),
@@ -3697,6 +3766,7 @@ class AllenamentiDaOrologioCompanion
     this.passi = const Value.absent(),
     this.schedaAssegnata = const Value.absent(),
     this.nascosto = const Value.absent(),
+    this.staccato = const Value.absent(),
   }) : fonte = Value(fonte),
        tipo = Value(tipo),
        iniziatoIl = Value(iniziatoIl),
@@ -3712,6 +3782,7 @@ class AllenamentiDaOrologioCompanion
     Expression<int>? passi,
     Expression<int>? schedaAssegnata,
     Expression<bool>? nascosto,
+    Expression<bool>? staccato,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3724,6 +3795,7 @@ class AllenamentiDaOrologioCompanion
       if (passi != null) 'passi': passi,
       if (schedaAssegnata != null) 'scheda_assegnata': schedaAssegnata,
       if (nascosto != null) 'nascosto': nascosto,
+      if (staccato != null) 'staccato': staccato,
     });
   }
 
@@ -3738,6 +3810,7 @@ class AllenamentiDaOrologioCompanion
     Value<int?>? passi,
     Value<int?>? schedaAssegnata,
     Value<bool>? nascosto,
+    Value<bool>? staccato,
   }) {
     return AllenamentiDaOrologioCompanion(
       id: id ?? this.id,
@@ -3750,6 +3823,7 @@ class AllenamentiDaOrologioCompanion
       passi: passi ?? this.passi,
       schedaAssegnata: schedaAssegnata ?? this.schedaAssegnata,
       nascosto: nascosto ?? this.nascosto,
+      staccato: staccato ?? this.staccato,
     );
   }
 
@@ -3786,6 +3860,9 @@ class AllenamentiDaOrologioCompanion
     if (nascosto.present) {
       map['nascosto'] = Variable<bool>(nascosto.value);
     }
+    if (staccato.present) {
+      map['staccato'] = Variable<bool>(staccato.value);
+    }
     return map;
   }
 
@@ -3801,7 +3878,8 @@ class AllenamentiDaOrologioCompanion
           ..write('distanzaMetri: $distanzaMetri, ')
           ..write('passi: $passi, ')
           ..write('schedaAssegnata: $schedaAssegnata, ')
-          ..write('nascosto: $nascosto')
+          ..write('nascosto: $nascosto, ')
+          ..write('staccato: $staccato')
           ..write(')'))
         .toString();
   }
@@ -5488,6 +5566,7 @@ typedef $$AllenamentiDaOrologioTableCreateCompanionBuilder =
       Value<int?> passi,
       Value<int?> schedaAssegnata,
       Value<bool> nascosto,
+      Value<bool> staccato,
     });
 typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
     AllenamentiDaOrologioCompanion Function({
@@ -5501,6 +5580,7 @@ typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
       Value<int?> passi,
       Value<int?> schedaAssegnata,
       Value<bool> nascosto,
+      Value<bool> staccato,
     });
 
 class $$AllenamentiDaOrologioTableFilterComposer
@@ -5559,6 +5639,11 @@ class $$AllenamentiDaOrologioTableFilterComposer
 
   ColumnFilters<bool> get nascosto => $composableBuilder(
     column: $table.nascosto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get staccato => $composableBuilder(
+    column: $table.staccato,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5621,6 +5706,11 @@ class $$AllenamentiDaOrologioTableOrderingComposer
     column: $table.nascosto,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get staccato => $composableBuilder(
+    column: $table.staccato,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AllenamentiDaOrologioTableAnnotationComposer
@@ -5667,6 +5757,9 @@ class $$AllenamentiDaOrologioTableAnnotationComposer
 
   GeneratedColumn<bool> get nascosto =>
       $composableBuilder(column: $table.nascosto, builder: (column) => column);
+
+  GeneratedColumn<bool> get staccato =>
+      $composableBuilder(column: $table.staccato, builder: (column) => column);
 }
 
 class $$AllenamentiDaOrologioTableTableManager
@@ -5725,6 +5818,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> passi = const Value.absent(),
                 Value<int?> schedaAssegnata = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
+                Value<bool> staccato = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion(
                 id: id,
                 fonte: fonte,
@@ -5736,6 +5830,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 passi: passi,
                 schedaAssegnata: schedaAssegnata,
                 nascosto: nascosto,
+                staccato: staccato,
               ),
           createCompanionCallback:
               ({
@@ -5749,6 +5844,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> passi = const Value.absent(),
                 Value<int?> schedaAssegnata = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
+                Value<bool> staccato = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion.insert(
                 id: id,
                 fonte: fonte,
@@ -5760,6 +5856,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 passi: passi,
                 schedaAssegnata: schedaAssegnata,
                 nascosto: nascosto,
+                staccato: staccato,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

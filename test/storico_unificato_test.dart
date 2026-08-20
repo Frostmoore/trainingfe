@@ -3,19 +3,23 @@ import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/training/data/session_models.dart';
 import 'package:training_companion/src/features/training/data/storico_unificato.dart';
 
-/// La fusione dello storico — FASE 1.10, 20/08/2026.
+/// Il raggruppamento dello storico — FASE 1-bis, 20/08/2026.
 ///
-/// ── 🚨 Cosa difende questo file ────────────────────────────────────────────
+/// ── 🚨 Le due decisioni che questo file difende ────────────────────────────
 ///
-/// Che lo stesso allenamento non venga contato due volte. Chi si allena in
-/// palestra **con l'app aperta e l'orologio al polso** produce due
-/// registrazioni della stessa ora: senza la regola, la settimana ne conta il
-/// doppio e il numero in cima allo storico diventa una bugia.
+/// > *«se i timeframes si sovrappongono allora è lo stesso allenamento […]
+/// > esiste anche la possibilità che io fermi per sbaglio un allenamento sul
+/// > telefono e lo faccia ripartire, anche in tal caso è lo stesso allenamento
+/// > (a meno che non cambi proprio tipo)»*
 ///
-/// ⚠️ E che l'errore opposto non succeda: due allenamenti **davvero** diversi
-/// che si sfiorano — i pesi e poi subito la corsa — devono restare due.
+/// **D-1bis/A** — basta la sovrapposizione, anche di un istante.
+/// **D-1bis/B** — anche un buco breve, se il tipo non cambia.
+///
+/// ⚠️ **Un test qui è stato ROVESCIATO di proposito**: «due allenamenti che si
+/// sfiorano restano due» era verde il 19/08 e oggi è falso. Non è una
+/// regressione, è una decisione — ed è scritto qui perché nessuno lo «ripari».
 void main() {
-  DateTime alle(int ora, int minuti) => DateTime(2026, 8, 19, ora, minuti);
+  DateTime alle(int ora, [int minuti = 0]) => DateTime(2026, 8, 19, ora, minuti);
 
   WorkoutSession seduta({
     required int id,
@@ -38,7 +42,9 @@ void main() {
     required DateTime inizio,
     int durataMinuti = 60,
     String tipo = 'STRENGTH_TRAINING',
+    int? kcal = 400,
     bool nascosto = false,
+    bool staccato = false,
   }) =>
       AllenamentoDaOrologio(
         id: id,
@@ -46,94 +52,185 @@ void main() {
         tipo: tipo,
         iniziatoIl: inizio,
         finitoIl: inizio.add(Duration(minutes: durataMinuti)),
+        kcal: kcal,
         nascosto: nascosto,
+        staccato: staccato,
       );
 
-  group('Il doppio conteggio', () {
-    /// 🚨 Il caso vero, misurato sul telefono il 19/08: una seduta di pesi
-    /// registrata dal player mentre l'Amazfit registrava la stessa ora.
-    test('una seduta e il suo gemello dal polso fanno UNA riga', () {
+  group('D-1bis/A — basta la sovrapposizione', () {
+    /// 📌 Lo scenario testuale del committente: parto dall'app, faccio partire
+    /// l'orologio, chiudo l'app, e dieci minuti dopo mi ricordo dell'orologio.
+    test('lo scenario del committente fa UNA riga', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(17, 46))],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 46), durataMinuti: 62)],
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 60)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 5), durataMinuti: 65)],
       );
 
       expect(voci, hasLength(1));
-      expect(voci.single, isA<VoceSeduta>());
-      expect((voci.single as VoceSeduta).orologio, isNotNull);
+      expect(voci.single.sedute, hasLength(1));
+      expect(voci.single.dalPolso, hasLength(1));
     });
 
-    /// 💡 Non si nasconde: si **attacca**. Il player sa quali esercizi hai
-    /// fatto, l'orologio quanto ti è costato — e la riga li tiene insieme.
-    test('e il dato dell orologio resta consultabile', () {
+    /// 🚨 **Lo scenario specchiato: l'orologio partito TARDI.**
+    ///
+    /// ⚠️ È il caso che con la soglia al 50% falliva — dieci minuti in comune su
+    /// sessanta fanno il 17% — ed è lo stesso identico gesto, capitato
+    /// all'inizio invece che alla fine.
+    test('anche quando è l orologio a partire tardi', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(17, 46))],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 50))],
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 60)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 50), durataMinuti: 60)],
       );
 
-      expect((voci.single as VoceSeduta).orologio!.id, 10);
+      expect(voci, hasLength(1));
     });
 
-    /// ⚠️ L'errore opposto, altrettanto grave: i pesi e **poi** la corsa sono
-    /// due allenamenti, e devono restare due righe.
-    test('due allenamenti che si sfiorano restano due', () {
+    /// ══ 🚨 IL TEST ROVESCIATO ═══════════════════════════════════════════
+    ///
+    /// Il 19/08 questo caso doveva dare **due** righe, e il test si chiamava
+    /// «due allenamenti che si sfiorano restano due». ⚠️ Oggi ne dà **una**, ed
+    /// è una decisione presa sapendo il costo:
+    ///
+    /// > *«per i falsi accoppiamenti io non vedo un problema vero […] poi ci
+    /// > mettiamo la possibilità di splittarli e via»*
+    ///
+    /// 💡 Chi in futuro lo trovasse «sbagliato»: la riparazione non è
+    /// restringere la regola, è `staccato`.
+    test('un minuto solo in comune basta — deciso, non subito', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(17, 0), durataMinuti: 60)],
-        // Comincia a 17:55: dieci minuti in comune su sessanta, cioè il 17%.
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 55), durataMinuti: 40)],
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 60)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(17), durataMinuti: 61)],
+      );
+
+      expect(voci, hasLength(1));
+    });
+
+    /// ⚠️ Ma **toccarsi non è sovrapporsi**: una che finisce alle 18:00 e una
+    /// che comincia alle 18:00 non hanno nessun istante in comune. Restano
+    /// insieme solo grazie alla regola del buco, che qui vale zero minuti.
+    test('e chi si tocca senza sovrapporsi passa dalla regola del buco', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [seduta(id: 1, inizio: alle(17), durataMinuti: 60)],
+        // Stesso istante di fine/inizio: buco zero, tipi compatibili.
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18), durataMinuti: 30)],
+      );
+
+      expect(voci, hasLength(1));
+    });
+  });
+
+  group('D-1bis/B — fermato per sbaglio e ripreso', () {
+    /// 📌 *«fermi per sbaglio un allenamento sul telefono e lo faccia
+    /// ripartire»*: due sedute consecutive, che non si sovrappongono affatto.
+    test('due sedute a cinque minuti di distanza fanno una riga', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30),
+          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25),
+        ],
+        dallOrologio: const [],
+      );
+
+      expect(voci, hasLength(1));
+      expect(voci.single.sedute, hasLength(2));
+    });
+
+    /// 💡 E la durata è quella del **gruppo intero**, buchi compresi: è il tempo
+    /// che ci hai messo, non quello col cronometro acceso.
+    test('e la durata copre anche il buco', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30),
+          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25),
+        ],
+        dallOrologio: const [],
+      );
+
+      expect(voci.single.durata.inMinutes, 60);
+    });
+
+    /// 🚨 *«a meno che non cambi proprio tipo»* — la clausola del committente.
+    test('ma due tipi diversi nel buco restano due', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [
+          dalPolso(id: 10, inizio: alle(18), durataMinuti: 30, tipo: 'RUNNING'),
+          dalPolso(id: 11, inizio: alle(18, 35), durataMinuti: 25, tipo: 'BIKING'),
+        ],
       );
 
       expect(voci, hasLength(2));
     });
 
-    /// 🚨 Senza questo vincolo una seduta lunga e una corta sovrapposte se lo
-    /// prenderebbero **entrambe**, e la stessa ora comparirebbe due volte.
-    test('un allenamento del polso si attacca a una sola seduta', () {
+    /// ⚠️ Un buco lungo separa comunque: pesi alle 17 e corsa alle 19 sono due
+    /// allenamenti, ed è l'errore opposto che non deve tornare.
+    test('un buco di un ora separa, tipo o non tipo', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [seduta(id: 1, inizio: alle(17), durataMinuti: 60)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(19), durataMinuti: 60)],
+      );
+
+      expect(voci, hasLength(2));
+    });
+
+    /// 🚨 **La transitività**, che è la ragione per cui non bastano le coppie:
+    /// i due estremi non si sfiorano affatto, e stanno insieme perché c'è
+    /// qualcosa in mezzo che li lega.
+    test('la catena tiene insieme anche gli estremi che non si toccano', () {
       final voci = StoricoUnificato.fondi(
         sessioni: [
-          seduta(id: 1, inizio: alle(17, 0), durataMinuti: 60),
-          seduta(id: 2, inizio: alle(17, 10), durataMinuti: 50),
+          seduta(id: 1, inizio: alle(18), durataMinuti: 20),
+          // 19:10 → 19:40: con la prima non ha niente in comune, e il buco con
+          // lei e' di 70 minuti.
+          seduta(id: 2, inizio: alle(19, 10), durataMinuti: 30),
         ],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 5), durataMinuti: 55)],
+        // L'orologio copre il mezzo e lega le due.
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 10), durataMinuti: 65)],
       );
 
-      final conGemello = voci.whereType<VoceSeduta>().where((v) => v.orologio != null);
+      expect(voci, hasLength(1));
+      expect(voci.single.sedute, hasLength(2));
+    });
 
-      expect(conGemello, hasLength(1));
-      expect(voci, hasLength(2), reason: 'Nessuna riga in più: il polso è stato assorbito.');
+    /// ⚠️ **La catena si può riaprire**, ed è il motivo per cui serve un
+    /// union-find e non una passata sola: la bici in mezzo rompe la contiguità
+    /// di tipo, ma le due corse distano sei minuti.
+    test('due corse separate da una bici restano legate fra loro', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [
+          dalPolso(id: 10, inizio: alle(18), durataMinuti: 30, tipo: 'RUNNING'),
+          dalPolso(id: 11, inizio: alle(18, 32), durataMinuti: 3, tipo: 'BIKING'),
+          dalPolso(id: 12, inizio: alle(18, 36), durataMinuti: 24, tipo: 'RUNNING'),
+        ],
+      );
+
+      final corse = voci.where((v) => v.dalPolso.length == 2);
+
+      expect(corse, hasLength(1), reason: 'Le due corse stanno insieme…');
+      expect(voci, hasLength(2), reason: '…e la bici resta per conto suo.');
     });
   });
 
-  group('Quello che esiste solo grazie all orologio', () {
-    /// 💡 Il caso per cui questa fase esiste: una corsa fatta senza toccare il
-    /// telefono. Prima di oggi non compariva da nessuna parte.
-    test('una corsa senza seduta diventa una riga sua', () {
+  group('D-1bis/C — chi resta fuori da ogni gruppo', () {
+    /// 🚨 La contropartita della regola larga: senza, un raggruppamento
+    /// sbagliato farebbe sparire un allenamento vero.
+    test('uno staccato non si unisce a niente', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: const [],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(7, 0), tipo: 'RUNNING')],
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 60)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 5), staccato: true)],
       );
 
-      expect(voci.single, isA<VoceOrologio>());
-      expect((voci.single as VoceOrologio).allenamento.tipo, 'RUNNING');
+      expect(voci, hasLength(2));
     });
 
-    test('i nascosti non compaiono', () {
-      final voci = StoricoUnificato.fondi(
-        sessioni: const [],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(7, 0), nascosto: true)],
-      );
-
-      expect(voci, isEmpty);
-    });
-  });
-
-  group('I casi che non si accoppiano mai', () {
-    /// ⚠️ `isOpen` vuol dire che non è finita: la durata cresce a ogni secondo,
-    /// e accoppiarla sarebbe una decisione che il minuto dopo può cambiare.
+    /// ⚠️ La durata di una seduta aperta cresce a ogni secondo: raggrupparla
+    /// vorrebbe dire prendere una decisione che il minuto dopo può cambiare — e
+    /// nel frattempo avrebbe già inghiottito la riga di qualcun altro.
     test('una seduta ancora aperta non assorbe niente', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(17, 46), aperta: true)],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 46))],
+        sessioni: [seduta(id: 1, inizio: alle(18), aperta: true)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 5))],
       );
 
       expect(voci, hasLength(2));
@@ -143,29 +240,86 @@ void main() {
     /// vorrebbe dire attaccarle l'allenamento sbagliato.
     test('una seduta senza durata non assorbe niente', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(17, 46), durataMinuti: null)],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(17, 46))],
+        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: null)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 5))],
       );
 
       expect(voci, hasLength(2));
     });
+
+    test('i nascosti non compaiono affatto', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(7), nascosto: true)],
+      );
+
+      expect(voci, isEmpty);
+    });
+  });
+
+  group('Quello che la riga sa dire', () {
+    /// 💡 Il caso per cui la FASE 1.8 esiste: una corsa fatta senza toccare il
+    /// telefono. Prima non compariva da nessuna parte.
+    test('una corsa senza seduta è una riga sua', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(7), tipo: 'RUNNING')],
+      );
+
+      expect(voci.single.soloDalPolso, isTrue);
+      expect(voci.single.dalPolso.single.tipo, 'RUNNING');
+    });
+
+    /// 🚨 Le calorie **attive** si sommano su tutto il gruppo: se l'orologio è
+    /// stato fermato e ripreso, i due tratti sono lo stesso allenamento.
+    test('le calorie si sommano sui tratti del gruppo', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [
+          dalPolso(id: 10, inizio: alle(18), durataMinuti: 30, kcal: 250),
+          dalPolso(id: 11, inizio: alle(18, 35), durataMinuti: 25, kcal: 200),
+        ],
+      );
+
+      expect(voci.single.kcalDalPolso, 450);
+    });
+
+    /// ⚠️ «Non lo so» e «non hai bruciato niente» sono due cose diverse.
+    test('senza calorie da nessun tratto resta null, non zero', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18), kcal: null)],
+      );
+
+      expect(voci.single.kcalDalPolso, isNull);
+    });
+
+    /// 🚨 La seduta principale è la **prima**: è quella che la persona ha
+    /// cominciato, e le altre del gruppo sono riprese di quella.
+    test('la seduta principale è la prima cominciata', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25),
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30),
+        ],
+        dallOrologio: const [],
+      );
+
+      expect(voci.single.seduta!.id, 1);
+    });
   });
 
   /// 🚨 Lo storico si legge dal più recente: è la domanda che ci si fa
-  /// aprendolo. Un ordinamento sbagliato qui si vede subito, ma solo su un
-  /// telefono con dati veri — cioè tardi.
+  /// aprendolo.
   test('tutto esce dal più recente', () {
     final voci = StoricoUnificato.fondi(
-      sessioni: [seduta(id: 1, inizio: alle(9, 0))],
+      sessioni: [seduta(id: 1, inizio: alle(9), durataMinuti: 30)],
       dallOrologio: [
-        dalPolso(id: 10, inizio: alle(7, 0)),
-        dalPolso(id: 11, inizio: alle(20, 0)),
+        dalPolso(id: 10, inizio: alle(7), durataMinuti: 30),
+        dalPolso(id: 11, inizio: alle(20), durataMinuti: 30),
       ],
     );
 
-    expect(
-      voci.map((v) => v.quando).toList(),
-      [alle(20, 0), alle(9, 0), alle(7, 0)],
-    );
+    expect(voci.map((v) => v.quando).toList(), [alle(20), alle(9), alle(7)]);
   });
 }

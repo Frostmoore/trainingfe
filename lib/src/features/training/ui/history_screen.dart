@@ -5,13 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/storage/archivio_salute.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/states.dart';
 import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
-import '../data/session_models.dart';
 import '../data/storico_unificato.dart';
 import '../schede_ricevute_controller.dart';
 import '../session_controller.dart';
@@ -120,6 +118,14 @@ class _PerSettimana extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: Gap.md, bottom: Gap.sm),
               child: Text(
+                /*
+                 * 🚨 Si contano i **gruppi**, non le registrazioni — FASE 1-bis.
+                 *
+                 * 💡 È il numero che rende visibile tutto il lavoro del
+                 * raggruppamento: «1 seduta» al posto di «2 sedute» è l'unica
+                 * cosa che si nota a colpo d'occhio quando l'app e l'orologio
+                 * hanno registrato la stessa ora.
+                 */
                 '${DateFormat('d MMM', 'it').format(inizio)} – '
                 '${DateFormat('d MMM y', 'it').format(fine)}'
                 '   ·   ${delle.length} ${delle.length == 1 ? 'seduta' : 'sedute'}',
@@ -129,17 +135,13 @@ class _PerSettimana extends StatelessWidget {
                 ),
               ),
             ),
-            for (final v in delle)
-              switch (v) {
-                /*
-                 * 💡 `switch` esaustivo su una gerarchia `sealed`: se domani
-                 * nasce una terza origine — un allenamento inserito a mano — il
-                 * compilatore ferma qui invece di lasciarla sparire dallo
-                 * schermo senza un errore.
-                 */
-                VoceSeduta() => _CardSessione(voce: v),
-                VoceOrologio() => _CardOrologio(voce: v),
-              },
+            /*
+             * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e
+             * uno `switch`: con i gruppi la distinzione non è più «da dove
+             * viene» ma «contiene una seduta o no», e una proprietà non merita
+             * due gerarchie.
+             */
+            for (final v in delle) _CardAllenamento(voce: v),
           ],
         );
       },
@@ -147,252 +149,69 @@ class _PerSettimana extends StatelessWidget {
   }
 }
 
-class _CardSessione extends ConsumerWidget {
-  const _CardSessione({required this.voce});
+/// Una riga dello storico — FASE 1-bis.
+///
+/// ── 🚨 Una card sola per due casi che si somigliano ───────────────────────
+///
+/// Fino al 20/08 erano due classi: la seduta del player e l'allenamento del
+/// polso. Con i gruppi la distinzione non è più «da dove viene» — una riga può
+/// contenerli **entrambi, più volte** — ma «contiene una seduta o no», e una
+/// proprietà non merita due gerarchie.
+class _CardAllenamento extends ConsumerWidget {
+  const _CardAllenamento({required this.voce});
 
-  final VoceSeduta voce;
-
-  WorkoutSession get sessione => voce.sessione;
+  final VoceStorico voce;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 🚨 La miniatura viene dal TELEFONO — S5.3. `sessione.photos` arrivava
-    // dal server (C5) e da S5 non c'e' piu': le foto sono file locali.
-    final foto = ref.watch(fotoSessioneProvider(sessione.id)).valueOrNull;
-    final prima = (foto == null || foto.isEmpty) ? null : foto.first;
+    final tema = Theme.of(context);
+    final seduta = voce.seduta;
 
     return Card(
       margin: const EdgeInsets.only(bottom: Gap.sm),
       child: ListTile(
-        // La miniatura è ciò che rende lo storico leggibile a colpo d'occhio:
-        // per questo il backend la manda già nell'elenco (C5).
-        leading: SizedBox(
-          width: 52,
-          height: 52,
-          child: prima == null
-              ? const RiquadroFotoAssente()
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(Gap.radiusSm),
-                  child: FotoLocale(file: prima.file),
-                ),
-        ),
+        leading: SizedBox(width: 52, height: 52, child: _Miniatura(voce: voce)),
         title: Text(
-          sessione.titolo,
+          _titolo(),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              [
-                DateFormat('EEE d/MM · HH:mm', 'it').format(sessione.startedAt),
-                if (sessione.isOpen)
-                  'in corso'
-                else if (sessione.durationMinutes != null)
-                  '${sessione.durationMinutes} min',
-                if (sessione.kcal != null) '${sessione.kcal} kcal (${sessione.etichettaKcal})',
-              ].join(' · '),
-            ),
+            Text(_riga1()),
 
             /*
-             * 🆕 FASE 1.10 — l'orologio che ha visto la stessa ora.
-             *
-             * 🚨 **Non è un doppione da nascondere**: è la stessa cosa vista da
-             * due strumenti. Il player sa quali esercizi hai fatto, l'orologio
-             * sa quanto ti è costato. Una riga sola che li tiene insieme dice
-             * più di quanto ognuno dei due saprebbe dire.
-             *
-             * ⚠️ E soprattutto: **non fa numero a parte**. Prima di questa
-             * fusione la settimana avrebbe contato due sedute dove ce n'è stata
-             * una.
+             * 💡 La riga dell'orologio compare **anche** quando il gruppo ha una
+             * seduta: il player sa quali esercizi hai fatto, l'orologio sa
+             * quanto ti è costato, e tenerli insieme dice più di quanto ognuno
+             * dei due saprebbe dire da solo.
              */
-            if (voce.orologio != null)
+            if (voce.dalPolso.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: _RigaOrologio(allenamento: voce.orologio!),
+                child: _RigaOrologio(voce: voce),
               ),
-          ],
-        ),
-        isThreeLine: voce.orologio != null,
-        trailing: sessione.isOpen
-            ? FilledButton(
-                onPressed: () => _apri(context),
-                child: const Text('Riprendi'),
-              )
-            : IconButton(
-                onPressed: () => _correggiKcal(context, ref),
-                icon: const Icon(Icons.local_fire_department_outlined),
-                tooltip: 'Correggi le calorie',
-              ),
-        onTap: () => _apri(context),
-      ),
-    );
-  }
-
-  /// 🚨 **Una seduta conclusa si GUARDA, non si riapre.**
-  ///
-  /// Toccando una riga dello storico si finiva nel player: una schermata che
-  /// tiene lo schermo acceso, fa partire i recuperi e invita a registrare
-  /// serie — su un allenamento di tre giorni fa. Non ha senso, e il rischio è
-  /// di sporcare una seduta chiusa con dati di oggi.
-  ///
-  /// Il player resta per quella **ancora aperta**: lì «riprendi» è esattamente
-  /// ciò che si vuole, ed è il pulsante che la riga mostra al suo posto.
-  ///
-  /// ⚠️ `context.push` di go_router, **non** `Navigator.pushNamed`: il
-  /// `Navigator` di un'app con go_router non ha nessun `onGenerateRoute`, e una
-  /// rotta con nome lancia sempre.
-  void _apri(BuildContext context) => context.push(
-    sessione.isOpen
-        ? AppRoutes.player(sessione.id)
-        : AppRoutes.riepilogo(sessione.id),
-  );
-
-  /// Correzione manuale delle calorie.
-  ///
-  /// ⚠️ Svuotare il campo **rimette la stima**, non azzera: è la differenza fra
-  /// «non lo so» e «oggi ho bruciato zero», e il backend la rispetta.
-  Future<void> _correggiKcal(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(
-      text: sessione.kcalSource == 'manual' ? sessione.kcal?.toString() ?? '' : '',
-    );
-
-    final valore = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Calorie bruciate'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: 'kcal',
-            helperText: 'Vuoto = usa la stima (${sessione.kcal ?? 0})',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Salva'),
-          ),
-        ],
-      ),
-    );
-
-    if (valore == null) return;
-
-    await ref
-        .read(sessionActionsProvider)
-        .setKcal(sessione.id, valore.isEmpty ? null : int.tryParse(valore));
-  }
-}
-
-/// La riga che dice cosa ha visto l'orologio — FASE 1.10.
-///
-/// 💡 Piccola e grigia di proposito: sotto una seduta del player è un
-/// **complemento**, non la notizia. Sopra una card sua invece è tutto quello che
-/// c'è, e infatti lì la si legge da sola.
-class _RigaOrologio extends StatelessWidget {
-  const _RigaOrologio({required this.allenamento});
-
-  final AllenamentoDaOrologio allenamento;
-
-  @override
-  Widget build(BuildContext context) {
-    final tema = Theme.of(context);
-    final minuti = allenamento.finitoIl.difference(allenamento.iniziatoIl).inMinutes;
-
-    return Row(
-      children: [
-        Icon(
-          Icons.watch_outlined,
-          size: 14,
-          color: tema.colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            [
-              'dall\'orologio',
-              '$minuti min',
-              /*
-               * 💡 Sono le calorie **attive** della sessione, cioè lo stesso
-               * numero che mostra l'app dell'orologio. ⚠️ Fino al 20/08 erano
-               * quelle totali, col basale dentro: 835 al posto di 680. Vedi la
-               * nota su `AllenamentiDaOrologio.kcal`.
-               */
-              if (allenamento.kcal != null) '${allenamento.kcal} kcal',
-              if ((allenamento.distanzaMetri ?? 0) > 0)
-                _distanza(allenamento.distanzaMetri!),
-            ].join(' · '),
-            style: tema.textTheme.bodySmall?.copyWith(
-              color: tema.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 💡 Sotto il chilometro si scrivono i metri: «0,2 km» per una camminata in
-  /// palestra sarebbe una precisione finta.
-  static String _distanza(int metri) => metri < 1000
-      ? '$metri m'
-      : '${(metri / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
-}
-
-/// Un allenamento che esiste **solo** perché l'orologio l'ha registrato.
-///
-/// ── 🚨 Perché sta nello stesso elenco delle sedute ────────────────────────
-///
-/// Perché è un allenamento. *«Se un utente si vuole allenare è fighissimo fare
-/// in modo che possa registrare sia una corsetta che un allenamento in palestra
-/// che — che ne so — un allenamento in bicicletta»*: tenerli in due liste
-/// diverse vorrebbe dire chiedere a chi guarda di sommare a mente.
-class _CardOrologio extends ConsumerWidget {
-  const _CardOrologio({required this.voce});
-
-  final VoceOrologio voce;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tema = Theme.of(context);
-    final allenamento = voce.allenamento;
-    final tipo = TipoAllenamento.da(allenamento.tipo);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: Gap.sm),
-      child: ListTile(
-        leading: SizedBox(
-          width: 52,
-          height: 52,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: tema.colorScheme.secondaryContainer,
-              borderRadius: BorderRadius.circular(Gap.radiusSm),
-            ),
-            child: Icon(tipo.icona, color: tema.colorScheme.onSecondaryContainer),
-          ),
-        ),
-        title: Text(
-          tipo.nome,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(DateFormat('EEE d/MM · HH:mm', 'it').format(allenamento.iniziatoIl)),
-            _RigaOrologio(allenamento: allenamento),
 
             /*
-             * 💡 La scheda assegnata si vede **senza aprire niente**: è
-             * l'informazione che questa persona ha aggiunto di sua mano, ed è
-             * l'unica cosa in questa riga che non viene da un sensore.
+             * 🚨 **Le riprese si dicono.** Se il gruppo contiene più di una
+             * seduta vuol dire che qualcuno ha fermato e ripreso: senza questa
+             * riga, la durata del gruppo sembrerebbe sbagliata — «un'ora» per
+             * una seduta che sullo storico del server ne dura venti.
              */
+            if (voce.sedute.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  voce.sedute.length == 2
+                      ? 'ripresa una volta'
+                      : 'ripresa ${voce.sedute.length - 1} volte',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+
             if (voce.scheda != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
@@ -421,14 +240,299 @@ class _CardOrologio extends ConsumerWidget {
           ],
         ),
         isThreeLine: true,
-        trailing: IconButton(
-          onPressed: () => _scegliScheda(context, ref),
-          icon: const Icon(Icons.assignment_outlined),
-          tooltip: 'Assegna una scheda',
-        ),
-        onTap: () => _scegliScheda(context, ref),
+        trailing: seduta != null && seduta.isOpen
+            ? FilledButton(
+                onPressed: () => _apri(context),
+                child: const Text('Riprendi'),
+              )
+            : _Azioni(voce: voce),
+        onTap: () => _apri(context),
       ),
     );
+  }
+
+  /// 💡 Il titolo viene dalla seduta quando c'è: è il nome che la persona
+  /// riconosce. Solo se non c'è si usa il tipo dell'orologio.
+  String _titolo() {
+    final seduta = voce.seduta;
+    if (seduta != null) return seduta.titolo;
+
+    return TipoAllenamento.da(voce.dalPolso.first.tipo).nome;
+  }
+
+  String _riga1() {
+    final seduta = voce.seduta;
+
+    return [
+      DateFormat('EEE d/MM · HH:mm', 'it').format(voce.quando),
+
+      if (seduta != null && seduta.isOpen)
+        'in corso'
+      else
+        /*
+         * ⚠️ La durata del **gruppo**, buchi compresi, non quella della singola
+         * seduta. Una seduta fermata alle 18:30 e ripresa alle 18:35 è durata
+         * dalle 18:00 alle 19:00: è il tempo che ci hai messo, che è la domanda
+         * che si fa chi guarda.
+         */
+        '${voce.durata.inMinutes} min',
+
+      if (_kcal() != null) '${_kcal()} kcal${_fonteKcal()}',
+    ].join(' · ');
+  }
+
+  /// Le calorie da mostrare, secondo la catena decisa in §5 FASE 1.
+  ///
+  /// ══ 🚨 Le fonti si SOSTITUISCONO, non si sommano ════════════════════════
+  ///
+  /// | Ordine | Fonte |
+  /// |---|---|
+  /// | 1 | La correzione **a mano**, se c'è |
+  /// | 2 | L'**orologio**, che ha misurato |
+  /// | 3 | La nostra **stima** (MET × kg × ore) |
+  ///
+  /// ⚠️ Fino al 20/08 la card mostrava la stima **e sotto** il numero misurato:
+  /// due numeri per la stessa ora, senza dire quale valesse. 📌 Il committente:
+  /// *«devono essere usati i dati dell'orologio assegnandoli all'allenamento
+  /// sull'app»*.
+  ///
+  /// 🚨 **La correzione a mano resta sopra a tutto**: chi ha scritto un numero
+  /// l'ha scritto apposta, e un sensore non lo sconfessa.
+  int? _kcal() {
+    final seduta = voce.seduta;
+
+    if (seduta?.kcalSource == 'manual') return seduta!.kcal;
+
+    return voce.kcalDalPolso ?? seduta?.kcal;
+  }
+
+  String _fonteKcal() {
+    final seduta = voce.seduta;
+
+    if (seduta?.kcalSource == 'manual') return ' (a mano)';
+    if (voce.kcalDalPolso != null) return ' (dall\'orologio)';
+    if (seduta?.kcal != null) return ' (${seduta!.etichettaKcal})';
+
+    return '';
+  }
+
+  /// 🚨 **Una seduta conclusa si GUARDA, non si riapre.**
+  ///
+  /// Toccando una riga dello storico si finiva nel player: una schermata che
+  /// tiene lo schermo acceso, fa partire i recuperi e invita a registrare serie
+  /// — su un allenamento di tre giorni fa.
+  ///
+  /// ⚠️ Se la riga è **solo** dell'orologio non c'è niente da aprire: non ha
+  /// esercizi, e una schermata di dettaglio vuota è peggio di nessuna schermata.
+  void _apri(BuildContext context) {
+    final seduta = voce.seduta;
+    if (seduta == null) return;
+
+    context.push(
+      seduta.isOpen ? AppRoutes.player(seduta.id) : AppRoutes.riepilogo(seduta.id),
+    );
+  }
+}
+
+/// 💡 La foto della seduta quando c'è, l'icona del tipo quando la riga è solo
+/// dell'orologio. ⚠️ Un riquadro vuoto su una corsa sembrerebbe una foto che non
+/// si è caricata.
+class _Miniatura extends ConsumerWidget {
+  const _Miniatura({required this.voce});
+
+  final VoceStorico voce;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final seduta = voce.seduta;
+
+    if (seduta == null) {
+      final tipo = TipoAllenamento.da(voce.dalPolso.first.tipo);
+
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: tema.colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+        ),
+        child: Icon(tipo.icona, color: tema.colorScheme.onSecondaryContainer),
+      );
+    }
+
+    // 🚨 La miniatura viene dal TELEFONO — S5.3. `sessione.photos` arrivava dal
+    // server (C5) e da S5 non c'e' piu': le foto sono file locali.
+    final foto = ref.watch(fotoSessioneProvider(seduta.id)).valueOrNull;
+    final prima = (foto == null || foto.isEmpty) ? null : foto.first;
+
+    if (prima == null) return const RiquadroFotoAssente();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(Gap.radiusSm),
+      child: FotoLocale(file: prima.file),
+    );
+  }
+}
+
+/// La riga che dice cosa ha visto l'orologio.
+///
+/// 💡 Piccola e grigia di proposito: sotto una seduta del player è un
+/// **complemento**, non la notizia.
+class _RigaOrologio extends StatelessWidget {
+  const _RigaOrologio({required this.voce});
+
+  final VoceStorico voce;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    var minuti = 0;
+    for (final a in voce.dalPolso) {
+      minuti += a.finitoIl.difference(a.iniziatoIl).inMinutes;
+    }
+
+    final distanza = voce.distanzaMetri ?? 0;
+
+    return Row(
+      children: [
+        Icon(
+          Icons.watch_outlined,
+          size: 14,
+          color: tema.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            [
+              /*
+               * 💡 Quante sessioni ha visto l'orologio: se sono più di una vuol
+               * dire che è stato fermato e ripreso, e dirlo spiega perché i
+               * minuti qui non tornano con la durata del gruppo.
+               */
+              voce.dalPolso.length == 1
+                  ? 'dall\'orologio'
+                  : 'dall\'orologio (${voce.dalPolso.length} tratti)',
+              '$minuti min',
+              if (distanza > 0) _distanza(distanza),
+            ].join(' · '),
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 💡 Sotto il chilometro si scrivono i metri: «0,2 km» per una camminata in
+  /// palestra sarebbe una precisione finta.
+  static String _distanza(int metri) => metri < 1000
+      ? '$metri m'
+      : '${(metri / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
+}
+
+/// I gesti su una riga.
+///
+/// 🚨 **Un menu e non tre pulsanti.** Sono azioni che si usano di rado — una
+/// correzione, un'assegnazione, uno scollegamento — e tre icone su ogni riga
+/// renderebbero lo storico un pannello di comando invece di un elenco.
+class _Azioni extends ConsumerWidget {
+  const _Azioni({required this.voce});
+
+  final VoceStorico voce;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<_Gesto>(
+        icon: const Icon(Icons.more_vert),
+        tooltip: 'Altro',
+        onSelected: (g) => switch (g) {
+          _Gesto.correggiKcal => _correggiKcal(context, ref),
+          _Gesto.assegnaScheda => _scegliScheda(context, ref),
+          _Gesto.stacca => _stacca(context, ref),
+        },
+        itemBuilder: (context) => [
+          if (voce.seduta != null)
+            const PopupMenuItem(
+              value: _Gesto.correggiKcal,
+              child: ListTile(
+                leading: Icon(Icons.local_fire_department_outlined),
+                title: Text('Correggi le calorie'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          if (voce.dalPolso.isNotEmpty)
+            const PopupMenuItem(
+              value: _Gesto.assegnaScheda,
+              child: ListTile(
+                leading: Icon(Icons.assignment_outlined),
+                title: Text('Assegna una scheda'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          /*
+           * 🚨 Lo scollegamento compare **solo quando c'è qualcosa da
+           * scollegare**: una riga con una sola registrazione non è un gruppo, e
+           * offrire di dividerla sarebbe un comando che non fa niente.
+           */
+          if (voce.dalPolso.isNotEmpty &&
+              (voce.sedute.isNotEmpty || voce.dalPolso.length > 1))
+            const PopupMenuItem(
+              value: _Gesto.stacca,
+              child: ListTile(
+                leading: Icon(Icons.call_split),
+                title: Text('Non è lo stesso allenamento'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+        ],
+      );
+
+  /// Correzione manuale delle calorie della seduta.
+  ///
+  /// ⚠️ Svuotare il campo **rimette la stima**, non azzera: è la differenza fra
+  /// «non lo so» e «oggi ho bruciato zero», e il backend la rispetta.
+  Future<void> _correggiKcal(BuildContext context, WidgetRef ref) async {
+    final sessione = voce.seduta;
+    if (sessione == null) return;
+
+    final controller = TextEditingController(
+      text: sessione.kcalSource == 'manual' ? sessione.kcal?.toString() ?? '' : '',
+    );
+
+    final valore = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Calorie bruciate'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'kcal',
+            helperText: voce.kcalDalPolso != null
+                // 💡 Se l'orologio ha misurato, la stima non è più il ripiego.
+                ? 'Vuoto = usa l\'orologio (${voce.kcalDalPolso})'
+                : 'Vuoto = usa la stima (${sessione.kcal ?? 0})',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Salva'),
+          ),
+        ],
+      ),
+    );
+
+    if (valore == null) return;
+
+    await ref
+        .read(sessionActionsProvider)
+        .setKcal(sessione.id, valore.isEmpty ? null : int.tryParse(valore));
   }
 
   /// «Ok, ho fatto questa scheda» — la richiesta del 19/08.
@@ -454,6 +558,10 @@ class _CardOrologio extends ConsumerWidget {
       return;
     }
 
+    // 💡 Si assegna al **primo** allenamento del gruppo: è quello che il
+    // raggruppamento considera l'inizio, e la card legge da lì.
+    final bersaglio = voce.dalPolso.first;
+
     final scelta = await showModalBottomSheet<_Scelta>(
       context: context,
       showDragHandle: true,
@@ -472,10 +580,10 @@ class _CardOrologio extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.assignment_outlined),
                 title: Text(s.nome),
-                selected: s.id == voce.allenamento.schedaAssegnata,
+                selected: s.id == bersaglio.schedaAssegnata,
                 onTap: () => Navigator.of(context).pop(_Scelta(s.id)),
               ),
-            if (voce.allenamento.schedaAssegnata != null) ...[
+            if (bersaglio.schedaAssegnata != null) ...[
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.close),
@@ -492,11 +600,57 @@ class _CardOrologio extends ConsumerWidget {
 
     await assegnaSchedaAllAllenamento(
       ref,
-      allenamentoId: voce.allenamento.id,
+      allenamentoId: bersaglio.id,
       schedaId: scelta.schedaId,
     );
   }
+
+  /// «Non è lo stesso allenamento» — FASE 1-bis.
+  ///
+  /// ── 🚨 È la contropartita della regola larga ──────────────────────────────
+  ///
+  /// Dal 20/08 basta **un istante** di sovrapposizione perché due registrazioni
+  /// finiscano nella stessa riga. ⚠️ Senza questo comando un raggruppamento
+  /// sbagliato — i pesi finiti alle 18:01 e la corsa cominciata alle 18:00 —
+  /// farebbe **sparire** un allenamento vero, e non ci sarebbe modo di riaverlo.
+  ///
+  /// 💡 Si stacca l'**ultimo** allenamento del polso, che è quello che quasi
+  /// sempre è di troppo: il gruppo si forma in avanti nel tempo, e l'intruso è
+  /// chi è arrivato per ultimo.
+  Future<void> _stacca(BuildContext context, WidgetRef ref) async {
+    final bersaglio = voce.dalPolso.last;
+    final tipo = TipoAllenamento.da(bersaglio.tipo);
+
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Non è lo stesso allenamento?'),
+        content: Text(
+          '«${tipo.nome}» delle '
+          '${DateFormat('HH:mm', 'it').format(bersaglio.iniziatoIl)} '
+          'diventa un allenamento a sé, e non si unirà più a nessuno.\n\n'
+          'Puoi rimetterlo insieme quando vuoi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Separa'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma != true) return;
+
+    await staccaAllenamento(ref, allenamentoId: bersaglio.id, staccato: true);
+  }
 }
+
+enum _Gesto { correggiKcal, assegnaScheda, stacca }
 
 /// 💡 Un tipo apposta perché `null` dal bottom sheet vuol dire «ho chiuso senza
 /// scegliere», e `_Scelta(null)` vuol dire «togli l'assegnazione». ⚠️ Senza

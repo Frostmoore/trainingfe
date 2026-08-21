@@ -49,9 +49,33 @@ class AppTheme {
         ),
       ),
 
+      /*
+       * ══ 🆕 UNA LIEVE OMBREGGIATURA, PER TUTTA L'APP — 3b-O, 21/08/2026 ═════
+       *
+       * 📌 Il committente: *«rendiamo l'estetica della card più moderna, con un
+       * po' più di contrasto e una lieve ombreggiatura […] non lo ripeterò più,
+       * tutta l'interfaccia deve essere modernizzata»*.
+       *
+       * 🚨 **Si cambia QUI e non scheda per scheda**, ed è tutto il punto: le
+       * schede sono nove solo su «Oggi», e altrettante altrove. Toccarle una a
+       * una vorrebbe dire venti posti da tenere allineati, e il primo che
+       * qualcuno dimentica diventa la scheda che sembra di un'altra app.
+       *
+       * ⚠️ **`surfaceTintColor` a trasparente insieme all'elevazione.** In
+       * Material 3 l'elevazione **tinge la superficie** con il colore primario,
+       * e sommandosi al colore della palestra darebbe una tonalità diversa per
+       * ogni cliente. 💡 Qui l'elevazione deve produrre **un'ombra**, non una
+       * sfumatura: sono due cose che M3 confonde di proposito.
+       *
+       * 💡 `surfaceContainer` invece di `surfaceContainerLow`: un gradino di
+       * contrasto in più rispetto allo sfondo, che è la metà «più contrasto»
+       * della richiesta.
+       */
       cardTheme: CardThemeData(
-        elevation: 0,
-        color: scheme.surfaceContainerLow,
+        elevation: 2,
+        color: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: scheme.shadow.withValues(alpha: 0.28),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: EdgeInsets.zero,
       ),

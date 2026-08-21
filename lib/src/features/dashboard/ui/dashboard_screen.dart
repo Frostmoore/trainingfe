@@ -94,6 +94,7 @@ class DashboardScreen extends ConsumerWidget {
                    */
                   switch (consiglio.valueOrNull?.stato) {
                     StatoConsiglio.serveConsenso => const _ConsensoAiMancante(),
+                    StatoConsiglio.senzaAi => const _SenzaAi(),
                     StatoConsiglio.spento => null,
                     StatoConsiglio.inArrivo => const _ConsiglioInArrivo(),
                     _ => _Consiglio(
@@ -748,6 +749,73 @@ class _ConsiglioInArrivo extends StatelessWidget {
               child: Text(
                 'Sto preparando il consiglio di oggi…',
                 style: theme.textTheme.bodyMedium?.copyWith(color: sopra),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// L'assistente non e' attivo — 3b-O.3.1, 21/08/2026.
+///
+/// ══ 🚨 IL DIFETTO CHE QUESTA SCHEDA CHIUDE ══════════════════════════════
+///
+/// 📌 Il committente: *«se non ho attiva l'ai perché ho 0 crediti o perché non
+/// ho l'abbonamento, mi mostra il consiglio del giorno in perpetuo
+/// caricamento»*.
+///
+/// ⚠️ È l'altra faccia della regola del 20/08 *«la card non sparisce mai»*: si
+/// è impedito che sparisse, e non si è previsto il caso in cui un consiglio
+/// **non può proprio esserci**. 🚨 Una rotellina che gira per sempre è peggio di
+/// una card assente: dice «sto arrivando» e non arriva.
+///
+/// ── ⛔ Cosa manca ancora, e va detto ─────────────────────────────────────
+///
+/// 📌 La richiesta diceva anche *«mi deve invogliare a sottoscrivere un
+/// abbonamento o ad acquistare dei gettoni»*. ⚠️ **Nell'app non esiste nessuna
+/// schermata per farlo**: il saldo dei gettoni si vede, ma non c'è nessun posto
+/// dove comprarli. 💡 Il pulsante non c'è perché non avrebbe dove andare — un
+/// bottone che non porta da nessuna parte è peggio di nessun bottone.
+class _SenzaAi extends StatelessWidget {
+  const _SenzaAi();
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.auto_awesome_outlined,
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Consiglio del giorno',
+                    style: tema.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "L'assistente non è attivo sul tuo profilo. Con un piano che "
+                    'lo comprende — o con dei gettoni — ogni mattina trovi qui un '
+                    'consiglio costruito su quello che hai mangiato, come hai '
+                    'dormito e come ti sei allenato.',
+                    style: tema.textTheme.bodySmall?.copyWith(height: 1.35),
+                  ),
+                ],
               ),
             ),
           ],

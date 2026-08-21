@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/errors/api_exception.dart';
+import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
@@ -316,29 +317,46 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
         data['generated_at']?.toString() ?? '',
       )?.toLocal(),
     );
-  } on ForbiddenException {
+  } on Object catch (e) {
+    /*
+     * ══ 🚨 SI SBUCCIA CON `unwrapError`, NON CON `on ...Exception` ═══════════
+     *
+     * ⚠️ **Il `catch` tipizzato che c'era qui non scattava mai.** Quello che
+     * `dio` lancia è una `DioException` che **contiene** la nostra eccezione:
+     * `on ForbiddenException` non la prendeva, e **tutto** finiva nel ramo
+     * generico — cioè in un `Consiglio()` vuoto, che a valle diventa la
+     * rotellina che gira per sempre.
+     *
+     * 🚨 Quindi non era rotto solo il caso «niente AI»: era rotto anche il caso
+     * **«serve il consenso»**, che era stato scritto apposta il 12/08 e non ha
+     * mai funzionato. 💡 Lo stesso errore trovato lo stesso giorno in
+     * `SchermataAggiorna`: è una trappola del client, non di questo file.
+     */
+    final tradotto = ApiClient.unwrapError(e);
+
     /*
      * 🚨 **Il 403 del consenso NON è «l'AI non risponde»** — S9.
      *
-     * Da S9 le rotte AI pretendono il consenso esplicito, e senza rispondono
-     * `403` con `code: ai_consent_required`. ⚠️ Prima questo `catch` inghiottiva
-     * **tutto** allo stesso modo, quindi il consiglio del giorno spariva in
-     * silenzio e sembrava un guasto — è così che l'ha segnalato il committente:
-     * *«non mi mostra il consiglio del giorno»*.
-     *
-     * 💡 La differenza fra «non ha funzionato» e «devi dare il permesso» è
-     * tutto: la prima è una cosa che si aspetta, la seconda è una cosa che si
-     * fa. E l'unico posto in cui si può fare è la schermata dei consensi.
-     *
-     * ⚠️ **Si riconosce dal 403 e non da un codice**, perché
-     * `ForbiddenException` il codice non lo porta. Oggi è esatto: su
-     * `/ai/advice` l'unico 403 è quello del consenso — la quota esaurita
-     * risponde **429**. Se un domani quell'endpoint imparasse a rifiutare per
-     * un altro motivo, il posto giusto per distinguerli sarà l'eccezione, non
-     * questo ramo.
+     * La differenza fra «non ha funzionato» e «devi dare il permesso» è tutto:
+     * la prima è una cosa che si aspetta, la seconda una cosa che si fa.
      */
-    return const Consiglio(serveConsenso: true);
-  } on Object {
+    if (tradotto is ForbiddenException) {
+      // ⚠️ Su `/ai/advice` il 403 è del consenso; il piano senza AI risponde
+      // con `plan_without_ai`, che `ApiClient` traduce nello stesso tipo.
+      return tradotto.message.contains('piano') ||
+              tradotto.message.contains('abbonamento')
+          ? const Consiglio(senzaAi: true)
+          : const Consiglio(serveConsenso: true);
+    }
+
+    /*
+     * 🆕 **Quota o gettoni finiti**: l'assistente c'è ma non si può usare.
+     * ⚠️ Non è un guasto e non è un'attesa: è una porta chiusa, e va detto.
+     */
+    if (tradotto is AiQuotaExceededException) {
+      return const Consiglio(senzaAi: true);
+    }
+
     // Il consiglio è un di più: se l'AI non risponde, la dashboard resta
     // utilizzabile. Far fallire tutta la schermata per questo sarebbe
     // sproporzionato.
@@ -348,7 +366,12 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
 
 /// Il consiglio, o il motivo per cui non c'è.
 class Consiglio {
-  const Consiglio({this.testo, this.serveConsenso = false, this.generatoIl});
+  const Consiglio({
+    this.testo,
+    this.serveConsenso = false,
+    this.senzaAi = false,
+    this.generatoIl,
+  });
 
   final String? testo;
 
@@ -361,6 +384,23 @@ class Consiglio {
 
   /// L'app deve **portare al consenso**, non limitarsi a tacere.
   final bool serveConsenso;
+
+  /// 🆕 **L'assistente non è disponibile**: niente piano, o gettoni finiti.
+  ///
+  /// ══ 🚨 IL DIFETTO CHE QUESTO CAMPO CHIUDE — 21/08/2026 ═══════════════════
+  ///
+  /// 📌 Il committente: *«se non ho attiva l'ai perché ho 0 crediti o perché non
+  /// ho l'abbonamento, mi mostra il consiglio del giorno in perpetuo
+  /// caricamento»*.
+  ///
+  /// ⚠️ È l'altra faccia della regola del 20/08 *«la card non sparisce mai»*: si
+  /// è impedito che sparisse, e non si è previsto il caso in cui **un consiglio
+  /// non può proprio esserci**. 🚨 Una rotellina che gira per sempre è peggio di
+  /// una card assente: dice «sto arrivando» e non arriva mai.
+  ///
+  /// 💡 «Non ce l'hai» e «sta arrivando» sono due frasi diverse, e solo la prima
+  /// dice a una persona cosa può fare.
+  final bool senzaAi;
 
   bool get haTesto => testo != null && testo!.isNotEmpty;
 }

@@ -20,6 +20,13 @@ enum StatoConsiglio {
   /// Manca il consenso all'AI: c'è qualcosa da **fare**, non da aspettare.
   serveConsenso,
 
+  /// 🆕 L'assistente non è attivo: niente piano, o gettoni finiti.
+  ///
+  /// 🚨 Prima questo caso finiva in [inArrivo], cioè in una rotellina che
+  /// girava per sempre. ⚠️ «Non ce l'hai» e «sta arrivando» sono due frasi
+  /// diverse, e solo la prima dice a una persona cosa può fare.
+  senzaAi,
+
   /// L'interruttore è spento e non c'è niente da mostrare.
   spento,
 }
@@ -130,6 +137,16 @@ final consiglioDaMostrareProvider =
 
       return adesso.when(
         data: (c) {
+          /*
+           * 🆕 **Niente AI: si dice, non si gira** — 21/08/2026.
+           *
+           * ⚠️ Prima di [ricordo]: chi non ha l'assistente non deve vedere il
+           * consiglio di ieri come se ne stesse arrivando uno nuovo.
+           */
+          if (c.senzaAi) {
+            return const ConsiglioDaMostrare(stato: StatoConsiglio.senzaAi);
+          }
+
           if (c.serveConsenso) {
             return const ConsiglioDaMostrare(
               stato: StatoConsiglio.serveConsenso,

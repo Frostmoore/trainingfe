@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
+import 'barra_carico.dart';
 
 /// La scheda di stanchezza e carica — FASE 2-sexies.
 ///
@@ -38,9 +39,9 @@ class SchedaForma extends ConsumerWidget {
       /*
        * 🚨 **Si tocca, e si vede che si tocca.**
        *
-       * ⚠️ `InkWell` dentro la `Card` e non un `GestureDetector`: senza
-       * l'ondina al tocco, una card che apre una pagina è indistinguibile da una
-       * che non fa niente, e nessuno la prova due volte.
+       * ⚠️ `InkWell` dentro la `Card` e non un `GestureDetector`: senza l'ondina
+       * al tocco, una card che apre una pagina è indistinguibile da una che non
+       * fa niente, e nessuno la prova due volte.
        */
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -63,9 +64,6 @@ class SchedaForma extends ConsumerWidget {
                       style: tema.textTheme.titleMedium,
                     ),
                   ),
-
-                  // 💡 La freccia dice «qui sotto c'è altro»: l'avvertenza
-                  // sopra i numeri promette una spiegazione, e questa è la porta.
                   Icon(
                     Icons.chevron_right_rounded,
                     color: tema.colorScheme.onSurfaceVariant,
@@ -75,33 +73,28 @@ class SchedaForma extends ConsumerWidget {
 
               const SizedBox(height: Gap.sm),
               const AvvertenzaStima(),
-              const SizedBox(height: Gap.md),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _Numero(
-                      etichetta: 'Carico',
-                      indice: forma.stanchezza,
-                      // 💡 L'ACWR è un rapporto: «142%» vuol dire «il 142% del tuo
-                      // carico abituale», che è letteralmente quello che è. ⚠️ Non
-                      // si inventa una scala: quella della carica sì, e infatti è
-                      // dichiarata.
-                      formato: (v) => '${(v * 100).round()}%',
-                      sotto: _fascia(forma.fascia),
-                    ),
-                  ),
-                  const SizedBox(width: Gap.md),
-                  Expanded(
-                    child: _Numero(
-                      etichetta: 'Carica',
-                      indice: forma.carica,
-                      formato: (v) => v.round().toString(),
-                      sotto: 'su 100',
-                    ),
-                  ),
-                ],
-              ),
+              /*
+               * ══ 🆕 DUE SEZIONI, UNA SOTTO L'ALTRA — 3b-O.4, 21/08/2026 ═════
+               *
+               * 📌 Il committente: *«adesso è terribile […] non dovrebbero
+               * essere solo numeri […] due sezioni, una sotto l'altra»*.
+               *
+               * ⚠️ Prima erano **due numeri affiancati**, e la disposizione
+               * diceva una cosa falsa: che fossero **la stessa cosa misurata in
+               * due modi**. Non lo sono. Il carico è un rapporto con la propria
+               * settimana, la carica è uno stato di oggi — e affiancarli
+               * invitava a confrontarli.
+               *
+               * 💡 Uno sotto l'altro, con **forme diverse**, si legge che sono
+               * due domande diverse prima ancora di leggere le parole.
+               */
+              const SizedBox(height: Gap.md),
+              _SezioneCarico(forma: forma),
+
+              const Divider(height: Gap.lg),
+
+              _SezioneCarica(forma: forma),
             ],
           ),
         ),
@@ -109,7 +102,9 @@ class SchedaForma extends ConsumerWidget {
     );
   }
 
-  static String _fascia(FasciaCarico? f) => switch (f) {
+  /// 💡 Pubblica perché la usa `_SezioneCarico`: le frasi restano **le stesse
+  /// di prima**, era la richiesta.
+  static String fascia(FasciaCarico? f) => switch (f) {
     FasciaCarico.scarico => 'sotto il tuo solito',
     FasciaCarico.normale => 'nella tua norma',
     FasciaCarico.inSalita => 'in salita',
@@ -118,106 +113,6 @@ class SchedaForma extends ConsumerWidget {
   };
 }
 
-/// Un numero, con **quanto vale** scritto sotto.
-class _Numero extends StatelessWidget {
-  const _Numero({
-    required this.etichetta,
-    required this.indice,
-    required this.formato,
-    required this.sotto,
-  });
-
-  final String etichetta;
-  final Indice indice;
-  final String Function(double) formato;
-  final String sotto;
-
-  @override
-  Widget build(BuildContext context) {
-    final tema = Theme.of(context);
-    final valore = indice.valore;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(etichetta, style: tema.textTheme.labelMedium),
-        const SizedBox(height: 2),
-
-        /*
-         * ══ 🚨 IL NUMERO C'È SEMPRE CHE SI POSSA CALCOLARE ══
-         *
-         * Decisione D-2s/A: *«certo che si calcola. Si stima, e sotto c'è
-         * scritto che è una stima poco veritiera perché mancano x giorni»*.
-         *
-         * ⚠️ L'unica eccezione è quando il numero **non può esistere** — per il
-         * carico, zero allenamenti in ventotto giorni: è una divisione per zero,
-         * non una stima imprecisa.
-         */
-        if (valore == null)
-          Text(
-            '—',
-            style: tema.textTheme.headlineMedium?.copyWith(
-              color: tema.colorScheme.outline,
-            ),
-          )
-        else
-          Text(
-            formato(valore),
-            style: tema.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: tema.colorScheme.primary,
-            ),
-          ),
-
-        Text(
-          valore == null ? 'non calcolabile' : sotto,
-          style: tema.textTheme.bodySmall,
-        ),
-
-        /*
-         * 💡 La nota dice **quanti giorni mancano**, non «dati insufficienti»:
-         * la prima è un'attesa che finisce, la seconda sembra un guasto.
-         */
-        if (valore != null && !indice.eAttendibile)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'stima poco attendibile: mancano '
-              '${indice.giorniCheMancano} giorni di dati',
-              style: tema.textTheme.labelSmall?.copyWith(
-                color: tema.colorScheme.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-
-        if (valore == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Serve almeno un allenamento registrato.',
-              style: tema.textTheme.labelSmall?.copyWith(
-                color: tema.colorScheme.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// L'avvertenza di questi due numeri — D-2s/B.
-///
-/// ── ⚠️ Perché NON si riusa `AvvertenzaNutrizionale` ───────────────────────
-///
-/// Perché quel testo parla di **calorie** e di formule nutrizionali: infilarlo
-/// sotto un indice di stanchezza direbbe la cosa sbagliata con le parole di
-/// un'altra. 💡 Stesso mestiere, testo suo.
-///
-/// 🚨 E dice **due** cose, non una: che è una stima da formule, e che **non è
-/// confrontabile con quella di un'altra persona**. La seconda è specifica di
-/// questi numeri, e senza di essa l'indice diventa una gara.
 class AvvertenzaStima extends StatelessWidget {
   const AvvertenzaStima({super.key});
 
@@ -243,6 +138,144 @@ class AvvertenzaStima extends StatelessWidget {
               color: colore,
               height: 1.3,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Il carico: una barra, non un numero — 3b-O.4.3.
+class _SezioneCarico extends StatelessWidget {
+  const _SezioneCarico({required this.forma});
+
+  final Forma forma;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final v = forma.stanchezza.valore;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text('Carico', style: tema.textTheme.labelMedium),
+            const SizedBox(width: Gap.sm),
+            Text(
+              /*
+               * 💡 L'ACWR è un rapporto: «142%» vuol dire «il 142% del tuo
+               * carico abituale», che è letteralmente quello che è. ⚠️ Non si
+               * inventa una scala: quella della carica sì, e infatti è
+               * dichiarata.
+               */
+              v == null ? '—' : '${(v * 100).round()}%',
+              style: tema.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: v == null
+                    ? tema.colorScheme.outline
+                    : tema.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: Gap.xs),
+
+        BarraCarico(acwr: v),
+
+        const SizedBox(height: Gap.xs),
+
+        Text(
+          v == null
+              ? 'Serve almeno un allenamento negli ultimi 28 giorni.'
+              : SchedaForma.fascia(forma.fascia),
+          style: tema.textTheme.bodySmall,
+        ),
+
+        /*
+         * 💡 La nota dice **quanti giorni mancano**, non «dati insufficienti»:
+         * la prima è un'attesa che finisce, la seconda sembra un guasto.
+         */
+        if (v != null && !forma.stanchezza.eAttendibile)
+          Text(
+            'stima poco attendibile: mancano '
+            '${forma.stanchezza.giorniCheMancano} giorni di dati',
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// La carica: una batteria con il numero dentro — 3b-O.4.4.
+class _SezioneCarica extends StatelessWidget {
+  const _SezioneCarica({required this.forma});
+
+  final Forma forma;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final v = forma.carica.valore;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        BatteriaCarica(livello: v),
+
+        const SizedBox(width: Gap.md),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Carica', style: tema.textTheme.labelMedium),
+              Text(
+                v == null ? 'non calcolabile' : 'su 100',
+                style: tema.textTheme.bodySmall,
+              ),
+
+              const SizedBox(height: Gap.xs),
+
+              /*
+               * 🚨 **L'avvertenza sta ACCANTO alla batteria** — 3b-O.4.4.
+               *
+               * 📌 *«accanto le frasi necessarie per comunicare che non è un
+               * parere medico eccetera»*.
+               *
+               * ⚠️ Si sposta dall'alto al fianco, e la regola di D-2s/B regge
+               * lo stesso: quella diceva **sopra i numeri**, cioè *letta
+               * insieme al numero, non dopo*. Qui il numero è dentro la
+               * batteria e l'avvertenza le sta a fianco — si leggono nello
+               * stesso colpo d'occhio, che era il punto.
+               */
+              Text(
+                'Stima del telefono, non una misura e non un parere medico. '
+                'È costruita sulle tue medie: non si confronta con quella di '
+                'altri.',
+                style: tema.textTheme.labelSmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                  height: 1.3,
+                ),
+              ),
+
+              if (v != null && !forma.carica.eAttendibile)
+                Text(
+                  'stima poco attendibile: mancano '
+                  '${forma.carica.giorniCheMancano} giorni di dati',
+                  style: tema.textTheme.labelSmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
           ),
         ),
       ],

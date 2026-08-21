@@ -85,84 +85,95 @@ class CaloriesCard extends ConsumerWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  n.kcal.round().toString(),
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: Gap.xs),
-                Text(
-                  haObiettivo ? '/ ${target.round()} kcal' : 'kcal',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const Spacer(),
-                if (bruciate.esistono)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 18,
-                        color: theme.colorScheme.tertiary,
-                      ),
-                      Text(
-                        '${bruciate.kcal}',
-                        style: theme.textTheme.titleSmall,
-                      ),
-                    ],
-                  ),
-              ],
-            ),
 
-            if (haObiettivo) ...[
-              const SizedBox(height: Gap.sm),
-              _BarraConRitmo(
-                percentualeMangiata: (n.kcal / target).clamp(0.0, 1.5),
-                percentualeGiornata: riepilogo.dayProgressPct / 100,
-              ),
-              const SizedBox(height: Gap.xs),
-              Text(
-                _frase(
-                  // ⚠️ Il ritmo si ricalcola sull'obiettivo **che si sta
-                  // mostrando**: usare quello del server quando il numero viene
-                  // dal calcolo locale darebbe una frase che non c'entra niente
-                  // con la barra sopra.
-                  n.haTarget
-                      ? scostamento
-                      : n.kcal - target * riepilogo.dayProgressPct / 100,
-                  target - n.kcal,
-                  riepilogo.dayProgressPct,
-                ),
-                style: theme.textTheme.bodySmall,
+      /*
+       * 🆕 **Toccandola si va al cibo di oggi** — 3b-O.2.3, 21/08/2026.
+       *
+       * 💡 È il criterio di tutta la pagina: «Oggi» è un **riassunto**, e ogni
+       * scheda porta al posto dove si fa la cosa. ⚠️ Il numero delle calorie
+       * senza una strada per correggerlo è un numero che si guarda e basta.
+       */
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.diary),
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    n.kcal.round().toString(),
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: Gap.xs),
+                  Text(
+                    haObiettivo ? '/ ${target.round()} kcal' : 'kcal',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  if (bruciate.esistono)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 18,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                        Text(
+                          '${bruciate.kcal}',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ],
+                    ),
+                ],
               ),
 
-              // 🚨 S7.5 — se l'obiettivo viene dal piano del trainer, si dice.
-              //
-              // ⚠️ **Il numero calcolato non compare affatto**, e non è una
-              // dimenticanza: due numeri diversi nella stessa schermata sono un
-              // invito a non fidarsi di nessuno dei due, e chi paga un trainer
-              // vuole seguire il trainer. La formula però continua a girare —
-              // serve quando il piano scade, e per chi un trainer non ce l'ha.
-              if (n.targetDaPiano)
-                Padding(
-                  padding: const EdgeInsets.only(top: Gap.xs),
-                  child: Text(
-                    'Dal piano del tuo trainer',
-                    style: theme.textTheme.labelSmall,
+              if (haObiettivo) ...[
+                const SizedBox(height: Gap.sm),
+                _BarraConRitmo(
+                  percentualeMangiata: (n.kcal / target).clamp(0.0, 1.5),
+                  percentualeGiornata: riepilogo.dayProgressPct / 100,
+                ),
+                const SizedBox(height: Gap.xs),
+                Text(
+                  _frase(
+                    // ⚠️ Il ritmo si ricalcola sull'obiettivo **che si sta
+                    // mostrando**: usare quello del server quando il numero viene
+                    // dal calcolo locale darebbe una frase che non c'entra niente
+                    // con la barra sopra.
+                    n.haTarget
+                        ? scostamento
+                        : n.kcal - target * riepilogo.dayProgressPct / 100,
+                    target - n.kcal,
+                    riepilogo.dayProgressPct,
                   ),
-                )
-              else
-                /*
+                  style: theme.textTheme.bodySmall,
+                ),
+
+                // 🚨 S7.5 — se l'obiettivo viene dal piano del trainer, si dice.
+                //
+                // ⚠️ **Il numero calcolato non compare affatto**, e non è una
+                // dimenticanza: due numeri diversi nella stessa schermata sono un
+                // invito a non fidarsi di nessuno dei due, e chi paga un trainer
+                // vuole seguire il trainer. La formula però continua a girare —
+                // serve quando il piano scade, e per chi un trainer non ce l'ha.
+                if (n.targetDaPiano)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Gap.xs),
+                    child: Text(
+                      'Dal piano del tuo trainer',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  )
+                else
+                  /*
                  * 🆕 20/08/2026 — l'avvertenza dove sta il numero.
                  *
                  * 🚨 **Era l'unico posto in cui mancava**, ed era il peggiore in
@@ -176,14 +187,14 @@ class CaloriesCard extends ConsumerWidget {
                  * generiche: è la scelta di un professionista, e scriverci sotto
                  * «stima da formule generiche» sarebbe falso e gli darebbe torto.
                  */
-                const Padding(
-                  padding: EdgeInsets.only(top: Gap.xs),
-                  child: AvvertenzaNutrizionale(compatta: true),
-                ),
-            ] else ...[
-              const SizedBox(height: Gap.sm),
+                  const Padding(
+                    padding: EdgeInsets.only(top: Gap.xs),
+                    child: AvvertenzaNutrizionale(compatta: true),
+                  ),
+              ] else ...[
+                const SizedBox(height: Gap.sm),
 
-              /*
+                /*
                * ⚠️ Si dice **cosa** manca, non «compila i tuoi dati».
                *
                * Il peso non sta nel profilo: vive nell'archivio locale (S5) e si
@@ -191,40 +202,42 @@ class CaloriesCard extends ConsumerWidget {
                * compilato tutto tranne la pesata è un giro a vuoto — ed è
                * esattamente com'è stato riferito provando l'app.
                */
-              if (esito != null && !esito.riuscito)
-                MancaPerIlTarget(esito: esito)
-              else
-                Text(
-                  'Nessun obiettivo impostato.',
-                  style: theme.textTheme.bodySmall,
-                ),
-            ],
-
-            const SizedBox(height: Gap.sm),
-            Row(
-              children: [
-                // ⚠️ Anche i macro seguono la stessa precedenza del totale:
-                // mostrarne uno calcolato accanto a un totale che viene dal
-                // piano — o viceversa — darebbe una scheda che si contraddice.
-                _Macro(
-                  nome: 'P',
-                  valore: n.protein,
-                  target: n.targetProtein ?? locale?.macro.proteineG.toDouble(),
-                ),
-                _Macro(
-                  nome: 'C',
-                  valore: n.carbs,
-                  target:
-                      n.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
-                ),
-                _Macro(
-                  nome: 'G',
-                  valore: n.fat,
-                  target: n.targetFat ?? locale?.macro.grassiG.toDouble(),
-                ),
+                if (esito != null && !esito.riuscito)
+                  MancaPerIlTarget(esito: esito)
+                else
+                  Text(
+                    'Nessun obiettivo impostato.',
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
-            ),
-          ],
+
+              const SizedBox(height: Gap.sm),
+              Row(
+                children: [
+                  // ⚠️ Anche i macro seguono la stessa precedenza del totale:
+                  // mostrarne uno calcolato accanto a un totale che viene dal
+                  // piano — o viceversa — darebbe una scheda che si contraddice.
+                  _Macro(
+                    nome: 'P',
+                    valore: n.protein,
+                    target:
+                        n.targetProtein ?? locale?.macro.proteineG.toDouble(),
+                  ),
+                  _Macro(
+                    nome: 'C',
+                    valore: n.carbs,
+                    target:
+                        n.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+                  ),
+                  _Macro(
+                    nome: 'G',
+                    valore: n.fat,
+                    target: n.targetFat ?? locale?.macro.grassiG.toDouble(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

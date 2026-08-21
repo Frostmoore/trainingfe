@@ -9,7 +9,7 @@ import '../../../health/health_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../dashboard_controller.dart';
 
-/// Le calorie del periodo, **a onda doppia attorno a una linea di base** —
+/// Le calorie del periodo, **a colonne attorno a una linea di base** —
 /// 3b-O.9, 21/08/2026.
 ///
 /// ══ 🚨 IL GRAFICO DI PRIMA NON ERA BRUTTO: ERA SBAGLIATO ══════════════════
@@ -38,6 +38,24 @@ import '../../dashboard_controller.dart';
 /// ⚠️ **Il verso di sopra è con segno**: chi ha mangiato *meno* del target va
 /// **sotto** la linea. Costringere il cibo a stare sempre sopra nasconderebbe
 /// esattamente il giorno che si vuole vedere.
+///
+/// ── 🚨 A COLONNE, DOPO AVERLO PROVATO A ONDA ────────────────────────────
+///
+/// 📌 Prima richiesta: *«non mi piace a colonne, lo preferisco a onda doppia»*.
+/// 📌 Dopo averlo visto sul telefono: *«forse il grafico delle calorie sotto
+/// sarebbe meglio a colonne, così non si capisce nulla»*.
+///
+/// ⚠️ **E l'onda era davvero peggio, per una ragione che si vede solo a
+/// schermo**: una curva morbida fra due giorni *unisce* punti che non sono
+/// uniti. Il cibo di martedì non «diventa» quello di mercoledì passando per i
+/// valori in mezzo — sono due misure separate. 🚨 Una linea suggerisce una
+/// continuità che nei dati non c'è, e con dieci giorni di scostamenti alterni
+/// diventa un ghirigoro da cui non si estrae nessun giorno.
+///
+/// 💡 Le colonne dicono **quanto**, ed è quello che serve qui: ogni giorno è una
+/// domanda a sé («quel giorno come è andata?»). ⛔ Non contraddice `OndaMetrica`
+/// di «Sonno e recupero»: lì conta il **verso** — un HRV che sale — e per il
+/// verso la linea è giusta.
 ///
 /// ── ⚠️ Il target del periodo è quello di OGGI ─────────────────────────────
 ///
@@ -240,7 +258,7 @@ class _Corpo extends ConsumerWidget {
         else
           SizedBox(
             height: 190,
-            child: LineChart(_dati(context, serie, daHealth, target!, consumo)),
+            child: BarChart(_dati(context, serie, daHealth, target!, consumo)),
           ),
 
         const SizedBox(height: Gap.sm),
@@ -278,7 +296,7 @@ double bruciateDi(Series s, int i, Map<String, int> daHealth) {
   return i < s.burned.length ? s.burned[i] : 0;
 }
 
-LineChartData _dati(
+BarChartData _dati(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
@@ -287,8 +305,14 @@ LineChartData _dati(
 ) {
   final theme = Theme.of(context);
 
-  final cibo = <FlSpot>[];
-  final moto = <FlSpot>[];
+  final gruppi = <BarChartGroupData>[];
+  final valori = <double>[0];
+
+  /*
+   * 💡 Le colonne si assottigliano quando i giorni sono tanti: a trenta giorni
+   * due barre da 6 px per giorno diventano una macchia continua.
+   */
+  final larghezza = s.labels.length <= 10 ? 7.0 : 3.5;
 
   for (var i = 0; i < s.labels.length; i++) {
     final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
@@ -296,22 +320,56 @@ LineChartData _dati(
 
     /*
      * ⚠️ **Un giorno senza diario NON è un giorno a digiuno.** Con `assunte = 0`
-     * lo scostamento sarebbe `−target`, cioè il punto più basso del grafico: chi
-     * ha saltato il diario per un giorno si vedrebbe un tuffo che non è
-     * successo. 💡 Quel giorno il cibo semplicemente non ha un punto.
+     * lo scostamento sarebbe `−target`, cioè la colonna più bassa del grafico:
+     * chi ha saltato il diario per un giorno si vedrebbe un tuffo che non è
+     * successo. 💡 Quel giorno la colonna del cibo semplicemente non c'è.
      */
-    if (assunte > 0) cibo.add(FlSpot(i.toDouble(), assunte - target));
+    final scostamento = assunte > 0 ? assunte - target : null;
 
-    moto.add(FlSpot(i.toDouble(), -bruciate));
+    if (scostamento != null) valori.add(scostamento);
+    valori.add(-bruciate);
+
+    gruppi.add(
+      BarChartGroupData(
+        x: i,
+        barRods: [
+          /*
+           * 🚨 `fromY: 0` su tutte e due: le colonne **partono dalla linea di
+           * base**, non dal fondo del riquadro. È quello che le rende
+           * scostamenti invece che totali — cioè tutta la correzione chiesta.
+           */
+          if (scostamento != null)
+            BarChartRodData(
+              fromY: 0,
+              toY: scostamento,
+              width: larghezza,
+              borderRadius: BorderRadius.zero,
+              // 💡 Rosso sopra, verde sotto: sopra la linea si è mangiato più
+              // del previsto, e il colore lo dice prima del numero.
+              color: scostamento >= 0
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.secondary,
+            ),
+
+          if (bruciate > 0)
+            BarChartRodData(
+              fromY: 0,
+              toY: -bruciate,
+              width: larghezza,
+              borderRadius: BorderRadius.zero,
+              color: theme.colorScheme.tertiary,
+            ),
+        ],
+      ),
+    );
   }
 
-  final tutti = <double>[...cibo.map((p) => p.y), ...moto.map((p) => p.y), 0];
-  final estremo = tutti
+  final estremo = valori
       .map((v) => v.abs())
       .reduce((a, b) => a > b ? a : b)
       .clamp(100.0, double.infinity);
 
-  return LineChartData(
+  return BarChartData(
     /*
      * 🚨 **La scala è simmetrica attorno allo zero**, e non è estetica: con
      * limiti calcolati sui dati la linea di base finirebbe a un terzo
@@ -324,6 +382,7 @@ LineChartData _dati(
     gridData: const FlGridData(show: false),
     borderData: FlBorderData(show: false),
     titlesData: _titoli(s.labels),
+    barGroups: gruppi,
 
     // ── 🎯 La linea di base: «la giornata come prevista» ──────────────────
     extraLinesData: ExtraLinesData(
@@ -336,54 +395,9 @@ LineChartData _dati(
       ],
     ),
 
-    lineTouchData: _tocco(context, s, daHealth, consumo),
-
-    lineBarsData: [
-      _onda(
-        punti: cibo,
-        colore: theme.colorScheme.primary,
-        // 💡 Il riempimento parte **dallo zero**, non dal fondo: è la distanza
-        // dalla linea di base a voler essere vista, non l'altezza assoluta.
-        versoZero: true,
-      ),
-      _onda(punti: moto, colore: theme.colorScheme.tertiary, versoZero: true),
-    ],
+    barTouchData: _tocco(context, s, daHealth, consumo),
   );
 }
-
-/// Una delle due onde — 3b-O.9.3.
-///
-/// 📌 *«non mi piace a colonne, lo preferisco a onda doppia»*.
-///
-/// 💡 E il linguaggio è già quello di «Sonno e recupero» (`OndaMetrica`): usarne
-/// un secondo per la stessa idea renderebbe la pagina meno leggibile, non più
-/// ricca.
-LineChartBarData _onda({
-  required List<FlSpot> punti,
-  required Color colore,
-  required bool versoZero,
-}) => LineChartBarData(
-  spots: punti,
-  isCurved: true,
-  // ⚠️ Senza questo, una curva morbida fra due giorni molto diversi «sfonda»
-  // oltre i punti e disegna un massimo che non esiste in nessun giorno.
-  preventCurveOverShooting: true,
-  barWidth: 2.5,
-  color: colore,
-  dotData: const FlDotData(show: false),
-  belowBarData: BarAreaData(
-    show: true,
-    applyCutOffY: versoZero,
-    cutOffY: 0,
-    color: colore.withValues(alpha: 0.18),
-  ),
-  aboveBarData: BarAreaData(
-    show: true,
-    applyCutOffY: versoZero,
-    cutOffY: 0,
-    color: colore.withValues(alpha: 0.18),
-  ),
-);
 
 /// Il riquadro che compare col dito — 3b-O.9.4.
 ///
@@ -396,7 +410,7 @@ LineChartBarData _onda({
 ///
 /// 🚨 Il saldo è `(assunte − consumo) − bruciate`: positivo vuol dire surplus —
 /// si è mangiato più di quanto si è speso — negativo deficit.
-LineTouchData _tocco(
+BarTouchData _tocco(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
@@ -404,54 +418,35 @@ LineTouchData _tocco(
 ) {
   final theme = Theme.of(context);
 
-  return LineTouchData(
-    // 💡 Un solo riquadro anche se le onde sono due: due fumetti sovrapposti
-    // sullo stesso giorno si coprono a vicenda.
-    getTouchedSpotIndicator: (barData, indici) => indici
-        .map(
-          (_) => TouchedSpotIndicatorData(
-            FlLine(color: theme.colorScheme.outline, strokeWidth: 1),
-            const FlDotData(show: true),
-          ),
-        )
-        .toList(),
-
-    touchTooltipData: LineTouchTooltipData(
+  return BarTouchData(
+    touchTooltipData: BarTouchTooltipData(
       getTooltipColor: (_) => theme.colorScheme.inverseSurface,
-      getTooltipItems: (punti) {
-        var primo = true;
+      getTooltipItem: (gruppo, _, _, _) {
+        final i = gruppo.x;
+        final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
+        final bruciate = bruciateDi(s, i, daHealth);
+        final giorno = i < s.labels.length ? s.labels[i] : '';
 
-        return punti.map((p) {
-          // Solo sul primo punto: gli altri restituiscono `null` e spariscono.
-          if (!primo) return null;
-          primo = false;
-
-          final i = p.x.toInt();
-          final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-          final bruciate = bruciateDi(s, i, daHealth);
-          final giorno = i < s.labels.length ? s.labels[i] : '';
-
-          if (consumo == null || assunte <= 0) {
-            return LineTooltipItem(
-              '$giorno · nessun dato',
-              theme.textTheme.labelSmall!.copyWith(
-                color: theme.colorScheme.onInverseSurface,
-              ),
-            );
-          }
-
-          final saldo = (assunte - consumo) - bruciate;
-
-          return LineTooltipItem(
-            '$giorno\n'
-            '${saldo > 0 ? '+' : ''}${saldo.round()} kcal '
-            '${saldo > 0 ? 'in più' : 'in meno'}',
-            theme.textTheme.labelMedium!.copyWith(
+        if (consumo == null || assunte <= 0) {
+          return BarTooltipItem(
+            '$giorno · nessun dato',
+            theme.textTheme.labelSmall!.copyWith(
               color: theme.colorScheme.onInverseSurface,
-              fontWeight: FontWeight.w700,
             ),
           );
-        }).toList();
+        }
+
+        final saldo = (assunte - consumo) - bruciate;
+
+        return BarTooltipItem(
+          '$giorno\n'
+          '${saldo > 0 ? '+' : ''}${saldo.round()} kcal '
+          '${saldo > 0 ? 'in più' : 'in meno'}',
+          theme.textTheme.labelMedium!.copyWith(
+            color: theme.colorScheme.onInverseSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        );
       },
     ),
   );

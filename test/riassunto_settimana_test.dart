@@ -84,7 +84,10 @@ void main() {
   test('un riassunto senza niente si riconosce da solo', () {
     // ⛔ Serve a far sparire la sezione invece di disegnare cinque assenze.
     expect(const RiassuntoSettimana().vuoto, isTrue);
-    expect(const RiassuntoSettimana(sedute: 1).vuoto, isFalse);
+    expect(
+      const RiassuntoSettimana(giorniDallUltimo: 2, minutiDormiti: 1).vuoto,
+      isFalse,
+    );
     expect(const RiassuntoSettimana(minutiDormiti: 420).vuoto, isFalse);
   });
 

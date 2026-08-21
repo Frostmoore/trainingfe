@@ -45,7 +45,9 @@ import 'dashboard_controller.dart';
 @immutable
 class RiassuntoSettimana {
   const RiassuntoSettimana({
-    this.sedute = 0,
+    this.voci = const [],
+    this.giorniDallUltimo,
+    this.ultimi30 = 0,
     this.volumeKg,
     this.metri,
     this.kcalBruciate,
@@ -54,8 +56,37 @@ class RiassuntoSettimana {
     this.pesoStimatoKg,
   });
 
+  /// Gli allenamenti dei sette giorni, dal più recente.
+  ///
+  /// ══ 🚨 QUESTA LISTA CHIUDE UN DIFETTO RIFERITO ═════════════════════════
+  ///
+  /// 📌 Il committente, 21/08/2026: *«La card allenamento è sbagliata, mi dice
+  /// che ho registrato un esercizio e non me lo mostra (quello dell'altro ieri
+  /// dall'orologio)»*.
+  ///
+  /// ⚠️ **E le due metà della scheda parlavano di due elenchi diversi**: il
+  /// riassunto contava dallo **storico unificato** (che l'orologio ce l'ha), la
+  /// lista sotto disegnava `riepilogo.training.recent`, cioè le sedute del
+  /// **server**. Un allenamento registrato solo dall'orologio finiva nel conteggio
+  /// e non nella lista.
+  ///
+  /// 🚨 **Il difetto peggiore non è la riga mancante: è la contraddizione.** Una
+  /// scheda che dice «1 allenamento» e sotto non ne mostra nessuno fa dubitare
+  /// di tutti e due i numeri, non solo di quello sbagliato.
+  ///
+  /// 💡 Da qui in poi la scheda ha **una fonte sola**, e per la stessa ragione
+  /// ci sono anche [giorniDallUltimo] e [ultimi30]: erano gli altri due numeri
+  /// che venivano dal server.
+  final List<VoceStorico> voci;
+
+  /// Da quanti giorni non ci si allena. `null` = mai.
+  final int? giorniDallUltimo;
+
+  /// Quanti allenamenti negli ultimi 30 giorni.
+  final int ultimi30;
+
   /// Quante volte ci si è allenati nei sette giorni.
-  final int sedute;
+  int get sedute => voci.length;
 
   /// Il peso sollevato in totale: `reps × weight`, sommato su tutte le serie.
   final double? volumeKg;
@@ -91,7 +122,7 @@ class RiassuntoSettimana {
   static const kcalPerChilo = 7700.0;
 
   bool get vuoto =>
-      sedute == 0 &&
+      voci.isEmpty &&
       volumeKg == null &&
       metri == null &&
       kcalBruciate == null &&
@@ -127,9 +158,31 @@ final riassuntoSettimanaProvider =
       );
 
       // ── 🏋️ Allenamento: dallo storico unificato ──────────────────────────
-      final voci = (await ref.watch(
-        storicoUnificatoProvider.future,
-      )).where((v) => !v.quando.isBefore(da)).toList();
+      final tutte = await ref.watch(storicoUnificatoProvider.future);
+
+      final voci = tutte.where((v) => !v.quando.isBefore(da)).toList()
+        // 💡 Dal più recente: è l'ordine in cui la scheda li mostra, e farlo
+        // qui evita che chi disegna se lo ricordi (o se lo dimentichi).
+        ..sort((a, b) => b.quando.compareTo(a.quando));
+
+      /*
+       * 🚨 Anche questi due venivano dal **server** — vedi [voci]. Un
+       * allenamento fatto solo con l'orologio non spostava «non ti alleni da N
+       * giorni», che è la frase che dovrebbe far tornare in palestra: diceva
+       * «da 5 giorni» a chi aveva corso ieri.
+       */
+      final ultimo = tutte.isEmpty
+          ? null
+          : tutte.map((v) => v.quando).reduce((a, b) => a.isAfter(b) ? a : b);
+
+      final giorniDallUltimo = ultimo == null
+          ? null
+          : mezzanotte
+                .difference(DateTime(ultimo.year, ultimo.month, ultimo.day))
+                .inDays;
+
+      final da30 = mezzanotte.subtract(const Duration(days: 29));
+      final ultimi30 = tutte.where((v) => !v.quando.isBefore(da30)).length;
 
       double? volume;
       int? metri;
@@ -181,7 +234,9 @@ final riassuntoSettimanaProvider =
       }
 
       return RiassuntoSettimana(
-        sedute: voci.length,
+        voci: voci,
+        giorniDallUltimo: giorniDallUltimo,
+        ultimi30: ultimi30,
         volumeKg: volume,
         metri: metri,
         kcalBruciate: bruciate,

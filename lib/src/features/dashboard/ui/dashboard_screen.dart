@@ -127,7 +127,7 @@ class DashboardScreen extends ConsumerWidget {
                    */
                   SchedaPeso(pesoObiettivo: r.body.targetWeightKg),
 
-                  TrainingCard(riepilogo: r),
+                  const TrainingCard(),
                   /*
                    * 🔥 **Il grafico delle calorie, rifatto** — 3b-O.9.
                    *

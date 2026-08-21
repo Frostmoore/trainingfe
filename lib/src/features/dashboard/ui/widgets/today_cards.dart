@@ -13,10 +13,12 @@ import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
+import '../../../health/tipo_allenamento.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../sleep/sleep_controller.dart';
+import '../../../training/data/storico_unificato.dart';
 import '../../data/dashboard_models.dart';
 import '../../riassunto_settimana.dart';
 import 'onda_metrica.dart';
@@ -141,12 +143,34 @@ class CaloriesCard extends ConsumerWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                   const Spacer(),
+
+                  /*
+                   * ══ 🚨 «TDAA», NON «CONSUMO» — correzione del 21/08 sera ═══
+                   *
+                   * 📌 Il committente, vedendola sul telefono: *«mi dice
+                   * "consumato" 2271. Non va bene, mi dovrebbe dire il tdaa,
+                   * non il consumo. Cioè il discorso è che io qui devo avere:
+                   * consumate/target | tdaa | bruciate»*.
+                   *
+                   * ⚠️ **Aveva ragione, ed era un difetto di lettura, non di
+                   * numero**: 2.271 era già il valore giusto. Ma la parola
+                   * «consumo» accanto a «1.694 consumate» e a «60 bruciate» si
+                   * legge come *«finora hai consumato 2.271»* — cioè un terzo
+                   * numero della stessa famiglia, in contraddizione con gli
+                   * altri due. 🚨 Una sigla non si può confondere con un
+                   * conteggio: è il suo unico vantaggio qui.
+                   *
+                   * 💡 **Nel codice resta `tdee`**, che è il nome vero (*Total
+                   * Daily Energy Expenditure*): la sigla a schermo è quella che
+                   * usa il committente, e le due cose non devono confondersi
+                   * nemmeno in senso opposto.
+                   */
                   if (consumo != null)
                     Padding(
                       padding: const EdgeInsets.only(right: Gap.sm),
                       child: Text(
-                        'consumo ${consumo.round()}',
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        'TDAA ${consumo.round()}',
+                        style: theme.textTheme.titleSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
@@ -711,14 +735,14 @@ class _InvitoACollegare extends StatelessWidget {
 }
 
 class TrainingCard extends ConsumerWidget {
-  const TrainingCard({required this.riepilogo, super.key});
-
-  final DashboardSummary riepilogo;
+  /// ⛔ **Non prende più il riepilogo del server** — 21/08/2026: tutto quello
+  /// che disegnava da lì (la frase, il conteggio, l'elenco) ignorava gli
+  /// allenamenti dell'orologio. Adesso legge da `riassuntoSettimanaProvider`.
+  const TrainingCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final t = riepilogo.training;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -744,20 +768,24 @@ class TrainingCard extends ConsumerWidget {
               ],
             ),
 
-            Text(
-              // «Non ti alleni da 5 giorni» è l'informazione che fa tornare in
-              // palestra: un elenco di date costringe a fare il conto a mente.
-              switch (t.daysSinceLast) {
-                null => 'Nessun allenamento registrato.',
-                0 =>
-                  'Ti sei allenato oggi. ${t.last30Days} sedute negli ultimi 30 giorni.',
-                1 =>
-                  'Ultimo allenamento ieri. ${t.last30Days} negli ultimi 30 giorni.',
-                final g =>
-                  'Non ti alleni da $g giorni. ${t.last30Days} negli ultimi 30.',
-              },
-              style: theme.textTheme.bodySmall,
-            ),
+            /*
+             * ══ 🚨 UNA FONTE SOLA PER TUTTA LA SCHEDA ═══════════════════════
+             *
+             * 📌 Difetto riferito il 21/08/2026: *«La card allenamento è
+             * sbagliata, mi dice che ho registrato un esercizio e non me lo
+             * mostra (quello dell'altro ieri dall'orologio)»*.
+             *
+             * ⚠️ Questa frase, il conteggio e l'elenco venivano da **due posti
+             * diversi**: `riepilogo.training` è il riassunto del server, che gli
+             * allenamenti dell'orologio non li ha. 🚨 Il risultato non era una
+             * riga mancante: era una **contraddizione dentro la stessa scheda**,
+             * che fa dubitare di tutti e due i numeri.
+             *
+             * 💡 Adesso tutto passa da `riassuntoSettimanaProvider`, che unisce
+             * le sedute del server e gli allenamenti del polso — la stessa fonte
+             * del carico (FASE 2-sexies).
+             */
+            const _Allenamenti(),
 
             /*
              * ══ 🆕 IL RIASSUNTO DEI SETTE GIORNI — 3b-O.7.3 ═════════════════
@@ -772,47 +800,106 @@ class TrainingCard extends ConsumerWidget {
              * che ha fatto lui. L'elenco resta perché serve ad *aprirne* una.
              */
             const _SetteGiorni(),
-
-            const SizedBox(height: Gap.sm),
-
-            /*
-             * 🚨 Le sedute restano quelle **recenti dal server**, e non quelle
-             * dello storico unificato: qui servono per **toccarle** — portano al
-             * riepilogo o al player — e quelle dell'orologio una pagina propria
-             * non ce l'hanno.
-             */
-            for (final s in t.recent.take(3))
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  s.isOpen
-                      ? Icons.play_circle_outline_rounded
-                      : Icons.fitness_center_rounded,
-                  size: 20,
-                ),
-                title: Text(s.name),
-                subtitle: Text(
-                  [
-                    DateFormat('EEE d/MM', 'it').format(s.startedAt),
-                    if (s.isOpen)
-                      'in corso'
-                    else if (s.durationMinutes != null)
-                      '${s.durationMinutes} min',
-                    '${s.setsCount} serie',
-                  ].join(' · '),
-                ),
-                trailing: s.kcal == null ? null : Text('${s.kcal} kcal'),
-                // Conclusa → riepilogo; ancora aperta → player. Riaprire
-                // come «allenamento in corso» una seduta di tre giorni fa non
-                // ha senso, e rischia di sporcarla con dati di oggi.
-                onTap: () => context.push(
-                  s.isOpen ? AppRoutes.player(s.id) : AppRoutes.riepilogo(s.id),
-                ),
-              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// La frase in cima e l'elenco degli allenamenti — 3b-O.7.2, corretto il
+/// 21/08/2026.
+///
+/// 🚨 Legge **solo** da `riassuntoSettimanaProvider`: vedi il commento nella
+/// scheda per il perché.
+class _Allenamenti extends ConsumerWidget {
+  const _Allenamenti();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final r = ref.watch(riassuntoSettimanaProvider).valueOrNull;
+
+    // 💡 Mentre carica non si scrive «nessun allenamento»: sarebbe una notizia
+    // falsa per mezzo secondo, ed è quella che resta in mente.
+    if (r == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          // «Non ti alleni da 5 giorni» è l'informazione che fa tornare in
+          // palestra: un elenco di date costringe a fare il conto a mente.
+          switch (r.giorniDallUltimo) {
+            null => 'Nessun allenamento registrato.',
+            0 =>
+              'Ti sei allenato oggi. ${r.ultimi30} sedute negli ultimi 30 giorni.',
+            1 =>
+              'Ultimo allenamento ieri. ${r.ultimi30} negli ultimi 30 giorni.',
+            final g =>
+              'Non ti alleni da $g giorni. ${r.ultimi30} negli ultimi 30.',
+          },
+          style: theme.textTheme.bodySmall,
+        ),
+
+        for (final v in r.voci.take(3)) _RigaAllenamento(voce: v),
+      ],
+    );
+  }
+}
+
+/// Una riga dell'elenco.
+///
+/// ⛔ **Quello che viene solo dall'orologio non si apre**, e non è una
+/// dimenticanza: una pagina di dettaglio esiste per le sedute registrate
+/// nell'app, che hanno gli esercizi dentro. 💡 Chi tocca una corsa finisce sullo
+/// storico, dove quella riga c'è per intero.
+class _RigaAllenamento extends StatelessWidget {
+  const _RigaAllenamento({required this.voce});
+
+  final VoceStorico voce;
+
+  @override
+  Widget build(BuildContext context) {
+    final seduta = voce.seduta;
+    final kcal = voce.kcalDalPolso ?? voce.kcalDalleSedute;
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(switch (seduta) {
+        null => Icons.watch_outlined,
+        final s when s.isOpen => Icons.play_circle_outline_rounded,
+        _ => Icons.fitness_center_rounded,
+      }, size: 20),
+      title: Text(
+        // 🚨 Lo stesso titolo dello storico: `seduta.titolo` se c'è, altrimenti
+        // il nome del tipo letto dall'orologio. Due modi di chiamare la stessa
+        // riga in due schermate sono due righe che sembrano due allenamenti.
+        seduta?.titolo ?? TipoAllenamento.da(voce.dalPolso.first.tipo).nome,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        [
+          DateFormat('EEE d/MM', 'it').format(voce.quando),
+          if (seduta != null && seduta.isOpen)
+            'in corso'
+          else
+            '${voce.durata.inMinutes} min',
+          if (kcal != null) '$kcal kcal',
+        ].join(' · '),
+      ),
+      // Conclusa → riepilogo; ancora aperta → player. Riaprire come
+      // «allenamento in corso» una seduta di tre giorni fa non ha senso, e
+      // rischia di sporcarla con dati di oggi.
+      onTap: seduta == null
+          ? () => context.push(AppRoutes.history)
+          : () => context.push(
+              seduta.isOpen
+                  ? AppRoutes.player(seduta.id)
+                  : AppRoutes.riepilogo(seduta.id),
+            ),
     );
   }
 }

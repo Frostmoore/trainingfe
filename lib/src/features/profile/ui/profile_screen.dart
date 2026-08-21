@@ -352,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
           // ⚠️ Per chi si è iscritto senza codice questa card diceva «La tua
           // palestra» seguita da un ripiego. Meglio non mostrarla: una sezione
           // vuota fa cercare un dato che non manca — semplicemente non esiste.
-          if (palestra.name != null && palestra.name!.isNotEmpty)
+          if (palestra.haPalestra)
             Card(
               child: ListTile(
                 leading: const Icon(Icons.storefront_outlined),

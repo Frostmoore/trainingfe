@@ -13,12 +13,11 @@ import '../../../health/health_controller.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../../onboarding/data/gym_branding.dart';
-import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/bottone_profilo.dart';
 import '../../data/dashboard_models.dart';
-import '../../giorno_scelto.dart';
 import '../../gettoni_controller.dart';
+import '../../giorno_scelto.dart';
 
 /// L'intestazione di «Oggi»: la palestra e i numeri della giornata.
 ///
@@ -90,11 +89,6 @@ class TodayHeader extends ConsumerWidget {
     final hrv = recupero?.parametri[MetricaSalute.hrv];
     final battito = recupero?.parametri[MetricaSalute.battitoARiposo];
     final sonno = recupero?.notte?.durata;
-
-    final peso = ref
-        .watch(corpoDelGiornoProvider(giorno))
-        .valueOrNull
-        ?.weightKg;
 
     final obiettivo = TargetDelGiorno.scegli(
       dalServer: n.haTarget ? n.targetKcal : null,
@@ -193,7 +187,7 @@ class TodayHeader extends ConsumerWidget {
                            * un'intestazione, non un saluto.
                            */
                           Text(
-                            (palestra.name?.isNotEmpty ?? false)
+                            palestra.haPalestra
                                 ? palestra.name!
                                 : (utente?.name ?? 'Training Companion'),
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -280,11 +274,16 @@ class TodayHeader extends ConsumerWidget {
                   spacing: Gap.md,
                   runSpacing: Gap.sm,
                   children: [
+                    // 🍽️ 21/08/2026: *«tutti gli elementi dell'header hanno
+                    // un'icona tranne le calorie target, mettiamone una anche
+                    // li'»*. 💡 Il coperto, lo stesso simbolo del diario: chi
+                    // tocca la scheda sotto finisce esattamente li'.
                     _Valore(
                       valore: n.kcal.round().toString(),
                       etichetta: obiettivo.esiste
                           ? 'di ${obiettivo.kcal!.round()} kcal'
                           : 'kcal',
+                      icona: Icons.restaurant_rounded,
                     ),
 
                     _Valore(
@@ -293,27 +292,37 @@ class TodayHeader extends ConsumerWidget {
                       icona: Icons.local_fire_department_rounded,
                     ),
 
-                    // 🔥 Le calorie **attive**: quelle vere dell'orologio.
-                    if (attive != null)
+                    /*
+                     * 🔥 Le calorie **attive**: quelle vere dell'orologio.
+                     *
+                     * 🚨 **Zero sparisce come `null`** — difetto visto il
+                     * 21/08/2026. ⚠️ Quando l'orologio non ha ancora inviato
+                     * niente la somma del giorno non e' assente: e' `0`, e la
+                     * regola «se manca sparisce» non scattava. In cima alla
+                     * schermata compariva «0 attive», che si legge come «oggi
+                     * non ti sei mosso» — cioe' una **misura sbagliata**, non
+                     * un dato mancante.
+                     *
+                     * 💡 Zero calorie attive in una giornata intera non esiste:
+                     * si e' comunque camminato. Quindi qui `0` significa «non
+                     * lo so», ed e' la stessa lettura che fa `Recupero`.
+                     */
+                    if (attive != null && attive > 0)
                       _Valore(
                         valore: attive.toString(),
                         etichetta: 'attive',
                         icona: Icons.bolt_rounded,
                       ),
 
-                    /*
-                     * 🚨 **Il peso arriva dal TELEFONO, non dal riepilogo del
-                     * server** — difetto del 12/08: dopo S5 `body.weightKg` è
-                     * sempre `null`, e questa riga mostrava un trattino per
-                     * sempre. ⚠️ Adesso, mancando, **non compare**.
+/*
+                     * ⛔ **Il peso non sta piu' qui** — 21/08/2026: *«togliamo
+                     * il peso dall'header, e' inutile visto che sotto c'e'
+                     * proprio una card apposita»*.
+                     *
+                     * 💡 E toglierlo fa entrare gli altri **su due righe**, che
+                     * e' la disposizione chiesta in 3b-O.1b.1: a nove valori ne
+                     * servivano tre.
                      */
-                    if (peso != null)
-                      _Valore(
-                        valore: peso.toStringAsFixed(1),
-                        etichetta: 'kg',
-                        icona: Icons.monitor_weight_outlined,
-                      ),
-
                     if (sonno != null)
                       _Valore(
                         valore: sonno,
@@ -419,7 +428,7 @@ class _Logo extends StatelessWidget {
         // 💡 Senza palestra resta il cerchio con il simbolo dell'app: un buco
         // in cima alla dashboard la fa sembrare rotta, ed è il motivo per cui
         // questo ripiego esiste. Vedi la nota gemella in `GymHeader`.
-        child: (palestra.name?.isNotEmpty ?? false)
+        child: palestra.haPalestra
             ? Text(
                 palestra.name!.characters.first.toUpperCase(),
                 style: const TextStyle(
@@ -456,7 +465,28 @@ class _Valore extends StatelessWidget {
     final theme = Theme.of(context);
     final colore = theme.colorScheme.onPrimaryContainer;
 
-    return Expanded(
+    /*
+     * ══ 🚨 NIENTE `Expanded` QUI, E COSTA CARO SBAGLIARSI ═══════════════
+     *
+     * ⚠️ **Difetto del 21/08**: passando la fila dei valori da `Row` a `Wrap`
+     * questo `Expanded` è rimasto, e `Expanded` funziona **solo** dentro un
+     * `Flex` — `Row`, `Column`. Dentro un `Wrap` lancia
+     * `WrapParentData is not a subtype of FlexParentData`, e siccome
+     * l'intestazione sta in cima **cade tutta la pagina**: il committente ha
+     * visto «tutto completamente rotto».
+     *
+     * 🚨 **L'analizzatore non può vederlo**: `Expanded` è un `Widget` valido
+     * ovunque, e il contratto è di *disposizione*, non di tipo. Si scopre solo
+     * facendo partire l'app — ed è la ragione per cui una modifica di layout va
+     * guardata su un telefono prima di dire che è fatta.
+     *
+     * 💡 La larghezza fissa sostituisce quello che faceva `Expanded`: dentro un
+     * `Wrap` nessuno distribuisce lo spazio, quindi la deve dichiarare il
+     * figlio. 72 px tengono «1.850» e «bruciate» senza tagliare, e a 280 px ne
+     * entrano tre per riga.
+     */
+    return SizedBox(
+      width: 72,
       child: Column(
         children: [
           if (icona != null) Icon(icona, size: 16, color: colore),
@@ -467,6 +497,7 @@ class _Valore extends StatelessWidget {
               color: colore,
             ),
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             etichetta,

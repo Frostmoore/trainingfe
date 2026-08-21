@@ -36,7 +36,9 @@ class TrainingCompanionApp extends ConsumerWidget {
      * 💡 `palestra.name` vuoto è il segno che una palestra non c'è: è lo
      * stesso controllo che l'intestazione usa per decidere quale nome scrivere.
      */
-    final senzaPalestra = !(palestra.name?.isNotEmpty ?? false);
+    // 🚨 `haPalestra` e non il nome: [neutral] ha un nome non vuoto, e questa
+    // riga con il controllo sul nome spegneva il colore scelto. 21/08/2026.
+    final senzaPalestra = !palestra.haPalestra;
 
     final scelto = senzaPalestra
         ? ColoreAccento.daNome(ref.watch(accentoSceltoProvider))

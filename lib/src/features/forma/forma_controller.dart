@@ -123,19 +123,47 @@ const _finestra = IndiciDiForma.giorniCronici;
 final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((
   ref,
 ) async {
+  /*
+   * ══ 🚨 SI CHIEDONO 30 GIORNI, NON 28 — difetto del 21/08/2026 ════════════
+   *
+   * ⚠️ **Questa chiamata non ha MAI funzionato.** Chiedeva `days: _finestra`,
+   * cioe' 28, ma `SeriesController` ammette solo `0, 7, 30, 90, 365` — sono i
+   * periodi dei pulsanti del grafico, non un intervallo libero. Il server
+   * rispondeva `422 validation.in`, il `catch` piu' sotto se lo mangiava, e la
+   * **carica e' sempre stata calcolata senza l'ingrediente delle calorie**.
+   *
+   * 🚨 Ed e' il difetto peggiore che ci sia: nessun errore a schermo, un numero
+   * plausibile, e nessun modo di accorgersene guardando l'app. Si e' visto solo
+   * perche' un crollo di layout ha portato a leggere il log per un altro
+   * motivo.
+   *
+   * 💡 **Non si tocca il server**: quell'elenco e' una scelta di prodotto — i
+   * periodi che l'interfaccia offre — e infilarci dentro un 28 che serve solo a
+   * un calcolo interno lo trasformerebbe in un elenco senza criterio. Si chiede
+   * il valore ammesso piu' vicino, 30, e si tengono gli ultimi 28.
+   */
   final dati = await ref
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>(
         '/series',
-        query: {'metric': 'calories', 'days': _finestra, 'offset': 0},
+        query: {'metric': 'calories', 'days': 30, 'offset': 0},
       );
 
   final serie = Series.fromJson(dati);
 
+  /*
+   * 🚨 **Gli ULTIMI 28**, non i primi: la serie arriva dal piu' vecchio al piu'
+   * recente (`SeriesService::perGiorno`), quindi la coda e' il presente.
+   * Prendendo la testa si confronterebbe oggi con un mese fa.
+   */
+  final ultimi = serie.consumed.length > _finestra
+      ? serie.consumed.sublist(serie.consumed.length - _finestra)
+      : serie.consumed;
+
   // ⚠️ Gli zeri si buttano: sono i giorni in cui non si è segnato niente, non i
   // giorni in cui non si è mangiato. Contarli come «zero calorie» farebbe
   // sembrare a digiuno chi ha solo saltato il diario.
-  return serie.consumed.where((v) => v > 0).toList();
+  return ultimi.where((v) => v > 0).toList();
 });
 
 final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {

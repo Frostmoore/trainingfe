@@ -85,6 +85,30 @@ class GymBranding {
 
   bool supporta(String provider) => social.contains(provider);
 
+  /// Se dietro questo branding c'e' **davvero una palestra** — difetto del
+  /// 21/08/2026.
+  ///
+  /// == 🚨 PERCHE' NON BASTA GUARDARE IL NOME =================================
+  ///
+  /// ⚠️ Il controllo ovvio — `name != null && name!.isNotEmpty` — era scritto in
+  /// **quattro punti** e in tutti e quattro **dava il risultato sbagliato**:
+  /// [neutral] ha `name: 'Training Companion'`, che e' un nome non vuoto a tutti
+  /// gli effetti. Cosi' chi non ha nessuna palestra risultava averne una che si
+  /// chiama come l'app.
+  ///
+  /// 🚨 Le conseguenze non erano cosmetiche: l'intestazione scriveva «Training
+  /// Companion» al posto del nome della persona (3b-O.1a.3), e il colore
+  /// d'accento scelto nelle impostazioni **non veniva applicato**, perche'
+  /// `app.dart` lo riserva a chi non ha una palestra.
+  ///
+  /// 💡 Il discriminante giusto e' lo **slug**: [neutral] ce l'ha vuoto per
+  /// costruzione, e una palestra vera ce l'ha sempre — e' la chiave con cui il
+  /// backend la trova. Il nome no: e' facoltativo di la', e riempito qui.
+  ///
+  /// 🚨 Chiunque debba chiedersi «c'e' una palestra?» usa **questo** e non il
+  /// nome, altrimenti il difetto rinasce dal quinto punto in poi.
+  bool get haPalestra => slug.isNotEmpty && (name?.isNotEmpty ?? false);
+
   /// 🆕 Una copia con un colore diverso — 3b-O.1a.1.
   ///
   /// 💡 Serve a chi **non ha una palestra** e ha scelto il proprio accento: il

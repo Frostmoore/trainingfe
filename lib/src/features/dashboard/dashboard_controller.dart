@@ -138,9 +138,39 @@ class Series {
       burned.every((v) => v == 0);
 }
 
+/// I periodi che `/series` accetta — difetto del 21/08/2026.
+///
+/// ══ 🚨 NON È UN INTERVALLO LIBERO, E COSTA CARO CREDERLO ══════════════════
+///
+/// `SeriesController::index` valida `days` con `in:0,7,30,90,365`
+/// (`trainingbe/app/Http/Controllers/Api/V1/Training/SeriesController.php`):
+/// sono i **periodi dei pulsanti del grafico**, e `0` significa «tutto lo
+/// storico». ⚠️ Qualunque altro numero prende `422 validation.in`.
+///
+/// 🚨 **È già successo, ed è passato inosservato per settimane.**
+/// `_storiaCalorieProvider` chiedeva `days: 28` — la finestra dei calcoli di
+/// forma — e il suo `catch` si mangiava l'errore: la **carica veniva calcolata
+/// senza l'ingrediente delle calorie**, mostrando un numero plausibile e
+/// sbagliato. Nessun avviso a schermo, nessun modo di accorgersene dall'app.
+///
+/// 💡 Sta scritto qui perché chi costruisce una finestra lo legga **prima** di
+/// inventare un numero: chiedere il valore ammesso più vicino e tagliare la
+/// lista in casa costa due righe, scoprirlo dal log costa settimane.
+///
+/// ⚠️ Se l'elenco cambia di là, cambia **anche qui**: sono due copie della
+/// stessa regola, ed è il prezzo per poterla controllare senza rete.
+const giorniAmmessiPerLeSerie = <int>{0, 7, 30, 90, 365};
+
 /// La finestra scelta per il grafico delle calorie.
 class CaloriesWindow {
-  const CaloriesWindow({this.days = 7, this.offset = 0});
+  /// 🚨 L'`assert` è la rete: un periodo non ammesso **spacca subito in
+  /// sviluppo**, invece di diventare un `422` che qualcuno intercetta e
+  /// nasconde. ⚠️ In release non gira — lì la difesa è il test sul sorgente.
+  const CaloriesWindow({this.days = 7, this.offset = 0})
+    : assert(
+        days == 0 || days == 7 || days == 30 || days == 90 || days == 365,
+        'Il server accetta solo $giorniAmmessiPerLeSerie giorni per /series.',
+      );
 
   final int days;
   final int offset;

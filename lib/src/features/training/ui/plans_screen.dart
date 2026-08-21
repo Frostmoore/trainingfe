@@ -427,9 +427,29 @@ class _AvviaAllenamento extends ConsumerWidget {
     }
 
     try {
+      final idScheda = (scelta ?? 0) == 0 ? null : scelta;
+
+      /*
+       * 🆕 **Il nome viaggia con la seduta** — FASE 11.4.
+       *
+       * 🚨 Prima lo risolveva il server unendo `workout_plan_id` a `plans`.
+       * Adesso la seduta sta sul telefono e la scheda no, quindi il nome si
+       * **copia** al momento in cui si comincia.
+       *
+       * 💡 Ed è anche più giusto: una scheda archiviata o rinominata non deve
+       * cambiare quello che lo storico dice di un allenamento di tre mesi fa.
+       */
       final sessione = await ref
           .read(sessionActionsProvider)
-          .start(planId: (scelta ?? 0) == 0 ? null : scelta);
+          .start(
+            planId: idScheda,
+            planName: idScheda == null
+                ? null
+                : schede
+                      .where((s) => s.id == idScheda)
+                      .map((s) => s.name)
+                      .firstOrNull,
+          );
 
       if (context.mounted) await context.push(AppRoutes.player(sessione.id));
     } on Object catch (error) {

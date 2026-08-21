@@ -18,6 +18,7 @@ import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../sleep/sleep_controller.dart';
+import '../../../training/bruciate_locali.dart';
 import '../../../training/data/storico_unificato.dart';
 import '../../data/dashboard_models.dart';
 import '../../riassunto_settimana.dart';
@@ -93,10 +94,32 @@ class CaloriesCard extends ConsumerWidget {
      * l'obiettivo senza le calorie che aveva davvero bruciato. La catena era
      * agganciata a **una sola** delle tre schermate.
      */
+    /*
+     * ══ 🚨 LE BRUCIATE VENGONO DAL TELEFONO — FASE 11.5 ═══════════════════
+     *
+     * ⚠️ `n.bruciateAMano` e `n.burnedKcal` arrivavano da `/dashboard`, che li
+     * calcolava da `workout_sessions` e `daily_burns`. 🚨 Con quelle tabelle
+     * via, sarebbero diventati **zero senza un errore**: l'obiettivo calorico
+     * avrebbe smesso di comprendere le bruciate, e chi si allena avrebbe
+     * mangiato meno di quanto poteva credendo di essere in regola.
+     *
+     * 💡 `BruciateDelGiorno.scegli` resta dov'era: la regola di precedenza non
+     * cambia, cambia **da dove arrivano i tre numeri**.
+     */
+    final oggi = DateTime.now();
+
     final bruciate = BruciateDelGiorno.scegli(
-      manuale: n.bruciateAMano,
+      manuale: null,
       daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
-      stimate: n.burnedKcal,
+      stimate:
+          ref
+              .watch(
+                bruciateLocaliDelGiornoProvider(
+                  DateTime(oggi.year, oggi.month, oggi.day),
+                ),
+              )
+              .valueOrNull ??
+          0,
     );
 
     final delGiorno = TargetDelGiorno.scegli(

@@ -7,6 +7,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../health/health_controller.dart';
 import '../../../profile/target_locale_controller.dart';
+import '../../../training/bruciate_locali.dart';
 import '../../dashboard_controller.dart';
 
 /// Le calorie del periodo, **a colonne attorno a una linea di base** —
@@ -90,6 +91,12 @@ class GraficoCalorie extends ConsumerWidget {
                   .valueOrNull ??
               const <String, int>{});
 
+    // 🚨 Le bruciate degli allenamenti: dall'archivio locale — FASE 11.5.
+    final locali = giorni.isEmpty
+        ? const <String, int>{}
+        : (ref.watch(bruciateLocaliProvider(giorni.join(','))).valueOrNull ??
+              const <String, int>{});
+
     /*
      * 🎯 Il target e il consumo: due numeri diversi, e servono tutti e due.
      *
@@ -166,6 +173,7 @@ class GraficoCalorie extends ConsumerWidget {
                 data: (s) => _Corpo(
                   serie: s,
                   daHealth: daHealth,
+                  locali: locali,
                   target: target,
                   consumo: consumo,
                   finestra: finestra,
@@ -183,6 +191,7 @@ class _Corpo extends ConsumerWidget {
   const _Corpo({
     required this.serie,
     required this.daHealth,
+    required this.locali,
     required this.target,
     required this.consumo,
     required this.finestra,
@@ -190,6 +199,7 @@ class _Corpo extends ConsumerWidget {
 
   final Series serie;
   final Map<String, int> daHealth;
+  final Map<String, int> locali;
   final double? target;
   final double? consumo;
   final CaloriesWindow finestra;
@@ -258,7 +268,9 @@ class _Corpo extends ConsumerWidget {
         else
           SizedBox(
             height: 190,
-            child: BarChart(_dati(context, serie, daHealth, target!, consumo)),
+            child: BarChart(
+              _dati(context, serie, daHealth, locali, target!, consumo),
+            ),
           ),
 
         const SizedBox(height: Gap.sm),
@@ -282,24 +294,38 @@ class _Corpo extends ConsumerWidget {
 
 /// Le bruciate del giorno `i`, dalla stessa fonte dell'intestazione.
 ///
-/// 🚨 **Non `s.burned[i]`** — difetto del 19/08/2026: quella è la serie del
-/// **server**, che calcola con la formula sulle sedute registrate e le calorie
-/// dell'orologio non le ha (restano sul telefono per decisione del committente).
-/// ⚠️ Risultato: l'intestazione diceva 680 e il grafico zero. Non due numeri
-/// sbagliati: **due fonti diverse per lo stesso numero**.
-double bruciateDi(Series s, int i, Map<String, int> daHealth) {
+/// ══ 🚨 NIENTE VIENE PIÙ DAL SERVER — FASE 11.5 ═══════════════════════════
+///
+/// ⚠️ Qui c'era `s.burned[i]`, cioè la serie del **server**. Il 19/08 era già
+/// stato corretto una volta — l'intestazione diceva 680 e il grafico zero,
+/// perché il server le calorie dell'orologio non le ha — e adesso il server non
+/// ha nemmeno più le **sedute**.
+///
+/// 🚨 Lasciare `s.burned` sarebbe stato **zero per tutti senza un errore**: un
+/// grafico credibile che dice che nessuno si muove.
+///
+/// 💡 Precedenza: l'orologio se ha misurato qualcosa, altrimenti quello che
+/// dice l'archivio locale (dichiarazione a mano, o somma delle sedute).
+double bruciateDi(
+  Series s,
+  int i,
+  Map<String, int> daHealth,
+  Map<String, int> locali,
+) {
   final data = i < s.dates.length ? s.dates[i] : null;
-  final dalPolso = data == null ? null : daHealth[data];
+  if (data == null) return 0;
 
+  final dalPolso = daHealth[data];
   if (dalPolso != null && dalPolso > 0) return dalPolso.toDouble();
 
-  return i < s.burned.length ? s.burned[i] : 0;
+  return (locali[data] ?? 0).toDouble();
 }
 
 BarChartData _dati(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
+  Map<String, int> locali,
   double target,
   double? consumo,
 ) {
@@ -316,7 +342,7 @@ BarChartData _dati(
 
   for (var i = 0; i < s.labels.length; i++) {
     final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-    final bruciate = bruciateDi(s, i, daHealth);
+    final bruciate = bruciateDi(s, i, daHealth, locali);
 
     /*
      * ⚠️ **Un giorno senza diario NON è un giorno a digiuno.** Con `assunte = 0`
@@ -395,7 +421,7 @@ BarChartData _dati(
       ],
     ),
 
-    barTouchData: _tocco(context, s, daHealth, consumo),
+    barTouchData: _tocco(context, s, daHealth, locali, consumo),
   );
 }
 
@@ -414,6 +440,7 @@ BarTouchData _tocco(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
+  Map<String, int> locali,
   double? consumo,
 ) {
   final theme = Theme.of(context);
@@ -424,7 +451,7 @@ BarTouchData _tocco(
       getTooltipItem: (gruppo, _, _, _) {
         final i = gruppo.x;
         final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-        final bruciate = bruciateDi(s, i, daHealth);
+        final bruciate = bruciateDi(s, i, daHealth, locali);
         final giorno = i < s.labels.length ? s.labels[i] : '';
 
         if (consumo == null || assunte <= 0) {

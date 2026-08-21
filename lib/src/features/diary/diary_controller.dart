@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
+import '../health/health_controller.dart';
 import 'data/diary_models.dart';
 import 'data/stima_ai.dart';
 import 'data/stime_in_coda.dart';
@@ -332,17 +333,29 @@ class DiaryActions {
   ///
   /// ⚠️ `null` **rimette la stima**, non azzera: è la differenza fra «non lo so»
   /// e «oggi ho bruciato zero», e il backend la rispetta.
+  /// Dichiara (o disfa) le calorie bruciate del giorno.
+  ///
+  /// ══ 🚨 SCRIVE SUL TELEFONO, NON SUL SERVER — FASE 11.5 ═════════════════
+  ///
+  /// 📌 Il committente: *«Nessun allenamento deve risiedere sul server, devono
+  /// stare tutti nell'app»*. `daily_burns` è una delle tre tabelle che se ne
+  /// vanno (`plan_tutto_sul_telefono.md` §2.1).
+  ///
+  /// ⚠️ `null` **disfa** la dichiarazione, non scrive zero: uno zero dichiarato
+  /// è «oggi fermo» e vince sulla stima, l'assenza è «non lo so» e lascia
+  /// parlare le sedute. 🚨 Confonderli qui vorrebbe dire che chi svuota il
+  /// campo si ritrova a zero invece che com'era prima.
   Future<void> setDailyBurn(int? kcal) async {
-    await _api.post<dynamic>(
-      '/daily-burn',
-      body: {
-        'date': DateFormat(
-          'yyyy-MM-dd',
-        ).format(_ref.read(selectedDateProvider)),
-        'kcal': kcal,
-      },
-    );
+    final giorno = _ref.read(selectedDateProvider);
+    final archivio = _ref.read(archivioSaluteProvider);
 
+    if (kcal == null) {
+      await archivio.togliBruciateAMano(giorno);
+    } else {
+      await archivio.dichiaraBruciate(giorno, kcal);
+    }
+
+    _ref.read(revisioneAllenamentiProvider.notifier).state++;
     _ref.invalidate(diaryProvider);
   }
 

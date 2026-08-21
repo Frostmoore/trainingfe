@@ -9,9 +9,11 @@ import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
 import '../profile/corpo_controller.dart';
 import '../profile/target_locale_controller.dart';
+import '../training/bruciate_locali.dart';
 import '../training/storico_unificato_controller.dart';
 import 'data/dashboard_models.dart';
 import 'giorno_scelto.dart';
+import 'riassunto_settimana.dart';
 
 /// Il riepilogo di oggi — D5.
 ///
@@ -348,7 +350,52 @@ final contestoConsiglioProvider =
             return const <int, String>{};
           });
 
+      /*
+       * 🚨 **Le bruciate le manda l'app** — FASE 11.6, 21/08/2026.
+       *
+       * ⚠️ Prima le calcolava il server da `workout_sessions` e `daily_burns`.
+       * Dopo il trasloco non ce le ha più: senza questa riga il consiglio del
+       * giorno direbbe a chi si è allenato due ore che **non si è mosso** — e
+       * lo direbbe con la stessa sicurezza di un consiglio giusto.
+       *
+       * 💡 Stessa strada del target e del recupero: quello che vive sul
+       * telefono viaggia **dentro la richiesta**, e il server lo valida senza
+       * conservarlo.
+       */
+      final oggi = DateTime.now();
+
+      final bruciate = await ref
+          .watch(
+            bruciateLocaliDelGiornoProvider(
+              DateTime(oggi.year, oggi.month, oggi.day),
+            ).future,
+          )
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: le bruciate non si leggono — $e');
+
+            return 0;
+          });
+
+      /*
+       * 🚨 **I due conteggi dell'allenamento** — FASE 11.6.
+       *
+       * ⚠️ Li mandava il server da `workout_sessions`. Senza, il consiglio
+       * direbbe *«non ti alleni da sempre»* a chi si è allenato ieri — ed è la
+       * frase che dovrebbe far tornare in palestra.
+       */
+      final settimanaAllenamento = await ref
+          .watch(riassuntoSettimanaProvider.future)
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: il riassunto non si legge — $e');
+
+            return const RiassuntoSettimana();
+          });
+
       return {
+        if (bruciate > 0) 'burned_kcal': bruciate,
+        'training_last_30_days': settimanaAllenamento.ultimi30,
+        if (settimanaAllenamento.giorniDallUltimo != null)
+          'training_days_since_last': settimanaAllenamento.giorniDallUltimo,
         if (locale != null) ...{
           'target_kcal': locale.kcal,
           'target_protein_g': locale.macro.proteineG,

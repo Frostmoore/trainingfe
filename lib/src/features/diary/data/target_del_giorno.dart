@@ -47,22 +47,34 @@ class TargetDelGiorno {
   ///
   /// | Fonte | Bruciate |
   /// |---|---|
-  /// | **Piano del trainer** (dal server) | ⚠️ **già dentro** — non si risomma |
+  /// | **Piano del trainer** (dal server) | 🚨 si sommano **qui** — vedi sotto |
   /// | Calcolo locale | 🚨 si sommano **qui** |
   /// | Niente | `null` |
   ///
-  /// ⚠️ **Il caso che si sbaglia è il primo.** Il server manda `kcal` che è già
-  /// `kcal_base + bruciate`: sommarle di nuovo darebbe a chi ha un trainer il
-  /// **doppio** del margine, e il numero resterebbe plausibile. È lo stesso
-  /// tranello del doppio conteggio fra orologio e formula (N23), un piano più
-  /// in alto.
+  /// ══ 🚨 IL PRIMO RAMO È CAMBIATO — FASE 11.5, 21/08/2026 ═══════════════
+  ///
+  /// ⚠️ Fino a `v8.4.1` il server mandava `kcal_base + bruciate` già sommate, e
+  /// **risommarle qui avrebbe dato il doppio del margine**. Era il caso che si
+  /// sbagliava, ed era documentato come tale.
+  ///
+  /// 🚨 **Adesso è l'opposto**: dopo il trasloco il server le sedute non ce le
+  /// ha più, quindi manda il target del piano **e basta**. Non sommarle qui
+  /// vorrebbe dire che chi ha un trainer **perde il margine dell'allenamento** —
+  /// un numero più basso, plausibile, e nessun errore da nessuna parte.
+  ///
+  /// 💡 Il risultato è più semplice di prima: la somma si fa **sempre qui**, e
+  /// in nessun altro posto. Il doppio conteggio non è più possibile perché non
+  /// c'è più nessun altro che possa sommare.
   factory TargetDelGiorno.scegli({
     required double? dalServer,
     required double? locale,
     required int bruciate,
   }) {
     if (dalServer != null && dalServer > 0) {
-      return TargetDelGiorno._(kcal: dalServer, bruciateIncluse: bruciate > 0);
+      return TargetDelGiorno._(
+        kcal: dalServer + bruciate,
+        bruciateIncluse: bruciate > 0,
+      );
     }
 
     if (locale == null || locale <= 0) {

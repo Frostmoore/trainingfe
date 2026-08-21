@@ -7,6 +7,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../training/bruciate_locali.dart';
+import '../../training/session_controller.dart';
 import '../calendar_controller.dart';
 
 /// Il dettaglio di un giorno — C13.
@@ -31,10 +33,31 @@ class DayScreen extends ConsumerWidget {
         data: (d) {
           final voci = ((d['entries'] as List?) ?? const [])
               .cast<Map<String, dynamic>>();
-          final sessioni = ((d['sessions'] as List?) ?? const [])
-              .cast<Map<String, dynamic>>();
-          final bruciate =
-              (d['burned'] as Map?)?.cast<String, dynamic>() ?? const {};
+          /*
+           * ══ 🚨 GLI ALLENAMENTI VENGONO DAL TELEFONO — FASE 11.5.3 ═══════
+           *
+           * ⚠️ Erano `d['sessions']` e `d['burned']`, cioè `workout_sessions` e
+           * `daily_burns` dal server. 🚨 Dopo il trasloco quelle liste sarebbero
+           * state **vuote senza un errore**: una giornata in cui ci si è
+           * allenati mostrata come una in cui non si è fatto niente.
+           *
+           * 💡 Le calorie **assunte** restano dal server: il diario non è stato
+           * traslocato, ed è la FASE 6 che resta aperta.
+           */
+          final giornoScelto = DateTime.tryParse(date) ?? DateTime.now();
+
+          final sessioni = (ref.watch(sessionsProvider).valueOrNull ?? const [])
+              .where(
+                (s) =>
+                    !s.isOpen && DateUtils.isSameDay(s.startedAt, giornoScelto),
+              )
+              .toList();
+
+          final bruciateKcal =
+              ref
+                  .watch(bruciateLocaliDelGiornoProvider(giornoScelto))
+                  .valueOrNull ??
+              0;
 
           return ListView(
             padding: const EdgeInsets.all(Gap.md),
@@ -57,7 +80,7 @@ class DayScreen extends ConsumerWidget {
                         etichetta: 'kcal assunte',
                       ),
                       _Numero(
-                        valore: '${bruciate['kcal'] ?? 0}',
+                        valore: '$bruciateKcal',
                         etichetta: 'kcal bruciate',
                       ),
                       _Numero(valore: '${voci.length}', etichetta: 'alimenti'),
@@ -104,21 +127,15 @@ class DayScreen extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      s['plan_name']?.toString() ?? 'Sessione libera',
-                    ),
+                    title: Text(s.titolo),
                     subtitle: Text(
                       [
-                        if (s['is_open'] == true)
-                          'in corso'
-                        else if (s['duration_min'] != null)
-                          '${s['duration_min']} min',
-                        '${s['sets_count'] ?? 0} serie',
+                        if (s.durationMinutes != null)
+                          '${s.durationMinutes} min',
+                        '${s.sets.length} serie',
                       ].join(' · '),
                     ),
-                    trailing: s['kcal'] == null
-                        ? null
-                        : Text('${s['kcal']} kcal'),
+                    trailing: s.kcal == null ? null : Text('${s.kcal} kcal'),
                     // Il **riepilogo**, non il player: dal calendario si
                     // guarda una seduta passata, e riaprirla come allenamento
                     // in corso non ha senso. Vedi la nota in `history_screen`.
@@ -126,8 +143,7 @@ class DayScreen extends ConsumerWidget {
                     // ⚠️ go_router e non `Navigator.pushNamed`: con un router
                     // dichiarativo il `Navigator` non ha `onGenerateRoute` e
                     // una rotta con nome lancia sempre.
-                    onTap: () =>
-                        context.push(AppRoutes.riepilogo(s['id'] as int)),
+                    onTap: () => context.push(AppRoutes.riepilogo(s.id)),
                   ),
               const SizedBox(height: Gap.xl),
             ],

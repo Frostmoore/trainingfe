@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
+import '../health/health_controller.dart';
+import '../training/session_controller.dart';
 
 /// Una cella del calendario — C13.
 class CalendarDay {
@@ -24,8 +26,18 @@ class CalendarDay {
     // zero». Appiattirli disegnerebbe la stessa cella per una giornata a
     // digiuno e per una dimenticata.
     kcal: (j['kcal'] as num?)?.toInt(),
-    workouts: (j['workouts'] as num?)?.toInt() ?? 0,
-    burned: (j['burned'] as num?)?.toInt() ?? 0,
+    /*
+     * ⛔ **Non si leggono più dal server** — FASE 11.5.3, 21/08/2026.
+     *
+     * 🚨 `workouts` e `burned` nascevano da `workout_sessions` e `daily_burns`,
+     * che dopo il trasloco stanno sul telefono. ⚠️ Lasciando la lettura, ogni
+     * cella del calendario avrebbe detto **zero allenamenti** senza un errore:
+     * un mese vuoto e credibile.
+     *
+     * 💡 Li mette `conGliAllenamentiLocali()` un istante dopo.
+     */
+    workouts: 0,
+    burned: 0,
     inMonth: j['in_month'] == true,
     today: j['today'] == true,
   );
@@ -38,6 +50,18 @@ class CalendarDay {
   final int burned;
   final bool inMonth;
   final bool today;
+
+  CalendarDay conAllenamenti({required int quanti, required int kcal}) =>
+      CalendarDay(
+        date: date,
+        day: day,
+        dow: dow,
+        kcal: this.kcal,
+        workouts: quanti,
+        burned: kcal,
+        inMonth: inMonth,
+        today: today,
+      );
 }
 
 class CalendarPage {
@@ -78,7 +102,56 @@ final calendarProvider = FutureProvider.autoDispose<CalendarPage>((ref) async {
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>('/calendar', query: {'month': mese});
 
-  return CalendarPage.fromJson(data);
+  final pagina = CalendarPage.fromJson(data);
+
+  /*
+   * ══ 🚨 IL CIBO DAL SERVER, GLI ALLENAMENTI DAL TELEFONO — FASE 11.5.3 ═══
+   *
+   * ⚠️ Il calendario è l'ultima schermata in cui le due cose convivono, e da
+   * qui in poi hanno **due case diverse**: le calorie mangiate stanno ancora
+   * sul server (il diario non è stato traslocato), gli allenamenti no.
+   *
+   * 🚨 Senza questo innesto ogni cella avrebbe detto «0 allenamenti» — un mese
+   * vuoto, credibile, e senza nessun errore da nessuna parte.
+   */
+  final sedute = await ref.watch(sessionsProvider.future);
+  final archivio = ref.watch(archivioSaluteProvider);
+
+  final quante = <String, int>{};
+  final kcal = <String, int>{};
+
+  for (final s in sedute) {
+    // ⛔ Le sedute ancora aperte non si contano: non sono un allenamento fatto.
+    if (s.isOpen) continue;
+
+    final g = DateFormat('yyyy-MM-dd').format(s.startedAt);
+
+    quante[g] = (quante[g] ?? 0) + 1;
+    kcal[g] = (kcal[g] ?? 0) + (s.kcal ?? 0);
+  }
+
+  // 💡 La dichiarazione a mano **sostituisce** la somma delle sedute, non ci si
+  // aggiunge: è la regola di `CalorieAllenamento.bruciateDelGiorno`.
+  final aMano = await archivio.bruciateAManoFra(
+    pagina.days.first.date,
+    pagina.days.last.date,
+  );
+
+  for (final e in aMano.entries) {
+    kcal[DateFormat('yyyy-MM-dd').format(e.key)] = e.value;
+  }
+
+  return CalendarPage(
+    title: pagina.title,
+    prev: pagina.prev,
+    next: pagina.next,
+    targetKcal: pagina.targetKcal,
+    days: pagina.days.map((d) {
+      final g = DateFormat('yyyy-MM-dd').format(d.date);
+
+      return d.conAllenamenti(quanti: quante[g] ?? 0, kcal: kcal[g] ?? 0);
+    }).toList(),
+  );
 });
 
 /// Il dettaglio di un giorno.

@@ -6,6 +6,7 @@ import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../health/health_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
+import '../../../training/bruciate_locali.dart';
 import '../../data/bruciate_del_giorno.dart';
 import '../../data/diary_models.dart';
 import '../../data/target_del_giorno.dart';
@@ -55,11 +56,23 @@ class MacroSummary extends ConsumerWidget {
      * aggiorna. Una rotellina al posto dell'obiettivo calorico sarebbe peggio
      * di un numero che si corregge da solo in mezzo secondo.
      */
+    /*
+     * 🚨 **Da FASE 11.5 anche la stima e la dichiarazione vengono dal
+     * telefono.** Erano `day.bruciateAMano` e `day.burnedKcal`, cioè il campo
+     * `burned` di `/diary`, che il server calcolava da `workout_sessions` e
+     * `daily_burns`. ⚠️ Con quelle tabelle via sarebbero diventati **zero senza
+     * un errore**, e l'obiettivo calorico avrebbe smesso di comprenderle.
+     */
+    final aMano = ref
+        .watch(bruciateAManoDelGiornoProvider(day.date))
+        .valueOrNull;
+
     final bruciate = BruciateDelGiorno.scegli(
-      manuale: day.bruciateAMano,
+      manuale: aMano,
       daHealth:
           ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
-      stimate: day.burnedKcal,
+      stimate:
+          ref.watch(bruciateLocaliDelGiornoProvider(day.date)).valueOrNull ?? 0,
     );
 
     /*
@@ -148,8 +161,7 @@ class MacroSummary extends ConsumerWidget {
                         : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
                   ),
                   visualDensity: VisualDensity.compact,
-                  onPressed: () =>
-                      _bruciateAMano(context, ref, day.bruciateAMano),
+                  onPressed: () => _bruciateAMano(context, ref, aMano),
                 ),
               ],
             ),

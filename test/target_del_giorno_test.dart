@@ -10,21 +10,33 @@ import 'package:training_companion/src/features/diary/data/target_del_giorno.dar
 /// vero: la somma esisteva **solo sul server**, che dopo D9-bis non conosce il
 /// peso e restituisce `null` a chiunque non abbia un piano del trainer.
 ///
-/// ⚠️ Il difetto opposto è altrettanto facile e più grave: **sommare due volte**
-/// a chi il piano ce l'ha, perché il numero del server le bruciate le contiene
-/// già. Il primo test qui sotto è quello.
+/// ══ 🚨 E IL 21/08 SI È ROVESCIATO — FASE 11.5 ════════════════════════════
+///
+/// ⚠️ Fino a `v8.4.1` il difetto opposto era il più grave: **sommare due volte**
+/// a chi il piano ce l'ha, perché il numero del server le bruciate le conteneva
+/// già.
+///
+/// 🚨 **Adesso non le contiene più**: dopo il trasloco degli allenamenti il
+/// server le sedute non ce le ha, quindi manda il target del piano e basta. Non
+/// sommarle qui vorrebbe dire che chi ha un trainer **perde il margine
+/// dell'allenamento** — un numero più basso, plausibile, e nessun errore.
+///
+/// 💡 Il risultato è più semplice: la somma si fa **sempre qui**, e il doppio
+/// conteggio non è più possibile perché non c'è più nessun altro che sommi.
 void main() {
   group('quando il target arriva dal piano del trainer', () {
-    /// 🚨 Il server manda già `kcal_base + bruciate`: risommare darebbe il
-    /// doppio del margine, con un numero che resta plausibile.
-    test('le bruciate NON si risommano', () {
+    /// 🚨 **Da FASE 11.5 le bruciate SI sommano anche qui**: il server manda il
+    /// target del piano e basta, perché gli allenamenti non li ha più.
+    test('le bruciate si sommano al target del piano', () {
       final t = TargetDelGiorno.scegli(
-        dalServer: 2450,
-        locale: 2000,
+        dalServer: 2000,
+        locale: 1800,
         bruciate: 450,
       );
 
+      // 💡 2.000 dal trainer + 450 bruciate oggi.
       expect(t.kcal, 2450);
+      expect(t.bruciateIncluse, isTrue);
       expect(t.esiste, isTrue);
     });
 

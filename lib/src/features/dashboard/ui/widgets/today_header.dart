@@ -11,6 +11,7 @@ import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../profile/target_locale_controller.dart';
+import '../../../training/bruciate_locali.dart';
 import '../../data/dashboard_models.dart';
 import '../../giorno_scelto.dart';
 
@@ -61,10 +62,16 @@ class TodayHeader extends ConsumerWidget {
      * numeri diversi nella stessa app, che e' il modo piu' rapido per far
      * smettere qualcuno di fidarsi di entrambi.
      */
+    /*
+     * 🚨 Dal telefono, non dal server — FASE 11.5. Vedi la nota gemella in
+     * `CaloriesCard`: con `workout_sessions` via, i numeri del server sarebbero
+     * diventati zero **senza un errore**.
+     */
     final bruciate = BruciateDelGiorno.scegli(
-      manuale: n.bruciateAMano,
+      manuale: null,
       daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
-      stimate: n.burnedKcal,
+      stimate:
+          ref.watch(bruciateLocaliDelGiornoProvider(giorno)).valueOrNull ?? 0,
     );
 
     /*

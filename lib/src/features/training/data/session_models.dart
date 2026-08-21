@@ -1,6 +1,9 @@
 /// I modelli dell'allenamento — C9/C10.
 library;
 
+import '../../../core/storage/archivio_salute.dart';
+import 'calorie_allenamento.dart';
+
 class WorkoutSession {
   const WorkoutSession({
     required this.id,
@@ -44,6 +47,66 @@ class WorkoutSession {
       photos: ((j['photos'] as List?) ?? const [])
           .map((e) => SessionPhoto.fromJson((e as Map).cast<String, dynamic>()))
           .toList(),
+    );
+  }
+
+  /// Una seduta letta **dall'archivio locale** — FASE 11.4, 21/08/2026.
+  ///
+  /// ══ 🚨 STESSA CLASSE, ALTRA SORGENTE ══════════════════════════════════
+  ///
+  /// 📌 Il committente: *«Nessun allenamento deve risiedere sul server, devono
+  /// stare tutti nell'app»*.
+  ///
+  /// 💡 **Si tiene [WorkoutSession] invece di inventarne una locale**: la usano
+  /// il player, il riepilogo, lo storico unificato e il carico. Una seconda
+  /// classe con gli stessi campi vorrebbe dire due modelli da tenere allineati
+  /// — e il primo che diverge lo fa in silenzio.
+  ///
+  /// ⚠️ **`id` qui è quello LOCALE**, non `idServer`: è quello che le rotte si
+  /// passano (`AppRoutes.player`, `AppRoutes.riepilogo`) e quello a cui le
+  /// serie si legano.
+  ///
+  /// 🚨 Le calorie si **calcolano qui se non sono salvate**, con
+  /// `CalorieAllenamento`: è la stessa regola del server — quello che è scritto
+  /// vince, la formula è il ripiego.
+  factory WorkoutSession.dallArchivio(
+    SedutaAllenamento seduta,
+    List<SerieSeduta> serie, {
+    required double kg,
+  }) {
+    final fine = seduta.finitaIl;
+    final durata = (fine ?? DateTime.now()).difference(seduta.iniziataIl);
+
+    return WorkoutSession(
+      id: seduta.id,
+      planId: seduta.schedaServerId,
+      planName: seduta.nomeScheda,
+      startedAt: seduta.iniziataIl,
+      endedAt: fine,
+      durationMinutes: durata.inMinutes,
+      isOpen: fine == null,
+
+      /*
+       * ⛔ Su una seduta **ancora aperta** non si mostra nessun numero: la
+       * formula darebbe le calorie «finora», che a metà allenamento è un
+       * numero che cambia mentre lo si guarda.
+       */
+      kcal: fine == null
+          ? seduta.kcal
+          : CalorieAllenamento.kcalDi(
+              kcalSalvate: seduta.kcal,
+              durata: durata,
+              kg: kg,
+              metDelleSerie: serie.map((r) => r.met),
+            ),
+
+      // 💡 `formula` e non `ai`: da FASE 11 il modello qui non c'entra più.
+      kcalSource: seduta.kcalAMano ? 'manual' : 'formula',
+      notes: seduta.note,
+      sets: serie.map(LoggedSet.dallArchivio).toList(),
+
+      // 🚨 Le foto stanno già sul telefono da S5.3: `photos` è morto.
+      photos: const [],
     );
   }
 
@@ -97,6 +160,17 @@ class LoggedSet {
       restSec: (j['rest_sec'] as num?)?.toInt(),
     );
   }
+
+  /// Una serie letta dall'archivio locale — FASE 11.4.
+  factory LoggedSet.dallArchivio(SerieSeduta r) => LoggedSet(
+    id: r.id,
+    exerciseId: r.esercizioId,
+    exerciseName: r.nomeEsercizio,
+    setNumber: r.numero,
+    reps: r.ripetizioni,
+    weight: r.pesoKg,
+    restSec: r.riposoSec,
+  );
 
   final int id;
   final int exerciseId;

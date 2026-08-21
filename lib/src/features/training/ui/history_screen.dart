@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
@@ -25,9 +26,9 @@ class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Storico allenamenti')),
-    body: const StoricoAllenamenti(),
+  Widget build(BuildContext context, WidgetRef ref) => const Scaffold(
+    appBar: IntestazioneApp(titolo: 'Storico allenamenti'),
+    body: StoricoAllenamenti(),
   );
 }
 

@@ -118,6 +118,17 @@ class _SchermataIngrandimentoState extends State<SchermataIngrandimento> {
 
     return Scaffold(
       backgroundColor: Colors.black,
+      /*
+       * ⛔ **QUI RESTA UN'`AppBar`, E NON E' UNA DIMENTICANZA** — 3b-O.1a.6.
+       *
+       * L'intestazione condivisa ([IntestazioneApp]) e' andata su tutte le
+       * pagine dell'app tranne quattro, e questa e' una di quelle.
+       *
+       * 🚨 **E' una schermata immersiva su fondo nero.** Il nero non e' una
+       * scelta estetica: serve a giudicare i colori di quello che si sta
+       * inquadrando o ritagliando. Una fascia colorata in cima falserebbe la
+       * percezione, oltre a rubare spazio all'anteprima.
+       */
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,

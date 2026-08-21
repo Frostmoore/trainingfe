@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 
 /// Creare la password di recupero — S6.4.
 ///
@@ -93,11 +94,11 @@ class _SchermataPasswordDiRecuperoState
     final testo = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Password di recupero'),
+      appBar: const IntestazioneApp(
+        titolo: 'Password di recupero',
         // ⚠️ Niente pulsante «indietro»: senza questa password la chat non
         // funziona, e lasciarla saltare significherebbe un account a metà.
-        automaticallyImplyLeading: false,
+        indietro: false,
       ),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),

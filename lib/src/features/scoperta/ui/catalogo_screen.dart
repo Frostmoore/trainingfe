@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/ui/intestazione_app.dart';
+
 // 💡 `ThreadScreen` vive dentro `conversations_screen.dart`, non in un file
 // proprio: è dove sta oggi, e spostarlo sarebbe una modifica che non c'entra
 // niente con la Parte M.
@@ -57,7 +59,7 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
     final risultati = ref.watch(catalogoProvider(_cercato));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trova una palestra')),
+      appBar: const IntestazioneApp(titolo: 'Trova una palestra'),
       body: Column(
         children: [
           Padding(

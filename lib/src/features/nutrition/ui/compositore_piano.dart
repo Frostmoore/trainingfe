@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
 import '../compositore_piano_controller.dart';
@@ -70,7 +71,7 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (e, _) => Scaffold(
-          appBar: AppBar(),
+          appBar: const IntestazioneApp(),
           body: ErrorState(
             error: ApiClient.unwrapError(e),
             onRetry: () => ref.invalidate(pianoProvider(widget.pianoId!)),
@@ -99,9 +100,9 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
     final piano = _piano!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(piano.nuovo ? 'Nuovo piano' : piano.nome),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: piano.nuovo ? 'Nuovo piano' : piano.nome,
+        azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
             child: _salvando

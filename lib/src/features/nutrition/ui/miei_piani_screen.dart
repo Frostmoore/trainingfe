@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_piano_controller.dart';
 import '../data/piano_alimentare.dart';
@@ -26,7 +27,7 @@ class MieiPianiScreen extends ConsumerWidget {
     final stato = ref.watch(mieiPianiProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('I miei consigli alimentari')),
+      appBar: const IntestazioneApp(titolo: 'I miei consigli alimentari'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.compositorePiano),
         icon: const Icon(Icons.add),

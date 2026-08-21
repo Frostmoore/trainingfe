@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../training_controller.dart';
 
 /// L'editor delle schede — C11.
@@ -146,8 +147,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.planId == null ? 'Nuova scheda' : 'Modifica scheda'),
+      appBar: IntestazioneApp(
+        titolo: widget.planId == null ? 'Nuova scheda' : 'Modifica scheda',
       ),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),

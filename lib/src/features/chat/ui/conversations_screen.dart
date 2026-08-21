@@ -12,12 +12,12 @@ import '../../../core/crypto/contenuto_messaggio.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
 import '../../fotocamera/ui/schermata_fotocamera.dart';
 import '../../fotocamera/ui/schermata_ingrandimento.dart';
 import '../../nutrition/compositore_piano_controller.dart';
-import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
@@ -34,9 +34,9 @@ class ConversationsScreen extends ConsumerWidget {
     final elenco = ref.watch(conversationsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messaggi'),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: 'Messaggi',
+        azioni: [
           /*
            * 🚨 Il catalogo si raggiunge **da qui** — M7.4.
            *
@@ -53,8 +53,11 @@ class ConversationsScreen extends ConsumerWidget {
             tooltip: 'Trova una palestra o un trainer',
             onPressed: () => context.push(AppRoutes.catalogo),
           ),
-          // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
-          const BottoneProfilo(),
+          /*
+           * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6: sta nella
+           * riga d'identita' di [IntestazioneApp], su ogni pagina. Lasciarlo
+           * anche qui lo disegnerebbe due volte nella stessa barra.
+           */
         ],
       ),
       floatingActionButton: const _NuovoMessaggio(),
@@ -735,7 +738,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     ref.listen(threadProvider(widget.id), (prima, dopo) => _inFondo());
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.titolo)),
+      appBar: IntestazioneApp(titolo: widget.titolo),
       body: Column(
         children: [
           Expanded(

@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../progress_controller.dart';
 
@@ -25,7 +26,7 @@ class ProgressScreen extends ConsumerWidget {
     final foto = ref.watch(progressPhotosProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Foto dei progressi')),
+      appBar: const IntestazioneApp(titolo: 'Foto dei progressi'),
       floatingActionButton: const _Aggiungi(),
       body: foto.when(
         loading: () => const LoadingState(),

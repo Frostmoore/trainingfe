@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
-import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -39,14 +38,17 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     final schede = ref.watch(schedeUniteProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Allenamento'),
-        // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
-        actions: const [BottoneProfilo()],
+      appBar: IntestazioneApp(
+        titolo: 'Allenamento',
+        /*
+         * ⛔ Niente `BottoneProfilo` fra le azioni — 3b-O.1a.6: sta nella riga
+         * d'identita', su ogni pagina.
+         */
         // Il selettore sta **nella barra**, sotto il titolo: è la posizione in
         // cui si cerca un cambio di vista, e non ruba una riga al contenuto.
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
+        altezzaSotto: 52,
+        sotto: SizedBox(
+          height: 52,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
             child: SegmentedButton<int>(
@@ -283,9 +285,9 @@ class _DettaglioScheda extends ConsumerWidget {
     final scheda = ref.watch(planDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(nome),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: nome,
+        azioni: [
           // 🚨 Il pulsante compare **solo** se il server dice che è
           // modificabile. Mostrarlo sempre porterebbe l'utente a un 403 su una
           // scheda che il trainer ha scritto per lui: un pulsante che apre una

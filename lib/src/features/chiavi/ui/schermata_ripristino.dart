@@ -8,6 +8,7 @@ import '../../../core/crypto/cassaforte.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../health/health_controller.dart';
 
 /// Il ripristino su un dispositivo nuovo — S6.7.
@@ -391,9 +392,9 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
     final testo = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ritrova il tuo account'),
-        automaticallyImplyLeading: false,
+      appBar: const IntestazioneApp(
+        titolo: 'Ritrova il tuo account',
+        indietro: false,
       ),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),

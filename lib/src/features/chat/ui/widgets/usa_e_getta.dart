@@ -201,6 +201,17 @@ class _LetturaUsaEGettaState extends ConsumerState<LetturaUsaEGetta> {
 
     return Scaffold(
       backgroundColor: Colors.black,
+      /*
+       * ⛔ **QUI RESTA UN'`AppBar`, E NON E' UNA DIMENTICANZA** — 3b-O.1a.6.
+       *
+       * L'intestazione condivisa ([IntestazioneApp]) e' andata su tutte le
+       * pagine dell'app tranne quattro, e questa e' una di quelle.
+       *
+       * 🚨 **E' un contenuto effimero a schermo pieno**, sopra un fondo scuro
+       * e trasparente: la fascia colorata della palestra ci starebbe sopra e
+       * renderebbe illeggibile quello che si e' aperti per guardare — che poi
+       * sparisce e non si puo' riaprire.
+       */
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,

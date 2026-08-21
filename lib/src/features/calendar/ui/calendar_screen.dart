@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../calendar_controller.dart';
 
@@ -34,7 +35,7 @@ class CalendarScreen extends ConsumerWidget {
     final pagina = ref.watch(calendarProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendario')),
+      appBar: const IntestazioneApp(titolo: 'Calendario'),
       body: pagina.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

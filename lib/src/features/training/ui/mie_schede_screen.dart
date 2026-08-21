@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
@@ -26,7 +27,7 @@ class MieSchedeScreen extends ConsumerWidget {
     final stato = ref.watch(mieSchedeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Le mie schede')),
+      appBar: const IntestazioneApp(titolo: 'Le mie schede'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.compositoreScheda),
         icon: const Icon(Icons.add),

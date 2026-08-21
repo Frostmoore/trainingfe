@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../data/utente_seguito.dart';
 import '../trainer_controller.dart';
@@ -22,7 +23,7 @@ class MieiUtentiScreen extends ConsumerWidget {
     final stato = ref.watch(mieiUtentiProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('I miei utenti')),
+      appBar: const IntestazioneApp(titolo: 'I miei utenti'),
       body: stato.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

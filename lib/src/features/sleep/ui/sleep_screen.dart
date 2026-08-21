@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../health/sessioni_di_sonno.dart';
 import '../sleep_controller.dart';
@@ -30,7 +31,7 @@ class SleepScreen extends ConsumerWidget {
     final pisolini = ref.watch(pisoliniProvider).valueOrNull ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sonno')),
+      appBar: const IntestazioneApp(titolo: 'Sonno'),
       body: notte.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

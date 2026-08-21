@@ -5,6 +5,8 @@ import 'package:training_companion/src/features/forma/forma_controller.dart';
 import 'package:training_companion/src/features/forma/indici_di_forma.dart';
 import 'package:training_companion/src/features/forma/ui/schermata_forma.dart';
 
+import 'aiuto/intestazione.dart';
+
 /// Il dettaglio di carico e carica — 20/08/2026.
 ///
 /// ── 🚨 Cosa difende questo file ────────────────────────────────────────────
@@ -103,7 +105,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [formaProvider.overrideWith((ref) async => f)],
+        // 🚨 Da 3b-O.1a.6 ogni pagina porta l'intestazione condivisa, che
+        // vuole cache e configurazione. Senza, il `throw` di difesa di
+        // `core/providers.dart` fa fallire il `build` — vedi il file d'aiuto.
+        overrides: [
+          ...await intestazioneFinta(),
+          formaProvider.overrideWith((ref) async => f),
+        ],
         child: const MaterialApp(home: SchermataForma()),
       ),
     );

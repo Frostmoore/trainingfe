@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../dati_salute.dart';
 import '../health_controller.dart';
 import 'widgets/grafico_metrica.dart';
@@ -102,7 +103,7 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
     final stato = ref.watch(healthControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sonno e recupero')),
+      appBar: const IntestazioneApp(titolo: 'Sonno e recupero'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

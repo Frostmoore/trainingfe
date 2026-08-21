@@ -7,8 +7,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
-import '../../profile/ui/widgets/bottone_profilo.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
 import 'widgets/add_food_sheet.dart';
@@ -27,9 +27,9 @@ class DiaryScreen extends ConsumerWidget {
     final diario = ref.watch(diaryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Diario'),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: 'Diario',
+        azioni: [
           IconButton(
             onPressed: () => _scegliData(context, ref, giorno),
             icon: const Icon(Icons.calendar_today_rounded),
@@ -42,10 +42,18 @@ class DiaryScreen extends ConsumerWidget {
             icon: const Icon(Icons.calendar_month_rounded),
             tooltip: 'Calendario',
           ),
-          // 👤 M7.1 — il profilo è uscito dalla barra in basso e sta qui.
-          const BottoneProfilo(),
+          /*
+           * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6.
+           *
+           * ⚠️ Sta nella riga d'identita' di [IntestazioneApp], su **ogni**
+           * pagina. Lasciarlo anche fra le azioni lo disegnerebbe due volte
+           * nella stessa barra, a due centimetri di distanza.
+           */
         ],
-        bottom: _BarraGiorno(giorno: giorno, ref: ref),
+        // 🗓️ La barra del giorno era `AppBar.bottom`: qui si chiama `sotto`, e
+        // l'altezza va dichiarata perche' `Scaffold` sappia quanto riservarle.
+        sotto: _BarraGiorno(giorno: giorno, ref: ref),
+        altezzaSotto: 48,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddFoodSheet.show(context),

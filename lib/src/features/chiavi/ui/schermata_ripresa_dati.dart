@@ -5,6 +5,7 @@ import '../../../core/backup/backup_controller.dart';
 import '../../../core/crypto/cassaforte.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../auth/auth_controller.dart';
 
 /// La ripresa dei dati, dall'inizio alla fine, con davanti qualcosa da guardare.
@@ -144,9 +145,11 @@ class _SchermataRipresaDatiState extends ConsumerState<SchermataRipresaDati> {
        */
       canPop: !inCorso,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Riprendi i tuoi dati'),
-          automaticallyImplyLeading: !inCorso,
+        appBar: IntestazioneApp(
+          titolo: 'Riprendi i tuoi dati',
+          // ⛔ Mentre il ripristino gira non si torna indietro: interromperlo a
+          // meta' lascerebbe i dati in uno stato che nessuno sa leggere.
+          indietro: !inCorso,
         ),
         body: SafeArea(
           child: Padding(

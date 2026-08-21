@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../auth/auth_controller.dart';
 import '../../dashboard/consiglio_da_mostrare.dart';
 import '../../onboarding/branding_controller.dart';
@@ -25,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     final palestra = ref.watch(brandingControllerProvider).branding;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profilo')),
+      appBar: const IntestazioneApp(titolo: 'Profilo'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

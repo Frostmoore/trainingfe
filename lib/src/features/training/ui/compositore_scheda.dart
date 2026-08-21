@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
@@ -62,7 +63,7 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (e, _) => Scaffold(
-          appBar: AppBar(),
+          appBar: const IntestazioneApp(),
           body: ErrorState(
             error: ApiClient.unwrapError(e),
             onRetry: () => ref.invalidate(schedaProvider(widget.schedaId!)),
@@ -91,9 +92,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
     final scheda = _scheda!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(scheda.nuova ? 'Nuova scheda' : scheda.nome),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: scheda.nuova ? 'Nuova scheda' : scheda.nome,
+        azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
             child: _salvando

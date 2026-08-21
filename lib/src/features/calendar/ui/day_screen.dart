@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../calendar_controller.dart';
 
@@ -20,7 +21,7 @@ class DayScreen extends ConsumerWidget {
     final giorno = ref.watch(calendarDayProvider(date));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Giornata')),
+      appBar: const IntestazioneApp(titolo: 'Giornata'),
       body: giorno.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../dashboard/gettoni_controller.dart';
 
 /// Dove si attiva l'assistente — 3b-O.3.1, 21/08/2026.
@@ -38,7 +39,7 @@ class SchermataAcquisti extends ConsumerWidget {
     final gettoni = ref.watch(gettoniProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Attiva l\'assistente')),
+      appBar: const IntestazioneApp(titolo: 'Attiva l\'assistente'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

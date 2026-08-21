@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
 import 'scheda_forma.dart';
@@ -37,7 +38,7 @@ class SchermataForma extends ConsumerWidget {
     final stato = ref.watch(formaProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Carico e carica')),
+      appBar: const IntestazioneApp(titolo: 'Carico e carica'),
       body: RefreshIndicator(
         onRefresh: () =>
             aggiornaTutto(context, ref, () => ref.invalidate(formaProvider)),

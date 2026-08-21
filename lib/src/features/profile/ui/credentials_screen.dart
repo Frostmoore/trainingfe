@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/data/password_strength.dart';
 import '../../auth/ui/widgets/password_meter.dart';
@@ -27,7 +28,7 @@ class CredentialsScreen extends ConsumerWidget {
     final utente = ref.watch(authControllerProvider).user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Email e password')),
+      appBar: const IntestazioneApp(titolo: 'Email e password'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

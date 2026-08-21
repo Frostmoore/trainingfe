@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/foto_locale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
@@ -36,7 +37,7 @@ class SessionSummaryScreen extends ConsumerWidget {
       // all'elenco, non a una sessione chiusa. E da G13 a questa schermata si
       // arriva anche dallo storico e dal calendario, dove una schermata senza
       // via d'uscita sarebbe un vicolo cieco.
-      appBar: AppBar(title: const Text('Allenamento concluso')),
+      appBar: const IntestazioneApp(titolo: 'Allenamento concluso'),
       body: sessione.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(

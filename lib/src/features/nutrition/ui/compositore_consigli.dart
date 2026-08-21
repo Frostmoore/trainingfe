@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../compositore_piano_controller.dart';
 import '../data/piano_alimentare.dart';
 
@@ -128,7 +129,7 @@ class _CompositoreConsigliState extends ConsumerState<CompositoreConsigli> {
     final tema = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Consigli alimentari')),
+      appBar: const IntestazioneApp(titolo: 'Consigli alimentari'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

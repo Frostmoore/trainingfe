@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../consensi_controller.dart';
 
 /// I consensi facoltativi — S9.1.
@@ -26,7 +27,7 @@ class SchermataConsensi extends ConsumerWidget {
     final consensi = ref.watch(consensiProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy e consensi')),
+      appBar: const IntestazioneApp(titolo: 'Privacy e consensi'),
       body: consensi.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(

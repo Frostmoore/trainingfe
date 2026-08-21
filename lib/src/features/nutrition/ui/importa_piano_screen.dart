@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/avvertenza_nutrizionale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../data/importazione_piano.dart';
 import 'revisione_piano_importato.dart';
 
@@ -51,7 +52,7 @@ class _ImportaPianoScreenState extends ConsumerState<ImportaPianoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Importa un piano')),
+      appBar: const IntestazioneApp(titolo: 'Importa un piano'),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [

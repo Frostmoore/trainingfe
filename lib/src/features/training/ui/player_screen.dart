@@ -9,6 +9,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/notifications/notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
@@ -417,18 +418,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _planName ?? 'Sessione libera',
-              style: theme.textTheme.titleMedium,
-            ),
-            Text(_durata, style: theme.textTheme.bodySmall),
-          ],
-        ),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: _planName ?? 'Sessione libera',
+        // ⏱️ Il cronometro della seduta: era la seconda riga del titolo, e
+        // `sottotitolo` esiste esattamente per questo caso.
+        sottotitolo: _durata,
+        azioni: [
           TextButton(
             onPressed: _chiusura ? null : _termina,
             child: const Text('Concludi'),

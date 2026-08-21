@@ -182,6 +182,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final branding = ref.watch(brandingControllerProvider).branding;
 
     return Scaffold(
+      /*
+       * ⛔ **QUI RESTA UN'`AppBar`, E NON E' UNA DIMENTICANZA** — 3b-O.1a.6.
+       *
+       * L'intestazione condivisa ([IntestazioneApp]) e' andata su tutte le
+       * pagine dell'app tranne quattro, e questa e' una di quelle.
+       *
+       * 🚨 **Qui non c'e' ancora un utente.** L'intestazione condivisa mostra
+       * il saldo dei gettoni e l'avatar del profilo: entrambi vogliono una
+       * sessione, e prima della registrazione non esiste. Ne uscirebbe una
+       * barra con il nome dell'app e due buchi.
+       */
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => context.go(AppRoutes.login),

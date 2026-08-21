@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../profile_controller.dart';
 
 /// Eliminazione dell'account — C6 lato app.
@@ -82,7 +83,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Elimina account')),
+      appBar: const IntestazioneApp(titolo: 'Elimina account'),
       body: FutureBuilder<Map<String, dynamic>>(
         future: ref.read(profileActionsProvider).deletionPreview(),
         builder: (context, snapshot) {

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/avvertenza_nutrizionale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
 import '../data/target_scelto.dart';
@@ -29,7 +30,7 @@ class EditProfileScreen extends ConsumerWidget {
     final profilo = ref.watch(profileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('I tuoi dati')),
+      appBar: const IntestazioneApp(titolo: 'I tuoi dati'),
       body: profilo.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

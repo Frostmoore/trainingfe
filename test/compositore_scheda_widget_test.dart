@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/training/ui/compositore_scheda.dart';
 
+import 'aiuto/intestazione.dart';
+
 /// Il compositore delle schede su uno schermo stretto — G7.6.
 ///
 /// ── 🚨 Perché 328 px, e perché è un numero e non «piccolo» ────────────────
@@ -16,7 +18,15 @@ import 'package:training_companion/src/features/training/ui/compositore_scheda.d
 /// che ha smesso di funzionare, e nessun test sui modelli lo prende perché il
 /// dato è giusto ed è il **disegno** a rompersi.
 void main() {
+  late List<Override> intestazione;
+
+  setUp(() async => intestazione = await intestazioneFinta());
+
+  // 🚨 Da 3b-O.1a.6 ogni pagina porta l'intestazione condivisa, che vuole cache
+  // e configurazione: senza, il `throw` di difesa di `core/providers.dart` fa
+  // fallire il `build` prima ancora di disegnare il modulo.
   Widget suUnoSchermoStretto(Widget figlio) => ProviderScope(
+    overrides: intestazione,
     child: MaterialApp(
       home: Center(child: SizedBox(width: 328, child: figlio)),
     ),

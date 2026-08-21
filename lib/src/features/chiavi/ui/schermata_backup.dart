@@ -13,6 +13,7 @@ import '../../../core/backup/cloud_di_backup.dart';
 import '../../../core/backup/raccolta_foto.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../health/health_controller.dart';
 
 /// L'esportazione del file di backup — M7.3, 18/08/2026.
@@ -49,7 +50,7 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
     final tema = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Copia di sicurezza')),
+      appBar: const IntestazioneApp(titolo: 'Copia di sicurezza'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

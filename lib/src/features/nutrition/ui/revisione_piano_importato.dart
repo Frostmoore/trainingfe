@@ -9,6 +9,7 @@ import '../../../core/media/archivio_foto.dart';
 import '../../../core/media/tipo_foto.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/avvertenza_nutrizionale.dart';
+import '../../../core/ui/intestazione_app.dart';
 import '../../health/health_controller.dart';
 import '../data/importazione_piano.dart';
 
@@ -95,9 +96,9 @@ class _RevisionePianoImportatoState
     final dubbi = widget.importazione.dubbi;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Controlla il piano'),
-        actions: [
+      appBar: IntestazioneApp(
+        titolo: 'Controlla il piano',
+        azioni: [
           IconButton(
             tooltip: 'Apri il PDF originale',
             onPressed: _apriOriginale,

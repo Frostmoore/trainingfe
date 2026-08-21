@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/storage/archivio_salute.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
@@ -15,7 +16,9 @@ import '../../../health/recupero_controller.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
+import '../../../sleep/sleep_controller.dart';
 import '../../data/dashboard_models.dart';
+import 'onda_metrica.dart';
 
 /// Le schede del riepilogo di oggi — D5.
 
@@ -335,6 +338,22 @@ class _Macro extends StatelessWidget {
 ///
 /// ⚠️ **Per questo non prende più `riepilogo`**: portarsi dietro un parametro
 /// che non si usa avrebbe lasciato credere che la sorgente fosse ancora quella.
+/// Il recupero di oggi — 3b-O.5, riscritta il 21/08/2026.
+///
+/// ══ 🚨 COSA CAMBIA, E PERCHÉ ══════════════════════════════════════════════
+///
+/// 📌 Dettata dal committente: *«all'inizio ci deve proprio essere
+/// l'ipnogramma, con sotto i riposini; variabilità cardiaca deve essere un
+/// grafico, e idem battito a riposo, uno sotto l'altro (non a colonne, a onda);
+/// calorie attive deve essere un fuoco con vicino scritte le calorie»*.
+///
+/// ⚠️ Prima era un elenco di righe tutte uguali — un'icona, un nome, un numero —
+/// e le tre informazioni avevano lo **stesso peso visivo** pur essendo cose
+/// diverse: com'è andata la notte, come sta il cuore, quanto ti sei mosso.
+///
+/// 💡 Adesso ognuna ha la forma della domanda a cui risponde: la notte è una
+/// striscia da guardare, il cuore è una linea che sale o scende, il movimento è
+/// un numero solo.
 class RecoveryCard extends ConsumerWidget {
   const RecoveryCard({super.key});
 
@@ -351,52 +370,146 @@ class RecoveryCard extends ConsumerWidget {
     }
 
     final notte = recupero.notte;
+    final pisolini = ref.watch(pisoliniProvider).valueOrNull ?? const [];
+
+    final hrv = recupero.parametri[MetricaSalute.hrv];
+    final battito = recupero.parametri[MetricaSalute.battitoARiposo];
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recupero',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: Gap.sm),
-
-            if (notte != null)
-              InkWell(
-                onTap: () => context.push(AppRoutes.sleep),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Gap.xs),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.bedtime_outlined,
-                        size: 20,
+      child: InkWell(
+        // 📌 «Va bene che se ci clicco mi manda alla pagina del sonno.»
+        onTap: () => context.push(AppRoutes.sleep),
+        borderRadius: BorderRadius.circular(Gap.radius),
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Recupero',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (notte != null)
+                    Text(
+                      notte.durata,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
                         color: _colore(context, notte.complessivo),
                       ),
-                      const SizedBox(width: Gap.sm),
-                      Expanded(child: Text('Sonno · ${notte.durata}')),
-                      Text(
-                        'profondo ${notte.profondoPct.round()}% · REM ${notte.remPct.round()}%',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const Icon(Icons.chevron_right_rounded, size: 18),
-                    ],
-                  ),
-                ),
+                    ),
+                  const Icon(Icons.chevron_right_rounded, size: 18),
+                ],
               ),
 
-            for (final lettura in recupero.parametri.values)
-              _RigaParametro(lettura: lettura),
-          ],
+              /*
+               * 🚨 **L'ipnogramma in cima** — è la richiesta, ed è anche la cosa
+               * giusta: la domanda che porta su questa scheda è «come ho
+               * dormito», e una striscia risponde prima di qualunque numero.
+               */
+              if (notte != null) ...[
+                const SizedBox(height: Gap.sm),
+                _StrisciaSonno(fasi: notte.ipnogramma),
+                const SizedBox(height: Gap.xs),
+                Text(
+                  'profondo ${notte.profondoPct.round()}% · REM ${notte.remPct.round()}%',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+
+              // 💡 I riposini **sotto** la notte, come chiesto. Spariscono da
+              // soli quando non ce ne sono.
+              if (pisolini.isNotEmpty) ...[
+                const SizedBox(height: Gap.xs),
+                Text(
+                  pisolini.length == 1
+                      ? 'più un riposo di ${_breve(pisolini.first.durata)}'
+                      : 'più ${pisolini.length} riposi, '
+                            '${_breve(pisolini.fold(Duration.zero, (a, p) => a + p.durata))} in tutto',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+
+              if (hrv != null || battito != null)
+                const SizedBox(height: Gap.md),
+
+              if (hrv != null)
+                _Onda(
+                  lettura: hrv,
+                  colore: theme.colorScheme.primary,
+                  valori: ref
+                      .watch(andamentoMetricaProvider(MetricaSalute.hrv))
+                      .valueOrNull,
+                ),
+
+              if (battito != null) ...[
+                const SizedBox(height: Gap.sm),
+                _Onda(
+                  lettura: battito,
+                  colore: theme.colorScheme.tertiary,
+                  valori: ref
+                      .watch(
+                        andamentoMetricaProvider(MetricaSalute.battitoARiposo),
+                      )
+                      .valueOrNull,
+                ),
+              ],
+
+              /*
+               * 🔥 **Le calorie attive: un fuoco e un numero** — 3b-O.5.4.
+               *
+               * ⚠️ `null` e non `0`: «non lo so» e «non ti sei mosso» sono due
+               * frasi diverse, e uno zero che vuol dire «manca il dato» fa
+               * credere a qualcuno di essere stato fermo.
+               */
+              if (recupero.kcalAttive != null) ...[
+                const SizedBox(height: Gap.md),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 22,
+                      color: Color(0xFFE0603A),
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Text(
+                      '${recupero.kcalAttive} kcal',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: Text(
+                        'bruciate oggi con l\'attività',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  static String _breve(Duration d) {
+    final ore = d.inHours;
+    final minuti = d.inMinutes % 60;
+
+    return ore > 0 ? '${ore}h ${minuti}m' : '${minuti}m';
   }
 
   static Color? _colore(BuildContext context, Giudizio giudizio) =>
@@ -405,6 +518,124 @@ class RecoveryCard extends ConsumerWidget {
         Giudizio.warn => const Color(0xFFE0B341),
         Giudizio.ok => null,
       };
+}
+
+/// L'ipnogramma **in miniatura**: una striscia, non un grafico.
+///
+/// 🚨 Qui non si rifà quello della pagina del sonno, e non è pigrizia: là serve
+/// poterlo **leggere** — con le ore, le fasi, la legenda. ⚠️ In una scheda di
+/// riassunto quella roba non entra, e infilarcela a forza produrrebbe un
+/// grafico illeggibile che occupa il posto di tre informazioni.
+///
+/// 💡 Qui basta la **forma della notte**: dove è stato profondo, dove ci si è
+/// svegliati. Chi vuole i dettagli tocca e va alla pagina.
+class _StrisciaSonno extends StatelessWidget {
+  const _StrisciaSonno({required this.fasi});
+
+  final List<CampioneSonno> fasi;
+
+  @override
+  Widget build(BuildContext context) {
+    if (fasi.isEmpty) return const SizedBox.shrink();
+
+    /*
+     * ⚠️ **La larghezza è proporzionale alla DURATA**, non al numero di
+     * segmenti: venti minuti di REM e due ore di profondo non possono occupare
+     * lo stesso spazio, o la striscia racconta una notte che non c'è stata.
+     */
+    final totale = fasi.fold<int>(
+      0,
+      (a, c) => a + c.finitoIl.difference(c.iniziatoIl).inSeconds,
+    );
+
+    if (totale <= 0) return const SizedBox.shrink();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        height: 26,
+        child: Row(
+          children: [
+            for (final c in fasi)
+              Expanded(
+                flex: c.finitoIl
+                    .difference(c.iniziatoIl)
+                    .inSeconds
+                    .clamp(1, 1 << 30),
+                child: ColoredBox(
+                  color: _coloreFase(context, c.fase),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ⚠️ `CampioneSonno.fase` è un **intero** — il codice di `FaseSonno` — e non
+  /// una stringa: l'archivio lo salva così.
+  static Color _coloreFase(BuildContext context, int fase) {
+    final schema = Theme.of(context).colorScheme;
+
+    return switch (FaseSonno.daCodice(fase)) {
+      FaseSonno.profondo => schema.primary,
+      FaseSonno.rem => schema.tertiary,
+      FaseSonno.leggero => schema.primary.withValues(alpha: 0.45),
+      // 💡 Lo sveglio è un **buco**, non una fase: un colore pieno lo farebbe
+      // sembrare tempo dormito.
+      _ => schema.surfaceContainerHighest,
+    };
+  }
+}
+
+/// Una metrica con il suo andamento a onda.
+class _Onda extends StatelessWidget {
+  const _Onda({required this.lettura, required this.colore, this.valori});
+
+  final LetturaConMedia lettura;
+  final Color colore;
+  final List<double>? valori;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                lettura.metrica.etichetta,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                '${_numero(lettura.valore)} ${lettura.metrica.unita}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: OndaMetrica(valori: valori ?? const [], colore: colore),
+        ),
+      ],
+    );
+  }
+
+  static String _numero(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
 }
 
 /// Quando non c'è niente da mostrare.
@@ -433,56 +664,6 @@ class _InvitoACollegare extends StatelessWidget {
   );
 }
 
-class _RigaParametro extends StatelessWidget {
-  const _RigaParametro({required this.lettura});
-
-  final LetturaConMedia lettura;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final delta = lettura.scostamentoPct;
-    final anomalo = lettura.anomalo;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
-      child: Row(
-        children: [
-          Icon(
-            lettura.metrica == MetricaSalute.hrv
-                ? Icons.favorite_outline_rounded
-                : Icons.monitor_heart_outlined,
-            size: 20,
-            color: anomalo ? theme.colorScheme.error : null,
-          ),
-          const SizedBox(width: Gap.sm),
-          Expanded(child: Text(lettura.metrica.etichetta)),
-          Text(
-            '${lettura.valore.round()} ${lettura.metrica.unita}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          // 🚨 Lo scostamento accanto al valore, sempre. Il numero assoluto non
-          // si può giudicare: 42 ms sono ottimi per qualcuno e pessimi per un
-          // altro, e conta solo il confronto con la propria media.
-          if (delta != null) ...[
-            const SizedBox(width: Gap.xs),
-            Text(
-              '${delta > 0 ? '+' : ''}${delta.round()}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: anomalo
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.outline,
-                fontWeight: anomalo ? FontWeight.w700 : null,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Peso e allenamenti recenti.
 class TrainingCard extends ConsumerWidget {
   const TrainingCard({required this.riepilogo, super.key});
 

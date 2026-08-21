@@ -19,14 +19,27 @@ import 'media_di_riferimento.dart';
 /// precedente per riportare in Dart una regola che il server potrebbe ancora
 /// applicare; è ciò che resta quando il dato non gli arriva.
 class Recupero {
-  const Recupero({this.notte, this.parametri = const {}});
+  const Recupero({this.notte, this.parametri = const {}, this.kcalAttive});
 
   final GiudizioNotte? notte;
   final Map<MetricaSalute, LetturaConMedia> parametri;
 
+  /// Le calorie attive **di oggi**, sommate — 21/08/2026.
+  ///
+  /// 🚨 **Non passano da `parametri`**, e la ragione è il difetto che le rendeva
+  /// sbagliate: `MediaDiRiferimento` risponde a *«qual è l'ultima misura»*, che
+  /// per un totale giornaliero è la domanda sbagliata. ⚠️ Mostrava un campione
+  /// sciolto di un giorno qualunque — *«mi prende quelle dell'altro ieri»*.
+  ///
+  /// 💡 `null` quando non ce ne sono per oggi: e `null` non è `0`. Zero vuol dire
+  /// «oggi non ti sei mosso», assente vuol dire «non lo so» — e sono due frasi
+  /// diverse da mostrare.
+  final int? kcalAttive;
+
   /// Se c'è qualcosa da mostrare. Sostituisce l'`has_any` che mandava il
   /// backend: senza, l'interfaccia dovrebbe dedurlo da tre `null`.
-  bool get haQualcosa => notte != null || parametri.isNotEmpty;
+  bool get haQualcosa =>
+      notte != null || parametri.isNotEmpty || kcalAttive != null;
 }
 
 /// Il recupero della notte più recente per cui esistono dati.
@@ -95,10 +108,29 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
 
   final ultima = await archivio.ultimaNotteConDati();
 
+  /*
+   * 🚨 **Le calorie attive si chiedono per OGGI, esplicitamente.**
+   *
+   * ⚠️ Il resto di questa scheda parla della «notte più recente per cui esistono
+   * dati», che può essere ieri. Le calorie no: la domanda è *«quanto ho bruciato
+   * oggi»*, e una risposta di ieri sarebbe sbagliata anche se il dato esiste.
+   *
+   * 💡 `kcalAttiveDi` somma per sorgente e prende la maggiore: due app che
+   * scrivono lo stesso giorno non si sommano, si sceglie la più completa.
+   */
+  final oggi = DateTime.now();
+  final attive = await archivio.kcalAttiveDi(
+    DateTime(oggi.year, oggi.month, oggi.day),
+  );
+
   return Recupero(
     notte: ultima == null
         ? null
         : await AnalizzatoreSonno.notte(archivio, ultima),
+    // ⚠️ `0` diventa `null`: «non lo so» e «non ti sei mosso» sono due frasi
+    // diverse, e mostrare uno zero che vuol dire «manca il dato» è il modo di
+    // far credere a qualcuno di essere stato fermo.
+    kcalAttive: attive > 0 ? attive : null,
     parametri: await MediaDiRiferimento.tutte(archivio),
   );
 });

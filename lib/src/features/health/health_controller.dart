@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/storage/archivio_salute.dart';
 import '../privacy/consensi_controller.dart';
+import 'dati_salute.dart';
 import 'ponte_salute.dart';
 
 /// L'archivio locale, uno solo per tutta l'app.
@@ -54,6 +55,27 @@ final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
 final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
     .family<int, DateTime>((ref, giorno) async {
       return ref.watch(archivioSaluteProvider).kcalAttiveDi(giorno);
+    });
+
+/// L'andamento di una metrica negli ultimi giorni — 3b-O.5.3.
+///
+/// 🚨 Serve alla scheda «Recupero» per disegnare **una linea invece di un
+/// numero**: per HRV e battito a riposo il valore singolo non dice quasi niente,
+/// conta il verso — e il verso si legge solo se i punti sono uniti.
+///
+/// 💡 Una media **per giorno**: Health Connect scrive decine di campioni al
+/// giorno, e disegnarli tutti darebbe un pettine invece di un andamento.
+final andamentoMetricaProvider = FutureProvider.autoDispose
+    .family<List<double>, MetricaSalute>((ref, metrica) async {
+      ref.watch(healthControllerProvider);
+
+      final righe = await ref
+          .watch(archivioSaluteProvider)
+          .mediePerGiorno(metrica, giorni: 7);
+
+      // ⚠️ Dal più vecchio al più recente: `mediePerGiorno` ordina già così, e
+      // invertirlo darebbe un disegno plausibile e sbagliato.
+      return righe.map((r) => r.media).toList();
     });
 
 /// Le calorie attive **di oggi**.

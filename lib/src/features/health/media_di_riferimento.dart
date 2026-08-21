@@ -129,6 +129,38 @@ class MediaDiRiferimento {
     );
   }
 
+  /// 🚨 Le metriche che **non** si possono trattare come misure puntuali.
+  ///
+  /// ══ IL DIFETTO DEL 21/08/2026 ═══════════════════════════════════════════
+  ///
+  /// 📌 Il committente: *«le calorie attive sono sbagliate, non so perché ma mi
+  /// prende quelle dell'altro ieri»*.
+  ///
+  /// ⚠️ **Aveva ragione, e la causa è che erano nel posto sbagliato.** Questa
+  /// classe risponde alla domanda *«qual è l'ultima misura, e come sta rispetto
+  /// alla tua media?»* — che ha senso per HRV e battito a riposo: sono
+  /// **istantanee**, e l'ultima è l'ultima.
+  ///
+  /// 🚨 Le calorie attive non sono un'istantanea: sono un **totale che cresce
+  /// durante la giornata**. Trattarle come le altre produceva due errori
+  /// insieme, e nessuno dei due dava errore:
+  ///
+  /// 1. **Il giorno sbagliato.** `ultima` è l'ultima riga *che esiste*, non
+  ///    quella di oggi: senza sincronizzazione di oggi si mostrava tranquillamente
+  ///    l'altro ieri, con la sua data accanto — che nessuno legge.
+  /// 2. **Il numero sbagliato.** `ultima.valore` è **un campione**, non la somma
+  ///    del giorno. Health Connect ne scrive decine: quello mostrato era uno a
+  ///    caso fra quelli.
+  ///
+  /// 💡 La somma vera la fa già `ArchivioSalute.kcalAttiveDi()`, che raggruppa
+  /// per sorgente e prende la maggiore — perché due app che scrivono lo stesso
+  /// giorno non si sommano, si sceglie la più completa.
+  ///
+  /// ⛔ **Chi aggiunge una metrica cumulativa la deve mettere qui.** Il segno per
+  /// riconoscerla: se la domanda giusta è «quanto in tutto oggi» invece di
+  /// «quanto adesso», non è una misura puntuale.
+  static const cumulative = {MetricaSalute.calorieAttive};
+
   /// Tutte le metriche in un colpo solo, per la dashboard.
   ///
   /// Le metriche senza dati **non compaiono**: la mappa vuota è ciò che dice
@@ -141,6 +173,9 @@ class MediaDiRiferimento {
     final out = <MetricaSalute, LetturaConMedia>{};
 
     for (final m in MetricaSalute.values) {
+      // 🚨 Le cumulative non passano di qui: vedi `cumulative`.
+      if (cumulative.contains(m)) continue;
+
       final lettura = await perMetrica(archivio, m, giorniBase: giorniBase);
 
       if (lettura != null) out[m] = lettura;

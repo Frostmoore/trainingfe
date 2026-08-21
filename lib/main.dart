@@ -15,6 +15,7 @@ import 'src/core/storage/local_cache.dart';
 import 'src/features/aggiornamento/aggiornamento_controller.dart';
 import 'src/features/auth/auth_controller.dart';
 import 'src/features/onboarding/branding_controller.dart';
+import 'src/features/training/trasloco_allenamenti.dart';
 
 /// L'avvio — A1.1.
 ///
@@ -91,7 +92,25 @@ Future<void> main() async {
        */
     container.read(aggiornamentoProvider);
 
-    unawaited(container.read(authControllerProvider.notifier).restore());
+    unawaited(
+      container.read(authControllerProvider.notifier).restore().then((_) {
+        /*
+         * ══ 🏋️ IL TRASLOCO DEGLI ALLENAMENTI — FASE 11.3 ═══════════════════
+         *
+         * 📌 Il committente: *«Nessun allenamento deve risiedere sul server,
+         * devono stare tutti nell'app»*.
+         *
+         * 🚨 **Dopo `restore()`, non prima**: senza una sessione il server
+         * risponde 401, il trasloco fallisce e — peggio — il primo avvio dopo
+         * l'aggiornamento sarebbe anche l'unico tentativo che qualcuno guarda.
+         *
+         * 💡 `unawaited` e senza bloccare niente: se non riesce si riprova al
+         * prossimo avvio, e finché non riesce i dati sono ancora **tutti** sul
+         * server. ⛔ Nessuno cancella niente prima che questo abbia confermato.
+         */
+        unawaited(container.read(traslocoAllenamentiProvider).seServe());
+      }),
+    );
 
     // Il branding si riallinea in sottofondo: se fallisce, resta quello in
     // cache. I colori sbagliati sono un problema estetico, un'app che non

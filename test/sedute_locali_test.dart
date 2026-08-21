@@ -97,17 +97,16 @@ void main() {
   test('riscrivere la stessa serie la sostituisce, non la duplica', () async {
     final id = await archivio.apriSeduta();
 
-    Future<void> panca(int ripetizioni, double peso) =>
-        archivio.registraSerie(
-          SerieDelleSeduteCompanion.insert(
-            sedutaId: id,
-            esercizioId: 7,
-            nomeEsercizio: 'Panca piana',
-            numero: 3,
-            ripetizioni: Value(ripetizioni),
-            pesoKg: Value(peso),
-          ),
-        );
+    Future<void> panca(int ripetizioni, double peso) => archivio.registraSerie(
+      SerieDelleSeduteCompanion.insert(
+        sedutaId: id,
+        esercizioId: 7,
+        nomeEsercizio: 'Panca piana',
+        numero: 3,
+        ripetizioni: Value(ripetizioni),
+        pesoKg: Value(peso),
+      ),
+    );
 
     await panca(8, 60);
     // 💡 Correggere un numero sbagliato **è** quello che si vuole qui: al

@@ -443,6 +443,73 @@ class ArchivioSalute extends _$ArchivioSalute {
             ..limit(quante))
           .get();
 
+  /// Importa una seduta che veniva dal server — FASE 11.3.
+  ///
+  /// 🚨 **Riconosce dall'`idServer`**: una seconda passata del trasloco non
+  /// crea doppioni, aggiorna la riga che c'è già. ⚠️ Senza, chi apre l'app due
+  /// volte prima che il server segni «fatto» si ritroverebbe lo storico
+  /// duplicato — e con esso il volume settimanale e le calorie.
+  ///
+  /// 💡 Restituisce l'`id` **locale**, che è quello a cui le serie si legano.
+  Future<int> importaSeduta({
+    required int idServer,
+    required DateTime iniziataIl,
+    int? schedaServerId,
+    String? nomeScheda,
+    DateTime? finitaIl,
+    int? kcal,
+    bool kcalAMano = false,
+  }) async {
+    final esistente = await (select(
+      seduteAllenamento,
+    )..where((t) => t.idServer.equals(idServer))).getSingleOrNull();
+
+    final valori = SeduteAllenamentoCompanion(
+      idServer: Value(idServer),
+      schedaServerId: Value(schedaServerId),
+      nomeScheda: Value(nomeScheda),
+      iniziataIl: Value(iniziataIl),
+      finitaIl: Value(finitaIl),
+      kcal: Value(kcal),
+      kcalAMano: Value(kcalAMano),
+    );
+
+    if (esistente != null) {
+      await (update(
+        seduteAllenamento,
+      )..where((t) => t.id.equals(esistente.id))).write(valori);
+
+      return esistente.id;
+    }
+
+    return into(seduteAllenamento).insert(valori);
+  }
+
+  /// Quante righe di allenamento ci sono davvero nell'archivio — FASE 11.3.
+  ///
+  /// ⛔ **Si contano dall'archivio, non da quello che si è ricevuto.** Contare
+  /// il pacchetto proverebbe che il server ha mandato qualcosa, non che il
+  /// telefono l'abbia scritto: è la differenza fra un controllo e un rito.
+  ///
+  /// 🚨 Le chiavi sono quelle che il server si aspetta (`sessions`, `sets`,
+  /// `daily_burns`): tradurle qui e non a metà strada evita che i due lati
+  /// contino cose diverse chiamandole allo stesso modo.
+  Future<Map<String, int>> conteggiDelTrasloco() async {
+    Future<int> quante(TableInfo<Table, Object?> t) async {
+      final riga = await customSelect(
+        'SELECT COUNT(*) AS n FROM "${t.actualTableName}"',
+      ).getSingle();
+
+      return riga.read<int>('n');
+    }
+
+    return {
+      'sessions': await quante(seduteAllenamento),
+      'sets': await quante(serieDelleSedute),
+      'daily_burns': await quante(bruciateDichiarate),
+    };
+  }
+
   /// Le serie di una seduta, nell'ordine in cui sono state fatte.
   Future<List<SerieSeduta>> serieDi(int sedutaId) =>
       (select(serieDelleSedute)

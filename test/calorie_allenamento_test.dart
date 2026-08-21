@@ -35,11 +35,7 @@ void main() {
       // ⛔ Non è un caso limite teorico: è la seduta aperta e chiusa per
       // sbaglio nello stesso minuto.
       expect(
-        CalorieAllenamento.formula(
-          durata: Duration.zero,
-          kg: 75,
-          metMedio: 5,
-        ),
+        CalorieAllenamento.formula(durata: Duration.zero, kg: 75, metMedio: 5),
         0,
       );
     });

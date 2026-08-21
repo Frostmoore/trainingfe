@@ -49,7 +49,40 @@ import 'backup_controller.dart';
 /// ⚠️ **Uno solo, e stabile.** `ExistingPeriodicWorkPolicy.keep` fa sì che
 /// riaprire l'app non ne accodi un altro: senza, ogni avvio ne lascerebbe uno in
 /// più e il telefono farebbe backup a raffica.
-const nomeDelLavoro = 'backup-automatico-giornaliero';
+const nomeDelLavoro = 'backup-notturno-ore-4';
+
+/// 🆕 Il nome che il lavoro aveva prima delle 4 di notte — 21/08/2026.
+///
+/// ══ 🚨 PERCHÉ IL NOME È CAMBIATO, INVECE DI CAMBIARE SOLO L'ORARIO ════════
+///
+/// Perché `ExistingPeriodicWorkPolicy.keep` fa **esattamente il suo mestiere**:
+/// se un lavoro con quel nome è già in coda, il nuovo viene **ignorato**. ⚠️ Un
+/// orario nuovo scritto nel codice non sarebbe mai arrivato sui telefoni che il
+/// lavoro ce l'hanno già — cioè su tutti quelli che contano.
+///
+/// 💡 Le alternative erano peggiori:
+/// - `replace`/`update` a ogni avvio rimetterebbero in coda il lavoro **ogni
+///   volta che si apre l'app**, e chi la apre tutti i giorni azzererebbe il
+///   conto alla rovescia per sempre. È il difetto che `keep` esiste per evitare.
+/// - Lasciare il nome e sperare: il lavoro vecchio sarebbe rimasto con il suo
+///   orario, **senza dare nessun errore**.
+///
+/// 🚨 Un nome nuovo è una migrazione dichiarata: il vecchio si cancella una
+/// volta, il nuovo nasce con l'orario giusto, e `keep` torna a fare il suo
+/// lavoro dal giorno dopo.
+const nomeVecchio = 'backup-automatico-giornaliero';
+
+/// A che ora della notte, in ora locale.
+///
+/// 📌 Scelta dal committente il 21/08: *«mi metti l'orario in cui lo deve fare
+/// alle 4 di mattina, così è attaccato sicuro»*.
+///
+/// 💡 Non è un dettaglio di comodità: il vincolo `requiresCharging` è quello che
+/// decide davvero se il lavoro parte, e alle quattro di notte il telefono è in
+/// carica. ⚠️ Con la finestra a un'ora qualunque del giorno, il lavoro aspettava
+/// di trovare il telefono attaccato — e su un telefono che si carica solo la
+/// notte quel momento poteva non arrivare mai.
+const oraDelBackup = 4;
 
 const _compito = 'backup';
 
@@ -164,10 +197,33 @@ class BackupInBackground {
   Future<void> pianifica() async {
     if (!_soloAndroid) return;
 
+    /*
+     * 🚨 **Il lavoro vecchio se ne va prima**, o resterebbe in coda con il suo
+     * orario accanto a quello nuovo: due risvegli al giorno per fare una cosa
+     * sola. ⚠️ È idempotente — cancellare un nome che non esiste non fa niente —
+     * quindi può restare qui per sempre senza costare nulla.
+     */
+    await Workmanager().cancelByUniqueName(nomeVecchio);
+
     await Workmanager().registerPeriodicTask(
       nomeDelLavoro,
       _compito,
       frequency: _ogniQuanto,
+
+      /*
+       * 🆕 **Alle 4 di notte** — 21/08/2026.
+       *
+       * ⚠️ `initialDelay` sposta **solo la prima esecuzione**; da lì in poi
+       * Android ripete ogni `frequency`. 💡 È il modo con cui si dà un orario a
+       * un lavoro periodico: `WorkManager` non ha un «alle 4», ha «fra tot».
+       *
+       * 🚨 E l'orario non è una garanzia: Android può far partire il lavoro
+       * **molto dopo**, e il vincolo `requiresCharging` lo tiene fermo finché il
+       * telefono non è attaccato. Chi decide se è davvero ora resta
+       * `BackupCheGiraDaSolo.forse()`, che è l'unico posto che sa anche delle
+       * aperture dell'app.
+       */
+      initialDelay: quantoMancaAlleQuattro(),
       constraints: Constraints(
         networkType: NetworkType.unmetered,
         requiresCharging: true,
@@ -195,4 +251,27 @@ class BackupInBackground {
   /// romperebbe niente, ma darebbe l'impressione che il lavoro sia pianificato.
   bool get _soloAndroid =>
       defaultTargetPlatform == TargetPlatform.android && !kIsWeb;
+}
+
+/// Quanto manca alla prossima [oraDelBackup], in ora locale.
+///
+/// 💡 Sta fuori dalla classe ed è pura apposta: è l'unico pezzo di questa
+/// storia che si può provare in un test, e sarebbe un peccato lasciarlo dentro
+/// un metodo che chiama Android.
+///
+/// ⚠️ Se sono **già passate** le quattro, si punta a domani: un ritardo negativo
+/// farebbe partire il lavoro subito, cioè con il telefono probabilmente non in
+/// carica — e da lì in poi l'orario resterebbe sbagliato per sempre, perché il
+/// periodico si ancora alla prima esecuzione.
+@visibleForTesting
+Duration quantoMancaAlleQuattro([DateTime? adesso]) {
+  final ora = adesso ?? DateTime.now();
+
+  var bersaglio = DateTime(ora.year, ora.month, ora.day, oraDelBackup);
+
+  if (!bersaglio.isAfter(ora)) {
+    bersaglio = bersaglio.add(const Duration(days: 1));
+  }
+
+  return bersaglio.difference(ora);
 }

@@ -15,6 +15,7 @@ import 'widgets/add_food_sheet.dart';
 import 'widgets/edit_entry_sheet.dart';
 import 'widgets/favorites_sheet.dart';
 import 'widgets/macro_summary.dart';
+import 'widgets/stima_ritrovata.dart';
 
 /// Il diario del giorno — A4.1.
 class DiaryScreen extends ConsumerWidget {
@@ -61,6 +62,18 @@ class DiaryScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
             children: [
+              /*
+               * 🆕 FASE 9.7 — la stima lasciata a metà.
+               *
+               * 🚨 **In cima e non in fondo**: chi ha chiuso l'app mentre il
+               * server pensava sta cercando *quel* piatto, e trovarlo sotto ai
+               * totali vorrebbe dire non trovarlo.
+               *
+               * 💡 Nel caso normale non si vede e non costa niente: `inSospeso()`
+               * guarda prima sul telefono, e senza id locale non parte nemmeno
+               * una richiesta.
+               */
+              const StimaRitrovata(),
               MacroSummary(day: day),
               const SizedBox(height: Gap.md),
               for (final pasto in day.meals) _Pasto(pasto: pasto),

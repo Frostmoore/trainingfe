@@ -94,13 +94,16 @@ class StimeInCoda {
   /// momento in cui una persona chiude e riprova, cioè **accoda un secondo
   /// lavoro**.
   ///
-  /// Torna il `risultato` — la stessa forma che l'endpoint sincrono aveva con
-  /// `save: false`. Lancia [StimaFallita] se il server dice che non è riuscita.
+  /// Torna la stima **con il pasto e l'origine**: chi riprende un lavoro
+  /// lasciato a metà (FASE 9.7) deve poter riaprire il foglio di conferma nel
+  /// pasto giusto, e non ha nessun altro posto da cui saperlo.
+  ///
+  /// Lancia [StimaFallita] se il server dice che non è riuscita.
   ///
   /// 💡 [passo] esiste per i test: un'attesa vera di un secondo e mezzo
   /// renderebbe ogni prova del ciclo lunga quanto il ciclo. ⚠️ In produzione
   /// non lo passa nessuno.
-  Future<Map<String, dynamic>> aspetta(
+  Future<StimaPronta> aspetta(
     int id, {
     void Function(Duration)? avanzamento,
     Duration? passo,
@@ -124,7 +127,13 @@ class StimeInCoda {
 
         final risultato = data['risultato'];
 
-        if (risultato is Map<String, dynamic>) return risultato;
+        if (risultato is Map<String, dynamic>) {
+          return StimaPronta(
+            risultato: risultato,
+            pasto: data['pasto']?.toString(),
+            daFoto: data['origine']?.toString() == 'foto',
+          );
+        }
 
         // ⚠️ «Pronta senza risultato» non dovrebbe succedere: se succede è un
         // difetto nostro, e va detto come tale invece di restituire una stima
@@ -190,6 +199,24 @@ class StimeInCoda {
 
     return id;
   }
+}
+
+/// Una stima arrivata, con il contorno che serve a farla confermare.
+class StimaPronta {
+  const StimaPronta({
+    required this.risultato,
+    required this.pasto,
+    required this.daFoto,
+  });
+
+  /// La stessa forma che l'endpoint sincrono aveva con `save: false`.
+  final Map<String, dynamic> risultato;
+
+  /// 💡 Sopravvive alla cancellazione della richiesta: «pranzo» dice **quando**,
+  /// non *cosa* — non è il pezzo personale.
+  final String? pasto;
+
+  final bool daFoto;
 }
 
 /// La stima non è riuscita, e il server dice **con quale codice**.

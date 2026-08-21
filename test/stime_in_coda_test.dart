@@ -143,7 +143,11 @@ void main() {
 
     final risultato = await coda.aspetta(id, passo: Duration.zero);
 
-    expect(risultato['saved'], false);
+    expect(risultato.risultato['saved'], false);
+
+    // 💡 Il pasto e l'origine viaggiano con la stima: servono a riaprire il
+    // foglio di conferma nel pasto giusto (FASE 9.7).
+    expect(risultato.daFoto, false);
     expect(quante, greaterThan(1), reason: 'Si è fermata al primo giro.');
 
     // ⚠️ L'id se ne va: se restasse, al riavvio l'app aspetterebbe una stima

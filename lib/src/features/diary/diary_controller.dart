@@ -162,9 +162,9 @@ class DiaryActions {
       quando: _ref.read(selectedDateProvider),
     );
 
-    final data = await coda.aspetta(id, avanzamento: avanzamento);
+    final pronta = await coda.aspetta(id, avanzamento: avanzamento);
 
-    return StimaAi.fromJson(data).conFrase(text);
+    return StimaAi.fromJson(pronta.risultato).conFrase(text);
   }
 
   /// Riprende una stima lasciata a metà — FASE 9.7.
@@ -174,7 +174,7 @@ class DiaryActions {
   /// chiamata al modello per lo stesso piatto, pagata due volte.
   ///
   /// `null` quando non c'è niente in sospeso, che è il caso normale.
-  Future<StimaAi?> riprendiStimaInSospeso({
+  Future<StimaRipresa?> riprendiStimaInSospeso({
     void Function(Duration)? avanzamento,
   }) async {
     final coda = _ref.read(stimeInCodaProvider);
@@ -182,9 +182,18 @@ class DiaryActions {
 
     if (id == null) return null;
 
-    final data = await coda.aspetta(id, avanzamento: avanzamento);
+    final pronta = await coda.aspetta(id, avanzamento: avanzamento);
 
-    return StimaAi.fromJson(data);
+    /*
+     * 🚨 Il **pasto** arriva dal server e non si chiede di nuovo. La persona
+     * l'aveva già scelto prima di chiudere l'app: richiederlo sarebbe farle
+     * rifare un passo che aveva già fatto, per una nostra difficoltà tecnica.
+     */
+    return StimaRipresa(
+      stima: StimaAi.fromJson(pronta.risultato),
+      pasto: pronta.pasto ?? 'lunch',
+      daFoto: pronta.daFoto,
+    );
   }
 
   /// Riconoscimento da foto — A4.3 / A4.8.
@@ -210,9 +219,9 @@ class DiaryActions {
     final coda = _ref.read(stimeInCodaProvider);
 
     final id = await coda.accodaFoto(form);
-    final data = await coda.aspetta(id, avanzamento: avanzamento);
+    final pronta = await coda.aspetta(id, avanzamento: avanzamento);
 
-    return StimaAi.fromJson(data);
+    return StimaAi.fromJson(pronta.risultato);
   }
 
   /// Scrive in diario una stima **guardata da chi l'ha chiesta** — A4.8.
@@ -477,3 +486,20 @@ class FavoriteActions {
 }
 
 final favoriteActionsProvider = Provider<FavoriteActions>(FavoriteActions.new);
+
+/// Una stima ritrovata dopo che l'app era stata chiusa — FASE 9.7.
+///
+/// 💡 Porta anche il **pasto**: la persona l'aveva già scelto prima di chiudere
+/// l'app, e richiederlo sarebbe farle rifare un passo per una nostra difficoltà
+/// tecnica.
+class StimaRipresa {
+  const StimaRipresa({
+    required this.stima,
+    required this.pasto,
+    required this.daFoto,
+  });
+
+  final StimaAi stima;
+  final String pasto;
+  final bool daFoto;
+}

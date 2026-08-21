@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/acquisti/ui/schermata_acquisti.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/ui/gym_inactive_screen.dart';
 import '../../features/auth/ui/login_screen.dart';
@@ -157,6 +158,12 @@ class AppRoutes {
   /// stessa avvertenza: chi arriva qui deve trovarsi nello stesso posto mentale
   /// di chi arriva dalla schermata dei permessi.
   static const forma = '/salute/forma';
+
+  /// 🆕 Dove si attiva l'assistente — 3b-O.3.1.
+  ///
+  /// ⚠️ Oggi è una vetrina: i pagamenti non sono collegati, e la schermata lo
+  /// dice in cima. Vedi `SchermataAcquisti.inArrivo`.
+  static const acquisti = '/acquisti';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
   static const planNew = '/schede/nuova';
@@ -463,6 +470,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const SchermataSalute(),
       ),
       GoRoute(path: AppRoutes.forma, builder: (_, _) => const SchermataForma()),
+      GoRoute(
+        path: AppRoutes.acquisti,
+        builder: (_, _) => const SchermataAcquisti(),
+      ),
       GoRoute(
         path: AppRoutes.calendar,
         builder: (_, _) => const CalendarScreen(),

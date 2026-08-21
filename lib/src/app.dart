@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/onboarding/branding_controller.dart';
+import 'features/profile/colore_accento.dart';
 
 /// La radice dell'app.
 ///
@@ -19,7 +20,31 @@ class TrainingCompanionApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final branding = ref.watch(brandingControllerProvider).branding;
+    final palestra = ref.watch(brandingControllerProvider).branding;
+
+    /*
+     * ══ 🆕 IL COLORE SCELTO VALE SOLO SENZA PALESTRA — 3b-O.1a.1 ══════════
+     *
+     * 📌 *«il colore di accento deve essere quello della palestra, se è un
+     * utente free_user, questo deve poter scegliere il suo colore»*.
+     *
+     * 🚨 **L'ordine è questo e non l'inverso**: la palestra vince sempre. Il
+     * colore è l'identità del cliente (ADR-A01), ed è il motivo per cui l'app si
+     * chiama white-label — lasciarlo cambiare a un iscritto vorrebbe dire che
+     * può spegnere il marchio della palestra che lo paga.
+     *
+     * 💡 `palestra.name` vuoto è il segno che una palestra non c'è: è lo
+     * stesso controllo che l'intestazione usa per decidere quale nome scrivere.
+     */
+    final senzaPalestra = !(palestra.name?.isNotEmpty ?? false);
+
+    final scelto = senzaPalestra
+        ? ColoreAccento.daNome(ref.watch(accentoSceltoProvider))
+        : null;
+
+    final branding = scelto == null
+        ? palestra
+        : palestra.copyWith(primary: scelto);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

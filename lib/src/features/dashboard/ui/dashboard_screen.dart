@@ -286,6 +286,49 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
+
+                /*
+                 * 🆕 **Nascondere la card** — 3b-O.3.2, 21/08/2026.
+                 *
+                 * 📌 *«deve esserci sempre un toggle per nascondere la card
+                 * (se la nascondo la devo poter riattivare dalle impostazioni,
+                 * ovviamente)»*.
+                 *
+                 * ⚠️ **Non spegne il consiglio, nasconde la card**: sono due cose
+                 * diverse, e l'interruttore che ferma la spesa sta nel profilo.
+                 * 💡 Chi tocca qui vuole spazio sulla schermata, non
+                 * risparmiare.
+                 *
+                 * 🚨 E lo dice, con un messaggio che porta dove si riaccende:
+                 * un elemento che sparisce senza dire come tornare è un
+                 * elemento perso.
+                 */
+                IconButton(
+                  onPressed: () async {
+                    final messaggero = ScaffoldMessenger.of(context);
+
+                    await ref
+                        .read(consiglioNascostoProvider.notifier)
+                        .imposta(nascosto: true);
+
+                    messaggero.showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Nascosta. La riattivi da Profilo → Consiglio del giorno.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.visibility_off_outlined,
+                    size: 18,
+                    color: sopra,
+                  ),
+                  tooltip: 'Nascondi',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
+                ),
               ],
             ),
 
@@ -814,6 +857,14 @@ class _SenzaAi extends StatelessWidget {
                     'consiglio costruito su quello che hai mangiato, come hai '
                     'dormito e come ti sei allenato.',
                     style: tema.textTheme.bodySmall?.copyWith(height: 1.35),
+                  ),
+                  const SizedBox(height: Gap.sm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.tonal(
+                      onPressed: () => context.push(AppRoutes.acquisti),
+                      child: const Text('Scopri come attivarlo'),
+                    ),
                   ),
                 ],
               ),

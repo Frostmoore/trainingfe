@@ -34,6 +34,43 @@ final storicoCorpoProvider = FutureProvider.autoDispose<List<MisuraCorpo>>((
 /// L'ultimo peso e quanto è cambiato — quel che serviva a `WeightCard`.
 ///
 /// Sostituisce la sezione `body` che `GET /dashboard` restituiva prima di S5.
+/// Il peso **a una certa data** — 3b-O.1b.2, 21/08/2026.
+///
+/// 🚨 Serve alle frecce dell'intestazione: sfogliando indietro, il peso deve
+/// essere quello che si sapeva **allora**, non l'ultimo registrato.
+///
+/// ⚠️ **L'ultima misura FINO a quel giorno, non quella di quel giorno.** Chi si
+/// pesa una volta a settimana non ha una misura per ogni data: pretenderla
+/// darebbe un buco cinque giorni su sette. 💡 Il peso è un dato che *dura*, a
+/// differenza delle calorie.
+final corpoDelGiornoProvider = FutureProvider.autoDispose
+    .family<BodyToday, DateTime>((ref, giorno) async {
+      ref.watch(revisioneCorpoProvider);
+
+      final archivio = ref.watch(archivioSaluteProvider);
+      final storico = await archivio.storicoMisure();
+
+      final fine = DateTime(giorno.year, giorno.month, giorno.day, 23, 59, 59);
+
+      final conPeso = storico
+          .where((m) => m.pesoKg != null && !m.giorno.isAfter(fine))
+          .toList();
+
+      if (conPeso.isEmpty) {
+        return const BodyToday(
+          weightKg: null,
+          weightDelta: null,
+          targetWeightKg: null,
+        );
+      }
+
+      return BodyToday(
+        weightKg: conPeso.first.pesoKg,
+        weightDelta: null,
+        targetWeightKg: null,
+      );
+    });
+
 final corpoOggiProvider = FutureProvider.autoDispose<BodyToday>((ref) async {
   ref.watch(revisioneCorpoProvider);
 

@@ -7,6 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../auth/auth_controller.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
+import '../../../forma/forma_controller.dart';
+import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../onboarding/branding_controller.dart';
@@ -15,6 +17,7 @@ import '../../../profile/corpo_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/bottone_profilo.dart';
 import '../../data/dashboard_models.dart';
+import '../../giorno_scelto.dart';
 import '../../gettoni_controller.dart';
 
 /// L'intestazione di «Oggi»: la palestra e i numeri della giornata.
@@ -36,6 +39,13 @@ class TodayHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    /*
+     * ⚠️ **Il giorno scelto guida tutta l'intestazione** — 3b-O.1b.2.
+     * 🚨 Lasciare i numeri su «oggi» sotto una data di tre giorni fa sarebbe il
+     * difetto che le frecce dovevano evitare.
+     */
+    final giorno = ref.watch(giornoSceltoProvider);
+
     final palestra = ref.watch(brandingControllerProvider).branding;
     final utente = ref.watch(authControllerProvider).user;
     final n = riepilogo.nutrition;
@@ -65,6 +75,26 @@ class TodayHeader extends ConsumerWidget {
       daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
       stimate: n.burnedKcal,
     );
+
+    /*
+     * 🆕 I dati dei valori nuovi — 3b-O.1b.1.
+     *
+     * 💡 Tutti `valueOrNull`: l'intestazione **non aspetta nessuno**. ⚠️ Un
+     * numero che arriva mezzo secondo dopo è meglio di un'intestazione che
+     * lampeggia, e la regola «se manca sparisce» lo gestisce da sola.
+     */
+    final recupero = ref.watch(recuperoProvider).valueOrNull;
+    final forma = ref.watch(formaProvider).valueOrNull;
+
+    final attive = ref.watch(kcalAttiveDelGiornoProvider(giorno)).valueOrNull;
+    final hrv = recupero?.parametri[MetricaSalute.hrv];
+    final battito = recupero?.parametri[MetricaSalute.battitoARiposo];
+    final sonno = recupero?.notte?.durata;
+
+    final peso = ref
+        .watch(corpoDelGiornoProvider(giorno))
+        .valueOrNull
+        ?.weightKg;
 
     final obiettivo = TargetDelGiorno.scegli(
       dalServer: n.haTarget ? n.targetKcal : null,
@@ -146,24 +176,43 @@ class TodayHeader extends ConsumerWidget {
                            * chi sei e che giorno è, che è ciò per cui questa
                            * intestazione esiste.
                            */
-                          if (palestra.name != null &&
-                              palestra.name!.isNotEmpty)
-                            Text(
-                              palestra.name!,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          /*
+                           * ══ 🆕 IL NOME: LA PALESTRA, O LA PERSONA ═══════════
+                           *
+                           * 📌 3b-O.1a.3, 21/08/2026: *«non mi piace che ci sia
+                           * scritto "Training Companion" per i free_users, ci
+                           * deve essere il loro nome completo»*.
+                           *
+                           * ⚠️ Prima questa riga **spariva** senza palestra —
+                           * scelta di F3, per non scrivere il nome dell'app al
+                           * posto di quello della palestra. 💡 La correzione non
+                           * è rimettere il nome dell'app: è mettere **il nome
+                           * della persona** dove stava quello della palestra.
+                           *
+                           * 🚨 E il nome **completo**, non solo il primo: qui è
+                           * un'intestazione, non un saluto.
+                           */
                           Text(
-                            // Il saluto con il nome e la data: dice a colpo d'occhio
-                            // che si sta guardando **oggi**, che è la domanda a cui
-                            // tutto il resto della schermata risponde.
-                            utente == null
-                                ? _dataDiOggi()
-                                : 'Ciao ${utente.name.split(' ').first} · ${_dataDiOggi()}',
+                            (palestra.name?.isNotEmpty ?? false)
+                                ? palestra.name!
+                                : (utente?.name ?? 'Training Companion'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          /*
+                           * 🆕 **Sotto, solo la data** — 3b-O.1a.4.
+                           *
+                           * ⚠️ Via il «Ciao tizio»: il nome è già sopra, e
+                           * ripeterlo in due righe di seguito è la stessa
+                           * informazione detta due volte.
+                           */
+                          Text(
+                            _dataDiOggi(),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onPrimaryContainer,
                             ),
@@ -208,7 +257,28 @@ class TodayHeader extends ConsumerWidget {
 
                 const SizedBox(height: Gap.md),
 
-                Row(
+                /*
+                 * ══ 🆕 I VALORI, SU DUE RIGHE E SENZA TRATTINI — 3b-O.1b.1 ══
+                 *
+                 * 📌 Il committente: *«ci devono essere anche battiti a riposo e
+                 * hrv (se disponibili, altrimenti [...] spariscono proprio).
+                 * Inoltre, ci devono essere Carico e Carica e Calorie Attive»*.
+                 * E: *«li puoi anche disporre su 2 righe»*.
+                 *
+                 * 🚨 **«Se manca, sparisce» è una regola diversa da quella di
+                 * prima.** Il peso senza dato mostrava `—`: un trattino occupa
+                 * lo spazio di un numero e **non dice niente**. Togliendolo, si
+                 * capisce da soli che quel dato non c'è ancora.
+                 *
+                 * ⚠️ E i valori sono **nove** dove prima erano quattro: un `Row`
+                 * li avrebbe spinti fuori a 280 px, che è la larghezza su cui
+                 * questo progetto ha già misurato due difetti di layout. 💡 Un
+                 * `Wrap` va a capo da solo — su due righe, o su tre a carattere
+                 * ingrandito, senza che nessun numero debba essere scelto a mano.
+                 */
+                Wrap(
+                  spacing: Gap.md,
+                  runSpacing: Gap.sm,
                   children: [
                     _Valore(
                       valore: n.kcal.round().toString(),
@@ -216,58 +286,86 @@ class TodayHeader extends ConsumerWidget {
                           ? 'di ${obiettivo.kcal!.round()} kcal'
                           : 'kcal',
                     ),
+
                     _Valore(
                       valore: bruciate.kcal.toString(),
                       etichetta: 'bruciate',
                       icona: Icons.local_fire_department_rounded,
                     ),
+
+                    // 🔥 Le calorie **attive**: quelle vere dell'orologio.
+                    if (attive != null)
+                      _Valore(
+                        valore: attive.toString(),
+                        etichetta: 'attive',
+                        icona: Icons.bolt_rounded,
+                      ),
+
                     /*
                      * 🚨 **Il peso arriva dal TELEFONO, non dal riepilogo del
-                     * server** — difetto riferito il 12/08/2026: *«nella
-                     * top-bar peso ancora me lo mostra come —»*.
-                     *
-                     * Dopo S5 `DashboardService::corpo()` restituisce **solo**
-                     * `target_weight_kg`: il peso vero non sta più sul server
-                     * (decisione D9-bis). Ma questa riga continuava a chiederlo
-                     * a `riepilogo.body.weightKg`, che è quindi **sempre
-                     * `null`** — cioè un trattino per sempre, qualunque cosa si
-                     * registrasse.
-                     *
-                     * ⚠️ È la stessa svista già corretta per il sonno in
-                     * `RecoveryCard`, rimasta qui perché il campo nel modello
-                     * **esiste ancora** e quindi il codice compilava benissimo.
-                     * Un `null` che non arriva mai non fa rumore.
+                     * server** — difetto del 12/08: dopo S5 `body.weightKg` è
+                     * sempre `null`, e questa riga mostrava un trattino per
+                     * sempre. ⚠️ Adesso, mancando, **non compare**.
                      */
-                    _Valore(
-                      valore:
-                          ref
-                              .watch(corpoOggiProvider)
-                              .valueOrNull
-                              ?.weightKg
-                              ?.toStringAsFixed(1) ??
-                          '—',
-                      etichetta: 'kg',
-                      icona: Icons.monitor_weight_outlined,
-                    ),
-                    /*
-                     * ⚠️ Il sonno arriva dal TELEFONO, non dal riepilogo del
-                     * server — S4.3. `riepilogo.sleep` dopo S1 e' sempre
-                     * `null`, e lasciarlo qui avrebbe mostrato un trattino per
-                     * sempre.
-                     */
-                    _Valore(
-                      valore:
-                          ref
-                              .watch(recuperoProvider)
-                              .valueOrNull
-                              ?.notte
-                              ?.durata ??
-                          '—',
-                      etichetta: 'sonno',
-                      icona: Icons.bedtime_outlined,
-                    ),
+                    if (peso != null)
+                      _Valore(
+                        valore: peso.toStringAsFixed(1),
+                        etichetta: 'kg',
+                        icona: Icons.monitor_weight_outlined,
+                      ),
+
+                    if (sonno != null)
+                      _Valore(
+                        valore: sonno,
+                        etichetta: 'sonno',
+                        icona: Icons.bedtime_outlined,
+                      ),
+
+                    if (hrv != null)
+                      _Valore(
+                        valore: _numero(hrv.valore),
+                        etichetta: 'hrv',
+                        icona: Icons.favorite_outline_rounded,
+                      ),
+
+                    if (battito != null)
+                      _Valore(
+                        valore: _numero(battito.valore),
+                        etichetta: 'bpm',
+                        icona: Icons.monitor_heart_outlined,
+                      ),
+
+                    // 🔋 Carico e carica, dalla FASE 2-sexies.
+                    if (forma?.stanchezza.valore != null)
+                      _Valore(
+                        valore: '${(forma!.stanchezza.valore! * 100).round()}%',
+                        etichetta: 'carico',
+                        icona: Icons.trending_up_rounded,
+                      ),
+
+                    if (forma?.carica.valore != null)
+                      _Valore(
+                        valore: forma!.carica.valore!.round().toString(),
+                        etichetta: 'carica',
+                        icona: Icons.battery_charging_full_rounded,
+                      ),
                   ],
                 ),
+
+                /*
+                 * ══ 🆕 LA DATA CON LE FRECCE, IN FONDO — 3b-O.1b.2 ══════════
+                 *
+                 * 📌 *«ci deve essere una data con le freccette per passare ai
+                 * giorni precedenti o successivi, centrata, in fondo
+                 * all'header»*.
+                 *
+                 * 🚨 **In fondo e non in cima**, ed è la posizione giusta oltre
+                 * che quella chiesta: si legge **dopo** i numeri, cioè risponde
+                 * alla domanda «di quando sono questi?» nel momento in cui uno
+                 * se la fa.
+                 */
+                const SizedBox(height: Gap.md),
+                const _BarraData(),
               ],
             ),
           ),
@@ -275,6 +373,10 @@ class TodayHeader extends ConsumerWidget {
       ),
     );
   }
+
+  /// 💡 Senza decimali quando non servono: «48» invece di «48.0».
+  static String _numero(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
 
   static String _dataDiOggi() =>
       DateFormat('EEEE d MMMM', 'it').format(DateTime.now());
@@ -462,5 +564,70 @@ class _SaldoGettoni extends ConsumerWidget {
             );
           },
         );
+  }
+}
+
+/// La data con le frecce — 3b-O.1b.2.
+///
+/// ⛔ **La freccia in avanti si spegne su oggi.** Il diario non si compila in
+/// anticipo, e una giornata che non è ancora successa non ha calorie, peso né
+/// sonno: portarci vorrebbe dire una schermata vuota che sembra un guasto.
+///
+/// 💡 E toccando la data si torna a oggi in un colpo, senza premere la freccia
+/// tante volte quanti sono i giorni indietro.
+class _BarraData extends ConsumerWidget {
+  const _BarraData();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final giorno = ref.watch(giornoSceltoProvider);
+    final controllo = ref.read(giornoSceltoProvider.notifier);
+
+    final oggi = DateTime.now();
+    final eOggi = giorno == DateTime(oggi.year, oggi.month, oggi.day);
+
+    final sopra = theme.colorScheme.onPrimaryContainer;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: controllo.indietro,
+          icon: Icon(Icons.chevron_left_rounded, color: sopra),
+          tooltip: 'Giorno prima',
+          visualDensity: VisualDensity.compact,
+        ),
+
+        Flexible(
+          child: GestureDetector(
+            onTap: eOggi ? null : controllo.oggi,
+            child: Text(
+              eOggi
+                  ? 'Oggi · ${DateFormat('d MMMM', 'it').format(giorno)}'
+                  : DateFormat('EEEE d MMMM', 'it').format(giorno),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: sopra,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+
+        IconButton(
+          // ⛔ Spenta su oggi: `null` disabilita il pulsante, e si **vede**.
+          onPressed: eOggi ? null : controllo.avanti,
+          icon: Icon(
+            Icons.chevron_right_rounded,
+            color: eOggi ? sopra.withValues(alpha: 0.3) : sopra,
+          ),
+          tooltip: 'Giorno dopo',
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
   }
 }

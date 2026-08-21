@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/errors/api_exception.dart';
 import '../../core/api/api_client.dart';
+import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
@@ -11,6 +11,7 @@ import '../profile/corpo_controller.dart';
 import '../profile/target_locale_controller.dart';
 import '../training/storico_unificato_controller.dart';
 import 'data/dashboard_models.dart';
+import 'giorno_scelto.dart';
 
 /// Il riepilogo di oggi — D5.
 ///
@@ -20,9 +21,35 @@ import 'data/dashboard_models.dart';
 final dashboardProvider = FutureProvider.autoDispose<DashboardSummary>((
   ref,
 ) async {
+  /*
+   * 🆕 **Segue il giorno scelto** — 3b-O.1b.2, 21/08/2026.
+   *
+   * 🚨 Era il pezzo che rendeva le frecce impossibili: questo provider
+   * chiedeva **sempre oggi**, e una schermata che mostra i numeri di oggi sotto
+   * la data di tre giorni fa è **peggio** di una senza frecce — perché non si
+   * distingue da una che funziona.
+   *
+   * 💡 `date` si manda **solo quando non è oggi**: così la chiamata normale
+   * resta identica a prima, e la cache del server non si spacca in una voce per
+   * giorno per chi non sfoglia mai.
+   */
+  final giorno = ref.watch(giornoSceltoProvider);
+  final adesso = DateTime.now();
+  final eOggi = giorno == DateTime(adesso.year, adesso.month, adesso.day);
+
   final data = await ref
       .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/dashboard');
+      .get<Map<String, dynamic>>(
+        '/dashboard',
+        query: eOggi
+            ? null
+            : {
+                'date':
+                    '${giorno.year.toString().padLeft(4, '0')}-'
+                    '${giorno.month.toString().padLeft(2, '0')}-'
+                    '${giorno.day.toString().padLeft(2, '0')}',
+              },
+      );
 
   return DashboardSummary.fromJson(data);
 });
@@ -304,6 +331,22 @@ final contestoConsiglioProvider =
 /// target l'AI non ha niente su cui costruire un consiglio, e inventarne uno
 /// generico sarebbe rumore.
 final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
+  /*
+   * ⛔ **Sui giorni passati non si genera niente** — decisione del committente,
+   * 21/08: *«semplicemente sui giorni passati niente consiglio del giorno»*.
+   *
+   * 💡 Ed è la scelta che costa meno: il consiglio si costruisce su «come sta
+   * andando **oggi**» — quanto hai mangiato finora, che ore sono. ⚠️ Rigenerarlo
+   * per il 18 agosto vorrebbe dire pagare una chiamata per un consiglio che non
+   * serve piu' a nessuno.
+   */
+  final giorno = ref.watch(giornoSceltoProvider);
+  final adesso = DateTime.now();
+
+  if (giorno != DateTime(adesso.year, adesso.month, adesso.day)) {
+    return const Consiglio();
+  }
+
   final contesto = await ref.watch(contestoConsiglioProvider.future);
 
   try {

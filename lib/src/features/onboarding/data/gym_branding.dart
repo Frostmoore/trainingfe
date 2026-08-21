@@ -85,6 +85,23 @@ class GymBranding {
 
   bool supporta(String provider) => social.contains(provider);
 
+  /// 🆕 Una copia con un colore diverso — 3b-O.1a.1.
+  ///
+  /// 💡 Serve a chi **non ha una palestra** e ha scelto il proprio accento: il
+  /// tema si costruisce da `primary`, e cambiarlo qui evita di infilare una
+  /// seconda strada dentro `AppTheme`. ⚠️ Il resto — nome, logo, social — resta
+  /// quello che era: si sostituisce **un colore**, non l'identità.
+  GymBranding copyWith({Color? primary}) => GymBranding(
+    name: name,
+    slug: slug,
+    primary: primary ?? this.primary,
+    secondary: secondary,
+    accent: accent,
+    logoUrl: logoUrl,
+    locale: locale,
+    social: social,
+  );
+
   /// I colori di riserva: gli stessi che il backend usa come default sui
   /// `tenants`, così una palestra che non li ha impostati non si vede diversa
   /// fra app e pannello.

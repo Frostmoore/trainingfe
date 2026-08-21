@@ -90,8 +90,58 @@ const _chiaveRicordo = 'consiglio.ultimo';
 /// segnare un pasto e la chiave cambia, quindi il consiglio si rifà — e per i
 /// secondi che ci mette, la card spariva. Chi apre l'app dopo pranzo la vedeva
 /// sparire proprio perché aveva usato l'app.
+/// Se la card del consiglio è stata **nascosta a mano** — 3b-O.3.2, 21/08/2026.
+///
+/// ══ 🚨 NON È «CONSIGLIO AUTOMATICO SPENTO», ED È IMPORTANTE ═══════════════
+///
+/// Sul server esiste già `consiglio_automatico`, e sembra la stessa cosa. ⚠️
+/// **Non lo è**: quello ferma la **spesa** — il server smette di rigenerare — e
+/// il consiglio che c'è resta visibile. Questo nasconde la **card**, e non tocca
+/// niente di quello che il server fa.
+///
+/// 🚨 Confonderli vorrebbe dire spegnere una cosa credendo di spegnerne
+/// un'altra: chi nasconde la card per farsi spazio si ritroverebbe senza
+/// consiglio anche il giorno che la riaccende.
+///
+/// 💡 Vive sul telefono e non sul server: è una preferenza di **questo schermo**,
+/// e su un secondo telefono la stessa persona può volerla diversa.
+const chiaveConsiglioNascosto = 'consiglio.nascosto';
+
+final consiglioNascostoProvider = NotifierProvider<ConsiglioNascosto, bool>(
+  ConsiglioNascosto.new,
+);
+
+class ConsiglioNascosto extends Notifier<bool> {
+  @override
+  bool build() =>
+      ref.watch(localCacheProvider).getString(chiaveConsiglioNascosto) == '1';
+
+  Future<void> imposta({required bool nascosto}) async {
+    final cache = ref.read(localCacheProvider);
+
+    if (nascosto) {
+      await cache.setString(chiaveConsiglioNascosto, '1');
+    } else {
+      await cache.remove(chiaveConsiglioNascosto);
+    }
+
+    state = nascosto;
+  }
+}
+
 final consiglioDaMostrareProvider =
     FutureProvider.autoDispose<ConsiglioDaMostrare>((ref) async {
+      /*
+   * 🚨 **Nascosta a mano: si esce subito** — 3b-O.3.2.
+   *
+   * ⚠️ Prima di qualunque altra cosa, compreso il ricordo dell'ultimo
+   * consiglio: chi l'ha nascosta non deve vederla ricomparire perché il server
+   * ha risposto qualcosa.
+   */
+      if (ref.watch(consiglioNascostoProvider)) {
+        return const ConsiglioDaMostrare(stato: StatoConsiglio.spento);
+      }
+
       final cache = ref.watch(localCacheProvider);
 
       ConsiglioDaMostrare? ricordo() {

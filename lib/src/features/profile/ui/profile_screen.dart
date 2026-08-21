@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/auth_controller.dart';
+import '../../dashboard/consiglio_da_mostrare.dart';
 import '../../onboarding/branding_controller.dart';
 import '../../scoperta/ui/scelta_citta.dart';
+import '../colore_accento.dart';
 import '../profile_controller.dart';
 import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
@@ -231,6 +233,49 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
 
+                /*
+                 * 🆕 **Dove si riaccende il consiglio nascosto** — 3b-O.3.2.
+                 *
+                 * 🚨 È la metà che rende accettabile il pulsante «nascondi»
+                 * sulla card: un elemento che sparisce senza un posto dove
+                 * tornare è un elemento **perso**, e chi l'ha nascosto per
+                 * sbaglio non ha modo di rimediare.
+                 *
+                 * ⚠️ Compare **solo quando è nascosta**: una voce che dice
+                 * «mostra una cosa che stai già vedendo» è rumore in un elenco
+                 * che ne ha già abbastanza.
+                 */
+                /*
+                 * 🆕 **Il colore d'accento, solo senza palestra** — 3b-O.1a.1.
+                 *
+                 * 🚨 Chi una palestra ce l'ha **non lo vede**, e non è una
+                 * dimenticanza: il colore è l'identità del cliente (ADR-A01), e
+                 * lasciarlo cambiare a un iscritto vorrebbe dire che può
+                 * spegnere il marchio della palestra che lo paga.
+                 */
+                if (!(ref
+                        .watch(brandingControllerProvider)
+                        .branding
+                        .name
+                        ?.isNotEmpty ??
+                    false)) ...[
+                  const _ScegliColore(),
+                  const Divider(height: 1),
+                ],
+
+                if (ref.watch(consiglioNascostoProvider)) ...[
+                  ListTile(
+                    leading: const Icon(Icons.auto_awesome_outlined),
+                    title: const Text('Consiglio del giorno'),
+                    subtitle: const Text('Nascosto dalla schermata Oggi'),
+                    trailing: const Text('Mostra'),
+                    onTap: () => ref
+                        .read(consiglioNascostoProvider.notifier)
+                        .imposta(nascosto: false),
+                  ),
+                  const Divider(height: 1),
+                ],
+
                 ListTile(
                   leading: const Icon(Icons.monitor_heart_outlined),
                   title: const Text('Sonno e recupero'),
@@ -407,3 +452,77 @@ String _nomeFornitore(String id) => switch (id) {
   'apple' => 'Apple',
   _ => id,
 };
+
+/// La tavolozza dell'accento — 3b-O.1a.1.
+///
+/// ⚠️ **Otto colori e non un selettore libero**, ed è una scelta di sicurezza
+/// oltre che del committente: questo colore diventa lo sfondo
+/// dell'intestazione, e sopra ci vanno testo e icone di sistema. 🚨 Con un
+/// colore qualunque quel testo **sparisce**, e non c'è modo di impedirlo a
+/// valle.
+class _ScegliColore extends ConsumerWidget {
+  const _ScegliColore();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scelto = ref.watch(accentoSceltoProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, Gap.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.palette_outlined),
+              const SizedBox(width: Gap.md),
+              Expanded(
+                child: Text(
+                  "Colore dell'app",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: Gap.sm),
+
+          Wrap(
+            spacing: Gap.sm,
+            runSpacing: Gap.sm,
+            children: [
+              for (final voce in ColoreAccento.tavolozza.entries)
+                GestureDetector(
+                  onTap: () =>
+                      ref.read(accentoSceltoProvider.notifier).scegli(voce.key),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: voce.value,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: scelto == voce.key
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                    // 💡 Il segno di spunta oltre al bordo: chi non distingue
+                    // bene i colori non vedrebbe quale è selezionato.
+                    child: scelto == voce.key
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

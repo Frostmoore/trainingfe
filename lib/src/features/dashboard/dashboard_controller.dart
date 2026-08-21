@@ -16,8 +16,12 @@ import 'data/dashboard_models.dart';
 /// 🚨 **Una chiamata sola.** Calorie, allenamenti, peso, sonno e parametri
 /// arrivano insieme: con cinque richieste separate basta che una sia lenta
 /// perché la schermata compaia a pezzi, e su rete mobile succede sempre.
-final dashboardProvider = FutureProvider.autoDispose<DashboardSummary>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/dashboard');
+final dashboardProvider = FutureProvider.autoDispose<DashboardSummary>((
+  ref,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>('/dashboard');
 
   return DashboardSummary.fromJson(data);
 });
@@ -45,12 +49,17 @@ class Series {
   factory Series.fromJson(Map<String, dynamic> j) {
     final medie = (j['averages'] as Map?)?.cast<String, dynamic>() ?? const {};
 
-    List<double> numeri(String chiave) =>
-        ((j[chiave] as List?) ?? const []).map((e) => (e as num).toDouble()).toList();
+    List<double> numeri(String chiave) => ((j[chiave] as List?) ?? const [])
+        .map((e) => (e as num).toDouble())
+        .toList();
 
     return Series(
-      labels: ((j['labels'] as List?) ?? const []).map((e) => e.toString()).toList(),
-      dates: ((j['dates'] as List?) ?? const []).map((e) => e.toString()).toList(),
+      labels: ((j['labels'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      dates: ((j['dates'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       values: numeri('values'),
       consumed: numeri('consumed'),
       burned: numeri('burned'),
@@ -96,7 +105,9 @@ class Series {
   final bool canGoBack;
 
   bool get vuota =>
-      values.isEmpty && consumed.every((v) => v == 0) && burned.every((v) => v == 0);
+      values.isEmpty &&
+      consumed.every((v) => v == 0) &&
+      burned.every((v) => v == 0);
 }
 
 /// La finestra scelta per il grafico delle calorie.
@@ -110,7 +121,9 @@ class CaloriesWindow {
       CaloriesWindow(days: days ?? this.days, offset: offset ?? this.offset);
 }
 
-final caloriesWindowProvider = StateProvider<CaloriesWindow>((ref) => const CaloriesWindow());
+final caloriesWindowProvider = StateProvider<CaloriesWindow>(
+  (ref) => const CaloriesWindow(),
+);
 
 final weightWindowProvider = StateProvider<int>((ref) => 0);
 
@@ -158,7 +171,11 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>(
         '/series',
-        query: {'metric': 'calories', 'days': finestra.days, 'offset': finestra.offset},
+        query: {
+          'metric': 'calories',
+          'days': finestra.days,
+          'offset': finestra.offset,
+        },
       );
 
   return Series.fromJson(data);
@@ -169,8 +186,35 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
 /// ⚠️ `null` quando il profilo non basta a calcolare un fabbisogno: senza
 /// target l'AI non ha niente su cui costruire un consiglio, e inventarne uno
 /// generico sarebbe rumore.
-final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
-  /*
+/// Il contesto del consiglio, **in un posto solo** — FASE 2-septies, 21/08.
+///
+/// ══ 🚨 PERCHÉ È UN PROVIDER E NON DUE LISTE DI PARAMETRI ══════════════════
+///
+/// Perché le richieste che chiedono un consiglio sono **due** — la lettura
+/// normale e «Rigenera» — e prima costruivano il contesto **ognuna per conto
+/// suo**. ⚠️ Non erano uguali: `rigeneraConsiglioProvider` mandava target e
+/// recupero e **non** mandava la settimana né i tipi degli allenamenti.
+///
+/// 🚨 **E il server mette il contesto nella chiave della cache.** Due contesti
+/// diversi sono due `context_hash` diversi, quindi:
+///
+/// 1. si tocca «Rigenera» → il server cancella il consiglio di oggi, ne genera
+///    uno con il contesto **povero** e lo scrive con l'hash A. **Pagato.**
+/// 2. l'app invalida `adviceProvider`, che rilegge con il contesto **pieno** →
+///    hash B ≠ A → cache mancata → **si genera di nuovo. Pagato una seconda
+///    volta.**
+///
+/// 💡 Cioè un tocco costava **due** chiamate al modello, e quella che l'utente
+/// leggeva non era quella che aveva chiesto. ⚠️ Il difetto non si vedeva da
+/// nessuna parte: il consiglio arrivava, era pure quello giusto, e il conto lo
+/// pagavamo noi.
+///
+/// 🚨 Da qui la regola: **chi chiede un consiglio passa da questo provider.**
+/// Un terzo chiamante che si ricostruisse la mappa a mano rimetterebbe in piedi
+/// esattamente lo stesso difetto, e nessun test lo vedrebbe.
+final contestoConsiglioProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+      /*
    * 🚨 **Il fabbisogno lo manda l'app, perché il server non può più
    * calcolarlo** — S8.2.
    *
@@ -181,99 +225,96 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
    * ⚠️ **Si manda solo il risultato, non il peso.** Il target è un numero
    * derivato; il peso da cui nasce resta su questo telefono, che è il punto di
    * tutta la fase S5. E il server lo **inoltra al modello senza conservarlo**.
-   *
-   * 💡 Se non c'è — profilo incompleto, nessuna pesata — non si manda niente e
-   * il consiglio esce come può. Meglio un consiglio generico che uno costruito
-   * su un numero inventato.
    */
-  final locale = (await ref.watch(targetLocaleProvider.future)).target;
+      final locale = (await ref.watch(targetLocaleProvider.future)).target;
 
-  /*
+      /*
    * 🚨 **Il recupero lo manda l'app, per la stessa ragione del target** —
-   * 16/08/2026.
-   *
-   * Sonno, variabilità e battito vivono nell'archivio locale (D9): il server
-   * non li ha e non li conserva. Se li vuole il consiglio, glieli deve passare
-   * chi ce li ha.
-   *
-   * 💡 E risolve un conflitto che sembrava grosso: il consiglio **non può**
-   * essere generato da un job del server, perché il server questi dati non li
-   * vede. Lo chiede l'app — al massimo una volta per fascia — e il tetto di tre
-   * al giorno resta senza nessuno schedulatore.
+   * 16/08/2026. Sonno, variabilità e battito vivono nell'archivio locale (D9):
+   * il server non li ha e non li conserva.
    *
    * ⚠️ **Si manda anche se il consenso manca**, e non è una svista: la
    * decisione sta sul server (`AiController::recuperoDallApp()`), che è l'unico
    * posto dove non si aggira. Un client che decide da solo cosa può mandare è
    * un client di cui bisogna fidarsi, e non ci si fida mai.
    */
-  final recupero = await ref.watch(recuperoPerIlConsiglioProvider.future);
+      final recupero = await ref.watch(recuperoPerIlConsiglioProvider.future);
 
-  /*
-   * 🆕 20/08 — il **tipo** degli allenamenti della settimana.
-   *
-   * 🚨 Lo sa solo il telefono: sul server il tipo non esiste, e l'unico posto
-   * dove esiste «Pesi» e' l'orologio. Vedi `tipiDegliAllenamentiProvider`.
-   *
-   * ⚠️ **Un guasto qui non deve far sparire il consiglio.** Il tipo e' un di
-   * piu': se l'archivio locale non si legge, il consiglio parte con quello che
-   * c'e' — e' la stessa regola per cui il recupero e' facoltativo.
-   */
-  /*
+      /*
    * 🆕 20/08 — la settimana: sonno, HRV, battito e allenamenti.
    *
    * 🚨 Chiude due difetti con la stessa radice: il consiglio riceveva **una
-   * notte sola** e **zero allenamenti dell'orologio**, e da li' inventava il
-   * resto. *«non vede il mio allenamento di ieri»* e *«non e' vero che di
+   * notte sola** e **zero allenamenti dell'orologio**, e da lì inventava il
+   * resto. *«non vede il mio allenamento di ieri»* e *«non è vero che di
    * solito dormo bene»* erano lo stesso problema visto da due lati.
    *
-   * ⚠️ Anche questa e' facoltativa: se l'archivio non si legge, il consiglio
-   * parte con quello che c'e'.
+   * ⚠️ È facoltativa: se l'archivio non si legge, il consiglio parte con quello
+   * che c'è.
    */
-  final settimana = await ref
-      .watch(settimanaPerIlConsiglioProvider.future)
-      .then((s) => s.payload)
-      .catchError((Object e) {
-    debugPrint('adviceProvider: la settimana non si legge — $e');
+      final settimana = await ref
+          .watch(settimanaPerIlConsiglioProvider.future)
+          .then((s) => s.payload)
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: la settimana non si legge — $e');
 
-    return const <String, Object>{};
-  });
+            return const <String, Object>{};
+          });
 
-  final tipi = await ref
-      .watch(tipiDegliAllenamentiProvider.future)
-      .catchError((Object e) {
-    debugPrint('adviceProvider: i tipi degli allenamenti non si leggono — $e');
+      /*
+   * 🆕 20/08 — il **tipo** degli allenamenti della settimana.
+   *
+   * 🚨 Lo sa solo il telefono: sul server il tipo non esiste, e l'unico posto
+   * dove esiste «Pesi» è l'orologio. ⚠️ Un guasto qui non deve far sparire il
+   * consiglio: è un di più.
+   */
+      final tipi = await ref
+          .watch(tipiDegliAllenamentiProvider.future)
+          .catchError((Object e) {
+            debugPrint(
+              'contestoConsiglio: i tipi degli allenamenti non si leggono — $e',
+            );
 
-    return const <int, String>{};
-  });
+            return const <int, String>{};
+          });
+
+      return {
+        if (locale != null) ...{
+          'target_kcal': locale.kcal,
+          'target_protein_g': locale.macro.proteineG,
+          'target_carbs_g': locale.macro.carboidratiG,
+          'target_fat_g': locale.macro.grassiG,
+        },
+        ...recupero,
+        ...settimana,
+
+        /*
+     * 🚨 Il **codice**, non l'etichetta: `STRENGTH_TRAINING`, non «Pesi». Il
+     * server rifiuta tutto ciò che non è `[A-Z_]{2,48}`, ed è quella regex a
+     * garantire che da qui non esca testo libero.
+     */
+        for (final voce in tipi.entries)
+          'training_types[${voce.key}]': voce.value,
+      };
+    });
+
+/// Il consiglio del giorno.
+///
+/// ⚠️ `null` quando il profilo non basta a calcolare un fabbisogno: senza
+/// target l'AI non ha niente su cui costruire un consiglio, e inventarne uno
+/// generico sarebbe rumore.
+final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
+  final contesto = await ref.watch(contestoConsiglioProvider.future);
 
   try {
     final data = await ref
         .watch(apiClientProvider)
-        .get<Map<String, dynamic>>(
-          '/ai/advice',
-          query: {
-            if (locale != null) ...{
-              'target_kcal': locale.kcal,
-              'target_protein_g': locale.macro.proteineG,
-              'target_carbs_g': locale.macro.carboidratiG,
-              'target_fat_g': locale.macro.grassiG,
-            },
-            ...recupero,
-            ...settimana,
-
-            /*
-             * 🚨 Il **codice**, non l'etichetta: `STRENGTH_TRAINING`, non
-             * «Pesi». Il server rifiuta tutto cio' che non e' `[A-Z_]{2,48}`,
-             * ed e' quella regex a garantire che da qui non esca testo libero.
-             */
-            for (final voce in tipi.entries)
-              'training_types[${voce.key}]': voce.value,
-          },
-        );
+        .get<Map<String, dynamic>>('/ai/advice', query: contesto);
 
     return Consiglio(
       testo: data['body']?.toString(),
-      generatoIl: DateTime.tryParse(data['generated_at']?.toString() ?? '')?.toLocal(),
+      generatoIl: DateTime.tryParse(
+        data['generated_at']?.toString() ?? '',
+      )?.toLocal(),
     );
   } on ForbiddenException {
     /*
@@ -335,21 +376,27 @@ class Consiglio {
 /// — e l'utente avrebbe pagato per peggiorarlo.
 final rigeneraConsiglioProvider = Provider<Future<void> Function()>((ref) {
   return () async {
-    final locale = (await ref.read(targetLocaleProvider.future)).target;
-    final recupero = await ref.read(recuperoPerIlConsiglioProvider.future);
+    /*
+     * 🚨 **Lo stesso contesto della lettura, e non è un dettaglio di stile** —
+     * FASE 2-septies, 21/08.
+     *
+     * Qui prima si costruiva una mappa **più povera** (target e recupero, senza
+     * la settimana e senza i tipi). ⚠️ Il server mette il contesto nella chiave
+     * della cache: un contesto diverso è un `context_hash` diverso, quindi la
+     * lettura che segue non trovava niente e **rigenerava una seconda volta**.
+     * Due chiamate al modello per un tocco, e il testo pagato per primo
+     * buttato.
+     *
+     * 💡 Con `contestoConsiglioProvider` i due hash coincidono: si genera una
+     * volta, e la lettura subito dopo trova la cache.
+     */
+    final contesto = await ref.read(contestoConsiglioProvider.future);
 
-    await ref.read(apiClientProvider).get<Map<String, dynamic>>(
-      '/ai/advice',
-      query: {
-        'manuale': 1,
-        if (locale != null) ...{
-          'target_kcal': locale.kcal,
-          'target_protein_g': locale.macro.proteineG,
-          'target_carbs_g': locale.macro.carboidratiG,
-          'target_fat_g': locale.macro.grassiG,
-        },
-        ...recupero,
-      },
-    );
+    await ref
+        .read(apiClientProvider)
+        .get<Map<String, dynamic>>(
+          '/ai/advice',
+          query: {'manuale': 1, ...contesto},
+        );
   };
 });

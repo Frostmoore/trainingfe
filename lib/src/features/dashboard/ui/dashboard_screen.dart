@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,11 +9,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../forma/ui/scheda_forma.dart';
-import '../../health/health_controller.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
+import 'widgets/grafico_calorie.dart';
+import 'widgets/scheda_peso.dart';
 import 'widgets/today_cards.dart';
 import 'widgets/today_header.dart';
 
@@ -116,10 +116,27 @@ class DashboardScreen extends ConsumerWidget {
                   const SchedaForma(),
 
                   const RecoveryCard(),
-                  WeightCard(pesoObiettivo: r.body.targetWeightKg),
+
+                  /*
+                   * ⚖️ **Peso e grafico: una scheda sola** — 3b-O.6+8.
+                   *
+                   * ⛔ `WeightCard` e `_GraficoPeso` **non esistono più**: erano
+                   * due schede lontane fra loro che rispondevano alla stessa
+                   * domanda, e chi le leggeva doveva tenersi il numero a mente
+                   * mentre scorreva fino al grafico.
+                   */
+                  SchedaPeso(pesoObiettivo: r.body.targetWeightKg),
+
                   TrainingCard(riepilogo: r),
-                  const _GraficoPeso(),
-                  const _GraficoCalorie(),
+                  /*
+                   * 🔥 **Il grafico delle calorie, rifatto** — 3b-O.9.
+                   *
+                   * ⛔ `_GraficoCalorie` **non esiste più**: affiancava due
+                   * grandezze che non erano la stessa cosa — un totale e uno
+                   * scostamento — e il confronto che invitava a fare non
+                   * significava niente.
+                   */
+                  const GraficoCalorie(),
                 ],
               ),
 
@@ -407,366 +424,6 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
   }
 }
 
-class _GraficoPeso extends ConsumerWidget {
-  const _GraficoPeso();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final serie = ref.watch(weightSeriesProvider);
-    final finestra = ref.watch(weightWindowProvider);
-
-    return _Riquadro(
-      titolo: 'Peso',
-      selettore: _Finestre(
-        opzioni: const {30: '30g', 90: '90g', 365: '1a', 0: 'tutto'},
-        attuale: finestra,
-        onCambia: (g) => ref.read(weightWindowProvider.notifier).state = g,
-      ),
-      child: serie.when(
-        loading: () => const SizedBox(
-          height: 160,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (_, _) => const SizedBox(
-          height: 160,
-          child: Center(child: Text('Non disponibile')),
-        ),
-        // ⚠️ «in due giorni diversi» e non «due volte»: pesarsi due volte lo
-        // stesso giorno è una correzione e lascia **un** punto solo. Chi lo ha
-        // fatto e legge «due volte» conclude che l'app abbia perso il dato.
-        data: (s) => s.values.length < 2
-            ? const _NienteDati(
-                messaggio:
-                    'Registra il peso in almeno due giorni diversi '
-                    'per vedere l\'andamento.',
-              )
-            : SizedBox(
-                height: 180,
-                child: LineChart(
-                  LineChartData(
-                    gridData: const FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                    ),
-                    borderData: FlBorderData(show: false),
-                    titlesData: _titoli(s.labels),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: [
-                          for (var i = 0; i < s.values.length; i++)
-                            FlSpot(i.toDouble(), s.values[i]),
-                        ],
-                        isCurved: true,
-                        barWidth: 3,
-                        color: Theme.of(context).colorScheme.primary,
-                        dotData: const FlDotData(show: false),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _GraficoCalorie extends ConsumerWidget {
-  const _GraficoCalorie();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final serie = ref.watch(caloriesSeriesProvider);
-    final finestra = ref.watch(caloriesWindowProvider);
-    final theme = Theme.of(context);
-
-    /*
-     * 💡 Le date come **una stringa sola**: e' la chiave della `family`, e una
-     * lista non va bene — due liste con lo stesso contenuto non sono uguali per
-     * Riverpod, e il provider si ricreerebbe a ogni ridisegno. E' la stessa
-     * trappola di `DateTime.now()`, in un'altra forma.
-     */
-    final giorni = serie.valueOrNull?.dates ?? const <String>[];
-
-    final daHealth = giorni.isEmpty
-        ? const <String, int>{}
-        : (ref
-                  .watch(kcalAttivePerGiorniProvider(giorni.join(',')))
-                  .valueOrNull ??
-              const <String, int>{});
-
-    return _Riquadro(
-      titolo: 'Calorie',
-      sottotitolo: 'assunte contro bruciate',
-      selettore: _Finestre(
-        opzioni: const {7: '7g', 30: '30g', 90: '3m', 365: '1a', 0: 'tutto'},
-        attuale: finestra.days,
-        onCambia: (g) => ref.read(caloriesWindowProvider.notifier).state =
-            CaloriesWindow(days: g),
-      ),
-      child: serie.when(
-        loading: () => const SizedBox(
-          height: 180,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (_, _) => const SizedBox(
-          height: 180,
-          child: Center(child: Text('Non disponibile')),
-        ),
-        data: (s) => Column(
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  // «Tutto» non scorre: non c'è niente prima di tutto. Lo dice
-                  // il server con `can_go_back`, così la regola non è
-                  // duplicata qui.
-                  onPressed: s.canGoBack
-                      ? () => ref.read(caloriesWindowProvider.notifier).state =
-                            finestra.copyWith(offset: finestra.offset + 1)
-                      : null,
-                  icon: const Icon(Icons.chevron_left_rounded),
-                ),
-                Expanded(
-                  child: Text(
-                    s.period ?? '',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-                IconButton(
-                  onPressed: finestra.offset > 0
-                      ? () => ref.read(caloriesWindowProvider.notifier).state =
-                            finestra.copyWith(offset: finestra.offset - 1)
-                      : null,
-                  icon: const Icon(Icons.chevron_right_rounded),
-                ),
-              ],
-            ),
-            if (s.vuota)
-              const _NienteDati(messaggio: 'Nessun dato in questo periodo.')
-            else
-              SizedBox(
-                height: 180,
-                child: BarChart(
-                  BarChartData(
-                    gridData: const FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                    ),
-                    borderData: FlBorderData(show: false),
-                    titlesData: _titoli(s.labels),
-                    barGroups: [
-                      for (var i = 0; i < s.labels.length; i++)
-                        BarChartGroupData(
-                          x: i,
-                          barRods: [
-                            BarChartRodData(
-                              toY: i < s.consumed.length ? s.consumed[i] : 0,
-                              color: theme.colorScheme.primary,
-                              width: 6,
-                            ),
-                            BarChartRodData(
-                              /*
-                               * 🚨 **Le bruciate vengono dalla stessa fonte
-                               * dell'intestazione** — 19/08/2026.
-                               *
-                               * Qui c'era `s.burned[i]`, cioe' la serie del
-                               * **server**: quello calcola con la formula sulle
-                               * sedute registrate e le calorie dell'orologio non
-                               * le ha — restano sul telefono per decisione del
-                               * committente.
-                               *
-                               * ⚠️ Risultato: l'intestazione diceva 680 e il
-                               * grafico zero. Non due numeri sbagliati: **due
-                               * fonti diverse per lo stesso numero**, e ne avevo
-                               * corretta una sola.
-                               */
-                              toY: _bruciateDi(s, i, daHealth),
-                              color: theme.colorScheme.tertiary,
-                              width: 6,
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: Gap.sm),
-            // 🚨 Il contesto della media è parte della media: «2.200 di media»
-            // su due giorni registrati su sette non è lo stesso numero che su
-            // sette, e senza dirlo si legge come se lo fosse.
-            Text(
-              s.daysWithData == 0
-                  ? 'Nessun giorno registrato in questo periodo.'
-                  : 'Media ${s.avgConsumed} kcal assunte e ${s.avgBurned} bruciate, '
-                        'sui ${s.daysWithData} giorni in cui hai registrato qualcosa.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-FlTitlesData _titoli(List<String> etichette) => FlTitlesData(
-  topTitles: const AxisTitles(),
-  rightTitles: const AxisTitles(),
-  leftTitles: const AxisTitles(
-    sideTitles: SideTitles(showTitles: true, reservedSize: 38),
-  ),
-  bottomTitles: AxisTitles(
-    sideTitles: SideTitles(
-      showTitles: true,
-      // Un'etichetta ogni tot: con trenta barre si sovrapporrebbero fino a
-      // diventare una macchia nera.
-      interval: (etichette.length / 6).ceilToDouble().clamp(1, 100),
-      getTitlesWidget: (valore, meta) {
-        final i = valore.toInt();
-
-        if (i < 0 || i >= etichette.length) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.only(top: Gap.xs),
-          child: Text(etichette[i], style: const TextStyle(fontSize: 10)),
-        );
-      },
-    ),
-  ),
-);
-
-class _Riquadro extends StatelessWidget {
-  const _Riquadro({
-    required this.titolo,
-    required this.child,
-    this.sottotitolo,
-    this.selettore,
-  });
-
-  final String titolo;
-  final String? sottotitolo;
-  final Widget? selettore;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(Gap.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titolo,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (sottotitolo != null)
-                      Text(
-                        sottotitolo!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (selettore != null) ...[
-            const SizedBox(height: Gap.sm),
-            selettore!,
-          ],
-          const SizedBox(height: Gap.md),
-          child,
-        ],
-      ),
-    ),
-  );
-}
-
-class _Finestre extends StatelessWidget {
-  const _Finestre({
-    required this.opzioni,
-    required this.attuale,
-    required this.onCambia,
-  });
-
-  final Map<int, String> opzioni;
-  final int attuale;
-  final ValueChanged<int> onCambia;
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        for (final voce in opzioni.entries)
-          Padding(
-            padding: const EdgeInsets.only(right: Gap.xs),
-            child: ChoiceChip(
-              label: Text(voce.value),
-              selected: attuale == voce.key,
-              onSelected: (_) => onCambia(voce.key),
-            ),
-          ),
-      ],
-    ),
-  );
-}
-
-class _NienteDati extends StatelessWidget {
-  const _NienteDati({required this.messaggio});
-
-  final String messaggio;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 120,
-    child: Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-        child: Text(
-          messaggio,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ),
-    ),
-  );
-}
-
-/// Il consiglio del giorno c'è, ma serve il consenso — S9.
-///
-/// 🚨 **Non è un errore da nascondere: è un'azione da proporre.** Prima questo
-/// caso spariva dentro un `catch` che inghiottiva tutto allo stesso modo, e la
-/// card semplicemente non compariva — indistinguibile da un guasto.
-/// La card del consiglio quando non ne abbiamo ancora **nessuno**.
-///
-/// ── 🚨 Perché uno spazio occupato è meglio di uno spazio vuoto ────────────
-///
-/// Perché la card che compare e scompare fa **saltare la schermata**: le tre
-/// card sotto si spostano su e giù a ogni caricamento, e chi stava per toccarne
-/// una tocca quella sbagliata.
-///
-/// ⚠️ E perché dice cosa sta succedendo. Uno spazio vuoto lascia a chi guarda
-/// il compito di indovinare se la funzione esiste, se è rotta o se non ha
-/// ancora finito — ed è la stessa lezione del ripristino muto (§2t.8).
-///
-/// 💡 Compare **solo la primissima volta**: dal secondo giorno in poi c'è
-/// sempre un consiglio ricordato da mostrare al suo posto.
 class _ConsiglioInArrivo extends StatelessWidget {
   const _ConsiglioInArrivo();
 
@@ -934,11 +591,3 @@ class _ConsensoAiMancante extends StatelessWidget {
 /// l'allenamento che la formula del server sta stimando: sommarli darebbe il
 /// doppio, con un numero che resta plausibile. E' la stessa regola di
 /// `BruciateDelGiorno`, applicata al grafico.
-double _bruciateDi(Series s, int i, Map<String, int> daHealth) {
-  final data = i < s.dates.length ? s.dates[i] : null;
-  final orologio = data == null ? null : daHealth[data];
-
-  if (orologio != null && orologio > 0) return orologio.toDouble();
-
-  return i < s.burned.length ? s.burned[i] : 0;
-}

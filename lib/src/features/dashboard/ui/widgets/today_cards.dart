@@ -18,6 +18,7 @@ import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../sleep/sleep_controller.dart';
 import '../../data/dashboard_models.dart';
+import '../../riassunto_settimana.dart';
 import 'onda_metrica.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -56,6 +57,28 @@ class CaloriesCard extends ConsumerWidget {
         ? null
         : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
+
+    /*
+     * ══ 🆕 IL CONSUMO STIMATO, ACCANTO AL TARGET — 3b-O.2.4, 21/08/2026 ═════
+     *
+     * 📌 *«Nella card delle calorie sopra, vicino al target ci deve essere
+     * scritto anche il mio tdaa»*.
+     *
+     * 💡 **Sono due numeri diversi e serve saperlo**: il *target* è quanto si
+     * dovrebbe mangiare per arrivare dove si vuole, il *consumo* è quanto si
+     * brucia stando come si sta. **La distanza fra i due è la dieta**, e finora
+     * non si vedeva da nessuna parte se non entrando nel profilo.
+     *
+     * ⚠️ **Si legge sempre**, anche quando l'obiettivo arriva dal piano del
+     * trainer: lì `esito` resta `null` di proposito (non si mostrano due
+     * obiettivi), ma il consumo non è un secondo obiettivo — è un fatto sul
+     * corpo, e non contraddice il piano di nessuno.
+     *
+     * 🚨 Si scrive **«consumo»** e non «TDAA»: è il nome che usa già
+     * `edit_profile_screen` («consumo stimato»), ed è l'unico che si capisce
+     * senza sapere cosa vuol dire la sigla.
+     */
+    final consumo = ref.watch(targetLocaleProvider).valueOrNull?.target?.tdee;
 
     // 🚨 Le bruciate entrano nell'obiettivo — N23.B1. La regola sta in
     // `TargetDelGiorno` e in nessun altro posto: le schermate che mostrano un
@@ -118,6 +141,16 @@ class CaloriesCard extends ConsumerWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                   const Spacer(),
+                  if (consumo != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: Gap.sm),
+                      child: Text(
+                        'consumo ${consumo.round()}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   if (bruciate.esistono)
                     Row(
                       children: [
@@ -726,8 +759,28 @@ class TrainingCard extends ConsumerWidget {
               style: theme.textTheme.bodySmall,
             ),
 
+            /*
+             * ══ 🆕 IL RIASSUNTO DEI SETTE GIORNI — 3b-O.7.3 ═════════════════
+             *
+             * 📌 *«sopra ci deve essere un riassunto di quanto peso ho
+             * sollevato, quanti km ho corso/camminato/biciclettato, quante
+             * calorie ho bruciato […] quante proteine ho assunto e quanto ho
+             * riposato»*.
+             *
+             * 💡 **Sopra l'elenco e non sotto**: chi apre «Oggi» vuole sapere
+             * come sta andando la settimana, non rileggere i nomi delle sedute
+             * che ha fatto lui. L'elenco resta perché serve ad *aprirne* una.
+             */
+            const _SetteGiorni(),
+
             const SizedBox(height: Gap.sm),
 
+            /*
+             * 🚨 Le sedute restano quelle **recenti dal server**, e non quelle
+             * dello storico unificato: qui servono per **toccarle** — portano al
+             * riepilogo o al player — e quelle dell'orologio una pagina propria
+             * non ce l'hanno.
+             */
             for (final s in t.recent.take(3))
               ListTile(
                 dense: true,
@@ -759,6 +812,162 @@ class TrainingCard extends ConsumerWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Il riassunto degli ultimi sette giorni — 3b-O.7.3 e 3b-O.7.4.
+///
+/// ⛔ **Le voci senza dati spariscono**, e la scheda con nessuna voce non
+/// disegna niente: è la regola di O.1b.1, e qui pesa di più perché questi numeri
+/// sono somme su sette giorni. ⚠️ Uno zero da «dato mancante» non direbbe «non
+/// lo so», direbbe «non hai fatto niente».
+class _SetteGiorni extends ConsumerWidget {
+  const _SetteGiorni();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final r = ref.watch(riassuntoSettimanaProvider).valueOrNull;
+
+    if (r == null || r.vuoto) return const SizedBox.shrink();
+
+    final voci = <(IconData, String, String)>[
+      if (r.volumeKg != null)
+        (Icons.fitness_center_rounded, _tonnellate(r.volumeKg!), 'sollevati'),
+      if (r.metri != null)
+        (
+          Icons.directions_run_rounded,
+          '${(r.metri! / 1000).toStringAsFixed(1)} km',
+          'percorsi',
+        ),
+      if (r.kcalBruciate != null)
+        (Icons.local_fire_department_rounded, '${r.kcalBruciate}', 'bruciate'),
+      if (r.proteineG != null)
+        (Icons.egg_alt_outlined, '${r.proteineG} g', 'proteine'),
+      if (r.minutiDormiti != null)
+        (
+          Icons.bedtime_outlined,
+          '${(r.minutiDormiti! / 60).round()} h',
+          'di sonno',
+        ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ultimi 7 giorni · ${r.sedute} '
+            '${r.sedute == 1 ? 'allenamento' : 'allenamenti'}',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+
+          const SizedBox(height: Gap.sm),
+
+          /*
+           * 🚨 Un `Wrap`, non un `Row` — la lezione di §56.3 n° 1: le voci sono
+           * cinque e possono diventare lunghe. ⛔ E dentro un `Wrap` la
+           * larghezza la dichiara il figlio, perché nessuno distribuisce lo
+           * spazio.
+           */
+          Wrap(
+            spacing: Gap.md,
+            runSpacing: Gap.sm,
+            children: [
+              for (final (icona, valore, etichetta) in voci)
+                SizedBox(
+                  width: 76,
+                  child: Column(
+                    children: [
+                      Icon(icona, size: 16, color: theme.colorScheme.primary),
+                      Text(
+                        valore,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        etichetta,
+                        style: theme.textTheme.labelSmall,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+
+          if (r.pesoStimatoKg != null) ...[
+            const SizedBox(height: Gap.sm),
+            _PesoStimato(kg: r.pesoStimatoKg!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 💡 In tonnellate sopra i mille chili: «12.400 kg» si legge male, e in una
+  /// settimana di palestra ci si arriva senza sforzo.
+  static String _tonnellate(double kg) =>
+      kg >= 1000 ? '${(kg / 1000).toStringAsFixed(1)} t' : '${kg.round()} kg';
+}
+
+/// Quanto peso si sarebbe perso o guadagnato — 3b-O.7.4.
+///
+/// 🚨 **L'avvertenza non è facoltativa.** Il numero esce da 7.700 kcal per
+/// chilo, che è una stima del 1958 e non tiene conto di acqua, glicogeno né
+/// dell'adattamento metabolico. ⚠️ Senza la riga sotto si legge come una misura,
+/// e chi non la vede confermata dalla bilancia smette di fidarsi dell'app.
+class _PesoStimato extends StatelessWidget {
+  const _PesoStimato({required this.kg});
+
+  final double kg;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // ⚠️ Sotto i 50 grammi non si scrive «−0.0 kg», che sembra un guasto.
+    final trascurabile = kg.abs() < 0.05;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(Gap.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(Gap.radiusSm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            trascurabile
+                ? 'In pari con il tuo consumo, questa settimana.'
+                : '${kg > 0 ? '+' : ''}${kg.toStringAsFixed(1)} kg '
+                      'con quanto hai mangiato e speso',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          Text(
+            'Stima da 7.700 kcal per chilo: non è una misura, e le prime '
+            'settimane sbaglia per eccesso.',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

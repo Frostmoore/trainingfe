@@ -67,6 +67,7 @@ class Series {
     this.values = const [],
     this.consumed = const [],
     this.burned = const [],
+    this.protein = const [],
     this.period,
     this.avgConsumed = 0,
     this.avgBurned = 0,
@@ -91,6 +92,7 @@ class Series {
       values: numeri('values'),
       consumed: numeri('consumed'),
       burned: numeri('burned'),
+      protein: numeri('protein'),
       granularity: j['granularity']?.toString() ?? 'day',
       period: j['period']?.toString(),
       avgConsumed: (medie['consumed'] as num?)?.toInt() ?? 0,
@@ -108,6 +110,17 @@ class Series {
   /// Solo per le calorie.
   final List<double> consumed;
   final List<double> burned;
+
+  /// I grammi di proteine per giorno — 3b-O.7.3, 21/08/2026.
+  ///
+  /// ⚠️ **Vuota se il server non li manda ancora**, e va bene: il campo è stato
+  /// *aggiunto* a `/series`, e un'app nuova contro un server vecchio deve
+  /// funzionare lo stesso. 💡 Chi la usa nasconde la voce invece di scrivere
+  /// zero — uno zero direbbe «non hai mangiato proteine», che è un'altra cosa.
+  ///
+  /// ⛔ Arriva **solo** sulla vista per giorno: una media mensile di grammi non
+  /// risponde a nessuna domanda.
+  final List<double> protein;
 
   /// Le date vere delle colonne (`yyyy-mm-dd`) — 19/08/2026.
   ///

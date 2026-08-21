@@ -76,9 +76,9 @@ class CaloriesCard extends ConsumerWidget {
      * obiettivi), ma il consumo non è un secondo obiettivo — è un fatto sul
      * corpo, e non contraddice il piano di nessuno.
      *
-     * 🚨 Si scrive **«consumo»** e non «TDAA»: è il nome che usa già
-     * `edit_profile_screen` («consumo stimato»), ed è l'unico che si capisce
-     * senza sapere cosa vuol dire la sigla.
+     * 🚨 A schermo si scrive **`TDEE`** — vedi la nota più sotto, dove il
+     * numero viene disegnato: la parola «consumo», in quella riga, si legge
+     * come un terzo conteggio.
      */
     final consumo = ref.watch(targetLocaleProvider).valueOrNull?.target?.tdee;
 
@@ -145,12 +145,12 @@ class CaloriesCard extends ConsumerWidget {
                   const Spacer(),
 
                   /*
-                   * ══ 🚨 «TDAA», NON «CONSUMO» — correzione del 21/08 sera ═══
+                   * ══ 🚨 LA SIGLA, NON «CONSUMO» — 21/08/2026 sera ═════════
                    *
                    * 📌 Il committente, vedendola sul telefono: *«mi dice
-                   * "consumato" 2271. Non va bene, mi dovrebbe dire il tdaa,
+                   * "consumato" 2271. Non va bene, mi dovrebbe dire il tdee,
                    * non il consumo. Cioè il discorso è che io qui devo avere:
-                   * consumate/target | tdaa | bruciate»*.
+                   * consumate/target | tdee | bruciate»*.
                    *
                    * ⚠️ **Aveva ragione, ed era un difetto di lettura, non di
                    * numero**: 2.271 era già il valore giusto. Ma la parola
@@ -160,16 +160,19 @@ class CaloriesCard extends ConsumerWidget {
                    * altri due. 🚨 Una sigla non si può confondere con un
                    * conteggio: è il suo unico vantaggio qui.
                    *
-                   * 💡 **Nel codice resta `tdee`**, che è il nome vero (*Total
-                   * Daily Energy Expenditure*): la sigla a schermo è quella che
-                   * usa il committente, e le due cose non devono confondersi
-                   * nemmeno in senso opposto.
+                   * 💡 **La sigla è `TDEE`** — *Total Daily Energy
+                   * Expenditure*. ⚠️ Per un giro è stata «TDAA», che il
+                   * committente aveva usato a voce; corretta da lui stesso il
+                   * 21/08 sera: *«se si dice tdee scrivici così»*. 🚨 Qui
+                   * resta scritto perché la stessa sigla compare nei documenti
+                   * e in due messaggi: chi la ritrova scritta «TDAA» da
+                   * qualche parte sta leggendo qualcosa di superato.
                    */
                   if (consumo != null)
                     Padding(
                       padding: const EdgeInsets.only(right: Gap.sm),
                       child: Text(
-                        'TDAA ${consumo.round()}',
+                        'TDEE ${consumo.round()}',
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

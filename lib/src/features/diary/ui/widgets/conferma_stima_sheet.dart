@@ -63,7 +63,8 @@ class ConfermaStimaSheet extends ConsumerStatefulWidget {
     // questa stima, e perderla con un tocco distratto vorrebbe dire rifarla.
     isDismissible: false,
     enableDrag: false,
-    builder: (_) => ConfermaStimaSheet(stima: stima, meal: meal, daFoto: daFoto),
+    builder: (_) =>
+        ConfermaStimaSheet(stima: stima, meal: meal, daFoto: daFoto),
   );
 
   @override
@@ -149,7 +150,8 @@ class _ConfermaStimaSheetState extends ConsumerState<ConfermaStimaSheet> {
                  * distinguere «il modello dice di non essere sicuro» da «il
                  * sistema ha rifatto il conto al posto suo».
                  */
-                for (final avviso in _stima.avvisi) _AvvisoDelSistema(testo: avviso),
+                for (final avviso in _stima.avvisi)
+                  _AvvisoDelSistema(testo: avviso),
 
                 if (_stima.haMacroImpossibili) const _AvvisoMacroImpossibili(),
 
@@ -159,7 +161,8 @@ class _ConfermaStimaSheetState extends ConsumerState<ConfermaStimaSheet> {
                   _RigaVoce(
                     key: ValueKey('${voce.nome}-$i'),
                     voce: voce,
-                    apertaDaSola: _stima.voci.length == 1 || _stima.livello.apriDaSola,
+                    apertaDaSola:
+                        _stima.voci.length == 1 || _stima.livello.apriDaSola,
                     onCorretta: (nuova) => _correggi(i, nuova),
                     onTolta: _stima.voci.length > 1 ? () => _togli(i) : null,
                   ),
@@ -229,8 +232,14 @@ class _Intestazione extends StatelessWidget {
     /// 💡 Il colore segue il livello, non il numero: tre stati si distinguono
     /// a colpo d'occhio, una scala continua no.
     final (colore, icona) = switch (stima.livello) {
-      LivelloConfidenza.alta => (theme.colorScheme.primary, Icons.check_circle_outline),
-      LivelloConfidenza.media => (theme.colorScheme.tertiary, Icons.help_outline),
+      LivelloConfidenza.alta => (
+        theme.colorScheme.primary,
+        Icons.check_circle_outline,
+      ),
+      LivelloConfidenza.media => (
+        theme.colorScheme.tertiary,
+        Icons.help_outline,
+      ),
       LivelloConfidenza.bassa => (theme.colorScheme.error, Icons.error_outline),
     };
 
@@ -242,7 +251,9 @@ class _Intestazione extends StatelessWidget {
             children: [
               Text(
                 'Ecco cosa ho capito',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: Gap.xs),
               Text(
@@ -322,7 +333,9 @@ class _AvvisoDelSistema extends StatelessWidget {
       padding: const EdgeInsets.all(Gap.md),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Gap.radiusSm),
-        border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +377,9 @@ class _AvvisoMacroImpossibili extends StatelessWidget {
               'Una voce dichiara più proteine, carboidrati e grassi di quanto '
               'pesa: è impossibile. Correggi i valori qui sotto — finché non '
               'tornano, non si può aggiungere al diario.',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
         ],
@@ -401,8 +416,12 @@ class _RigaVoceState extends State<_RigaVoce> {
     text: _testo(widget.voce.qty ?? widget.voce.grammi),
   );
   late final _kcal = TextEditingController(text: _testo(widget.voce.kcal));
-  late final _proteine = TextEditingController(text: _testo(widget.voce.proteine));
-  late final _carbo = TextEditingController(text: _testo(widget.voce.carboidrati));
+  late final _proteine = TextEditingController(
+    text: _testo(widget.voce.proteine),
+  );
+  late final _carbo = TextEditingController(
+    text: _testo(widget.voce.carboidrati),
+  );
   late final _grassi = TextEditingController(text: _testo(widget.voce.grassi));
 
   /// I valori che chi legge ha corretto a mano.
@@ -473,8 +492,10 @@ class _RigaVoceState extends State<_RigaVoce> {
 
     // I campi non toccati si riscrivono con il valore nuovo, gli altri no.
     if (!_toccati.contains('kcal')) _kcal.text = _testo(riscalata.kcal);
-    if (!_toccati.contains('protein')) _proteine.text = _testo(riscalata.proteine);
-    if (!_toccati.contains('carbs')) _carbo.text = _testo(riscalata.carboidrati);
+    if (!_toccati.contains('protein'))
+      _proteine.text = _testo(riscalata.proteine);
+    if (!_toccati.contains('carbs'))
+      _carbo.text = _testo(riscalata.carboidrati);
     if (!_toccati.contains('fat')) _grassi.text = _testo(riscalata.grassi);
 
     _applica();
@@ -516,7 +537,10 @@ class _RigaVoceState extends State<_RigaVoce> {
       labelText: etichetta,
       suffixText: suffisso,
       floatingLabelBehavior: FloatingLabelBehavior.always,
-      contentPadding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.sm),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: Gap.sm,
+        vertical: Gap.sm,
+      ),
     ),
     onChanged: (_) {
       if (chiave == null) {
@@ -539,7 +563,9 @@ class _RigaVoceState extends State<_RigaVoce> {
       margin: const EdgeInsets.only(bottom: Gap.sm),
       child: ExpansionTile(
         initiallyExpanded:
-            widget.apertaDaSola || v.macroImpossibili || v.stato == StatoCottura.ambiguo,
+            widget.apertaDaSola ||
+            v.macroImpossibili ||
+            v.stato == StatoCottura.ambiguo,
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(
@@ -552,10 +578,13 @@ class _RigaVoceState extends State<_RigaVoce> {
             if (v.kcal != null) '${v.kcal!.round()} kcal',
             // 💡 Lo stato si mostra solo quando dice qualcosa: «non applicabile»
             // su uno yogurt e' rumore.
-            if (v.stato != null && v.stato!.etichetta.isNotEmpty) v.stato!.etichetta,
+            if (v.stato != null && v.stato!.etichetta.isNotEmpty)
+              v.stato!.etichetta,
           ].where((s) => s.isNotEmpty).join(' · '),
           style: theme.textTheme.bodySmall?.copyWith(
-            color: v.stato == StatoCottura.ambiguo ? theme.colorScheme.tertiary : null,
+            color: v.stato == StatoCottura.ambiguo
+                ? theme.colorScheme.tertiary
+                : null,
           ),
         ),
         trailing: v.macroImpossibili
@@ -587,7 +616,9 @@ class _RigaVoceState extends State<_RigaVoce> {
                   children: [
                     Expanded(child: _campo(_qty, 'Quantità', v.unita ?? 'g')),
                     const SizedBox(width: Gap.sm),
-                    Expanded(child: _campo(_kcal, 'Calorie', 'kcal', chiave: 'kcal')),
+                    Expanded(
+                      child: _campo(_kcal, 'Calorie', 'kcal', chiave: 'kcal'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: Gap.md),
@@ -604,11 +635,27 @@ class _RigaVoceState extends State<_RigaVoce> {
                  */
                 Row(
                   children: [
-                    Expanded(child: _campo(_proteine, 'Proteine', 'g', chiave: 'protein')),
+                    Expanded(
+                      child: _campo(
+                        _proteine,
+                        'Proteine',
+                        'g',
+                        chiave: 'protein',
+                      ),
+                    ),
                     const SizedBox(width: Gap.sm),
-                    Expanded(child: _campo(_carbo, 'Carboidrati', 'g', chiave: 'carbs')),
+                    Expanded(
+                      child: _campo(
+                        _carbo,
+                        'Carboidrati',
+                        'g',
+                        chiave: 'carbs',
+                      ),
+                    ),
                     const SizedBox(width: Gap.sm),
-                    Expanded(child: _campo(_grassi, 'Grassi', 'g', chiave: 'fat')),
+                    Expanded(
+                      child: _campo(_grassi, 'Grassi', 'g', chiave: 'fat'),
+                    ),
                   ],
                 ),
 
@@ -633,7 +680,9 @@ class _RigaVoceState extends State<_RigaVoce> {
                       onPressed: widget.onTolta,
                       icon: const Icon(Icons.remove_circle_outline, size: 18),
                       label: const Text('Togli'),
-                      style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
                     ),
                   ),
                 ],

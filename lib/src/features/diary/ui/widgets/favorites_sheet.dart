@@ -50,7 +50,11 @@ class FavoritesSheet extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.star_outline_rounded, size: 48, color: theme.colorScheme.outline),
+                  Icon(
+                    Icons.star_outline_rounded,
+                    size: 48,
+                    color: theme.colorScheme.outline,
+                  ),
                   const SizedBox(height: Gap.md),
                   Text('Nessun preferito', style: theme.textTheme.titleMedium),
                   const SizedBox(height: Gap.sm),
@@ -77,7 +81,9 @@ class FavoritesSheet extends ConsumerWidget {
             children: [
               Text(
                 'Aggiungi ai preferiti',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: Gap.sm),
 
@@ -124,7 +130,10 @@ class _RigaState extends ConsumerState<_Riga> {
         f.isMeal ? Icons.restaurant_menu_rounded : Icons.star_rounded,
         color: theme.colorScheme.primary,
       ),
-      title: Text(f.description, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        f.description,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(
         [
           if (f.isMeal) '${f.itemsCount} alimenti' else ?f.quantita,
@@ -132,7 +141,11 @@ class _RigaState extends ConsumerState<_Riga> {
         ].join(' · '),
       ),
       trailing: _inCorso
-          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -141,7 +154,10 @@ class _RigaState extends ConsumerState<_Riga> {
                   icon: const Icon(Icons.delete_outline_rounded),
                   tooltip: 'Togli dai preferiti',
                 ),
-                FilledButton(onPressed: _aggiungi, child: const Text('Aggiungi')),
+                FilledButton(
+                  onPressed: _aggiungi,
+                  child: const Text('Aggiungi'),
+                ),
               ],
             ),
     );
@@ -151,15 +167,17 @@ class _RigaState extends ConsumerState<_Riga> {
     setState(() => _inCorso = true);
 
     try {
-      await ref.read(favoriteActionsProvider).add(widget.preferito.id, meal: widget.meal);
+      await ref
+          .read(favoriteActionsProvider)
+          .add(widget.preferito.id, meal: widget.meal);
 
       if (mounted) Navigator.of(context).pop();
     } on Object catch (error) {
       if (mounted) {
         setState(() => _inCorso = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+        );
       }
     }
   }

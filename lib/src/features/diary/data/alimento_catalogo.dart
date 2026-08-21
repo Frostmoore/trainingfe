@@ -55,15 +55,19 @@ class AlimentoCatalogo {
   final String? note;
 
   /// Come si presenta in un elenco: «Petto di pollo · Aia».
-  String get titolo => marca == null || marca!.isEmpty ? nome : '$nome · $marca';
+  String get titolo =>
+      marca == null || marca!.isEmpty ? nome : '$nome · $marca';
 
   /// I valori per una quantità in grammi (o millilitri).
   ///
   /// 💡 Restituisce `null` dove il catalogo non sa: meglio un campo vuoto che
   /// uno zero, perché uno zero nel diario è un'affermazione — «questo alimento
   /// non ha proteine» — e non un «non lo so».
-  ({double? kcal, double? proteine, double? carboidrati, double? grassi}) per(double quantita) {
-    double? scala(double? per100) => per100 == null ? null : per100 * quantita / 100;
+  ({double? kcal, double? proteine, double? carboidrati, double? grassi}) per(
+    double quantita,
+  ) {
+    double? scala(double? per100) =>
+        per100 == null ? null : per100 * quantita / 100;
 
     return (
       kcal: scala(kcal100),

@@ -14,6 +14,7 @@ import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../data/alimento_catalogo.dart';
 import '../../data/stima_ai.dart';
+import '../../data/stime_in_coda.dart';
 import '../../diary_controller.dart';
 import 'campo_alimento.dart';
 import 'conferma_stima_sheet.dart';
@@ -30,12 +31,13 @@ class AddFoodSheet extends ConsumerStatefulWidget {
 
   final String meal;
 
-  static Future<void> show(BuildContext context, {String? meal}) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => AddFoodSheet(meal: meal ?? _pastoDaOra()),
-  );
+  static Future<void> show(BuildContext context, {String? meal}) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => AddFoodSheet(meal: meal ?? _pastoDaOra()),
+      );
 
   /// Il pasto plausibile a quest'ora: chiederlo ogni volta è attrito, e le
   /// stesse soglie le usa il backend quando l'app non lo manda.
@@ -56,7 +58,8 @@ class AddFoodSheet extends ConsumerStatefulWidget {
   ConsumerState<AddFoodSheet> createState() => _AddFoodSheetState();
 }
 
-class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerProviderStateMixin {
+class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
+    with SingleTickerProviderStateMixin {
   /*
    * 🚨 **Quattro linguette da G9**, e la nuova sta **prima** di «A mano»: chi
    * ha un piano lo segue, e chi lo segue non deve digitare quello che e' gia'
@@ -92,12 +95,32 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
 
   String _unita = 'g';
   bool _inCorso = false;
+
+  /// Da quanto si sta aspettando la stima — 🆕 FASE 9.6.
+  ///
+  /// 🚨 **Serve perché la stima adesso arriva quando arriva.** Prima la risposta
+  /// era sincrona e la rotellina durava il tempo di una richiesta; ora il lavoro
+  /// sta in coda sul server, e l'attesa può essere qualche secondo in più se
+  /// altri stanno scrivendo il pranzo nello stesso momento.
+  ///
+  /// ⚠️ Una rotellina che gira senza dire niente è indistinguibile da un'app
+  /// bloccata — ed è **il momento in cui una persona chiude e riprova**, cioè
+  /// accoda un secondo lavoro e lo paga due volte.
+  Duration _attesa = Duration.zero;
   String? _errore;
 
   /// Le unità sono le stesse di `FoodUnit` lato backend, nello stesso ordine:
   /// un elenco diverso qui produrrebbe unità che il server non sa convertire.
   static const _unitaAmmesse = [
-    'g', 'kg', 'ml', 'l', 'cucchiaio', 'cucchiaino', 'bicchiere', 'tazza', 'scoop',
+    'g',
+    'kg',
+    'ml',
+    'l',
+    'cucchiaio',
+    'cucchiaino',
+    'bicchiere',
+    'tazza',
+    'scoop',
   ];
 
   @override
@@ -140,6 +163,15 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   /// crescerebbe di qualche foto al giorno per anni. 💡 Vive nella cache, quindi
   /// non finirebbe comunque in nessun backup: ma occupare spazio per niente
   /// resta occupare spazio per niente.
+  /// 💡 `setState` solo quando il secondo cambia: l'attesa arriva ogni secondo
+  /// e mezzo, e ridisegnare per un decimo di secondo di differenza sarebbe
+  /// lavoro buttato.
+  void _segnaAttesa(Duration quanto) {
+    if (!mounted || quanto.inSeconds == _attesa.inSeconds) return;
+
+    setState(() => _attesa = quanto);
+  }
+
   Future<void> _stimaEConferma(
     Future<StimaAi> Function() stimatore, {
     required bool daFoto,
@@ -147,6 +179,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   }) async {
     setState(() {
       _inCorso = true;
+      _attesa = Duration.zero;
       _errore = null;
     });
 
@@ -191,11 +224,23 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
         // 🚨 La quota finita ha un messaggio suo e **non invita a riprovare**:
         // non si sblocca fino al mese prossimo, e un «riprova» qui farebbe
         // martellare l'utente contro un muro.
-        _errore = switch (tradotto) {
-          AiQuotaExceededException() =>
-            '${tradotto.message}\nPuoi comunque inserire a mano.',
-          RateLimitedException() => 'Il servizio è occupato. Riprova fra poco.',
-          _ => tradotto.message,
+        _errore = switch (error) {
+          /*
+           * 🆕 **I due esiti della coda** — FASE 9.
+           *
+           * 🚨 `StimaTroppoLenta` **non è un errore**: il lavoro sul server
+           * continua, ed è solo l'attesa che finisce. Dirlo come un guasto
+           * farebbe rifare il piatto da capo a chi ce l'ha già in produzione.
+           */
+          final StimaTroppoLenta e => e.perUnaPersona,
+          final StimaFallita e => e.perUnaPersona,
+          _ => switch (tradotto) {
+            AiQuotaExceededException() =>
+              '${tradotto.message}\nPuoi comunque inserire a mano.',
+            RateLimitedException() =>
+              'Il servizio è occupato. Riprova fra poco.',
+            _ => tradotto.message,
+          },
         };
       });
     } finally {
@@ -236,7 +281,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
   /// qui si scrive con `addManual` perche' **il server non conosce piu' quel
   /// piano** (D4). Vedi il debito §7.2 del piano: `food_entries.nutrition_plan_id`
   /// resta `null`, ed e' il prezzo dichiarato dell'anonimato.
-  Future<void> _registra(DiaryActions azioni, List<AlimentoDelPiano> alimenti) async {
+  Future<void> _registra(
+    DiaryActions azioni,
+    List<AlimentoDelPiano> alimenti,
+  ) async {
     for (final a in alimenti) {
       if (a.descrizione.trim().isEmpty) continue;
 
@@ -342,7 +390,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
 
     final v = a.per(quantita);
 
-    String scrivi(double? n) => n == null ? '' : n.toStringAsFixed(n >= 10 ? 0 : 1);
+    String scrivi(double? n) =>
+        n == null ? '' : n.toStringAsFixed(n >= 10 ? 0 : 1);
 
     _kcal.text = scrivi(v.kcal);
     _proteine.text = scrivi(v.proteine);
@@ -410,7 +459,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
             tabs: [
               Tab(
                 icon: Icon(
-                  aiOk ? Icons.auto_awesome_outlined : Icons.auto_awesome_outlined,
+                  aiOk
+                      ? Icons.auto_awesome_outlined
+                      : Icons.auto_awesome_outlined,
                   color: aiOk ? null : Theme.of(context).colorScheme.outline,
                 ),
                 /*
@@ -430,7 +481,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                       'Scrivi',
                       style: aiOk
                           ? null
-                          : TextStyle(color: Theme.of(context).colorScheme.outline),
+                          : TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                     ),
                     Text(
                       '1 gettone',
@@ -453,7 +506,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                       'Foto',
                       style: aiOk
                           ? null
-                          : TextStyle(color: Theme.of(context).colorScheme.outline),
+                          : TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                     ),
                     // ⚠️ Dieci, non uno: una foto costa al fornitore circa
                     // quattro volte una frase, e il prezzo lo dice.
@@ -501,7 +556,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
               controller: _tabs,
               children: [
                 if (consensi.isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  _StoPensando(attesa: _attesa)
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
@@ -513,13 +568,17 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                     controller: _testo,
                     inCorso: _inCorso,
                     onInvia: () => _stimaEConferma(
-                      () => azioni.stimaDaTesto(_testo.text, widget.meal),
+                      () => azioni.stimaDaTesto(
+                        _testo.text,
+                        widget.meal,
+                        avanzamento: _segnaAttesa,
+                      ),
                       daFoto: false,
                     ),
                   ),
 
                 if (consensi.isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  _StoPensando(attesa: _attesa)
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
@@ -533,12 +592,16 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> with SingleTickerPr
                       () async => azioni.stimaDaFoto(
                         (await const ArchivioFoto().fileDi(relativo)).path,
                         widget.meal,
+                        avanzamento: _segnaAttesa,
                       ),
                       fotoDaButtare: relativo,
                       daFoto: true,
                     ),
                   ),
-                DalPianoTab(onScelti: (alimenti) => _esegui(() => _registra(azioni, alimenti))),
+                DalPianoTab(
+                  onScelti: (alimenti) =>
+                      _esegui(() => _registra(azioni, alimenti)),
+                ),
 
                 _Manuale(
                   descrizione: _descrizione,
@@ -622,11 +685,17 @@ class _SenzaPianoAi extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.auto_awesome_outlined, size: 40, color: theme.colorScheme.outline),
+          Icon(
+            Icons.auto_awesome_outlined,
+            size: 40,
+            color: theme.colorScheme.outline,
+          ),
           const SizedBox(height: Gap.md),
           Text(
             'Non hai accesso alle funzioni AI',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: Gap.sm),
@@ -707,7 +776,11 @@ class _SenzaConsensoAi extends StatelessWidget {
 }
 
 class _Testo extends StatelessWidget {
-  const _Testo({required this.controller, required this.inCorso, required this.onInvia});
+  const _Testo({
+    required this.controller,
+    required this.inCorso,
+    required this.onInvia,
+  });
 
   final TextEditingController controller;
   final bool inCorso;
@@ -733,7 +806,11 @@ class _Testo extends StatelessWidget {
           style: bottonePieno(),
           onPressed: inCorso ? null : onInvia,
           icon: inCorso
-              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.auto_awesome),
           label: const Text('Riconosci e aggiungi'),
         ),
@@ -773,7 +850,9 @@ class _Foto extends StatelessWidget {
           ),
           const SizedBox(height: Gap.md),
           OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             onPressed: () async {
               final scelta = await CanaleFoto.dallaGalleria(
                 context,
@@ -850,7 +929,9 @@ class _Manuale extends StatelessWidget {
                 flex: 2,
                 child: TextField(
                   controller: quantita,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (_) => onQuantita(),
                   decoration: const InputDecoration(labelText: 'Quantit\u00e0'),
                 ),
@@ -862,7 +943,8 @@ class _Manuale extends StatelessWidget {
                   initialValue: unita,
                   decoration: const InputDecoration(labelText: 'Unit\u00e0'),
                   items: [
-                    for (final u in unitaAmmesse) DropdownMenuItem(value: u, child: Text(u)),
+                    for (final u in unitaAmmesse)
+                      DropdownMenuItem(value: u, child: Text(u)),
                   ],
                   onChanged: (v) => v != null ? onUnita(v) : null,
                 ),
@@ -896,7 +978,11 @@ class _Manuale extends StatelessWidget {
            */
           Row(
             children: [
-              Icon(Icons.auto_awesome_outlined, size: 16, color: theme.colorScheme.primary),
+              Icon(
+                Icons.auto_awesome_outlined,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: Gap.xs),
               Expanded(
                 child: Text(
@@ -912,11 +998,20 @@ class _Manuale extends StatelessWidget {
           const SizedBox(height: Gap.sm),
           Row(
             children: [
-              Expanded(child: _Macro(controller: proteine, etichetta: 'Proteine')),
+              Expanded(
+                child: _Macro(controller: proteine, etichetta: 'Proteine'),
+              ),
               const SizedBox(width: Gap.sm),
-              Expanded(child: _Macro(controller: carboidrati, etichetta: 'Carboidrati')),
+              Expanded(
+                child: _Macro(
+                  controller: carboidrati,
+                  etichetta: 'Carboidrati',
+                ),
+              ),
               const SizedBox(width: Gap.sm),
-              Expanded(child: _Macro(controller: grassi, etichetta: 'Grassi')),
+              Expanded(
+                child: _Macro(controller: grassi, etichetta: 'Grassi'),
+              ),
             ],
           ),
 
@@ -943,7 +1038,11 @@ class _Macro extends StatelessWidget {
   Widget build(BuildContext context) => TextField(
     controller: controller,
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    decoration: InputDecoration(labelText: etichetta, suffixText: 'g', isDense: true),
+    decoration: InputDecoration(
+      labelText: etichetta,
+      suffixText: 'g',
+      isDense: true,
+    ),
   );
 }
 
@@ -978,12 +1077,18 @@ class _AlimentoScelto extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
+              Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: Gap.xs),
               Expanded(
                 child: Text(
                   alimento.titolo,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1003,7 +1108,9 @@ class _AlimentoScelto extends StatelessWidget {
             const SizedBox(height: Gap.xs),
             Text(
               alimento.note!,
-              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ],
@@ -1035,4 +1142,61 @@ class _EtichettaGratis extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// «Sto pensando», con **quanto** — 🆕 FASE 9.6.
+///
+/// ══ 🚨 PERCHÉ NON BASTA UNA ROTELLINA ═════════════════════════════════════
+///
+/// Perché dalla FASE 9 la stima non arriva più nella risposta: il server la mette
+/// in coda e un worker la fa. ⚠️ Nel caso normale ci mettono gli stessi due
+/// secondi e mezzo di prima; ma se altri stanno scrivendo il pranzo nello stesso
+/// momento — cioè **sempre, a pranzo** — può volerci qualche secondo in più.
+///
+/// 🚨 E una rotellina muta, in quei secondi, è indistinguibile da un'app
+/// bloccata. È il momento in cui una persona chiude e riprova: cioè **accoda un
+/// secondo lavoro**, che costa una seconda chiamata al modello e non serve a
+/// niente.
+///
+/// 💡 Per questo il testo cambia tre volte, e l'ultima frase è la più
+/// importante: dice che si può **chiudere**, che è la cosa vera — il lavoro va
+/// avanti sul server e la stima si ritrova al rientro (FASE 9.7).
+class _StoPensando extends StatelessWidget {
+  const _StoPensando({required this.attesa});
+
+  final Duration attesa;
+
+  /// ⚠️ Le due soglie non sono simmetriche: 10 secondi è «più del solito» —
+  /// oltre il p95 misurato, 8,2 s — e 30 è «vattene pure».
+  static const piuDelSolito = Duration(seconds: 10);
+  static const puoiChiudere = Duration(seconds: 30);
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    final testo = switch (attesa) {
+      final d when d >= puoiChiudere =>
+        'Ci sta mettendo di più. Puoi chiudere: la ritrovi qui quando è pronta.',
+      final d when d >= piuDelSolito => 'Ci sta mettendo più del solito…',
+      _ => 'Sto pensando…',
+    };
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: Gap.md),
+          Text(
+            testo,
+            textAlign: TextAlign.center,
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

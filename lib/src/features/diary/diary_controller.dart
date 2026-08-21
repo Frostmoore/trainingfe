@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import 'data/diary_models.dart';
 import 'data/stima_ai.dart';
+import 'data/stime_in_coda.dart';
 
 /// Il giorno che si sta guardando.
 ///
@@ -55,12 +56,26 @@ final vociInUscitaProvider = StateProvider<Set<int>>((ref) => const {});
 final diaryProvider = FutureProvider.autoDispose<DiaryDay>((ref) async {
   final data = await ref
       .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/diary', query: {'date': _iso(ref.watch(selectedDateProvider))});
+      .get<Map<String, dynamic>>(
+        '/diary',
+        query: {'date': _iso(ref.watch(selectedDateProvider))},
+      );
 
   return DiaryDay.fromJson(data);
 });
 
 /// Le scritture sul diario — A4.2 / A4.4 / A4.6.
+/// L'attesa delle stime — FASE 9.
+///
+/// 💡 Un provider e non un campo di `DiaryActions` perché lo usa anche chi
+/// riprende una stima all'avvio, che di `DiaryActions` non ha bisogno.
+final stimeInCodaProvider = Provider<StimeInCoda>((ref) {
+  return StimeInCoda(
+    ref.watch(apiClientProvider),
+    ref.watch(localCacheProvider),
+  );
+});
+
 class DiaryActions {
   DiaryActions(this._ref);
 
@@ -126,18 +141,50 @@ class DiaryActions {
   /// fallisce, **il foglio è ancora aperto con la stima dentro** e si riprova.
   /// Prima, se falliva la scrittura, si perdeva comunque tutto — solo senza
   /// averla mai vista.
-  Future<StimaAi> stimaDaTesto(String text, String meal) async {
-    final data = await _api.post<Map<String, dynamic>>(
-      '/ai/food/text',
-      body: {
-        'text': text,
-        'meal': meal,
-        'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-        'save': false,
-      },
+  ///
+  /// 🆕 **Dalla FASE 9 la stima non arriva più nella risposta.** Il server
+  /// accoda e risponde in ~50 ms; l'attesa la fa `StimeInCoda`, qui sull'app,
+  /// dove non tiene occupato uno dei sei processi del dominio. ⚠️ Per chi la
+  /// chiama non cambia niente: entra una frase, esce una stima.
+  ///
+  /// 💡 [avanzamento] dice **da quanto** si sta aspettando, così la schermata
+  /// può cambiare quello che scrive invece di limitarsi a girare.
+  Future<StimaAi> stimaDaTesto(
+    String text,
+    String meal, {
+    void Function(Duration)? avanzamento,
+  }) async {
+    final coda = _ref.read(stimeInCodaProvider);
+
+    final id = await coda.accodaTesto(
+      testo: text,
+      pasto: meal,
+      quando: _ref.read(selectedDateProvider),
     );
 
+    final data = await coda.aspetta(id, avanzamento: avanzamento);
+
     return StimaAi.fromJson(data).conFrase(text);
+  }
+
+  /// Riprende una stima lasciata a metà — FASE 9.7.
+  ///
+  /// 🚨 Il lavoro sul server **continua** anche con l'app chiusa: al rientro
+  /// si ritrova, non si ricomincia. Ricominciare vorrebbe dire una seconda
+  /// chiamata al modello per lo stesso piatto, pagata due volte.
+  ///
+  /// `null` quando non c'è niente in sospeso, che è il caso normale.
+  Future<StimaAi?> riprendiStimaInSospeso({
+    void Function(Duration)? avanzamento,
+  }) async {
+    final coda = _ref.read(stimeInCodaProvider);
+    final id = await coda.inSospeso();
+
+    if (id == null) return null;
+
+    final data = await coda.aspetta(id, avanzamento: avanzamento);
+
+    return StimaAi.fromJson(data);
   }
 
   /// Riconoscimento da foto — A4.3 / A4.8.
@@ -149,15 +196,21 @@ class DiaryActions {
   /// ⚠️ `frase` resta nulla: da una foto non c'è niente da «precisare» — il
   /// foglio di conferma lo sa e offre di correggere i numeri invece di rifare
   /// la domanda.
-  Future<StimaAi> stimaDaFoto(String path, String meal) async {
+  Future<StimaAi> stimaDaFoto(
+    String path,
+    String meal, {
+    void Function(Duration)? avanzamento,
+  }) async {
     final form = FormData.fromMap({
       'photo': await MultipartFile.fromFile(path),
       'meal': meal,
       'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-      'save': 'false',
     });
 
-    final data = await _api.upload<Map<String, dynamic>>('/ai/food/photo', form);
+    final coda = _ref.read(stimeInCodaProvider);
+
+    final id = await coda.accodaFoto(form);
+    final data = await coda.aspetta(id, avanzamento: avanzamento);
 
     return StimaAi.fromJson(data);
   }
@@ -170,7 +223,11 @@ class DiaryActions {
   ///
   /// ⚠️ **Non consuma quota**: la chiamata al modello è già stata pagata dalla
   /// stima.
-  Future<void> confermaStima(StimaAi stima, {required String meal, required bool daFoto}) async {
+  Future<void> confermaStima(
+    StimaAi stima, {
+    required String meal,
+    required bool daFoto,
+  }) async {
     await _api.post<dynamic>(
       '/ai/food/confirm',
       body: {
@@ -216,8 +273,9 @@ class DiaryActions {
 
       _ref.invalidate(diaryProvider);
     } on Object {
-      _ref.read(vociInUscitaProvider.notifier).state = {..._ref.read(vociInUscitaProvider)}
-        ..remove(entryId);
+      _ref.read(vociInUscitaProvider.notifier).state = {
+        ..._ref.read(vociInUscitaProvider),
+      }..remove(entryId);
 
       rethrow;
     }
@@ -269,7 +327,9 @@ class DiaryActions {
     await _api.post<dynamic>(
       '/daily-burn',
       body: {
-        'date': DateFormat('yyyy-MM-dd').format(_ref.read(selectedDateProvider)),
+        'date': DateFormat(
+          'yyyy-MM-dd',
+        ).format(_ref.read(selectedDateProvider)),
         'kcal': kcal,
       },
     );
@@ -333,10 +393,14 @@ class FoodFavorite {
   /// La quantità come la si legge: «100 ml · 100 g».
   String? get quantita {
     if (qty != null && unit != null) {
-      final n = qty! == qty!.roundToDouble() ? qty!.toInt().toString() : qty!.toString();
+      final n = qty! == qty!.roundToDouble()
+          ? qty!.toInt().toString()
+          : qty!.toString();
       final base = '$n $unit';
 
-      return unit != 'g' && grams != null ? '$base · ${grams!.round()} g' : base;
+      return unit != 'g' && grams != null
+          ? '$base · ${grams!.round()} g'
+          : base;
     }
 
     return grams == null ? null : '${grams!.round()} g';
@@ -348,8 +412,12 @@ class FoodFavorite {
 /// ⚠️ L'ordine non è alfabetico né cronologico: è `times_used`. Chi ha
 /// venticinque preferiti vuole i tre che usa ogni giorno in cima, non quelli
 /// che cominciano per A.
-final favoritesProvider = FutureProvider.autoDispose<List<FoodFavorite>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/food-favorites');
+final favoritesProvider = FutureProvider.autoDispose<List<FoodFavorite>>((
+  ref,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/food-favorites');
 
   return data
       .map((e) => FoodFavorite.fromJson((e as Map).cast<String, dynamic>()))
@@ -365,13 +433,18 @@ class FavoriteActions {
   ApiClient get _api => _ref.read(apiClientProvider);
 
   /// Salva **l'intero pasto** di un giorno come preferito.
-  Future<void> saveMeal({required String meal, required String description}) async {
+  Future<void> saveMeal({
+    required String meal,
+    required String description,
+  }) async {
     await _api.post<dynamic>(
       '/food-favorites/meal',
       body: {
         'meal': meal,
         'description': description,
-        'date': DateFormat('yyyy-MM-dd').format(_ref.read(selectedDateProvider)),
+        'date': DateFormat(
+          'yyyy-MM-dd',
+        ).format(_ref.read(selectedDateProvider)),
       },
     );
 

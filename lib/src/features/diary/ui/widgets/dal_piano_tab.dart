@@ -40,7 +40,8 @@ class DalPianoTab extends ConsumerWidget {
 
     return stato.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Non riesco a leggere i tuoi piani.\n$e')),
+      error: (e, _) =>
+          Center(child: Text('Non riesco a leggere i tuoi piani.\n$e')),
       data: (piani) {
         if (piani.isEmpty) {
           /*
@@ -55,7 +56,8 @@ class DalPianoTab extends ConsumerWidget {
                 const EmptyState(
                   icon: Icons.restaurant_menu_outlined,
                   title: 'Nessun piano',
-                  message: 'Quando il tuo trainer te ne manda uno, lo trovi qui.',
+                  message:
+                      'Quando il tuo trainer te ne manda uno, lo trovi qui.',
                 ),
                 const SizedBox(height: Gap.md),
                 FilledButton.tonalIcon(
@@ -230,13 +232,17 @@ class _Pasto extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    pasto.titolo?.trim().isNotEmpty == true ? pasto.titolo! : 'Pasto',
+                    pasto.titolo?.trim().isNotEmpty == true
+                        ? pasto.titolo!
+                        : 'Pasto',
                     style: theme.textTheme.titleSmall,
                   ),
                 ),
                 Text(
                   '${pasto.kcal.round()} kcal',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
               ],
             ),
@@ -311,7 +317,9 @@ class _Alimento extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Text('oppure', style: theme.textTheme.labelSmall),
               title: Text(alt.descrizione, style: theme.textTheme.bodySmall),
-              subtitle: alt.kcal == null ? null : Text('${alt.kcal!.round()} kcal'),
+              subtitle: alt.kcal == null
+                  ? null
+                  : Text('${alt.kcal!.round()} kcal'),
               trailing: IconButton(
                 onPressed: () => onScelti([alt]),
                 icon: const Icon(Icons.add_circle_outline, size: 20),

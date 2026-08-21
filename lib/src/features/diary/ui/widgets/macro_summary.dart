@@ -38,7 +38,9 @@ class MacroSummary extends ConsumerWidget {
      * 💡 La precedenza è la stessa di sempre: **il piano del trainer vince sul
      * calcolo**, e il calcolo vince sul nulla (D8).
      */
-    final esito = day.hasTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
+    final esito = day.hasTarget
+        ? null
+        : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
     /*
@@ -55,7 +57,8 @@ class MacroSummary extends ConsumerWidget {
      */
     final bruciate = BruciateDelGiorno.scegli(
       manuale: day.bruciateAMano,
-      daHealth: ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
+      daHealth:
+          ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
       stimate: day.burnedKcal,
     );
 
@@ -104,7 +107,9 @@ class MacroSummary extends ConsumerWidget {
                   day.kcal.round().toString(),
                   style: theme.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: sforato ? theme.colorScheme.error : theme.colorScheme.onSurface,
+                    color: sforato
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(width: Gap.xs),
@@ -133,14 +138,18 @@ class MacroSummary extends ConsumerWidget {
                  * gli resta è «l'app sbaglia». L'etichetta costa una riga.
                  */
                 ActionChip(
-                  avatar: const Icon(Icons.local_fire_department_rounded, size: 16),
+                  avatar: const Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 16,
+                  ),
                   label: Text(
                     bruciate.fonte == FonteBruciate.nessuna
                         ? '${bruciate.kcal}'
                         : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
                   ),
                   visualDensity: VisualDensity.compact,
-                  onPressed: () => _bruciateAMano(context, ref, day.bruciateAMano),
+                  onPressed: () =>
+                      _bruciateAMano(context, ref, day.bruciateAMano),
                 ),
               ],
             ),
@@ -154,7 +163,9 @@ class MacroSummary extends ConsumerWidget {
                   value: progresso.clamp(0.0, 1.0),
                   minHeight: 10,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  color: sforato ? theme.colorScheme.error : theme.colorScheme.primary,
+                  color: sforato
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(height: Gap.xs),
@@ -232,12 +243,14 @@ class MacroSummary extends ConsumerWidget {
                 _Macro(
                   nome: 'Proteine',
                   valore: day.protein,
-                  target: day.targetProtein ?? locale?.macro.proteineG.toDouble(),
+                  target:
+                      day.targetProtein ?? locale?.macro.proteineG.toDouble(),
                 ),
                 _Macro(
                   nome: 'Carboidrati',
                   valore: day.carbs,
-                  target: day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+                  target:
+                      day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
                 ),
                 _Macro(
                   nome: 'Grassi',
@@ -258,7 +271,11 @@ class MacroSummary extends ConsumerWidget {
 /// ⚠️ **Svuotare il campo rimette la stima**, non azzera: è la differenza fra
 /// «non lo so» e «oggi ho bruciato zero», e il backend la rispetta. Va detto nel
 /// modulo, o l'unico modo per scoprirlo è provare.
-Future<void> _bruciateAMano(BuildContext context, WidgetRef ref, int? attuale) async {
+Future<void> _bruciateAMano(
+  BuildContext context,
+  WidgetRef ref,
+  int? attuale,
+) async {
   /*
    * 🚨 **`int?` e non `int`**: il campo parte vuoto quando non c'è un valore
    * dichiarato, e parte con **zero scritto** se qualcuno ha davvero dichiarato
@@ -319,11 +336,15 @@ class _Macro extends StatelessWidget {
             target != null
                 ? '${valore.round()} / ${target!.round()} g'
                 : '${valore.round()} g',
-            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           Text(
             nome,
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

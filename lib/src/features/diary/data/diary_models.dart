@@ -78,11 +78,11 @@ class FoodEntry {
   /// 💡 `null` per i valori che non hanno un riferimento per 100 g: una voce
   /// scritta a mano senza macro non si riscala, e inventarne uno sarebbe peggio
   /// che lasciare il campo com'è.
-  ({double? kcal, double? proteine, double? carboidrati, double? grassi}) riscalataA(
-    double grammi,
-  ) {
-    double? scala(double? per100) =>
-        per100 == null ? null : double.parse((per100 * grammi / 100).toStringAsFixed(1));
+  ({double? kcal, double? proteine, double? carboidrati, double? grassi})
+  riscalataA(double grammi) {
+    double? scala(double? per100) => per100 == null
+        ? null
+        : double.parse((per100 * grammi / 100).toStringAsFixed(1));
 
     return (
       kcal: scala(kcal100),

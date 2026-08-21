@@ -21,14 +21,17 @@ class EditEntrySheet extends ConsumerStatefulWidget {
 
   final FoodEntry voce;
 
-  static Future<void> mostra(BuildContext context, FoodEntry voce) => showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: EditEntrySheet(voce: voce),
-    ),
-  );
+  static Future<void> mostra(BuildContext context, FoodEntry voce) =>
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: EditEntrySheet(voce: voce),
+        ),
+      );
 
   @override
   ConsumerState<EditEntrySheet> createState() => _EditEntrySheetState();
@@ -41,15 +44,31 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   /// ⚠️ È un elenco per la tendina, **non** una tabella di conversione: i
   /// fattori restano sul server, dove sono già.
   static const _unita = [
-    'g', 'mg', 'hg', 'kg',
-    'ml', 'dl', 'cl', 'l',
-    'bicchiere', 'cucchiaio', 'tazza', 'cucchiaino', 'scoop',
+    'g',
+    'mg',
+    'hg',
+    'kg',
+    'ml',
+    'dl',
+    'cl',
+    'l',
+    'bicchiere',
+    'cucchiaio',
+    'tazza',
+    'cucchiaino',
+    'scoop',
   ];
 
-  late final _descrizione = TextEditingController(text: widget.voce.description);
-  late final _qty = TextEditingController(text: _pulito(widget.voce.qty ?? widget.voce.grams));
+  late final _descrizione = TextEditingController(
+    text: widget.voce.description,
+  );
+  late final _qty = TextEditingController(
+    text: _pulito(widget.voce.qty ?? widget.voce.grams),
+  );
   late final _kcal = TextEditingController(text: _pulito(widget.voce.kcal));
-  late final _proteine = TextEditingController(text: _pulito(widget.voce.protein));
+  late final _proteine = TextEditingController(
+    text: _pulito(widget.voce.protein),
+  );
   late final _carbo = TextEditingController(text: _pulito(widget.voce.carbs));
   late final _grassi = TextEditingController(text: _pulito(widget.voce.fat));
 
@@ -93,8 +112,14 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   /// È un'approssimazione, ma è **la stessa** che farà il server, quindi
   /// l'anteprima non può discordare dal risultato.
   static const _grammiPer = {
-    'g': 1.0, 'mg': 0.001, 'hg': 100.0, 'kg': 1000.0,
-    'ml': 1.0, 'cl': 10.0, 'dl': 100.0, 'l': 1000.0,
+    'g': 1.0,
+    'mg': 0.001,
+    'hg': 100.0,
+    'kg': 1000.0,
+    'ml': 1.0,
+    'cl': 10.0,
+    'dl': 100.0,
+    'l': 1000.0,
   };
 
   /// La quantità è cambiata: **i macro si riscrivono mentre si digita**.
@@ -121,13 +146,15 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
 
     // Senza un fattore certo o senza valori per 100 g non si riscala niente: si
     // lascia fare al server, che ha la tabella vera.
-    if (fattore == null || q == null || q <= 0 || !widget.voce.siRicalcola) return;
+    if (fattore == null || q == null || q <= 0 || !widget.voce.siRicalcola)
+      return;
 
     final nuovi = widget.voce.riscalataA(q * fattore);
 
     setState(() {
       if (!_toccati.contains('kcal')) _kcal.text = _pulito(nuovi.kcal);
-      if (!_toccati.contains('protein')) _proteine.text = _pulito(nuovi.proteine);
+      if (!_toccati.contains('protein'))
+        _proteine.text = _pulito(nuovi.proteine);
       if (!_toccati.contains('carbs')) _carbo.text = _pulito(nuovi.carboidrati);
       if (!_toccati.contains('fat')) _grassi.text = _pulito(nuovi.grassi);
     });
@@ -227,7 +254,9 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                 Expanded(
                   child: TextField(
                     controller: _qty,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(labelText: 'Quantità'),
                     onChanged: (_) => _quantitaCambiata(),
                   ),
@@ -235,7 +264,9 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                 const SizedBox(width: Gap.sm),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _unita.contains(_unitaScelta) ? _unitaScelta : 'g',
+                    initialValue: _unita.contains(_unitaScelta)
+                        ? _unitaScelta
+                        : 'g',
                     decoration: const InputDecoration(labelText: 'Unità'),
                     items: _unita
                         .map((u) => DropdownMenuItem(value: u, child: Text(u)))
@@ -313,8 +344,14 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
             // che si può solo far crescere.
             TextButton.icon(
               onPressed: _inCorso ? null : _elimina,
-              icon: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
-              label: Text('Elimina', style: TextStyle(color: theme.colorScheme.error)),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: theme.colorScheme.error,
+              ),
+              label: Text(
+                'Elimina',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             ),
           ],
         ),
@@ -322,13 +359,16 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
     );
   }
 
-  Widget _campoMacro(TextEditingController controller, String chiave, String etichetta) =>
-      TextField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(labelText: etichetta, isDense: true),
-        // Toccarlo significa «questo lo decido io»: da quel momento il valore
-        // viaggia nella richiesta e vince sul ricalcolo.
-        onChanged: (_) => _toccati.add(chiave),
-      );
+  Widget _campoMacro(
+    TextEditingController controller,
+    String chiave,
+    String etichetta,
+  ) => TextField(
+    controller: controller,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    decoration: InputDecoration(labelText: etichetta, isDense: true),
+    // Toccarlo significa «questo lo decido io»: da quel momento il valore
+    // viaggia nella richiesta e vince sul ricalcolo.
+    onChanged: (_) => _toccati.add(chiave),
+  );
 }

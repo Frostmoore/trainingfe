@@ -184,7 +184,8 @@ class VoceStimata {
   /// Va guardata: il modello dichiara di non essere sicuro, oppure non sa se
   /// l'alimento fosse crudo o cotto.
   bool get daGuardare =>
-      (confidenza != null && confidenza! < 0.7) || stato == StatoCottura.ambiguo;
+      (confidenza != null && confidenza! < 0.7) ||
+      stato == StatoCottura.ambiguo;
 
   VoceStimata copyCon({
     double? qty,
@@ -225,7 +226,8 @@ class VoceStimata {
   ///
   /// 💡 Restituisce `null` senza grammi: da «due cucchiai» senza peso non si
   /// ricava niente, e riscalare inventando sarebbe peggio che non riscalare.
-  ({double? kcal, double? proteine, double? carboidrati, double? grassi})? get per100 {
+  ({double? kcal, double? proteine, double? carboidrati, double? grassi})?
+  get per100 {
     final g = grammi;
 
     if (g == null || g <= 0) return null;
@@ -245,7 +247,10 @@ class VoceStimata {
   /// ⚠️ I valori che chi legge ha già corretto a mano non passano di qui: chi
   /// chiama decide quali riscalare, perché un numero scritto da una persona non
   /// va sovrascritto da una proporzione.
-  VoceStimata riscalataA(double nuoviGrammi, {required Set<String> intoccabili}) {
+  VoceStimata riscalataA(
+    double nuoviGrammi, {
+    required Set<String> intoccabili,
+  }) {
     final base = per100;
 
     if (base == null || nuoviGrammi <= 0) return this;

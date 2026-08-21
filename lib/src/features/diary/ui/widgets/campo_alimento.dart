@@ -75,7 +75,9 @@ class _CampoAlimentoState extends ConsumerState<CampoAlimento> {
   void _scegli(AlimentoCatalogo a) {
     _apertoDaUnaScelta = true;
     widget.controller.text = a.nome;
-    widget.controller.selection = TextSelection.collapsed(offset: a.nome.length);
+    widget.controller.selection = TextSelection.collapsed(
+      offset: a.nome.length,
+    );
 
     widget.onScelto(a);
 
@@ -98,7 +100,8 @@ class _CampoAlimentoState extends ConsumerState<CampoAlimento> {
           onChanged: _scritto,
           decoration: const InputDecoration(
             labelText: 'Cosa hai mangiato',
-            helperText: 'Scrivi le prime lettere: se lo conosciamo, lo compiliamo noi.',
+            helperText:
+                'Scrivi le prime lettere: se lo conosciamo, lo compiliamo noi.',
           ),
         ),
 

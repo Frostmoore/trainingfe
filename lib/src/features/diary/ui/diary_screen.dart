@@ -53,9 +53,11 @@ class DiaryScreen extends ConsumerWidget {
       ),
       body: diario.when(
         loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
+        error: (e, _) =>
+            ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
         data: (day) => RefreshIndicator(
-          onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(diaryProvider)),
+          onRefresh: () =>
+              aggiornaTutto(context, ref, () => ref.invalidate(diaryProvider)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
             children: [
@@ -69,7 +71,11 @@ class DiaryScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _scegliData(BuildContext context, WidgetRef ref, DateTime attuale) async {
+  Future<void> _scegliData(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime attuale,
+  ) async {
     final scelta = await showDatePicker(
       context: context,
       initialDate: attuale,
@@ -116,15 +122,17 @@ class _BarraGiorno extends StatelessWidget implements PreferredSizeWidget {
             child: Text(
               isOggi ? 'Oggi' : DateFormat('EEEE d MMMM', 'it').format(giorno),
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           IconButton(
             // Disabilitato su oggi: in avanti non c'è niente da vedere.
             onPressed: isOggi
                 ? null
-                : () => ref.read(selectedDateProvider.notifier).state =
-                      giorno.add(const Duration(days: 1)),
+                : () => ref.read(selectedDateProvider.notifier).state = giorno
+                      .add(const Duration(days: 1)),
             icon: const Icon(Icons.chevron_right_rounded),
           ),
         ],
@@ -155,7 +163,9 @@ class _Pasto extends ConsumerWidget {
      * l'elemento nell'albero — cioè esattamente ciò di cui Flutter si lamenta.
      */
     final inUscita = ref.watch(vociInUscitaProvider);
-    final visibili = pasto.entries.where((v) => !inUscita.contains(v.id)).toList();
+    final visibili = pasto.entries
+        .where((v) => !inUscita.contains(v.id))
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Gap.md),
@@ -164,13 +174,20 @@ class _Pasto extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.sm),
+              padding: const EdgeInsets.fromLTRB(
+                Gap.md,
+                Gap.md,
+                Gap.md,
+                Gap.sm,
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       pasto.label,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   Text(
@@ -210,13 +227,15 @@ class _Pasto extends ConsumerWidget {
               children: [
                 Expanded(
                   child: TextButton.icon(
-                    onPressed: () => AddFoodSheet.show(context, meal: pasto.meal),
+                    onPressed: () =>
+                        AddFoodSheet.show(context, meal: pasto.meal),
                     icon: const Icon(Icons.add, size: 18),
                     label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () => FavoritesSheet.mostra(context, meal: pasto.meal),
+                  onPressed: () =>
+                      FavoritesSheet.mostra(context, meal: pasto.meal),
                   icon: const Icon(Icons.star_outline_rounded, size: 18),
                   label: const Text('Preferiti'),
                 ),
@@ -272,15 +291,15 @@ extension on _Pasto {
           .saveMeal(meal: pasto.meal, description: nome);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('«$nome» salvato fra i preferiti')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('«$nome» salvato fra i preferiti')),
+        );
       }
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+        );
       }
     }
   }
@@ -408,14 +427,16 @@ class _Voce extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('«${voce.description}» salvato fra i preferiti')),
+          SnackBar(
+            content: Text('«${voce.description}» salvato fra i preferiti'),
+          ),
         );
       }
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+        );
       }
     }
   }

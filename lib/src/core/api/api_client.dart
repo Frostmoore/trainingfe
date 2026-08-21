@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 import '../errors/api_exception.dart';
@@ -324,14 +325,29 @@ class ApiClient {
         return NotFoundException(message ?? const NotFoundException().message);
 
       /*
-       * 🆕 **426 — questa versione non parla più con questo server** (FASE 10).
+       * 🆕 **409 con `code: app_da_aggiornare`: l'app è troppo vecchia** (FASE 10).
        *
-       * 🚨 Ha una classe sua perché il `catch (Object)` che sta in mezza app la
-       * trasformerebbe in «non ha funzionato, riprova» — e riprovare **non può
-       * funzionare**: quello che serve è aggiornare.
+       * 🚨 **Era un 426, che sarebbe stato il codice giusto.** Non funziona
+       * su Android: lo stack HTTP di sistema tratta il 426 come un codice di
+       * *protocollo* e **butta via il corpo** — misurato il 21/08 su telefono
+       * vero, `response.data` arrivava `null`. ⚠️ Senza corpo non arrivano né
+       * l'indirizzo dello store né il minimo, cioè la schermata di blocco
+       * resterebbe senza l'unica azione che ha.
+       *
+       * ⚠️ **Si guarda il `code`, non solo lo stato**: il 409 lo usa già la
+       * chat, e inghiottirlo qui trasformerebbe un conflitto di conversazione
+       * in «aggiorna l'app».
+       *
+       * 💡 Ha una classe sua perché il `catch (Object)` che sta in mezza app
+       * la trasformerebbe in «non ha funzionato, riprova» — e la persona
+       * riproverebbe per sempre, perché riprovare **non può** funzionare.
        */
-      case 426:
-        return _annunciaCheVaAggiornata(message, body['store']?.toString());
+      case 409:
+        if (code == 'app_da_aggiornare') {
+          return _annunciaCheVaAggiornata(message, body['store']?.toString());
+        }
+
+        return ServerException(message ?? const ServerException().message);
 
       case 422:
         return ValidationException(

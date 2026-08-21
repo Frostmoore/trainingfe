@@ -48,11 +48,11 @@ void main() {
   tearDown(() => api.dispose());
 
   test(
-    'un 426 diventa AppDaAggiornareException, non un errore generico',
+    'un 409 con `app_da_aggiornare` diventa AppDaAggiornareException, non un errore generico',
     () async {
       adapter.onGet(
         '/diario',
-        (s) => s.reply(426, {
+        (s) => s.reply(409, {
           'message': 'Questa versione non è più supportata.',
           'code': 'app_da_aggiornare',
           'minima': 74500,
@@ -88,11 +88,11 @@ void main() {
   );
 
   test(
-    'il 426 arriva sullo stream, una volta sola e da un posto solo',
+    'il 409 arriva sullo stream, una volta sola e da un posto solo',
     () async {
       adapter.onGet(
         '/diario',
-        (s) => s.reply(426, {
+        (s) => s.reply(409, {
           'code': 'app_da_aggiornare',
           'store': 'https://x.test',
         }),
@@ -121,7 +121,7 @@ void main() {
   test('il controller si blocca sul verdetto, e non da solo', () async {
     adapter.onGet(
       '/diario',
-      (s) => s.reply(426, {
+      (s) => s.reply(409, {
         'code': 'app_da_aggiornare',
         'store': 'https://x.test',
       }),
@@ -193,7 +193,7 @@ void main() {
     },
   );
 
-  test('un 401 non è un 426: sono due schermate diverse', () async {
+  test('un 401 non è un blocco di versione: due schermate diverse', () async {
     // ⚠️ Confonderli manderebbe al login chi deve andare allo store, e viceversa.
     adapter.onGet(
       '/diario',

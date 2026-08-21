@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,6 +33,45 @@ class SchermataAggiorna extends ConsumerStatefulWidget {
 
 class _SchermataAggiornaState extends ConsumerState<SchermataAggiorna> {
   bool _inCorso = false;
+
+  /// L'indirizzo dello store, se il 426 non l'ha portato.
+  String? _storeDiRipiego;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recuperaLoStore());
+  }
+
+  /// ⚠️ **Il link allo store non può mancare: è l'unica azione di questa
+  /// schermata.** Senza, la persona legge «aggiorna» e non ha da nessuna parte
+  /// per andare — cioè il blocco diventa un vicolo cieco davvero.
+  ///
+  /// 🚨 Il 426 lo porta, ma **solo se il corpo della risposta si è potuto
+  /// leggere**: una richiesta che scarica byte grezzi (`scaricaByte`) o una
+  /// risposta che per qualunque ragione non è JSON lascerebbe `store` a `null`,
+  /// e non c'è modo di saperlo prima. 💡 `GET /versione` sta **fuori dal
+  /// cancello** e lo porta sempre: è la rete di sicurezza.
+  Future<void> _recuperaLoStore() async {
+    if (ref.read(aggiornamentoProvider).store != null) return;
+
+    try {
+      final dati = await ref
+          .read(apiClientProvider)
+          .get<Map<String, dynamic>>('/versione');
+
+      final store = dati['store']?.toString();
+
+      if (mounted && store != null && store.isNotEmpty) {
+        setState(() => _storeDiRipiego = store);
+      }
+    } on Object catch (e) {
+      // ⚠️ Muto: senza rete non si può fare niente, e dirlo qui aggiungerebbe
+      // un errore a una schermata che già sta dando una brutta notizia.
+      debugPrint('SchermataAggiorna: lo store non si recupera — $e');
+    }
+  }
 
   /// Richiede il verdetto al server.
   ///
@@ -93,6 +133,17 @@ class _SchermataAggiornaState extends ConsumerState<SchermataAggiorna> {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final stato = ref.watch(aggiornamentoProvider);
+    /*
+     * 🚨 **Due sorgenti, e la seconda è nata da un difetto vero.**
+     *
+     * Il 21/08, con il blocco al primo tentativo su `426`, `stato.store`
+     * arrivava **sempre nullo** e il pulsante «Aggiorna» non compariva: lo stack
+     * HTTP di Android buttava via il corpo della risposta. ⚠️ Il codice è poi
+     * diventato `409` e il corpo arriva, ma il ripiego **resta**: il link allo
+     * store è l'unica azione di questa schermata, e una schermata di blocco
+     * senza via d'uscita è peggio del problema che risolve.
+     */
+    final store = stato.store ?? _storeDiRipiego;
 
     return Scaffold(
       body: SafeArea(
@@ -164,9 +215,9 @@ class _SchermataAggiornaState extends ConsumerState<SchermataAggiorna> {
 
               const SizedBox(height: Gap.lg),
 
-              if (stato.store != null)
+              if (store != null)
                 FilledButton.icon(
-                  onPressed: () => _apriLoStore(stato.store!),
+                  onPressed: () => _apriLoStore(store),
                   icon: const Icon(Icons.open_in_new_rounded),
                   label: const Text('Aggiorna'),
                 ),

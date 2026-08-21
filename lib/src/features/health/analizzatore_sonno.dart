@@ -83,6 +83,40 @@ class AnalizzatoreSonno {
 
   /// Il riepilogo di una notte. `null` se per quella notte non c'è nessun
   /// campione — **non** un oggetto con tutti zeri.
+  /// Le **pennichelle** di una giornata — 21/08/2026.
+  ///
+  /// ══ 🚨 PERCHÉ ESISTE, E PERCHÉ NON TOCCA IL CONTO DELLA NOTTE ═══════════
+  ///
+  /// 📌 Il committente: *«la notte ho dormito 5:16 ma poi ho fatto due pisolini,
+  /// vedi se ti risultano perché sull'app non si vedono»*.
+  ///
+  /// ⚠️ Le pennichelle **erano già lette e già salvate** — `_assegnaLeGiornate`
+  /// dà a ognuna la sua giornata — e già classificate (`eNotte: false`). 🚨 Il
+  /// difetto era che **nessuno le chiedeva**: `notte()` teneva solo le notti e
+  /// buttava il resto, quindi un'ora e mezza di sonno vera spariva dall'app
+  /// senza lasciare traccia.
+  ///
+  /// 💡 È lo specchio del difetto del 20/08. Allora i pisolini finivano **dentro**
+  /// il totale della notte e lo gonfiavano; la correzione li ha tolti — e li ha
+  /// tolti **anche dalla vista**. Una cosa contata male è peggio di una non
+  /// contata, ma «non contata» non deve voler dire «invisibile».
+  ///
+  /// ⛔ **E restano fuori dal conto della notte, dal recupero e dal consiglio.**
+  /// Questo metodo serve a **mostrarle**, non a rimetterle nella somma: due ore
+  /// di pennichella non rendono riposante una notte da cinque.
+  static Future<List<SessioneSonno>> pisolini(
+    ArchivioSalute archivio,
+    DateTime quale,
+  ) async {
+    final tutti = await archivio.campioniDellaNotte(quale);
+
+    if (tutti.isEmpty) return const [];
+
+    return SessioniDiSonno.da(
+      tutti.map((c) => (inizio: c.iniziatoIl, fine: c.finitoIl)),
+    ).where((s) => !s.eNotte).toList();
+  }
+
   static Future<GiudizioNotte?> notte(
     ArchivioSalute archivio,
     DateTime quale,

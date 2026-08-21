@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
+import '../../health/sessioni_di_sonno.dart';
 import '../sleep_controller.dart';
 
 /// Il sonno — C14.
@@ -26,6 +27,7 @@ class SleepScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notte = ref.watch(sleepProvider);
+    final pisolini = ref.watch(pisoliniProvider).valueOrNull ?? const [];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sonno')),
@@ -36,24 +38,192 @@ class SleepScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(sleepProvider),
         ),
         data: (n) => n == null
-            ? const EmptyState(
-                icon: Icons.bedtime_outlined,
-                title: 'Nessun dato sul sonno',
-                message:
-                    'I dati arrivano dall\'orologio. Assicurati che la categoria '
-                    'Sonno sia attiva nell\'app che li invia, e fai una sincronizzazione.',
-              )
-            : _Notte(notte: n, ref: ref),
+            /*
+             * 🚨 **Senza notte, ma con pennichelle, si mostrano quelle** —
+             * 21/08/2026.
+             *
+             * ⚠️ Prima qui compariva «Nessun dato sul sonno» anche a chi aveva
+             * dormito due ore nel pomeriggio: il dato c'era, era letto, era
+             * salvato, e la schermata diceva che non esisteva. 💡 Dire «non ho
+             * dati» quando i dati ci sono è il modo più rapido per far smettere
+             * di fidarsi di una schermata.
+             */
+            ? (pisolini.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.bedtime_outlined,
+                      title: 'Nessun dato sul sonno',
+                      message:
+                          'I dati arrivano dall\'orologio. Assicurati che la categoria '
+                          'Sonno sia attiva nell\'app che li invia, e fai una sincronizzazione.',
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(Gap.md),
+                      children: [
+                        const _SenzaNotte(),
+                        const SizedBox(height: Gap.md),
+                        _Pisolini(pisolini: pisolini),
+                      ],
+                    ))
+            : _Notte(notte: n, ref: ref, pisolini: pisolini),
+      ),
+    );
+  }
+}
+
+/// 💡 C'è la giornata, ma non una dormita principale.
+class _SenzaNotte extends StatelessWidget {
+  const _SenzaNotte();
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.nights_stay_outlined,
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Text(
+                'Per questa giornata non risulta una dormita notturna — solo '
+                'riposi brevi. Non li sommiamo come se fossero una notte.',
+                style: tema.textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// I riposi brevi della giornata — 21/08/2026.
+///
+/// ══ 🚨 PERCHÉ STANNO A PARTE, E NON NEL TOTALE ════════════════════════════
+///
+/// 📌 Il committente: *«la notte ho dormito 5:16 ma poi ho fatto due pisolini,
+/// vedi se ti risultano perché sull'app non si vedono»*.
+///
+/// ⚠️ Il 20/08 il difetto era **l'opposto**: le pennichelle finivano dentro il
+/// totale della notte e la facevano sembrare riposante. La correzione le ha
+/// tolte dal conto — giustamente — ma le ha tolte **anche dalla vista**.
+///
+/// 💡 Qui si rimettono dove devono stare: **visibili e separate**. Sommarle alla
+/// notte sarebbe rifare il difetto vecchio; nasconderle è buttare via un'ora e
+/// mezza di sonno vera.
+class _Pisolini extends StatelessWidget {
+  const _Pisolini({required this.pisolini});
+
+  final List<SessioneSonno> pisolini;
+
+  static String _durata(Duration d) {
+    final ore = d.inHours;
+    final minuti = d.inMinutes % 60;
+
+    return ore > 0 ? '${ore}h ${minuti}m' : '${minuti}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (pisolini.isEmpty) return const SizedBox.shrink();
+
+    final tema = Theme.of(context);
+    final ora = DateFormat('HH:mm');
+
+    final totale = pisolini.fold(Duration.zero, (somma, p) => somma + p.durata);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.weekend_outlined, color: tema.colorScheme.primary),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    pisolini.length == 1 ? 'Un riposo breve' : 'Riposi brevi',
+                    style: tema.textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  _durata(totale),
+                  style: tema.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: tema.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: Gap.sm),
+
+            for (final p in pisolini)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${ora.format(p.inizio)} – ${ora.format(p.fine)}',
+                        style: tema.textTheme.bodyMedium,
+                      ),
+                    ),
+                    Text(
+                      _durata(p.durata),
+                      style: tema.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: Gap.sm),
+
+            /*
+             * 🚨 **Va detto che NON sono nel totale della notte**, o il numero
+             * grande sopra sembrerà sbagliato a chi sa di aver dormito di più.
+             * ⚠️ Un totale che non torna, senza una riga che spieghi perché, è un
+             * totale di cui si smette di fidarsi.
+             */
+            Text(
+              'Contati a parte: non entrano nel totale della notte né nel '
+              'giudizio sul recupero.',
+              style: tema.textTheme.labelSmall?.copyWith(
+                color: tema.colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _Notte extends StatelessWidget {
-  const _Notte({required this.notte, required this.ref});
+  const _Notte({
+    required this.notte,
+    required this.ref,
+    this.pisolini = const [],
+  });
 
   final SleepNight notte;
   final WidgetRef ref;
+
+  /// I riposi brevi della stessa giornata, se ce ne sono.
+  final List<SessioneSonno> pisolini;
 
   /// Il colore del giudizio: verde non serve, l'assenza di allarme è già
   /// l'informazione.
@@ -114,6 +284,17 @@ class _Notte extends StatelessWidget {
 
         const SizedBox(height: Gap.lg),
         _Ipnogramma(notte: notte),
+
+        const SizedBox(height: Gap.lg),
+
+        /*
+         * 🆕 **I riposi brevi, sotto la notte e separati da essa** — 21/08.
+         *
+         * ⚠️ Sotto e non sopra: la domanda che porta qui è «come ho dormito
+         * stanotte», e mettere le pennichelle prima farebbe leggere per primo il
+         * numero più piccolo. 💡 Sparisce da sola quando non ce ne sono.
+         */
+        _Pisolini(pisolini: pisolini),
 
         const SizedBox(height: Gap.lg),
         _Fase(

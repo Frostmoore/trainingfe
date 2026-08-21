@@ -4,6 +4,7 @@ import '../../core/storage/archivio_salute.dart';
 import '../health/analizzatore_sonno.dart';
 import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
+import '../health/sessioni_di_sonno.dart';
 
 // ⚠️ `core/providers.dart` non torna: la sorgente non è più la rete, e
 // `apiClientProvider` qui non serve più a niente.
@@ -153,6 +154,35 @@ final sleepNightProvider = StateProvider<DateTime?>((ref) => null);
 /// — ed è il motivo per cui `SleepNight`, `SleepBlock` e `SleepScreen` non sono
 /// stati cancellati in S2: è cambiata **solo la sorgente**, e nessuna schermata
 /// se n'è accorta.
+/// Quale giornata si sta guardando.
+///
+/// 💡 Estratta perché la guardano in due — la notte e le pennichelle — e due
+/// copie di questa regola sarebbero due schermate che parlano di giorni diversi.
+final giornataDelSonnoProvider = FutureProvider.autoDispose<DateTime?>((
+  ref,
+) async {
+  ref.watch(healthControllerProvider);
+
+  return ref.watch(sleepNightProvider) ??
+      await ref.watch(archivioSaluteProvider).ultimaNotteConDati();
+});
+
+/// Le **pennichelle** della giornata — 21/08/2026.
+///
+/// 🚨 Un provider a parte e non un campo di `SleepNight`, per una ragione che
+/// conta: `sleepProvider` torna `null` quando **non c'è una notte**, e in quel
+/// caso la schermata non mostrerebbe niente pur avendo la persona dormito.
+/// ⚠️ Chi ha fatto solo pennichelle deve vederle lo stesso.
+final pisoliniProvider = FutureProvider.autoDispose<List<SessioneSonno>>((
+  ref,
+) async {
+  final quale = await ref.watch(giornataDelSonnoProvider.future);
+
+  if (quale == null) return const [];
+
+  return AnalizzatoreSonno.pisolini(ref.watch(archivioSaluteProvider), quale);
+});
+
 final sleepProvider = FutureProvider.autoDispose<SleepNight?>((ref) async {
   final archivio = ref.watch(archivioSaluteProvider);
 
@@ -163,8 +193,7 @@ final sleepProvider = FutureProvider.autoDispose<SleepNight?>((ref) async {
   // ⚠️ Nessuna notte scelta = **l'ultima con dati**, non «stanotte». Chi apre
   // l'app alle 18 senza aver sincronizzato vedrebbe altrimenti una schermata
   // vuota pur avendo dormito: il dato c'è, è solo di ieri.
-  final quale =
-      ref.watch(sleepNightProvider) ?? await archivio.ultimaNotteConDati();
+  final quale = await ref.watch(giornataDelSonnoProvider.future);
 
   if (quale == null) return null;
 

@@ -37,6 +37,9 @@ part 'archivio_salute.g.dart';
     PianiRicevuti,
     ContenutiRifiutati,
     AllenamentiDaOrologio,
+    SeduteAllenamento,
+    SerieDelleSedute,
+    BruciateDichiarate,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -46,7 +49,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -146,6 +149,27 @@ class ArchivioSalute extends _$ArchivioSalute {
           allenamentiDaOrologio,
           allenamentiDaOrologio.staccato,
         );
+      }
+
+      /*
+       * ══ 🏋️ v10 → v11 (FASE 11): gli allenamenti tornano a casa ═══════════
+       *
+       * 📌 Il committente, 21/08/2026: *«Nessun allenamento deve risiedere sul
+       * server, devono stare tutti nell'app»*.
+       *
+       * ⚠️ **Le tabelle si creano vuote, e nessuno ci scrive ancora**: chi
+       * riempie è la migrazione dei dati (11.3), che gira **una volta sola** e
+       * solo dopo aver verificato i conteggi. 🚨 Creare le tabelle e spostare
+       * il player nello stesso passo vorrebbe dire perdere le sedute di chi
+       * aggiorna prima che la migrazione abbia girato.
+       *
+       * 💡 Finiscono nel backup **da sole**: `esportaPerBackup()` enumera
+       * `allTables`, non un elenco scritto a mano.
+       */
+      if (da < 11) {
+        await m.createTable(seduteAllenamento);
+        await m.createTable(serieDelleSedute);
+        await m.createTable(bruciateDichiarate);
       }
     },
   );
@@ -320,6 +344,196 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     return allenamenti.length;
   }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 🏋️ Le sedute registrate con l'app — FASE 11.1
+  // ══════════════════════════════════════════════════════════════════════
+
+  /// Apre una seduta e restituisce il suo `id` locale.
+  ///
+  /// 🚨 **`finitaIl` resta `null` finché non si chiude**, ed è quello che la
+  /// rende «aperta». ⚠️ Deve sopravvivere alla chiusura dell'app: chi si allena
+  /// mette giù il telefono, e il sistema può ucciderlo in qualunque momento.
+  Future<int> apriSeduta({
+    int? schedaServerId,
+    String? nomeScheda,
+    DateTime? quando,
+  }) => into(seduteAllenamento).insert(
+    SeduteAllenamentoCompanion.insert(
+      schedaServerId: Value(schedaServerId),
+      nomeScheda: Value(nomeScheda),
+      iniziataIl: quando ?? DateTime.now(),
+    ),
+  );
+
+  /// La seduta ancora aperta, se ce n'è una.
+  ///
+  /// ⚠️ **La più recente**, non «l'unica»: se per un difetto ne restassero due
+  /// aperte, riprendere la più vecchia sarebbe la scelta peggiore — si
+  /// scriverebbero le serie di oggi dentro la seduta di ieri.
+  Future<SedutaAllenamento?> sedutaAperta() =>
+      (select(seduteAllenamento)
+            ..where((t) => t.finitaIl.isNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.iniziataIl)])
+            ..limit(1))
+          .getSingleOrNull();
+
+  /// Chiude una seduta.
+  ///
+  /// 💡 `kcal` si scrive solo se arriva: passare `null` **non azzera** un numero
+  /// già calcolato. ⚠️ La differenza fra «non lo so» e «zero» vale anche qui.
+  Future<void> chiudiSeduta(
+    int id, {
+    DateTime? quando,
+    int? kcal,
+    bool? kcalAMano,
+  }) => (update(seduteAllenamento)..where((t) => t.id.equals(id))).write(
+    SeduteAllenamentoCompanion(
+      finitaIl: Value(quando ?? DateTime.now()),
+      kcal: kcal == null ? const Value.absent() : Value(kcal),
+      kcalAMano: kcalAMano == null ? const Value.absent() : Value(kcalAMano),
+    ),
+  );
+
+  /// Scrive le calorie **a mano** su una seduta — 🚨 e segna che sono a mano.
+  ///
+  /// ⛔ Le due scritture non si separano mai: `kcal` senza `kcalAMano` fa
+  /// credere a un ricalcolo automatico di poter sovrascrivere una correzione
+  /// della persona, ed è esattamente il difetto che `kcal_source` evitava sul
+  /// server.
+  Future<void> correggiKcalSeduta(int id, int kcal) =>
+      (update(seduteAllenamento)..where((t) => t.id.equals(id))).write(
+        SeduteAllenamentoCompanion(
+          kcal: Value(kcal),
+          kcalAMano: const Value(true),
+        ),
+      );
+
+  /// Cancella una seduta **e le sue serie**.
+  ///
+  /// ══ 🚨 IL `cascade` DICHIARATO NON BASTA, E SI SCOPRE SOLO PROVANDO ═════
+  ///
+  /// `SerieDelleSedute.sedutaId` dichiara `onDelete: KeyAction.cascade`, ma
+  /// **SQLite non applica le chiavi esterne se non gliele si accende** con
+  /// `PRAGMA foreign_keys = ON`. ⚠️ Questo archivio non lo fa, e non è una
+  /// dimenticanza da rimediare qui:
+  ///
+  /// 🚨 `ripristinaDaBackup()` svuota tutte le tabelle e le riscrive **in
+  /// ordine di enumerazione**. Con i vincoli attivi, riscrivere le serie prima
+  /// delle sedute fallirebbe — cioè il ripristino, che è l'unica copia dei dati
+  /// dopo la FASE 11, si romperebbe per una precauzione.
+  ///
+  /// 💡 Quindi le serie si cancellano a mano, in transazione. ⛔ Senza,
+  /// resterebbero righe orfane: nessuna schermata le mostra, ma il backup se le
+  /// porta in giro per sempre.
+  Future<void> cancellaSeduta(int id) => transaction(() async {
+    await (delete(serieDelleSedute)..where((t) => t.sedutaId.equals(id))).go();
+    await (delete(seduteAllenamento)..where((t) => t.id.equals(id))).go();
+  });
+
+  /// Le sedute, dalla più recente.
+  Future<List<SedutaAllenamento>> sedute({int quante = 200, DateTime? da}) =>
+      (select(seduteAllenamento)
+            ..where(
+              (t) => da == null
+                  ? const Constant(true)
+                  : t.iniziataIl.isBiggerOrEqualValue(da),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.iniziataIl)])
+            ..limit(quante))
+          .get();
+
+  /// Le serie di una seduta, nell'ordine in cui sono state fatte.
+  Future<List<SerieSeduta>> serieDi(int sedutaId) =>
+      (select(serieDelleSedute)
+            ..where((t) => t.sedutaId.equals(sedutaId))
+            ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
+          .get();
+
+  /// Le serie di **più** sedute in una query sola.
+  ///
+  /// 🚨 Serve allo storico e al riassunto della settimana: chiamarne una per
+  /// seduta vorrebbe dire trenta query per disegnare una schermata, su un
+  /// database che sta sullo stesso telefono che deve restare fluido.
+  Future<Map<int, List<SerieSeduta>>> serieDiPiuSedute(
+    List<int> seduteIds,
+  ) async {
+    if (seduteIds.isEmpty) return const {};
+
+    final righe =
+        await (select(serieDelleSedute)
+              ..where((t) => t.sedutaId.isIn(seduteIds))
+              ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
+            .get();
+
+    final per = <int, List<SerieSeduta>>{};
+    for (final r in righe) {
+      (per[r.sedutaId] ??= []).add(r);
+    }
+
+    return per;
+  }
+
+  /// Registra una serie. Se esiste già `(seduta, esercizio, numero)`, la
+  /// **sostituisce**.
+  ///
+  /// 💡 È il gesto giusto per questa tabella, al contrario di
+  /// [scriviAllenamenti]: qui non c'è nessun campo «di chi usa l'app» da
+  /// difendere — riscrivere la terza serie di panca **è** quello che si vuole
+  /// quando si corregge un numero sbagliato.
+  Future<void> registraSerie(SerieDelleSeduteCompanion serie) =>
+      into(serieDelleSedute).insert(serie, mode: InsertMode.insertOrReplace);
+
+  Future<void> cancellaSerie(int id) =>
+      (delete(serieDelleSedute)..where((t) => t.id.equals(id))).go();
+
+  /// Le calorie dichiarate a mano per un giorno, o `null`.
+  Future<int?> bruciateAManoDel(DateTime giorno) async {
+    final riga =
+        await (select(bruciateDichiarate)..where(
+              (t) => t.giorno.equals(
+                DateTime(giorno.year, giorno.month, giorno.day),
+              ),
+            ))
+            .getSingleOrNull();
+
+    return riga?.kcal;
+  }
+
+  /// Le calorie dichiarate a mano in un intervallo, per giorno.
+  Future<Map<DateTime, int>> bruciateAManoFra(DateTime da, DateTime a) async {
+    final righe =
+        await (select(bruciateDichiarate)..where(
+              (t) =>
+                  t.giorno.isBiggerOrEqualValue(da) &
+                  t.giorno.isSmallerOrEqualValue(a),
+            ))
+            .get();
+
+    return {for (final r in righe) r.giorno: r.kcal};
+  }
+
+  /// Dichiara le calorie bruciate di un giorno.
+  ///
+  /// ⚠️ **Una riga per giorno**: è una dichiarazione complessiva, non un
+  /// contributo. 🚨 Permetterne due vorrebbe dire sommarle, e chi corregge il
+  /// numero si ritroverebbe il doppio.
+  Future<void> dichiaraBruciate(DateTime giorno, int kcal) =>
+      into(bruciateDichiarate).insert(
+        BruciateDichiarateCompanion.insert(
+          giorno: DateTime(giorno.year, giorno.month, giorno.day),
+          kcal: kcal,
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
+
+  Future<void> togliBruciateAMano(DateTime giorno) =>
+      (delete(bruciateDichiarate)..where(
+            (t) => t.giorno.equals(
+              DateTime(giorno.year, giorno.month, giorno.day),
+            ),
+          ))
+          .go();
 
   /// Gli allenamenti dell'orologio, dal più recente.
   ///
@@ -1487,4 +1701,151 @@ class AllenamentiDaOrologio extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
     {fonte, iniziatoIl},
   ];
+}
+
+/// Una seduta di allenamento registrata **con l'app** — FASE 11.1, 21/08/2026.
+///
+/// ══ 🚨 PERCHÉ QUESTA TABELLA ESISTE ═══════════════════════════════════════
+///
+/// 📌 Il committente: *«Nessun allenamento deve risiedere sul server, devono
+/// stare tutti nell'app»*. È la decisione già scritta il 16/08 in
+/// `plan_tutto_sul_telefono.md` §2.1, rimasta a metà.
+///
+/// ⚠️ **Fino a oggi c'erano due case per la stessa cosa**: quello che arriva
+/// dall'orologio in [AllenamentiDaOrologio], quello registrato col player in
+/// `workout_sessions` **sul server**. 🚨 `storicoUnificatoProvider` esiste solo
+/// per ricucire i due mondi — ed è il motivo per cui la scheda «Allenamento» si
+/// è contraddetta da sola (difetto O.D.8).
+///
+/// ── ⚠️ `idServer` non è ridondante ───────────────────────────────────────
+///
+/// 🚨 Serve a **due** cose, e senza di esso la migrazione non è possibile:
+///
+/// 1. La migrazione (11.3) deve poter riscaricare senza duplicare: la chiave
+///    unica è `idServer`, e una seconda passata non crea righe doppie.
+/// 2. `SchedeRicevute` e le foto della seduta puntano all'id del server. ⛔
+///    Buttarlo vorrebbe dire perdere il legame fra una seduta e la scheda che
+///    è stata eseguita.
+///
+/// 💡 `null` per le sedute **nate sul telefono** dopo la migrazione: da lì in
+/// poi il server non le vede mai, quindi un id di là non ce l'hanno.
+@DataClassName('SedutaAllenamento')
+class SeduteAllenamento extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// L'`id` che questa seduta aveva sul server, se ci è mai stata.
+  IntColumn get idServer => integer().nullable().unique()();
+
+  /// L'`id` **del server** della scheda eseguita, come lo mandava `plan_id`.
+  ///
+  /// ⚠️ Non l'id locale di `SchedeRicevute`: quello cambia da telefono a
+  /// telefono, questo no. Le due cose si incrociano su `SchedeRicevute.origineId`.
+  IntColumn get schedaServerId => integer().nullable()();
+
+  /// 💡 Copiato al momento della seduta, non risolto ogni volta: la scheda può
+  /// essere archiviata o rinominata, e lo storico deve continuare a dire quello
+  /// che diceva allora.
+  TextColumn get nomeScheda => text().nullable()();
+
+  DateTimeColumn get iniziataIl => dateTime()();
+
+  /// 🚨 `null` = **seduta ancora aperta**, ed è uno stato che deve sopravvivere
+  /// alla chiusura dell'app: chi si allena mette giù il telefono.
+  DateTimeColumn get finitaIl => dateTime().nullable()();
+
+  /// Le calorie che **valgono** per questa seduta.
+  ///
+  /// ⚠️ Va sempre letta insieme a [kcalAMano]: è la coppia che tiene in piedi la
+  /// regola «il manuale batte la stima». 🚨 Senza la seconda colonna, un
+  /// ricalcolo automatico non sa se sta sovrascrivendo una stima o una
+  /// correzione della persona — e lo scopre solo la persona, quando il suo
+  /// numero sparisce.
+  IntColumn get kcal => integer().nullable()();
+
+  /// Se [kcal] l'ha scritta la persona invece della formula.
+  BoolColumn get kcalAMano => boolean().withDefault(const Constant(false))();
+
+  TextColumn get note => text().nullable()();
+
+  // 💡 Niente `uniqueKeys`: `idServer` ha già il suo `.unique()` di colonna, e
+  // dichiararlo due volte fa avvisare drift senza aggiungere niente.
+}
+
+/// Una serie dentro una seduta — FASE 11.1.
+///
+/// ⚠️ **`esercizioId` è quello del catalogo del server**, e il catalogo **resta
+/// sul server**: `exercises` è roba condivisa, non è di nessuno
+/// (`plan_tutto_sul_telefono.md` §2.2). 💡 Il nome si copia qui accanto perché
+/// lo storico si deve poter leggere anche senza rete.
+@DataClassName('SerieSeduta')
+class SerieDelleSedute extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// L'`id` **locale** della seduta: qui il legame è interno al telefono.
+  IntColumn get sedutaId => integer().references(
+    SeduteAllenamento,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  IntColumn get esercizioId => integer()();
+  TextColumn get nomeEsercizio => text()();
+
+  /// Il MET dell'esercizio, **copiato al momento della serie** — FASE 11.2.
+  ///
+  /// ══ 🚨 SI COPIA, NON SI RISOLVE ═══════════════════════════════════════
+  ///
+  /// Il catalogo degli esercizi **resta sul server** (`plan_tutto_sul_telefono.md`
+  /// §2.2): è roba condivisa, non è di nessuno. ⚠️ Ma il calcolo delle calorie
+  /// gira sul telefono, e deve funzionare **senza rete** — un ricalcolo che
+  /// aspetta il catalogo è un ricalcolo che non avviene in palestra.
+  ///
+  /// 💡 E c'è la ragione migliore: se domani il MET di un esercizio venisse
+  /// corretto nel catalogo, le sedute già fatte **non devono cambiare numero**.
+  /// Lo storico deve continuare a dire quello che diceva allora. È la stessa
+  /// scelta di [nomeEsercizio].
+  ///
+  /// ⛔ `null` per l'esercizio che non ce l'ha (1 su 121) e per quelli scritti a
+  /// mano dalle palestre: allora vince il ripiego di `CalorieAllenamento.met`.
+  RealColumn get met => real().nullable()();
+
+  IntColumn get numero => integer()();
+  IntColumn get ripetizioni => integer().nullable()();
+
+  /// 🚨 `real` e non intero: i manubri da 7.5 kg esistono, e arrotondarli
+  /// falserebbe il volume settimanale di chi li usa.
+  RealColumn get pesoKg => real().nullable()();
+
+  IntColumn get durataSec => integer().nullable()();
+  IntColumn get riposoSec => integer().nullable()();
+
+  DateTimeColumn get fattaIl => dateTime().nullable()();
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {sedutaId, esercizioId, numero},
+  ];
+}
+
+/// Le calorie bruciate **dichiarate a mano** per un giorno — FASE 11.1.
+///
+/// 🚨 **È una dichiarazione complessiva, non un contributo**: «oggi ho bruciato
+/// 800». ⚠️ Sommarla alle sedute raddoppierebbe la giornata di chi corregge il
+/// numero dopo essersi allenato — è la stessa regola che il server applicava in
+/// `WorkoutCalorieService::dailyBurned()`, e va **trasportata**, non
+/// reinventata.
+@DataClassName('BruciatoDichiarato')
+class BruciateDichiarate extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Il giorno locale, a mezzanotte.
+  ///
+  /// ⚠️ Un `DateTime` e non una stringa `yyyy-mm-dd`: il resto dell'archivio
+  /// usa `DateTime` per i giorni, e mescolare due convenzioni nello stesso
+  /// database è il modo per confrontare una data con un testo e non accorgersene.
+  DateTimeColumn get giorno => dateTime().unique()();
+
+  IntColumn get kcal => integer()();
+
+  // 💡 Come sopra: `giorno` ha già il suo `.unique()`.
 }

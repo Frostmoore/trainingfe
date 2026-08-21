@@ -3885,6 +3885,1535 @@ class AllenamentiDaOrologioCompanion
   }
 }
 
+class $SeduteAllenamentoTable extends SeduteAllenamento
+    with TableInfo<$SeduteAllenamentoTable, SedutaAllenamento> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeduteAllenamentoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _idServerMeta = const VerificationMeta(
+    'idServer',
+  );
+  @override
+  late final GeneratedColumn<int> idServer = GeneratedColumn<int>(
+    'id_server',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _schedaServerIdMeta = const VerificationMeta(
+    'schedaServerId',
+  );
+  @override
+  late final GeneratedColumn<int> schedaServerId = GeneratedColumn<int>(
+    'scheda_server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomeSchedaMeta = const VerificationMeta(
+    'nomeScheda',
+  );
+  @override
+  late final GeneratedColumn<String> nomeScheda = GeneratedColumn<String>(
+    'nome_scheda',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _iniziataIlMeta = const VerificationMeta(
+    'iniziataIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> iniziataIl = GeneratedColumn<DateTime>(
+    'iniziata_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _finitaIlMeta = const VerificationMeta(
+    'finitaIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> finitaIl = GeneratedColumn<DateTime>(
+    'finita_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcalMeta = const VerificationMeta('kcal');
+  @override
+  late final GeneratedColumn<int> kcal = GeneratedColumn<int>(
+    'kcal',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcalAManoMeta = const VerificationMeta(
+    'kcalAMano',
+  );
+  @override
+  late final GeneratedColumn<bool> kcalAMano = GeneratedColumn<bool>(
+    'kcal_a_mano',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("kcal_a_mano" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    idServer,
+    schedaServerId,
+    nomeScheda,
+    iniziataIl,
+    finitaIl,
+    kcal,
+    kcalAMano,
+    note,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sedute_allenamento';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SedutaAllenamento> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('id_server')) {
+      context.handle(
+        _idServerMeta,
+        idServer.isAcceptableOrUnknown(data['id_server']!, _idServerMeta),
+      );
+    }
+    if (data.containsKey('scheda_server_id')) {
+      context.handle(
+        _schedaServerIdMeta,
+        schedaServerId.isAcceptableOrUnknown(
+          data['scheda_server_id']!,
+          _schedaServerIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nome_scheda')) {
+      context.handle(
+        _nomeSchedaMeta,
+        nomeScheda.isAcceptableOrUnknown(data['nome_scheda']!, _nomeSchedaMeta),
+      );
+    }
+    if (data.containsKey('iniziata_il')) {
+      context.handle(
+        _iniziataIlMeta,
+        iniziataIl.isAcceptableOrUnknown(data['iniziata_il']!, _iniziataIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_iniziataIlMeta);
+    }
+    if (data.containsKey('finita_il')) {
+      context.handle(
+        _finitaIlMeta,
+        finitaIl.isAcceptableOrUnknown(data['finita_il']!, _finitaIlMeta),
+      );
+    }
+    if (data.containsKey('kcal')) {
+      context.handle(
+        _kcalMeta,
+        kcal.isAcceptableOrUnknown(data['kcal']!, _kcalMeta),
+      );
+    }
+    if (data.containsKey('kcal_a_mano')) {
+      context.handle(
+        _kcalAManoMeta,
+        kcalAMano.isAcceptableOrUnknown(data['kcal_a_mano']!, _kcalAManoMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SedutaAllenamento map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SedutaAllenamento(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      idServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_server'],
+      ),
+      schedaServerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scheda_server_id'],
+      ),
+      nomeScheda: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome_scheda'],
+      ),
+      iniziataIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}iniziata_il'],
+      )!,
+      finitaIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}finita_il'],
+      ),
+      kcal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kcal'],
+      ),
+      kcalAMano: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}kcal_a_mano'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+    );
+  }
+
+  @override
+  $SeduteAllenamentoTable createAlias(String alias) {
+    return $SeduteAllenamentoTable(attachedDatabase, alias);
+  }
+}
+
+class SedutaAllenamento extends DataClass
+    implements Insertable<SedutaAllenamento> {
+  final int id;
+
+  /// L'`id` che questa seduta aveva sul server, se ci è mai stata.
+  final int? idServer;
+
+  /// L'`id` **del server** della scheda eseguita, come lo mandava `plan_id`.
+  ///
+  /// ⚠️ Non l'id locale di `SchedeRicevute`: quello cambia da telefono a
+  /// telefono, questo no. Le due cose si incrociano su `SchedeRicevute.origineId`.
+  final int? schedaServerId;
+
+  /// 💡 Copiato al momento della seduta, non risolto ogni volta: la scheda può
+  /// essere archiviata o rinominata, e lo storico deve continuare a dire quello
+  /// che diceva allora.
+  final String? nomeScheda;
+  final DateTime iniziataIl;
+
+  /// 🚨 `null` = **seduta ancora aperta**, ed è uno stato che deve sopravvivere
+  /// alla chiusura dell'app: chi si allena mette giù il telefono.
+  final DateTime? finitaIl;
+
+  /// Le calorie che **valgono** per questa seduta.
+  ///
+  /// ⚠️ Va sempre letta insieme a [kcalAMano]: è la coppia che tiene in piedi la
+  /// regola «il manuale batte la stima». 🚨 Senza la seconda colonna, un
+  /// ricalcolo automatico non sa se sta sovrascrivendo una stima o una
+  /// correzione della persona — e lo scopre solo la persona, quando il suo
+  /// numero sparisce.
+  final int? kcal;
+
+  /// Se [kcal] l'ha scritta la persona invece della formula.
+  final bool kcalAMano;
+  final String? note;
+  const SedutaAllenamento({
+    required this.id,
+    this.idServer,
+    this.schedaServerId,
+    this.nomeScheda,
+    required this.iniziataIl,
+    this.finitaIl,
+    this.kcal,
+    required this.kcalAMano,
+    this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || idServer != null) {
+      map['id_server'] = Variable<int>(idServer);
+    }
+    if (!nullToAbsent || schedaServerId != null) {
+      map['scheda_server_id'] = Variable<int>(schedaServerId);
+    }
+    if (!nullToAbsent || nomeScheda != null) {
+      map['nome_scheda'] = Variable<String>(nomeScheda);
+    }
+    map['iniziata_il'] = Variable<DateTime>(iniziataIl);
+    if (!nullToAbsent || finitaIl != null) {
+      map['finita_il'] = Variable<DateTime>(finitaIl);
+    }
+    if (!nullToAbsent || kcal != null) {
+      map['kcal'] = Variable<int>(kcal);
+    }
+    map['kcal_a_mano'] = Variable<bool>(kcalAMano);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    return map;
+  }
+
+  SeduteAllenamentoCompanion toCompanion(bool nullToAbsent) {
+    return SeduteAllenamentoCompanion(
+      id: Value(id),
+      idServer: idServer == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idServer),
+      schedaServerId: schedaServerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedaServerId),
+      nomeScheda: nomeScheda == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nomeScheda),
+      iniziataIl: Value(iniziataIl),
+      finitaIl: finitaIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(finitaIl),
+      kcal: kcal == null && nullToAbsent ? const Value.absent() : Value(kcal),
+      kcalAMano: Value(kcalAMano),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+    );
+  }
+
+  factory SedutaAllenamento.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SedutaAllenamento(
+      id: serializer.fromJson<int>(json['id']),
+      idServer: serializer.fromJson<int?>(json['idServer']),
+      schedaServerId: serializer.fromJson<int?>(json['schedaServerId']),
+      nomeScheda: serializer.fromJson<String?>(json['nomeScheda']),
+      iniziataIl: serializer.fromJson<DateTime>(json['iniziataIl']),
+      finitaIl: serializer.fromJson<DateTime?>(json['finitaIl']),
+      kcal: serializer.fromJson<int?>(json['kcal']),
+      kcalAMano: serializer.fromJson<bool>(json['kcalAMano']),
+      note: serializer.fromJson<String?>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'idServer': serializer.toJson<int?>(idServer),
+      'schedaServerId': serializer.toJson<int?>(schedaServerId),
+      'nomeScheda': serializer.toJson<String?>(nomeScheda),
+      'iniziataIl': serializer.toJson<DateTime>(iniziataIl),
+      'finitaIl': serializer.toJson<DateTime?>(finitaIl),
+      'kcal': serializer.toJson<int?>(kcal),
+      'kcalAMano': serializer.toJson<bool>(kcalAMano),
+      'note': serializer.toJson<String?>(note),
+    };
+  }
+
+  SedutaAllenamento copyWith({
+    int? id,
+    Value<int?> idServer = const Value.absent(),
+    Value<int?> schedaServerId = const Value.absent(),
+    Value<String?> nomeScheda = const Value.absent(),
+    DateTime? iniziataIl,
+    Value<DateTime?> finitaIl = const Value.absent(),
+    Value<int?> kcal = const Value.absent(),
+    bool? kcalAMano,
+    Value<String?> note = const Value.absent(),
+  }) => SedutaAllenamento(
+    id: id ?? this.id,
+    idServer: idServer.present ? idServer.value : this.idServer,
+    schedaServerId: schedaServerId.present
+        ? schedaServerId.value
+        : this.schedaServerId,
+    nomeScheda: nomeScheda.present ? nomeScheda.value : this.nomeScheda,
+    iniziataIl: iniziataIl ?? this.iniziataIl,
+    finitaIl: finitaIl.present ? finitaIl.value : this.finitaIl,
+    kcal: kcal.present ? kcal.value : this.kcal,
+    kcalAMano: kcalAMano ?? this.kcalAMano,
+    note: note.present ? note.value : this.note,
+  );
+  SedutaAllenamento copyWithCompanion(SeduteAllenamentoCompanion data) {
+    return SedutaAllenamento(
+      id: data.id.present ? data.id.value : this.id,
+      idServer: data.idServer.present ? data.idServer.value : this.idServer,
+      schedaServerId: data.schedaServerId.present
+          ? data.schedaServerId.value
+          : this.schedaServerId,
+      nomeScheda: data.nomeScheda.present
+          ? data.nomeScheda.value
+          : this.nomeScheda,
+      iniziataIl: data.iniziataIl.present
+          ? data.iniziataIl.value
+          : this.iniziataIl,
+      finitaIl: data.finitaIl.present ? data.finitaIl.value : this.finitaIl,
+      kcal: data.kcal.present ? data.kcal.value : this.kcal,
+      kcalAMano: data.kcalAMano.present ? data.kcalAMano.value : this.kcalAMano,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SedutaAllenamento(')
+          ..write('id: $id, ')
+          ..write('idServer: $idServer, ')
+          ..write('schedaServerId: $schedaServerId, ')
+          ..write('nomeScheda: $nomeScheda, ')
+          ..write('iniziataIl: $iniziataIl, ')
+          ..write('finitaIl: $finitaIl, ')
+          ..write('kcal: $kcal, ')
+          ..write('kcalAMano: $kcalAMano, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    idServer,
+    schedaServerId,
+    nomeScheda,
+    iniziataIl,
+    finitaIl,
+    kcal,
+    kcalAMano,
+    note,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SedutaAllenamento &&
+          other.id == this.id &&
+          other.idServer == this.idServer &&
+          other.schedaServerId == this.schedaServerId &&
+          other.nomeScheda == this.nomeScheda &&
+          other.iniziataIl == this.iniziataIl &&
+          other.finitaIl == this.finitaIl &&
+          other.kcal == this.kcal &&
+          other.kcalAMano == this.kcalAMano &&
+          other.note == this.note);
+}
+
+class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
+  final Value<int> id;
+  final Value<int?> idServer;
+  final Value<int?> schedaServerId;
+  final Value<String?> nomeScheda;
+  final Value<DateTime> iniziataIl;
+  final Value<DateTime?> finitaIl;
+  final Value<int?> kcal;
+  final Value<bool> kcalAMano;
+  final Value<String?> note;
+  const SeduteAllenamentoCompanion({
+    this.id = const Value.absent(),
+    this.idServer = const Value.absent(),
+    this.schedaServerId = const Value.absent(),
+    this.nomeScheda = const Value.absent(),
+    this.iniziataIl = const Value.absent(),
+    this.finitaIl = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.kcalAMano = const Value.absent(),
+    this.note = const Value.absent(),
+  });
+  SeduteAllenamentoCompanion.insert({
+    this.id = const Value.absent(),
+    this.idServer = const Value.absent(),
+    this.schedaServerId = const Value.absent(),
+    this.nomeScheda = const Value.absent(),
+    required DateTime iniziataIl,
+    this.finitaIl = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.kcalAMano = const Value.absent(),
+    this.note = const Value.absent(),
+  }) : iniziataIl = Value(iniziataIl);
+  static Insertable<SedutaAllenamento> custom({
+    Expression<int>? id,
+    Expression<int>? idServer,
+    Expression<int>? schedaServerId,
+    Expression<String>? nomeScheda,
+    Expression<DateTime>? iniziataIl,
+    Expression<DateTime>? finitaIl,
+    Expression<int>? kcal,
+    Expression<bool>? kcalAMano,
+    Expression<String>? note,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (idServer != null) 'id_server': idServer,
+      if (schedaServerId != null) 'scheda_server_id': schedaServerId,
+      if (nomeScheda != null) 'nome_scheda': nomeScheda,
+      if (iniziataIl != null) 'iniziata_il': iniziataIl,
+      if (finitaIl != null) 'finita_il': finitaIl,
+      if (kcal != null) 'kcal': kcal,
+      if (kcalAMano != null) 'kcal_a_mano': kcalAMano,
+      if (note != null) 'note': note,
+    });
+  }
+
+  SeduteAllenamentoCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? idServer,
+    Value<int?>? schedaServerId,
+    Value<String?>? nomeScheda,
+    Value<DateTime>? iniziataIl,
+    Value<DateTime?>? finitaIl,
+    Value<int?>? kcal,
+    Value<bool>? kcalAMano,
+    Value<String?>? note,
+  }) {
+    return SeduteAllenamentoCompanion(
+      id: id ?? this.id,
+      idServer: idServer ?? this.idServer,
+      schedaServerId: schedaServerId ?? this.schedaServerId,
+      nomeScheda: nomeScheda ?? this.nomeScheda,
+      iniziataIl: iniziataIl ?? this.iniziataIl,
+      finitaIl: finitaIl ?? this.finitaIl,
+      kcal: kcal ?? this.kcal,
+      kcalAMano: kcalAMano ?? this.kcalAMano,
+      note: note ?? this.note,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (idServer.present) {
+      map['id_server'] = Variable<int>(idServer.value);
+    }
+    if (schedaServerId.present) {
+      map['scheda_server_id'] = Variable<int>(schedaServerId.value);
+    }
+    if (nomeScheda.present) {
+      map['nome_scheda'] = Variable<String>(nomeScheda.value);
+    }
+    if (iniziataIl.present) {
+      map['iniziata_il'] = Variable<DateTime>(iniziataIl.value);
+    }
+    if (finitaIl.present) {
+      map['finita_il'] = Variable<DateTime>(finitaIl.value);
+    }
+    if (kcal.present) {
+      map['kcal'] = Variable<int>(kcal.value);
+    }
+    if (kcalAMano.present) {
+      map['kcal_a_mano'] = Variable<bool>(kcalAMano.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeduteAllenamentoCompanion(')
+          ..write('id: $id, ')
+          ..write('idServer: $idServer, ')
+          ..write('schedaServerId: $schedaServerId, ')
+          ..write('nomeScheda: $nomeScheda, ')
+          ..write('iniziataIl: $iniziataIl, ')
+          ..write('finitaIl: $finitaIl, ')
+          ..write('kcal: $kcal, ')
+          ..write('kcalAMano: $kcalAMano, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SerieDelleSeduteTable extends SerieDelleSedute
+    with TableInfo<$SerieDelleSeduteTable, SerieSeduta> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SerieDelleSeduteTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sedutaIdMeta = const VerificationMeta(
+    'sedutaId',
+  );
+  @override
+  late final GeneratedColumn<int> sedutaId = GeneratedColumn<int>(
+    'seduta_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sedute_allenamento (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _esercizioIdMeta = const VerificationMeta(
+    'esercizioId',
+  );
+  @override
+  late final GeneratedColumn<int> esercizioId = GeneratedColumn<int>(
+    'esercizio_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nomeEsercizioMeta = const VerificationMeta(
+    'nomeEsercizio',
+  );
+  @override
+  late final GeneratedColumn<String> nomeEsercizio = GeneratedColumn<String>(
+    'nome_esercizio',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _metMeta = const VerificationMeta('met');
+  @override
+  late final GeneratedColumn<double> met = GeneratedColumn<double>(
+    'met',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _numeroMeta = const VerificationMeta('numero');
+  @override
+  late final GeneratedColumn<int> numero = GeneratedColumn<int>(
+    'numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ripetizioniMeta = const VerificationMeta(
+    'ripetizioni',
+  );
+  @override
+  late final GeneratedColumn<int> ripetizioni = GeneratedColumn<int>(
+    'ripetizioni',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pesoKgMeta = const VerificationMeta('pesoKg');
+  @override
+  late final GeneratedColumn<double> pesoKg = GeneratedColumn<double>(
+    'peso_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _durataSecMeta = const VerificationMeta(
+    'durataSec',
+  );
+  @override
+  late final GeneratedColumn<int> durataSec = GeneratedColumn<int>(
+    'durata_sec',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _riposoSecMeta = const VerificationMeta(
+    'riposoSec',
+  );
+  @override
+  late final GeneratedColumn<int> riposoSec = GeneratedColumn<int>(
+    'riposo_sec',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fattaIlMeta = const VerificationMeta(
+    'fattaIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fattaIl = GeneratedColumn<DateTime>(
+    'fatta_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sedutaId,
+    esercizioId,
+    nomeEsercizio,
+    met,
+    numero,
+    ripetizioni,
+    pesoKg,
+    durataSec,
+    riposoSec,
+    fattaIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'serie_delle_sedute';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SerieSeduta> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('seduta_id')) {
+      context.handle(
+        _sedutaIdMeta,
+        sedutaId.isAcceptableOrUnknown(data['seduta_id']!, _sedutaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sedutaIdMeta);
+    }
+    if (data.containsKey('esercizio_id')) {
+      context.handle(
+        _esercizioIdMeta,
+        esercizioId.isAcceptableOrUnknown(
+          data['esercizio_id']!,
+          _esercizioIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_esercizioIdMeta);
+    }
+    if (data.containsKey('nome_esercizio')) {
+      context.handle(
+        _nomeEsercizioMeta,
+        nomeEsercizio.isAcceptableOrUnknown(
+          data['nome_esercizio']!,
+          _nomeEsercizioMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_nomeEsercizioMeta);
+    }
+    if (data.containsKey('met')) {
+      context.handle(
+        _metMeta,
+        met.isAcceptableOrUnknown(data['met']!, _metMeta),
+      );
+    }
+    if (data.containsKey('numero')) {
+      context.handle(
+        _numeroMeta,
+        numero.isAcceptableOrUnknown(data['numero']!, _numeroMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_numeroMeta);
+    }
+    if (data.containsKey('ripetizioni')) {
+      context.handle(
+        _ripetizioniMeta,
+        ripetizioni.isAcceptableOrUnknown(
+          data['ripetizioni']!,
+          _ripetizioniMeta,
+        ),
+      );
+    }
+    if (data.containsKey('peso_kg')) {
+      context.handle(
+        _pesoKgMeta,
+        pesoKg.isAcceptableOrUnknown(data['peso_kg']!, _pesoKgMeta),
+      );
+    }
+    if (data.containsKey('durata_sec')) {
+      context.handle(
+        _durataSecMeta,
+        durataSec.isAcceptableOrUnknown(data['durata_sec']!, _durataSecMeta),
+      );
+    }
+    if (data.containsKey('riposo_sec')) {
+      context.handle(
+        _riposoSecMeta,
+        riposoSec.isAcceptableOrUnknown(data['riposo_sec']!, _riposoSecMeta),
+      );
+    }
+    if (data.containsKey('fatta_il')) {
+      context.handle(
+        _fattaIlMeta,
+        fattaIl.isAcceptableOrUnknown(data['fatta_il']!, _fattaIlMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {sedutaId, esercizioId, numero},
+  ];
+  @override
+  SerieSeduta map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SerieSeduta(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sedutaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seduta_id'],
+      )!,
+      esercizioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}esercizio_id'],
+      )!,
+      nomeEsercizio: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome_esercizio'],
+      )!,
+      met: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}met'],
+      ),
+      numero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}numero'],
+      )!,
+      ripetizioni: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ripetizioni'],
+      ),
+      pesoKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso_kg'],
+      ),
+      durataSec: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}durata_sec'],
+      ),
+      riposoSec: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}riposo_sec'],
+      ),
+      fattaIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fatta_il'],
+      ),
+    );
+  }
+
+  @override
+  $SerieDelleSeduteTable createAlias(String alias) {
+    return $SerieDelleSeduteTable(attachedDatabase, alias);
+  }
+}
+
+class SerieSeduta extends DataClass implements Insertable<SerieSeduta> {
+  final int id;
+
+  /// L'`id` **locale** della seduta: qui il legame è interno al telefono.
+  final int sedutaId;
+  final int esercizioId;
+  final String nomeEsercizio;
+
+  /// Il MET dell'esercizio, **copiato al momento della serie** — FASE 11.2.
+  ///
+  /// ══ 🚨 SI COPIA, NON SI RISOLVE ═══════════════════════════════════════
+  ///
+  /// Il catalogo degli esercizi **resta sul server** (`plan_tutto_sul_telefono.md`
+  /// §2.2): è roba condivisa, non è di nessuno. ⚠️ Ma il calcolo delle calorie
+  /// gira sul telefono, e deve funzionare **senza rete** — un ricalcolo che
+  /// aspetta il catalogo è un ricalcolo che non avviene in palestra.
+  ///
+  /// 💡 E c'è la ragione migliore: se domani il MET di un esercizio venisse
+  /// corretto nel catalogo, le sedute già fatte **non devono cambiare numero**.
+  /// Lo storico deve continuare a dire quello che diceva allora. È la stessa
+  /// scelta di [nomeEsercizio].
+  ///
+  /// ⛔ `null` per l'esercizio che non ce l'ha (1 su 121) e per quelli scritti a
+  /// mano dalle palestre: allora vince il ripiego di `CalorieAllenamento.met`.
+  final double? met;
+  final int numero;
+  final int? ripetizioni;
+
+  /// 🚨 `real` e non intero: i manubri da 7.5 kg esistono, e arrotondarli
+  /// falserebbe il volume settimanale di chi li usa.
+  final double? pesoKg;
+  final int? durataSec;
+  final int? riposoSec;
+  final DateTime? fattaIl;
+  const SerieSeduta({
+    required this.id,
+    required this.sedutaId,
+    required this.esercizioId,
+    required this.nomeEsercizio,
+    this.met,
+    required this.numero,
+    this.ripetizioni,
+    this.pesoKg,
+    this.durataSec,
+    this.riposoSec,
+    this.fattaIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['seduta_id'] = Variable<int>(sedutaId);
+    map['esercizio_id'] = Variable<int>(esercizioId);
+    map['nome_esercizio'] = Variable<String>(nomeEsercizio);
+    if (!nullToAbsent || met != null) {
+      map['met'] = Variable<double>(met);
+    }
+    map['numero'] = Variable<int>(numero);
+    if (!nullToAbsent || ripetizioni != null) {
+      map['ripetizioni'] = Variable<int>(ripetizioni);
+    }
+    if (!nullToAbsent || pesoKg != null) {
+      map['peso_kg'] = Variable<double>(pesoKg);
+    }
+    if (!nullToAbsent || durataSec != null) {
+      map['durata_sec'] = Variable<int>(durataSec);
+    }
+    if (!nullToAbsent || riposoSec != null) {
+      map['riposo_sec'] = Variable<int>(riposoSec);
+    }
+    if (!nullToAbsent || fattaIl != null) {
+      map['fatta_il'] = Variable<DateTime>(fattaIl);
+    }
+    return map;
+  }
+
+  SerieDelleSeduteCompanion toCompanion(bool nullToAbsent) {
+    return SerieDelleSeduteCompanion(
+      id: Value(id),
+      sedutaId: Value(sedutaId),
+      esercizioId: Value(esercizioId),
+      nomeEsercizio: Value(nomeEsercizio),
+      met: met == null && nullToAbsent ? const Value.absent() : Value(met),
+      numero: Value(numero),
+      ripetizioni: ripetizioni == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ripetizioni),
+      pesoKg: pesoKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pesoKg),
+      durataSec: durataSec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durataSec),
+      riposoSec: riposoSec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(riposoSec),
+      fattaIl: fattaIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fattaIl),
+    );
+  }
+
+  factory SerieSeduta.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SerieSeduta(
+      id: serializer.fromJson<int>(json['id']),
+      sedutaId: serializer.fromJson<int>(json['sedutaId']),
+      esercizioId: serializer.fromJson<int>(json['esercizioId']),
+      nomeEsercizio: serializer.fromJson<String>(json['nomeEsercizio']),
+      met: serializer.fromJson<double?>(json['met']),
+      numero: serializer.fromJson<int>(json['numero']),
+      ripetizioni: serializer.fromJson<int?>(json['ripetizioni']),
+      pesoKg: serializer.fromJson<double?>(json['pesoKg']),
+      durataSec: serializer.fromJson<int?>(json['durataSec']),
+      riposoSec: serializer.fromJson<int?>(json['riposoSec']),
+      fattaIl: serializer.fromJson<DateTime?>(json['fattaIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sedutaId': serializer.toJson<int>(sedutaId),
+      'esercizioId': serializer.toJson<int>(esercizioId),
+      'nomeEsercizio': serializer.toJson<String>(nomeEsercizio),
+      'met': serializer.toJson<double?>(met),
+      'numero': serializer.toJson<int>(numero),
+      'ripetizioni': serializer.toJson<int?>(ripetizioni),
+      'pesoKg': serializer.toJson<double?>(pesoKg),
+      'durataSec': serializer.toJson<int?>(durataSec),
+      'riposoSec': serializer.toJson<int?>(riposoSec),
+      'fattaIl': serializer.toJson<DateTime?>(fattaIl),
+    };
+  }
+
+  SerieSeduta copyWith({
+    int? id,
+    int? sedutaId,
+    int? esercizioId,
+    String? nomeEsercizio,
+    Value<double?> met = const Value.absent(),
+    int? numero,
+    Value<int?> ripetizioni = const Value.absent(),
+    Value<double?> pesoKg = const Value.absent(),
+    Value<int?> durataSec = const Value.absent(),
+    Value<int?> riposoSec = const Value.absent(),
+    Value<DateTime?> fattaIl = const Value.absent(),
+  }) => SerieSeduta(
+    id: id ?? this.id,
+    sedutaId: sedutaId ?? this.sedutaId,
+    esercizioId: esercizioId ?? this.esercizioId,
+    nomeEsercizio: nomeEsercizio ?? this.nomeEsercizio,
+    met: met.present ? met.value : this.met,
+    numero: numero ?? this.numero,
+    ripetizioni: ripetizioni.present ? ripetizioni.value : this.ripetizioni,
+    pesoKg: pesoKg.present ? pesoKg.value : this.pesoKg,
+    durataSec: durataSec.present ? durataSec.value : this.durataSec,
+    riposoSec: riposoSec.present ? riposoSec.value : this.riposoSec,
+    fattaIl: fattaIl.present ? fattaIl.value : this.fattaIl,
+  );
+  SerieSeduta copyWithCompanion(SerieDelleSeduteCompanion data) {
+    return SerieSeduta(
+      id: data.id.present ? data.id.value : this.id,
+      sedutaId: data.sedutaId.present ? data.sedutaId.value : this.sedutaId,
+      esercizioId: data.esercizioId.present
+          ? data.esercizioId.value
+          : this.esercizioId,
+      nomeEsercizio: data.nomeEsercizio.present
+          ? data.nomeEsercizio.value
+          : this.nomeEsercizio,
+      met: data.met.present ? data.met.value : this.met,
+      numero: data.numero.present ? data.numero.value : this.numero,
+      ripetizioni: data.ripetizioni.present
+          ? data.ripetizioni.value
+          : this.ripetizioni,
+      pesoKg: data.pesoKg.present ? data.pesoKg.value : this.pesoKg,
+      durataSec: data.durataSec.present ? data.durataSec.value : this.durataSec,
+      riposoSec: data.riposoSec.present ? data.riposoSec.value : this.riposoSec,
+      fattaIl: data.fattaIl.present ? data.fattaIl.value : this.fattaIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SerieSeduta(')
+          ..write('id: $id, ')
+          ..write('sedutaId: $sedutaId, ')
+          ..write('esercizioId: $esercizioId, ')
+          ..write('nomeEsercizio: $nomeEsercizio, ')
+          ..write('met: $met, ')
+          ..write('numero: $numero, ')
+          ..write('ripetizioni: $ripetizioni, ')
+          ..write('pesoKg: $pesoKg, ')
+          ..write('durataSec: $durataSec, ')
+          ..write('riposoSec: $riposoSec, ')
+          ..write('fattaIl: $fattaIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sedutaId,
+    esercizioId,
+    nomeEsercizio,
+    met,
+    numero,
+    ripetizioni,
+    pesoKg,
+    durataSec,
+    riposoSec,
+    fattaIl,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SerieSeduta &&
+          other.id == this.id &&
+          other.sedutaId == this.sedutaId &&
+          other.esercizioId == this.esercizioId &&
+          other.nomeEsercizio == this.nomeEsercizio &&
+          other.met == this.met &&
+          other.numero == this.numero &&
+          other.ripetizioni == this.ripetizioni &&
+          other.pesoKg == this.pesoKg &&
+          other.durataSec == this.durataSec &&
+          other.riposoSec == this.riposoSec &&
+          other.fattaIl == this.fattaIl);
+}
+
+class SerieDelleSeduteCompanion extends UpdateCompanion<SerieSeduta> {
+  final Value<int> id;
+  final Value<int> sedutaId;
+  final Value<int> esercizioId;
+  final Value<String> nomeEsercizio;
+  final Value<double?> met;
+  final Value<int> numero;
+  final Value<int?> ripetizioni;
+  final Value<double?> pesoKg;
+  final Value<int?> durataSec;
+  final Value<int?> riposoSec;
+  final Value<DateTime?> fattaIl;
+  const SerieDelleSeduteCompanion({
+    this.id = const Value.absent(),
+    this.sedutaId = const Value.absent(),
+    this.esercizioId = const Value.absent(),
+    this.nomeEsercizio = const Value.absent(),
+    this.met = const Value.absent(),
+    this.numero = const Value.absent(),
+    this.ripetizioni = const Value.absent(),
+    this.pesoKg = const Value.absent(),
+    this.durataSec = const Value.absent(),
+    this.riposoSec = const Value.absent(),
+    this.fattaIl = const Value.absent(),
+  });
+  SerieDelleSeduteCompanion.insert({
+    this.id = const Value.absent(),
+    required int sedutaId,
+    required int esercizioId,
+    required String nomeEsercizio,
+    this.met = const Value.absent(),
+    required int numero,
+    this.ripetizioni = const Value.absent(),
+    this.pesoKg = const Value.absent(),
+    this.durataSec = const Value.absent(),
+    this.riposoSec = const Value.absent(),
+    this.fattaIl = const Value.absent(),
+  }) : sedutaId = Value(sedutaId),
+       esercizioId = Value(esercizioId),
+       nomeEsercizio = Value(nomeEsercizio),
+       numero = Value(numero);
+  static Insertable<SerieSeduta> custom({
+    Expression<int>? id,
+    Expression<int>? sedutaId,
+    Expression<int>? esercizioId,
+    Expression<String>? nomeEsercizio,
+    Expression<double>? met,
+    Expression<int>? numero,
+    Expression<int>? ripetizioni,
+    Expression<double>? pesoKg,
+    Expression<int>? durataSec,
+    Expression<int>? riposoSec,
+    Expression<DateTime>? fattaIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sedutaId != null) 'seduta_id': sedutaId,
+      if (esercizioId != null) 'esercizio_id': esercizioId,
+      if (nomeEsercizio != null) 'nome_esercizio': nomeEsercizio,
+      if (met != null) 'met': met,
+      if (numero != null) 'numero': numero,
+      if (ripetizioni != null) 'ripetizioni': ripetizioni,
+      if (pesoKg != null) 'peso_kg': pesoKg,
+      if (durataSec != null) 'durata_sec': durataSec,
+      if (riposoSec != null) 'riposo_sec': riposoSec,
+      if (fattaIl != null) 'fatta_il': fattaIl,
+    });
+  }
+
+  SerieDelleSeduteCompanion copyWith({
+    Value<int>? id,
+    Value<int>? sedutaId,
+    Value<int>? esercizioId,
+    Value<String>? nomeEsercizio,
+    Value<double?>? met,
+    Value<int>? numero,
+    Value<int?>? ripetizioni,
+    Value<double?>? pesoKg,
+    Value<int?>? durataSec,
+    Value<int?>? riposoSec,
+    Value<DateTime?>? fattaIl,
+  }) {
+    return SerieDelleSeduteCompanion(
+      id: id ?? this.id,
+      sedutaId: sedutaId ?? this.sedutaId,
+      esercizioId: esercizioId ?? this.esercizioId,
+      nomeEsercizio: nomeEsercizio ?? this.nomeEsercizio,
+      met: met ?? this.met,
+      numero: numero ?? this.numero,
+      ripetizioni: ripetizioni ?? this.ripetizioni,
+      pesoKg: pesoKg ?? this.pesoKg,
+      durataSec: durataSec ?? this.durataSec,
+      riposoSec: riposoSec ?? this.riposoSec,
+      fattaIl: fattaIl ?? this.fattaIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sedutaId.present) {
+      map['seduta_id'] = Variable<int>(sedutaId.value);
+    }
+    if (esercizioId.present) {
+      map['esercizio_id'] = Variable<int>(esercizioId.value);
+    }
+    if (nomeEsercizio.present) {
+      map['nome_esercizio'] = Variable<String>(nomeEsercizio.value);
+    }
+    if (met.present) {
+      map['met'] = Variable<double>(met.value);
+    }
+    if (numero.present) {
+      map['numero'] = Variable<int>(numero.value);
+    }
+    if (ripetizioni.present) {
+      map['ripetizioni'] = Variable<int>(ripetizioni.value);
+    }
+    if (pesoKg.present) {
+      map['peso_kg'] = Variable<double>(pesoKg.value);
+    }
+    if (durataSec.present) {
+      map['durata_sec'] = Variable<int>(durataSec.value);
+    }
+    if (riposoSec.present) {
+      map['riposo_sec'] = Variable<int>(riposoSec.value);
+    }
+    if (fattaIl.present) {
+      map['fatta_il'] = Variable<DateTime>(fattaIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SerieDelleSeduteCompanion(')
+          ..write('id: $id, ')
+          ..write('sedutaId: $sedutaId, ')
+          ..write('esercizioId: $esercizioId, ')
+          ..write('nomeEsercizio: $nomeEsercizio, ')
+          ..write('met: $met, ')
+          ..write('numero: $numero, ')
+          ..write('ripetizioni: $ripetizioni, ')
+          ..write('pesoKg: $pesoKg, ')
+          ..write('durataSec: $durataSec, ')
+          ..write('riposoSec: $riposoSec, ')
+          ..write('fattaIl: $fattaIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BruciateDichiarateTable extends BruciateDichiarate
+    with TableInfo<$BruciateDichiarateTable, BruciatoDichiarato> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BruciateDichiarateTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _giornoMeta = const VerificationMeta('giorno');
+  @override
+  late final GeneratedColumn<DateTime> giorno = GeneratedColumn<DateTime>(
+    'giorno',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _kcalMeta = const VerificationMeta('kcal');
+  @override
+  late final GeneratedColumn<int> kcal = GeneratedColumn<int>(
+    'kcal',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, giorno, kcal];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bruciate_dichiarate';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BruciatoDichiarato> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('giorno')) {
+      context.handle(
+        _giornoMeta,
+        giorno.isAcceptableOrUnknown(data['giorno']!, _giornoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_giornoMeta);
+    }
+    if (data.containsKey('kcal')) {
+      context.handle(
+        _kcalMeta,
+        kcal.isAcceptableOrUnknown(data['kcal']!, _kcalMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kcalMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BruciatoDichiarato map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BruciatoDichiarato(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      giorno: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}giorno'],
+      )!,
+      kcal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kcal'],
+      )!,
+    );
+  }
+
+  @override
+  $BruciateDichiarateTable createAlias(String alias) {
+    return $BruciateDichiarateTable(attachedDatabase, alias);
+  }
+}
+
+class BruciatoDichiarato extends DataClass
+    implements Insertable<BruciatoDichiarato> {
+  final int id;
+
+  /// Il giorno locale, a mezzanotte.
+  ///
+  /// ⚠️ Un `DateTime` e non una stringa `yyyy-mm-dd`: il resto dell'archivio
+  /// usa `DateTime` per i giorni, e mescolare due convenzioni nello stesso
+  /// database è il modo per confrontare una data con un testo e non accorgersene.
+  final DateTime giorno;
+  final int kcal;
+  const BruciatoDichiarato({
+    required this.id,
+    required this.giorno,
+    required this.kcal,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['giorno'] = Variable<DateTime>(giorno);
+    map['kcal'] = Variable<int>(kcal);
+    return map;
+  }
+
+  BruciateDichiarateCompanion toCompanion(bool nullToAbsent) {
+    return BruciateDichiarateCompanion(
+      id: Value(id),
+      giorno: Value(giorno),
+      kcal: Value(kcal),
+    );
+  }
+
+  factory BruciatoDichiarato.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BruciatoDichiarato(
+      id: serializer.fromJson<int>(json['id']),
+      giorno: serializer.fromJson<DateTime>(json['giorno']),
+      kcal: serializer.fromJson<int>(json['kcal']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'giorno': serializer.toJson<DateTime>(giorno),
+      'kcal': serializer.toJson<int>(kcal),
+    };
+  }
+
+  BruciatoDichiarato copyWith({int? id, DateTime? giorno, int? kcal}) =>
+      BruciatoDichiarato(
+        id: id ?? this.id,
+        giorno: giorno ?? this.giorno,
+        kcal: kcal ?? this.kcal,
+      );
+  BruciatoDichiarato copyWithCompanion(BruciateDichiarateCompanion data) {
+    return BruciatoDichiarato(
+      id: data.id.present ? data.id.value : this.id,
+      giorno: data.giorno.present ? data.giorno.value : this.giorno,
+      kcal: data.kcal.present ? data.kcal.value : this.kcal,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BruciatoDichiarato(')
+          ..write('id: $id, ')
+          ..write('giorno: $giorno, ')
+          ..write('kcal: $kcal')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, giorno, kcal);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BruciatoDichiarato &&
+          other.id == this.id &&
+          other.giorno == this.giorno &&
+          other.kcal == this.kcal);
+}
+
+class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
+  final Value<int> id;
+  final Value<DateTime> giorno;
+  final Value<int> kcal;
+  const BruciateDichiarateCompanion({
+    this.id = const Value.absent(),
+    this.giorno = const Value.absent(),
+    this.kcal = const Value.absent(),
+  });
+  BruciateDichiarateCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime giorno,
+    required int kcal,
+  }) : giorno = Value(giorno),
+       kcal = Value(kcal);
+  static Insertable<BruciatoDichiarato> custom({
+    Expression<int>? id,
+    Expression<DateTime>? giorno,
+    Expression<int>? kcal,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (giorno != null) 'giorno': giorno,
+      if (kcal != null) 'kcal': kcal,
+    });
+  }
+
+  BruciateDichiarateCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? giorno,
+    Value<int>? kcal,
+  }) {
+    return BruciateDichiarateCompanion(
+      id: id ?? this.id,
+      giorno: giorno ?? this.giorno,
+      kcal: kcal ?? this.kcal,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (giorno.present) {
+      map['giorno'] = Variable<DateTime>(giorno.value);
+    }
+    if (kcal.present) {
+      map['kcal'] = Variable<int>(kcal.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BruciateDichiarateCompanion(')
+          ..write('id: $id, ')
+          ..write('giorno: $giorno, ')
+          ..write('kcal: $kcal')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -3898,6 +5427,13 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $ContenutiRifiutatiTable(this);
   late final $AllenamentiDaOrologioTable allenamentiDaOrologio =
       $AllenamentiDaOrologioTable(this);
+  late final $SeduteAllenamentoTable seduteAllenamento =
+      $SeduteAllenamentoTable(this);
+  late final $SerieDelleSeduteTable serieDelleSedute = $SerieDelleSeduteTable(
+    this,
+  );
+  late final $BruciateDichiarateTable bruciateDichiarate =
+      $BruciateDichiarateTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3911,7 +5447,20 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     pianiRicevuti,
     contenutiRifiutati,
     allenamentiDaOrologio,
+    seduteAllenamento,
+    serieDelleSedute,
+    bruciateDichiarate,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sedute_allenamento',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('serie_delle_sedute', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$LettureSaluteTableCreateCompanionBuilder =
@@ -5887,6 +7436,1013 @@ typedef $$AllenamentiDaOrologioTableProcessedTableManager =
       AllenamentoDaOrologio,
       PrefetchHooks Function()
     >;
+typedef $$SeduteAllenamentoTableCreateCompanionBuilder =
+    SeduteAllenamentoCompanion Function({
+      Value<int> id,
+      Value<int?> idServer,
+      Value<int?> schedaServerId,
+      Value<String?> nomeScheda,
+      required DateTime iniziataIl,
+      Value<DateTime?> finitaIl,
+      Value<int?> kcal,
+      Value<bool> kcalAMano,
+      Value<String?> note,
+    });
+typedef $$SeduteAllenamentoTableUpdateCompanionBuilder =
+    SeduteAllenamentoCompanion Function({
+      Value<int> id,
+      Value<int?> idServer,
+      Value<int?> schedaServerId,
+      Value<String?> nomeScheda,
+      Value<DateTime> iniziataIl,
+      Value<DateTime?> finitaIl,
+      Value<int?> kcal,
+      Value<bool> kcalAMano,
+      Value<String?> note,
+    });
+
+final class $$SeduteAllenamentoTableReferences
+    extends
+        BaseReferences<
+          _$ArchivioSalute,
+          $SeduteAllenamentoTable,
+          SedutaAllenamento
+        > {
+  $$SeduteAllenamentoTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$SerieDelleSeduteTable, List<SerieSeduta>>
+  _serieDelleSeduteRefsTable(_$ArchivioSalute db) =>
+      MultiTypedResultKey.fromTable(
+        db.serieDelleSedute,
+        aliasName: 'sedute_allenamento__id__serie_delle_sedute__seduta_id',
+      );
+
+  $$SerieDelleSeduteTableProcessedTableManager get serieDelleSeduteRefs {
+    final manager = $$SerieDelleSeduteTableTableManager(
+      $_db,
+      $_db.serieDelleSedute,
+    ).filter((f) => f.sedutaId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _serieDelleSeduteRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SeduteAllenamentoTableFilterComposer
+    extends Composer<_$ArchivioSalute, $SeduteAllenamentoTable> {
+  $$SeduteAllenamentoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idServer => $composableBuilder(
+    column: $table.idServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nomeScheda => $composableBuilder(
+    column: $table.nomeScheda,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get iniziataIl => $composableBuilder(
+    column: $table.iniziataIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get finitaIl => $composableBuilder(
+    column: $table.finitaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get kcalAMano => $composableBuilder(
+    column: $table.kcalAMano,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> serieDelleSeduteRefs(
+    Expression<bool> Function($$SerieDelleSeduteTableFilterComposer f) f,
+  ) {
+    final $$SerieDelleSeduteTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.serieDelleSedute,
+      getReferencedColumn: (t) => t.sedutaId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SerieDelleSeduteTableFilterComposer(
+            $db: $db,
+            $table: $db.serieDelleSedute,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SeduteAllenamentoTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $SeduteAllenamentoTable> {
+  $$SeduteAllenamentoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idServer => $composableBuilder(
+    column: $table.idServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nomeScheda => $composableBuilder(
+    column: $table.nomeScheda,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get iniziataIl => $composableBuilder(
+    column: $table.iniziataIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get finitaIl => $composableBuilder(
+    column: $table.finitaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get kcalAMano => $composableBuilder(
+    column: $table.kcalAMano,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SeduteAllenamentoTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $SeduteAllenamentoTable> {
+  $$SeduteAllenamentoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get idServer =>
+      $composableBuilder(column: $table.idServer, builder: (column) => column);
+
+  GeneratedColumn<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nomeScheda => $composableBuilder(
+    column: $table.nomeScheda,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get iniziataIl => $composableBuilder(
+    column: $table.iniziataIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get finitaIl =>
+      $composableBuilder(column: $table.finitaIl, builder: (column) => column);
+
+  GeneratedColumn<int> get kcal =>
+      $composableBuilder(column: $table.kcal, builder: (column) => column);
+
+  GeneratedColumn<bool> get kcalAMano =>
+      $composableBuilder(column: $table.kcalAMano, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  Expression<T> serieDelleSeduteRefs<T extends Object>(
+    Expression<T> Function($$SerieDelleSeduteTableAnnotationComposer a) f,
+  ) {
+    final $$SerieDelleSeduteTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.serieDelleSedute,
+      getReferencedColumn: (t) => t.sedutaId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SerieDelleSeduteTableAnnotationComposer(
+            $db: $db,
+            $table: $db.serieDelleSedute,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SeduteAllenamentoTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $SeduteAllenamentoTable,
+          SedutaAllenamento,
+          $$SeduteAllenamentoTableFilterComposer,
+          $$SeduteAllenamentoTableOrderingComposer,
+          $$SeduteAllenamentoTableAnnotationComposer,
+          $$SeduteAllenamentoTableCreateCompanionBuilder,
+          $$SeduteAllenamentoTableUpdateCompanionBuilder,
+          (SedutaAllenamento, $$SeduteAllenamentoTableReferences),
+          SedutaAllenamento,
+          PrefetchHooks Function({bool serieDelleSeduteRefs})
+        > {
+  $$SeduteAllenamentoTableTableManager(
+    _$ArchivioSalute db,
+    $SeduteAllenamentoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SeduteAllenamentoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SeduteAllenamentoTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SeduteAllenamentoTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idServer = const Value.absent(),
+                Value<int?> schedaServerId = const Value.absent(),
+                Value<String?> nomeScheda = const Value.absent(),
+                Value<DateTime> iniziataIl = const Value.absent(),
+                Value<DateTime?> finitaIl = const Value.absent(),
+                Value<int?> kcal = const Value.absent(),
+                Value<bool> kcalAMano = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+              }) => SeduteAllenamentoCompanion(
+                id: id,
+                idServer: idServer,
+                schedaServerId: schedaServerId,
+                nomeScheda: nomeScheda,
+                iniziataIl: iniziataIl,
+                finitaIl: finitaIl,
+                kcal: kcal,
+                kcalAMano: kcalAMano,
+                note: note,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idServer = const Value.absent(),
+                Value<int?> schedaServerId = const Value.absent(),
+                Value<String?> nomeScheda = const Value.absent(),
+                required DateTime iniziataIl,
+                Value<DateTime?> finitaIl = const Value.absent(),
+                Value<int?> kcal = const Value.absent(),
+                Value<bool> kcalAMano = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+              }) => SeduteAllenamentoCompanion.insert(
+                id: id,
+                idServer: idServer,
+                schedaServerId: schedaServerId,
+                nomeScheda: nomeScheda,
+                iniziataIl: iniziataIl,
+                finitaIl: finitaIl,
+                kcal: kcal,
+                kcalAMano: kcalAMano,
+                note: note,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SeduteAllenamentoTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({serieDelleSeduteRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (serieDelleSeduteRefs) db.serieDelleSedute,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (serieDelleSeduteRefs)
+                    await $_getPrefetchedData<
+                      SedutaAllenamento,
+                      $SeduteAllenamentoTable,
+                      SerieSeduta
+                    >(
+                      currentTable: table,
+                      referencedTable: $$SeduteAllenamentoTableReferences
+                          ._serieDelleSeduteRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$SeduteAllenamentoTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).serieDelleSeduteRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.sedutaId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SeduteAllenamentoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $SeduteAllenamentoTable,
+      SedutaAllenamento,
+      $$SeduteAllenamentoTableFilterComposer,
+      $$SeduteAllenamentoTableOrderingComposer,
+      $$SeduteAllenamentoTableAnnotationComposer,
+      $$SeduteAllenamentoTableCreateCompanionBuilder,
+      $$SeduteAllenamentoTableUpdateCompanionBuilder,
+      (SedutaAllenamento, $$SeduteAllenamentoTableReferences),
+      SedutaAllenamento,
+      PrefetchHooks Function({bool serieDelleSeduteRefs})
+    >;
+typedef $$SerieDelleSeduteTableCreateCompanionBuilder =
+    SerieDelleSeduteCompanion Function({
+      Value<int> id,
+      required int sedutaId,
+      required int esercizioId,
+      required String nomeEsercizio,
+      Value<double?> met,
+      required int numero,
+      Value<int?> ripetizioni,
+      Value<double?> pesoKg,
+      Value<int?> durataSec,
+      Value<int?> riposoSec,
+      Value<DateTime?> fattaIl,
+    });
+typedef $$SerieDelleSeduteTableUpdateCompanionBuilder =
+    SerieDelleSeduteCompanion Function({
+      Value<int> id,
+      Value<int> sedutaId,
+      Value<int> esercizioId,
+      Value<String> nomeEsercizio,
+      Value<double?> met,
+      Value<int> numero,
+      Value<int?> ripetizioni,
+      Value<double?> pesoKg,
+      Value<int?> durataSec,
+      Value<int?> riposoSec,
+      Value<DateTime?> fattaIl,
+    });
+
+final class $$SerieDelleSeduteTableReferences
+    extends
+        BaseReferences<_$ArchivioSalute, $SerieDelleSeduteTable, SerieSeduta> {
+  $$SerieDelleSeduteTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SeduteAllenamentoTable _sedutaIdTable(_$ArchivioSalute db) => db
+      .seduteAllenamento
+      .createAlias('serie_delle_sedute__seduta_id__sedute_allenamento__id');
+
+  $$SeduteAllenamentoTableProcessedTableManager get sedutaId {
+    final $_column = $_itemColumn<int>('seduta_id')!;
+
+    final manager = $$SeduteAllenamentoTableTableManager(
+      $_db,
+      $_db.seduteAllenamento,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sedutaIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SerieDelleSeduteTableFilterComposer
+    extends Composer<_$ArchivioSalute, $SerieDelleSeduteTable> {
+  $$SerieDelleSeduteTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get esercizioId => $composableBuilder(
+    column: $table.esercizioId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nomeEsercizio => $composableBuilder(
+    column: $table.nomeEsercizio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get met => $composableBuilder(
+    column: $table.met,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get numero => $composableBuilder(
+    column: $table.numero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ripetizioni => $composableBuilder(
+    column: $table.ripetizioni,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pesoKg => $composableBuilder(
+    column: $table.pesoKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durataSec => $composableBuilder(
+    column: $table.durataSec,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get riposoSec => $composableBuilder(
+    column: $table.riposoSec,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fattaIl => $composableBuilder(
+    column: $table.fattaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SeduteAllenamentoTableFilterComposer get sedutaId {
+    final $$SeduteAllenamentoTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sedutaId,
+      referencedTable: $db.seduteAllenamento,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeduteAllenamentoTableFilterComposer(
+            $db: $db,
+            $table: $db.seduteAllenamento,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SerieDelleSeduteTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $SerieDelleSeduteTable> {
+  $$SerieDelleSeduteTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get esercizioId => $composableBuilder(
+    column: $table.esercizioId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nomeEsercizio => $composableBuilder(
+    column: $table.nomeEsercizio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get met => $composableBuilder(
+    column: $table.met,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get numero => $composableBuilder(
+    column: $table.numero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ripetizioni => $composableBuilder(
+    column: $table.ripetizioni,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pesoKg => $composableBuilder(
+    column: $table.pesoKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durataSec => $composableBuilder(
+    column: $table.durataSec,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get riposoSec => $composableBuilder(
+    column: $table.riposoSec,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fattaIl => $composableBuilder(
+    column: $table.fattaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SeduteAllenamentoTableOrderingComposer get sedutaId {
+    final $$SeduteAllenamentoTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sedutaId,
+      referencedTable: $db.seduteAllenamento,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeduteAllenamentoTableOrderingComposer(
+            $db: $db,
+            $table: $db.seduteAllenamento,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SerieDelleSeduteTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $SerieDelleSeduteTable> {
+  $$SerieDelleSeduteTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get esercizioId => $composableBuilder(
+    column: $table.esercizioId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nomeEsercizio => $composableBuilder(
+    column: $table.nomeEsercizio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get met =>
+      $composableBuilder(column: $table.met, builder: (column) => column);
+
+  GeneratedColumn<int> get numero =>
+      $composableBuilder(column: $table.numero, builder: (column) => column);
+
+  GeneratedColumn<int> get ripetizioni => $composableBuilder(
+    column: $table.ripetizioni,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pesoKg =>
+      $composableBuilder(column: $table.pesoKg, builder: (column) => column);
+
+  GeneratedColumn<int> get durataSec =>
+      $composableBuilder(column: $table.durataSec, builder: (column) => column);
+
+  GeneratedColumn<int> get riposoSec =>
+      $composableBuilder(column: $table.riposoSec, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fattaIl =>
+      $composableBuilder(column: $table.fattaIl, builder: (column) => column);
+
+  $$SeduteAllenamentoTableAnnotationComposer get sedutaId {
+    final $$SeduteAllenamentoTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.sedutaId,
+          referencedTable: $db.seduteAllenamento,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SeduteAllenamentoTableAnnotationComposer(
+                $db: $db,
+                $table: $db.seduteAllenamento,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$SerieDelleSeduteTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $SerieDelleSeduteTable,
+          SerieSeduta,
+          $$SerieDelleSeduteTableFilterComposer,
+          $$SerieDelleSeduteTableOrderingComposer,
+          $$SerieDelleSeduteTableAnnotationComposer,
+          $$SerieDelleSeduteTableCreateCompanionBuilder,
+          $$SerieDelleSeduteTableUpdateCompanionBuilder,
+          (SerieSeduta, $$SerieDelleSeduteTableReferences),
+          SerieSeduta,
+          PrefetchHooks Function({bool sedutaId})
+        > {
+  $$SerieDelleSeduteTableTableManager(
+    _$ArchivioSalute db,
+    $SerieDelleSeduteTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SerieDelleSeduteTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SerieDelleSeduteTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SerieDelleSeduteTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> sedutaId = const Value.absent(),
+                Value<int> esercizioId = const Value.absent(),
+                Value<String> nomeEsercizio = const Value.absent(),
+                Value<double?> met = const Value.absent(),
+                Value<int> numero = const Value.absent(),
+                Value<int?> ripetizioni = const Value.absent(),
+                Value<double?> pesoKg = const Value.absent(),
+                Value<int?> durataSec = const Value.absent(),
+                Value<int?> riposoSec = const Value.absent(),
+                Value<DateTime?> fattaIl = const Value.absent(),
+              }) => SerieDelleSeduteCompanion(
+                id: id,
+                sedutaId: sedutaId,
+                esercizioId: esercizioId,
+                nomeEsercizio: nomeEsercizio,
+                met: met,
+                numero: numero,
+                ripetizioni: ripetizioni,
+                pesoKg: pesoKg,
+                durataSec: durataSec,
+                riposoSec: riposoSec,
+                fattaIl: fattaIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int sedutaId,
+                required int esercizioId,
+                required String nomeEsercizio,
+                Value<double?> met = const Value.absent(),
+                required int numero,
+                Value<int?> ripetizioni = const Value.absent(),
+                Value<double?> pesoKg = const Value.absent(),
+                Value<int?> durataSec = const Value.absent(),
+                Value<int?> riposoSec = const Value.absent(),
+                Value<DateTime?> fattaIl = const Value.absent(),
+              }) => SerieDelleSeduteCompanion.insert(
+                id: id,
+                sedutaId: sedutaId,
+                esercizioId: esercizioId,
+                nomeEsercizio: nomeEsercizio,
+                met: met,
+                numero: numero,
+                ripetizioni: ripetizioni,
+                pesoKg: pesoKg,
+                durataSec: durataSec,
+                riposoSec: riposoSec,
+                fattaIl: fattaIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SerieDelleSeduteTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sedutaId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sedutaId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sedutaId,
+                                referencedTable:
+                                    $$SerieDelleSeduteTableReferences
+                                        ._sedutaIdTable(db),
+                                referencedColumn:
+                                    $$SerieDelleSeduteTableReferences
+                                        ._sedutaIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SerieDelleSeduteTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $SerieDelleSeduteTable,
+      SerieSeduta,
+      $$SerieDelleSeduteTableFilterComposer,
+      $$SerieDelleSeduteTableOrderingComposer,
+      $$SerieDelleSeduteTableAnnotationComposer,
+      $$SerieDelleSeduteTableCreateCompanionBuilder,
+      $$SerieDelleSeduteTableUpdateCompanionBuilder,
+      (SerieSeduta, $$SerieDelleSeduteTableReferences),
+      SerieSeduta,
+      PrefetchHooks Function({bool sedutaId})
+    >;
+typedef $$BruciateDichiarateTableCreateCompanionBuilder =
+    BruciateDichiarateCompanion Function({
+      Value<int> id,
+      required DateTime giorno,
+      required int kcal,
+    });
+typedef $$BruciateDichiarateTableUpdateCompanionBuilder =
+    BruciateDichiarateCompanion Function({
+      Value<int> id,
+      Value<DateTime> giorno,
+      Value<int> kcal,
+    });
+
+class $$BruciateDichiarateTableFilterComposer
+    extends Composer<_$ArchivioSalute, $BruciateDichiarateTable> {
+  $$BruciateDichiarateTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BruciateDichiarateTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $BruciateDichiarateTable> {
+  $$BruciateDichiarateTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BruciateDichiarateTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $BruciateDichiarateTable> {
+  $$BruciateDichiarateTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get giorno =>
+      $composableBuilder(column: $table.giorno, builder: (column) => column);
+
+  GeneratedColumn<int> get kcal =>
+      $composableBuilder(column: $table.kcal, builder: (column) => column);
+}
+
+class $$BruciateDichiarateTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $BruciateDichiarateTable,
+          BruciatoDichiarato,
+          $$BruciateDichiarateTableFilterComposer,
+          $$BruciateDichiarateTableOrderingComposer,
+          $$BruciateDichiarateTableAnnotationComposer,
+          $$BruciateDichiarateTableCreateCompanionBuilder,
+          $$BruciateDichiarateTableUpdateCompanionBuilder,
+          (
+            BruciatoDichiarato,
+            BaseReferences<
+              _$ArchivioSalute,
+              $BruciateDichiarateTable,
+              BruciatoDichiarato
+            >,
+          ),
+          BruciatoDichiarato,
+          PrefetchHooks Function()
+        > {
+  $$BruciateDichiarateTableTableManager(
+    _$ArchivioSalute db,
+    $BruciateDichiarateTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BruciateDichiarateTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BruciateDichiarateTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BruciateDichiarateTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> giorno = const Value.absent(),
+                Value<int> kcal = const Value.absent(),
+              }) => BruciateDichiarateCompanion(
+                id: id,
+                giorno: giorno,
+                kcal: kcal,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime giorno,
+                required int kcal,
+              }) => BruciateDichiarateCompanion.insert(
+                id: id,
+                giorno: giorno,
+                kcal: kcal,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BruciateDichiarateTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $BruciateDichiarateTable,
+      BruciatoDichiarato,
+      $$BruciateDichiarateTableFilterComposer,
+      $$BruciateDichiarateTableOrderingComposer,
+      $$BruciateDichiarateTableAnnotationComposer,
+      $$BruciateDichiarateTableCreateCompanionBuilder,
+      $$BruciateDichiarateTableUpdateCompanionBuilder,
+      (
+        BruciatoDichiarato,
+        BaseReferences<
+          _$ArchivioSalute,
+          $BruciateDichiarateTable,
+          BruciatoDichiarato
+        >,
+      ),
+      BruciatoDichiarato,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -5907,4 +8463,10 @@ class $ArchivioSaluteManager {
       $$ContenutiRifiutatiTableTableManager(_db, _db.contenutiRifiutati);
   $$AllenamentiDaOrologioTableTableManager get allenamentiDaOrologio =>
       $$AllenamentiDaOrologioTableTableManager(_db, _db.allenamentiDaOrologio);
+  $$SeduteAllenamentoTableTableManager get seduteAllenamento =>
+      $$SeduteAllenamentoTableTableManager(_db, _db.seduteAllenamento);
+  $$SerieDelleSeduteTableTableManager get serieDelleSedute =>
+      $$SerieDelleSeduteTableTableManager(_db, _db.serieDelleSedute);
+  $$BruciateDichiarateTableTableManager get bruciateDichiarate =>
+      $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
 }

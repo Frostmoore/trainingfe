@@ -64,9 +64,9 @@ Future<void> aggiornaTutto(
   final messaggero = ScaffoldMessenger.of(context);
 
   unawaited(
-    ref.read(risincronizzazioneHealthProvider).forse(
-          annuncia: () => _diCheStaLavorando(messaggero),
-        ),
+    ref
+        .read(risincronizzazioneHealthProvider)
+        .forse(annuncia: () => _diCheStaLavorando(messaggero)),
   );
 }
 
@@ -125,8 +125,8 @@ class RisincronizzazioneHealth {
     this._sincronizza, {
     DateTime Function()? adesso,
     Duration? attesa,
-  })  : _adesso = adesso ?? DateTime.now,
-        _attesa = attesa ?? attesaMinima;
+  }) : _adesso = adesso ?? DateTime.now,
+       _attesa = attesa ?? attesaMinima;
 
   static const attesaMinima = Duration(seconds: 30);
 

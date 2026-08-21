@@ -13,25 +13,43 @@ import 'package:training_companion/src/features/health/sessioni_di_sonno.dart';
 /// ⚠️ Con un segmento di venti minuti in mano quella domanda **non ha
 /// risposta**: bisogna prima ricomporre la dormita intera.
 void main() {
-  ({DateTime inizio, DateTime fine}) seg(DateTime a, DateTime b) => (inizio: a, fine: b);
+  ({DateTime inizio, DateTime fine}) seg(DateTime a, DateTime b) =>
+      (inizio: a, fine: b);
 
   group('i numeri veri del telefono, 17-18/08/2026', () {
     // Riferiti dal committente:
     //   ieri 18:09 → 19:30   (seconda pennichella di ieri)
     //   oggi 05:10 → 09:22   (la notte)
     //   oggi 15:16 → 16:37   (pennichella di oggi)
-    final pennicaDiIeri = seg(DateTime(2026, 8, 17, 18, 9), DateTime(2026, 8, 17, 19, 30));
-    final laNotte = seg(DateTime(2026, 8, 18, 5, 10), DateTime(2026, 8, 18, 9, 22));
-    final pennicaDiOggi = seg(DateTime(2026, 8, 18, 15, 16), DateTime(2026, 8, 18, 16, 37));
+    final pennicaDiIeri = seg(
+      DateTime(2026, 8, 17, 18, 9),
+      DateTime(2026, 8, 17, 19, 30),
+    );
+    final laNotte = seg(
+      DateTime(2026, 8, 18, 5, 10),
+      DateTime(2026, 8, 18, 9, 22),
+    );
+    final pennicaDiOggi = seg(
+      DateTime(2026, 8, 18, 15, 16),
+      DateTime(2026, 8, 18, 16, 37),
+    );
 
     test('sono tre dormite distinte, non una', () {
-      final sessioni = SessioniDiSonno.da([pennicaDiIeri, laNotte, pennicaDiOggi]);
+      final sessioni = SessioniDiSonno.da([
+        pennicaDiIeri,
+        laNotte,
+        pennicaDiOggi,
+      ]);
 
       expect(sessioni, hasLength(3));
     });
 
     test('solo quella delle 5:10 è una notte', () {
-      final sessioni = SessioniDiSonno.da([pennicaDiIeri, laNotte, pennicaDiOggi]);
+      final sessioni = SessioniDiSonno.da([
+        pennicaDiIeri,
+        laNotte,
+        pennicaDiOggi,
+      ]);
 
       expect(sessioni.map((s) => s.eNotte), [false, true, false]);
     });
@@ -41,13 +59,21 @@ void main() {
     /// *«è assurdo che mi prenda la pennica di ieri come parte del sonno di
     /// oggi»* — con la regola vecchia le 18:09 finivano sul 18, perché 18 ≥ 18.
     test('la pennica di ieri resta su ieri', () {
-      final sessioni = SessioniDiSonno.da([pennicaDiIeri, laNotte, pennicaDiOggi]);
+      final sessioni = SessioniDiSonno.da([
+        pennicaDiIeri,
+        laNotte,
+        pennicaDiOggi,
+      ]);
 
       expect(sessioni[0].giornata, DateTime(2026, 8, 17));
     });
 
     test('la notte e la pennica di oggi stanno su oggi', () {
-      final sessioni = SessioniDiSonno.da([pennicaDiIeri, laNotte, pennicaDiOggi]);
+      final sessioni = SessioniDiSonno.da([
+        pennicaDiIeri,
+        laNotte,
+        pennicaDiOggi,
+      ]);
 
       expect(sessioni[1].giornata, DateTime(2026, 8, 18));
       expect(sessioni[2].giornata, DateTime(2026, 8, 18));

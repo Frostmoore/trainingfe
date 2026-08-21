@@ -115,7 +115,8 @@ void main() {
       expect(
         ponte.permessiChiesti,
         0,
-        reason: 'il dialogo di Android, se rifiutato due volte, non si '
+        reason:
+            'il dialogo di Android, se rifiutato due volte, non si '
             'ripropone piu\': non va bruciato per una verifica che si poteva '
             'fare prima',
       );
@@ -154,16 +155,19 @@ void main() {
       expect(c.state.errore, isNotNull);
     });
 
-    test('permesso negato: non collegato, e si spiega come rimediare', () async {
-      ponte.concede = false;
+    test(
+      'permesso negato: non collegato, e si spiega come rimediare',
+      () async {
+        ponte.concede = false;
 
-      final c = conConsenso(true);
+        final c = conConsenso(true);
 
-      await c.collega();
+        await c.collega();
 
-      expect(c.state.collegato, isFalse);
-      expect(c.state.errore, contains('impostazioni'));
-    });
+        expect(c.state.collegato, isFalse);
+        expect(c.state.errore, contains('impostazioni'));
+      },
+    );
   });
 
   group('aggiornaInSilenzio()', () {
@@ -206,15 +210,18 @@ void main() {
     /// ⚠️ Sette giorni e non trenta: è la finestra della media di riferimento,
     /// e rileggere un mese a ogni avvio costerebbe tempo per dati che
     /// l'archivio ha già.
-    test('rilegge la finestra breve, non quella del primo collegamento', () async {
-      ponte
-        ..permessiGiaCe = true
-        ..campioni = 3;
+    test(
+      'rilegge la finestra breve, non quella del primo collegamento',
+      () async {
+        ponte
+          ..permessiGiaCe = true
+          ..campioni = 3;
 
-      await conConsenso(true).aggiornaInSilenzio();
+        await conConsenso(true).aggiornaInSilenzio();
 
-      expect(ponte.ultimaFinestra, 7);
-    });
+        expect(ponte.ultimaFinestra, 7);
+      },
+    );
   });
 }
 

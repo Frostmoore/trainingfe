@@ -150,7 +150,10 @@ class PonteSalute {
     try {
       await _salute.configure();
 
-      return await _salute.hasPermissions(_tipiDaAutorizzare, permissions: _permessi) ??
+      return await _salute.hasPermissions(
+            _tipiDaAutorizzare,
+            permissions: _permessi,
+          ) ??
           false;
     } on Object {
       // Un telefono senza Health Connect: non è un errore, è una funzione che
@@ -167,15 +170,24 @@ class PonteSalute {
       // anche peggio — si toccava il pacchetto vero.
       await _salute.configure();
 
-      final gia = await _salute.hasPermissions(_tipiDaAutorizzare, permissions: _permessi);
+      final gia = await _salute.hasPermissions(
+        _tipiDaAutorizzare,
+        permissions: _permessi,
+      );
 
       if (gia ?? false) return true;
 
-      return await _salute.requestAuthorization(_tipiDaAutorizzare, permissions: _permessi);
+      return await _salute.requestAuthorization(
+        _tipiDaAutorizzare,
+        permissions: _permessi,
+      );
     } on Object catch (errore, stack) {
       // Un telefono senza Health Connect non è un errore da mostrare: è una
       // funzione che quel telefono non ha.
-      debugPrintStack(label: 'PonteSalute.chiediPermessi: $errore', stackTrace: stack);
+      debugPrintStack(
+        label: 'PonteSalute.chiediPermessi: $errore',
+        stackTrace: stack,
+      );
       return false;
     }
   }
@@ -207,7 +219,10 @@ class PonteSalute {
         endTime: a,
       );
     } on Object catch (errore, stack) {
-      debugPrintStack(label: 'PonteSalute.sincronizza: $errore', stackTrace: stack);
+      debugPrintStack(
+        label: 'PonteSalute.sincronizza: $errore',
+        stackTrace: stack,
+      );
       return 0;
     }
 
@@ -223,14 +238,20 @@ class PonteSalute {
         final valore = _numero(punto.value);
         if (valore == null) continue;
 
-        letture.add(LetturaSalute(
-          id: 0,
-          fonte: _fonte(punto),
-          metrica: metrica.codice,
-          misurataIl: punto.dateFrom,
-          giorno: DateTime(punto.dateFrom.year, punto.dateFrom.month, punto.dateFrom.day),
-          valore: valore,
-        ));
+        letture.add(
+          LetturaSalute(
+            id: 0,
+            fonte: _fonte(punto),
+            metrica: metrica.codice,
+            misurataIl: punto.dateFrom,
+            giorno: DateTime(
+              punto.dateFrom.year,
+              punto.dateFrom.month,
+              punto.dateFrom.day,
+            ),
+            valore: valore,
+          ),
+        );
 
         continue;
       }
@@ -249,14 +270,16 @@ class PonteSalute {
          *
          * \U0001F4A1 Si mette un segnaposto e si decide sotto, quando ci sono tutti.
          */
-        campioni.add(CampioneSonno(
-          id: 0,
-          fonte: _fonte(punto),
-          notte: punto.dateFrom,
-          iniziatoIl: punto.dateFrom,
-          finitoIl: punto.dateTo,
-          fase: fase.codice,
-        ));
+        campioni.add(
+          CampioneSonno(
+            id: 0,
+            fonte: _fonte(punto),
+            notte: punto.dateFrom,
+            iniziatoIl: punto.dateFrom,
+            finitoIl: punto.dateTo,
+            fase: fase.codice,
+          ),
+        );
       }
     }
 
@@ -284,10 +307,13 @@ class PonteSalute {
   /// identici. ⚠️ Nello storico diventerebbero righe «0 min · 0 kcal» che
   /// nessuno sa da dove vengano e che non si possono cancellare.
   @visibleForTesting
-  static List<AllenamentoDaOrologio> allenamentiDa(List<HealthDataPoint> punti) =>
-      _allenamentiDa(punti);
+  static List<AllenamentoDaOrologio> allenamentiDa(
+    List<HealthDataPoint> punti,
+  ) => _allenamentiDa(punti);
 
-  static List<AllenamentoDaOrologio> _allenamentiDa(List<HealthDataPoint> punti) {
+  static List<AllenamentoDaOrologio> _allenamentiDa(
+    List<HealthDataPoint> punti,
+  ) {
     final fuori = <AllenamentoDaOrologio>[];
 
     for (final punto in punti) {
@@ -301,20 +327,21 @@ class PonteSalute {
 
       if (!punto.dateTo.isAfter(punto.dateFrom)) continue;
 
-      fuori.add(AllenamentoDaOrologio(
-        /*
+      fuori.add(
+        AllenamentoDaOrologio(
+          /*
          * ⚠️ L'`id` a zero e' costretto dalla classe generata, e va bene
          * **solo** perche' `_companionAllenamento` non lo passa: vedi la nota
          * lunga in `ArchivioSalute`, dove lo stesso zero aveva prodotto un
          * archivio con una riga sola per sincronizzazione.
          */
-        id: 0,
-        fonte: _fonte(punto),
-        tipo: codice,
-        iniziatoIl: punto.dateFrom,
-        finitoIl: punto.dateTo,
+          id: 0,
+          fonte: _fonte(punto),
+          tipo: codice,
+          iniziatoIl: punto.dateFrom,
+          finitoIl: punto.dateTo,
 
-        /*
+          /*
          * ══ 🚨 NON `valore.totalEnergyBurned` ═══════════════════════════════
          *
          * Quello viene da `TotalCaloriesBurnedRecord` e comprende il
@@ -332,18 +359,19 @@ class PonteSalute {
          * perché due schermate dell'app non dicano numeri diversi sulla stessa
          * ora.
          */
-        kcal: _attiveDentro(punti, punto.dateFrom, punto.dateTo),
-        distanzaMetri: valore.totalDistance,
-        passi: valore.totalSteps,
-        nascosto: false,
+          kcal: _attiveDentro(punti, punto.dateFrom, punto.dateTo),
+          distanzaMetri: valore.totalDistance,
+          passi: valore.totalSteps,
+          nascosto: false,
 
-        /*
+          /*
          * ⚠️ Sempre `false` da qui: `staccato` e' una **scelta di chi usa
          * l'app**, non un dato dell'orologio. Non viene nemmeno passato a
          * `_companionAllenamento`, quindi una rilettura non puo' cancellarlo.
          */
-        staccato: false,
-      ));
+          staccato: false,
+        ),
+      );
     }
 
     return fuori;
@@ -366,7 +394,11 @@ class PonteSalute {
   /// «non hai bruciato niente» sono due cose diverse, e mostrare uno zero
   /// inventato è peggio che non mostrare niente. ⚠️ E in nessun caso si ripiega
   /// su `totalEnergyBurned`: sarebbe rimettere dentro il basale di nascosto.
-  static int? _attiveDentro(List<HealthDataPoint> punti, DateTime da, DateTime a) {
+  static int? _attiveDentro(
+    List<HealthDataPoint> punti,
+    DateTime da,
+    DateTime a,
+  ) {
     var somma = 0.0;
     var trovato = false;
 
@@ -429,7 +461,9 @@ class PonteSalute {
   static String _fonte(HealthDataPoint punto) {
     final nome = punto.sourceName.trim();
 
-    return nome.isEmpty ? 'health' : nome.substring(0, nome.length.clamp(0, 32));
+    return nome.isEmpty
+        ? 'health'
+        : nome.substring(0, nome.length.clamp(0, 32));
   }
 
   static double? _numero(HealthValue valore) =>
@@ -449,7 +483,8 @@ class PonteSalute {
   static FaseSonno? _faseDi(HealthDataType tipo) => switch (tipo) {
     HealthDataType.SLEEP_DEEP => FaseSonno.profondo,
     HealthDataType.SLEEP_REM => FaseSonno.rem,
-    HealthDataType.SLEEP_LIGHT || HealthDataType.SLEEP_ASLEEP => FaseSonno.leggero,
+    HealthDataType.SLEEP_LIGHT ||
+    HealthDataType.SLEEP_ASLEEP => FaseSonno.leggero,
     HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
     _ => null,
   };

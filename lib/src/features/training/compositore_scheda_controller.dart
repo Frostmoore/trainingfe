@@ -16,11 +16,17 @@ import 'data/scheda_allenamento.dart';
 /// proprie.** Non ce n'è una «da trainer»: quello che cambia è chi la chiama e
 /// cosa gli torna indietro. Il filtro lo fa `forMember()` sul server, e va bene
 /// così — due rotte che fanno la stessa cosa divergono alla prima modifica.
-final mieSchedeProvider = FutureProvider.autoDispose<List<SchedaAllenamento>>((ref) async {
-  final dati = await ref.watch(apiClientProvider).get<List<dynamic>>('/workout-plans');
+final mieSchedeProvider = FutureProvider.autoDispose<List<SchedaAllenamento>>((
+  ref,
+) async {
+  final dati = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/workout-plans');
 
   return dati
-      .map((e) => SchedaAllenamento.fromJson((e as Map).cast<String, dynamic>()))
+      .map(
+        (e) => SchedaAllenamento.fromJson((e as Map).cast<String, dynamic>()),
+      )
       .toList(growable: false);
 });
 
@@ -29,13 +35,14 @@ final mieSchedeProvider = FutureProvider.autoDispose<List<SchedaAllenamento>>((r
 /// 💡 **Prima di G7 questa chiamata non serviva a niente per un compositore**:
 /// `dettaglio()` tornava la sola lista piatta, quindi riaprire una scheda a tre
 /// giorni ne avrebbe mostrato uno e il salvataggio avrebbe cancellato gli altri.
-final schedaProvider = FutureProvider.autoDispose.family<SchedaAllenamento, int>((ref, id) async {
-  final dati = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/workout-plans/$id');
+final schedaProvider = FutureProvider.autoDispose
+    .family<SchedaAllenamento, int>((ref, id) async {
+      final dati = await ref
+          .watch(apiClientProvider)
+          .get<Map<String, dynamic>>('/workout-plans/$id');
 
-  return SchedaAllenamento.fromJson(dati);
-});
+      return SchedaAllenamento.fromJson(dati);
+    });
 
 final azioniSchedaProvider = Provider(
   (ref) => AzioniScheda(ref.watch(apiClientProvider), ref),
@@ -64,7 +71,10 @@ class AzioniScheda {
 
     final dati = scheda.nuova
         ? await _api.post<Map<String, dynamic>>('/workout-plans', body: corpo)
-        : await _api.put<Map<String, dynamic>>('/workout-plans/${scheda.id}', body: corpo);
+        : await _api.put<Map<String, dynamic>>(
+            '/workout-plans/${scheda.id}',
+            body: corpo,
+          );
 
     _ref.invalidate(mieSchedeProvider);
 

@@ -24,9 +24,15 @@ void main() {
     /// tipi e `WORKOUT` traduce nel solo `READ_EXERCISE`. Risultato:
     /// `granted=false` per sempre, e `SecurityException` a ogni lettura.
     test('si chiedono i tre tipi che il pacchetto pretende', () {
-      expect(PonteSalute.tipiDaAutorizzare, contains(HealthDataType.DISTANCE_DELTA));
+      expect(
+        PonteSalute.tipiDaAutorizzare,
+        contains(HealthDataType.DISTANCE_DELTA),
+      );
       expect(PonteSalute.tipiDaAutorizzare, contains(HealthDataType.STEPS));
-      expect(PonteSalute.tipiDaAutorizzare, contains(HealthDataType.TOTAL_CALORIES_BURNED));
+      expect(
+        PonteSalute.tipiDaAutorizzare,
+        contains(HealthDataType.TOTAL_CALORIES_BURNED),
+      );
     });
 
     test('e ovviamente anche gli allenamenti', () {
@@ -47,13 +53,17 @@ void main() {
       expect(
         PonteSalute.tipiDaLeggere,
         isNot(contains(HealthDataType.TOTAL_CALORIES_BURNED)),
-        reason: 'Comprende il metabolismo basale: per la giornata vale solo '
+        reason:
+            'Comprende il metabolismo basale: per la giornata vale solo '
             'ACTIVE_ENERGY_BURNED, o si contano due volte ~1.600 kcal.',
       );
     });
 
     test('per la giornata vale ACTIVE_ENERGY_BURNED', () {
-      expect(PonteSalute.tipiDaLeggere, contains(HealthDataType.ACTIVE_ENERGY_BURNED));
+      expect(
+        PonteSalute.tipiDaLeggere,
+        contains(HealthDataType.ACTIVE_ENERGY_BURNED),
+      );
     });
 
     /// 💡 Passi e distanza sono il dato buono **di una corsa**, non della
@@ -61,7 +71,10 @@ void main() {
     /// vorrebbe dire tirarsi in casa migliaia di campioni che nessuno guarda.
     test('passi e distanza si chiedono ma non si leggono a parte', () {
       expect(PonteSalute.tipiDaLeggere, isNot(contains(HealthDataType.STEPS)));
-      expect(PonteSalute.tipiDaLeggere, isNot(contains(HealthDataType.DISTANCE_DELTA)));
+      expect(
+        PonteSalute.tipiDaLeggere,
+        isNot(contains(HealthDataType.DISTANCE_DELTA)),
+      );
     });
   });
 
@@ -69,8 +82,14 @@ void main() {
   /// identificante che il telefono possieda, e non serve a niente di quello che
   /// facciamo.
   test('la traccia GPS non si chiede e non si legge', () {
-    expect(PonteSalute.tipiDaAutorizzare, isNot(contains(HealthDataType.WORKOUT_ROUTE)));
-    expect(PonteSalute.tipiDaLeggere, isNot(contains(HealthDataType.WORKOUT_ROUTE)));
+    expect(
+      PonteSalute.tipiDaAutorizzare,
+      isNot(contains(HealthDataType.WORKOUT_ROUTE)),
+    );
+    expect(
+      PonteSalute.tipiDaLeggere,
+      isNot(contains(HealthDataType.WORKOUT_ROUTE)),
+    );
   });
 
   /// ⚠️ Chi legge deve poter fidarsi che l'elenco lungo **contenga** quello

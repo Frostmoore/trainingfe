@@ -13,10 +13,10 @@ import 'session_controller.dart';
 /// regola del 19/08 non ha eccezioni: restano sul telefono e nel backup.
 final allenamentiDalPolsoProvider =
     FutureProvider.autoDispose<List<AllenamentoDaOrologio>>((ref) async {
-  ref.watch(revisioneAllenamentiProvider);
+      ref.watch(revisioneAllenamentiProvider);
 
-  return ref.watch(archivioSaluteProvider).allenamentiDellOrologio();
-});
+      return ref.watch(archivioSaluteProvider).allenamentiDellOrologio();
+    });
 
 /// Lo storico completo: le sedute dell'app e gli allenamenti dell'orologio,
 /// fusi — FASE 1.10.
@@ -31,8 +31,9 @@ final allenamentiDalPolsoProvider =
 /// 💡 Quindi: un guasto sul lato locale vale «nessun allenamento dall'orologio»,
 /// e lo storico resta quello di prima. 🚨 Il contrario no: se cade la rete, lo
 /// storico deve dirlo, perché lì manca la parte principale.
-final storicoUnificatoProvider =
-    FutureProvider.autoDispose<List<VoceStorico>>((ref) async {
+final storicoUnificatoProvider = FutureProvider.autoDispose<List<VoceStorico>>((
+  ref,
+) async {
   final sessioni = await ref.watch(sessionsProvider.future);
 
   /*
@@ -45,19 +46,21 @@ final storicoUnificatoProvider =
   final dalPolso = await ref
       .watch(allenamentiDalPolsoProvider.future)
       .catchError((Object e) {
-    debugPrint('storicoUnificato: gli allenamenti locali non si leggono — $e');
+        debugPrint(
+          'storicoUnificato: gli allenamenti locali non si leggono — $e',
+        );
 
-    return const <AllenamentoDaOrologio>[];
-  });
+        return const <AllenamentoDaOrologio>[];
+      });
 
   final schede = await ref
       .watch(schedeRicevuteProvider.future)
       .then((v) => {for (final s in v) s.id: s})
       .catchError((Object e) {
-    debugPrint('storicoUnificato: le schede non si leggono — $e');
+        debugPrint('storicoUnificato: le schede non si leggono — $e');
 
-    return const <int, SchedaRicevuta>{};
-  });
+        return const <int, SchedaRicevuta>{};
+      });
 
   return StoricoUnificato.fondi(
     sessioni: sessioni,
@@ -98,28 +101,28 @@ final storicoUnificatoProvider =
 /// controllo.
 final tipiDegliAllenamentiProvider =
     FutureProvider.autoDispose<Map<int, String>>((ref) async {
-  final voci = await ref.watch(storicoUnificatoProvider.future);
+      final voci = await ref.watch(storicoUnificatoProvider.future);
 
-  final fuori = <int, String>{};
+      final fuori = <int, String>{};
 
-  for (final v in voci) {
-    if (v.sedute.isEmpty || v.dalPolso.isEmpty) continue;
+      for (final v in voci) {
+        if (v.sedute.isEmpty || v.dalPolso.isEmpty) continue;
 
-    /*
+        /*
      * ⚠️ Il tipo del **primo** tratto del gruppo. Se l'orologio è stato fermato
      * e ripreso i tratti sono più d'uno, ma il raggruppamento li tiene insieme
      * solo se il tipo non cambia (o se si sovrappongono): prendere il primo è
      * quindi rappresentativo, e prendere l'ultimo non cambierebbe niente.
      */
-    final tipo = v.dalPolso.first.tipo;
+        final tipo = v.dalPolso.first.tipo;
 
-    for (final s in v.sedute) {
-      fuori[s.id] = tipo;
-    }
-  }
+        for (final s in v.sedute) {
+          fuori[s.id] = tipo;
+        }
+      }
 
-  return fuori;
-});
+      return fuori;
+    });
 
 /// La riga di storico a cui appartiene una seduta — FASE 1-bis.
 ///
@@ -132,16 +135,16 @@ final tipiDegliAllenamentiProvider =
 ///
 /// 💡 `null` quando quella seduta non è (ancora) in nessun gruppo: il riepilogo
 /// si comporta come prima, che è la cosa giusta.
-final voceDellaSedutaProvider =
-    FutureProvider.autoDispose.family<VoceStorico?, int>((ref, sedutaId) async {
-  final voci = await ref.watch(storicoUnificatoProvider.future);
+final voceDellaSedutaProvider = FutureProvider.autoDispose
+    .family<VoceStorico?, int>((ref, sedutaId) async {
+      final voci = await ref.watch(storicoUnificatoProvider.future);
 
-  for (final v in voci) {
-    if (v.sedute.any((s) => s.id == sedutaId)) return v;
-  }
+      for (final v in voci) {
+        if (v.sedute.any((s) => s.id == sedutaId)) return v;
+      }
 
-  return null;
-});
+      return null;
+    });
 
 /// Assegna a un allenamento dell'orologio una delle proprie schede — FASE 1.10.
 ///

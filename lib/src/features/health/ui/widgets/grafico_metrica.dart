@@ -33,10 +33,16 @@ class GraficoMetrica extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final serie = ref.watch(serieSaluteProvider(metrica)).valueOrNull;
-    final conMedia = ref.watch(recuperoProvider).valueOrNull?.parametri[metrica];
+    final conMedia = ref
+        .watch(recuperoProvider)
+        .valueOrNull
+        ?.parametri[metrica];
 
     if (serie == null) {
-      return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (serie.isEmpty) {
@@ -52,7 +58,10 @@ class GraficoMetrica extends ConsumerWidget {
           children: [
             _Intestazione(metrica: metrica, conMedia: conMedia),
             const SizedBox(height: Gap.md),
-            SizedBox(height: 130, child: _Linea(serie: serie, metrica: metrica)),
+            SizedBox(
+              height: 130,
+              child: _Linea(serie: serie, metrica: metrica),
+            ),
             const SizedBox(height: Gap.xs),
             Text(
               serie.length == 1
@@ -152,7 +161,8 @@ class _Linea extends StatelessWidget {
     final theme = Theme.of(context);
 
     final punti = <FlSpot>[
-      for (var i = 0; i < serie.length; i++) FlSpot(i.toDouble(), serie[i].media),
+      for (var i = 0; i < serie.length; i++)
+        FlSpot(i.toDouble(), serie[i].media),
     ];
 
     final valori = serie.map((p) => p.media).toList();
@@ -167,7 +177,10 @@ class _Linea extends StatelessWidget {
      * Per una metrica che si legge come scostamento, partire da zero significa
      * nascondere proprio la cosa che si sta guardando.
      */
-    final margine = ((massimo - minimo).abs() * 0.1).clamp(1.0, double.infinity);
+    final margine = ((massimo - minimo).abs() * 0.1).clamp(
+      1.0,
+      double.infinity,
+    );
 
     return LineChart(
       LineChartData(
@@ -188,10 +201,8 @@ class _Linea extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 34,
-              getTitlesWidget: (v, meta) => Text(
-                v.round().toString(),
-                style: theme.textTheme.labelSmall,
-              ),
+              getTitlesWidget: (v, meta) =>
+                  Text(v.round().toString(), style: theme.textTheme.labelSmall),
             ),
           ),
           bottomTitles: AxisTitles(

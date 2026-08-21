@@ -31,7 +31,9 @@ class UserProfile {
 
     return UserProfile(
       sex: j['sex']?.toString(),
-      birthdate: j['birthdate'] == null ? null : DateTime.tryParse(j['birthdate'].toString()),
+      birthdate: j['birthdate'] == null
+          ? null
+          : DateTime.tryParse(j['birthdate'].toString()),
       age: (j['age'] as num?)?.toInt(),
       heightCm: (j['height_cm'] as num?)?.toInt(),
       activityLevel: j['activity_level']?.toString(),
@@ -44,10 +46,14 @@ class UserProfile {
       // 🚨 L'elenco dei campi mancanti viene dal server e si usa così com'è:
       // ricostruirlo in Dart significherebbe avere due idee diverse di «cosa
       // serve per calcolare il fabbisogno».
-      missing: ((j['missing'] as List?) ?? const []).map((e) => e.toString()).toList(),
+      missing: ((j['missing'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       derived: j['derived'] == null
           ? null
-          : DerivedTargets.fromJson((j['derived'] as Map).cast<String, dynamic>()),
+          : DerivedTargets.fromJson(
+              (j['derived'] as Map).cast<String, dynamic>(),
+            ),
       activityLevels: ((opzioni['activity_levels'] as Map?) ?? const {}).map(
         (k, v) => MapEntry(k.toString(), v.toString()),
       ),
@@ -184,7 +190,11 @@ class DerivedTargets {
 
 /// Una pesata: la serie storica su cui si disegna l'andamento.
 class WeightEntry {
-  const WeightEntry({required this.date, required this.weightKg, this.bodyFatPct});
+  const WeightEntry({
+    required this.date,
+    required this.weightKg,
+    this.bodyFatPct,
+  });
 
   factory WeightEntry.fromJson(Map<String, dynamic> j) => WeightEntry(
     date: DateTime.parse(j['date'].toString()),

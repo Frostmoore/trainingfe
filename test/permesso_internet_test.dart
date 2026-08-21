@@ -35,7 +35,8 @@ void main() {
     expect(
       manifest.existsSync(),
       isTrue,
-      reason: 'il manifest principale non è dove dovrebbe: il test non prova più niente',
+      reason:
+          'il manifest principale non è dove dovrebbe: il test non prova più niente',
     );
 
     /*
@@ -47,7 +48,8 @@ void main() {
     expect(
       manifest.readAsStringSync(),
       contains('android.permission.INTERNET'),
-      reason: 'senza questo, ogni chiamata della release fallisce e l\'app accusa la rete del telefono',
+      reason:
+          'senza questo, ogni chiamata della release fallisce e l\'app accusa la rete del telefono',
     );
   });
 }

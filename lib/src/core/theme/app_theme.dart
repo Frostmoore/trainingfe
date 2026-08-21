@@ -16,9 +16,11 @@ import '../../features/onboarding/data/gym_branding.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData light(GymBranding branding) => _build(branding, Brightness.light);
+  static ThemeData light(GymBranding branding) =>
+      _build(branding, Brightness.light);
 
-  static ThemeData dark(GymBranding branding) => _build(branding, Brightness.dark);
+  static ThemeData dark(GymBranding branding) =>
+      _build(branding, Brightness.dark);
 
   static ThemeData _build(GymBranding branding, Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
@@ -82,7 +84,9 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
       ),
@@ -90,7 +94,9 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
 
@@ -101,7 +107,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
 
       navigationBarTheme: NavigationBarThemeData(
@@ -116,7 +125,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
-      dividerTheme: DividerThemeData(color: scheme.outlineVariant, space: 1, thickness: 1),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        space: 1,
+        thickness: 1,
+      ),
     );
   }
 }

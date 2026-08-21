@@ -37,7 +37,11 @@ void main() {
         'slug': 'palestra-demo',
         'logo_url': 'https://esempio.test/logo.png',
         'locale': 'it',
-        'colors': {'primary': '#123456', 'secondary': '#654321', 'accent': '#ABCDEF'},
+        'colors': {
+          'primary': '#123456',
+          'secondary': '#654321',
+          'accent': '#ABCDEF',
+        },
       });
 
       expect(b.name, 'Palestra Demo');
@@ -78,7 +82,11 @@ void main() {
       });
 
       expect(b.name, isNull);
-      expect(b.primary, isNot(GymBranding.fallbackPrimary), reason: 'i colori arrivano lo stesso');
+      expect(
+        b.primary,
+        isNot(GymBranding.fallbackPrimary),
+        reason: 'i colori arrivano lo stesso',
+      );
     });
 
     /// 🚨 Quali pulsanti d'accesso esterno mostrare lo decide il **server**.
@@ -105,14 +113,17 @@ void main() {
       expect(b.supporta('google'), isFalse);
     });
 
-    test('un fornitore sconosciuto si scarta invece di disegnare un pulsante muto', () {
-      final b = GymBranding.fromJson(const {
-        'name': 'X',
-        'social': ['google', 'facebook'],
-      });
+    test(
+      'un fornitore sconosciuto si scarta invece di disegnare un pulsante muto',
+      () {
+        final b = GymBranding.fromJson(const {
+          'name': 'X',
+          'social': ['google', 'facebook'],
+        });
 
-      expect(b.social, ['google']);
-    });
+        expect(b.social, ['google']);
+      },
+    );
 
     test('un colore sbagliato ricade sul valore di riserva', () {
       final b = GymBranding.fromJson(const {

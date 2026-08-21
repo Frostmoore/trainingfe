@@ -48,10 +48,9 @@ class _Avatar {
       ),
     });
 
-    await _ref.read(apiClientProvider).post<dynamic>(
-      '/account/avatar',
-      body: form,
-    );
+    await _ref
+        .read(apiClientProvider)
+        .post<dynamic>('/account/avatar', body: form);
 
     /*
      * 🚨 **Si ricarica l'utente, non si aggiorna una variabile.**

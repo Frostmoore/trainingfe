@@ -12,8 +12,18 @@ void main() {
     'id': 12,
     'title': 'Push — petto, spalle, tricipiti',
     'exercises': [
-      {'position': 1, 'sets': 4, 'reps': '8-10', 'exercise': {'name': 'Panca piana'}},
-      {'position': 2, 'sets': 3, 'reps': '12', 'exercise': {'name': 'Alzate laterali'}},
+      {
+        'position': 1,
+        'sets': 4,
+        'reps': '8-10',
+        'exercise': {'name': 'Panca piana'},
+      },
+      {
+        'position': 2,
+        'sets': 3,
+        'reps': '12',
+        'exercise': {'name': 'Alzate laterali'},
+      },
     ],
   };
 
@@ -24,7 +34,10 @@ void main() {
       final tornato = ContenutoMessaggio.daChiaro(originale.perLaBusta());
 
       expect(tornato, isA<ContenutoTesto>());
-      expect((tornato as ContenutoTesto).testo, 'Domani panca piana, 4 serie da 8.');
+      expect(
+        (tornato as ContenutoTesto).testo,
+        'Domani panca piana, 4 serie da 8.',
+      );
     });
 
     test('una scheda arriva dall altra parte per intero', () {
@@ -52,7 +65,10 @@ void main() {
       final tornato = ContenutoMessaggio.daChiaro(originale.perLaBusta());
 
       expect(tornato, isA<ContenutoPianoAlimentare>());
-      expect((tornato as ContenutoPianoAlimentare).titolo, 'Definizione — 2100 kcal');
+      expect(
+        (tornato as ContenutoPianoAlimentare).titolo,
+        'Definizione — 2100 kcal',
+      );
     });
   });
 

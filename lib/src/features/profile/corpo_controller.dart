@@ -23,7 +23,9 @@ import '../health/health_controller.dart';
 final revisioneCorpoProvider = StateProvider<int>((ref) => 0);
 
 /// Lo storico delle misure, dalla più recente.
-final storicoCorpoProvider = FutureProvider.autoDispose<List<MisuraCorpo>>((ref) async {
+final storicoCorpoProvider = FutureProvider.autoDispose<List<MisuraCorpo>>((
+  ref,
+) async {
   ref.watch(revisioneCorpoProvider);
 
   return ref.watch(archivioSaluteProvider).storicoMisure();
@@ -40,7 +42,11 @@ final corpoOggiProvider = FutureProvider.autoDispose<BodyToday>((ref) async {
   final conPeso = storico.where((m) => m.pesoKg != null).toList();
 
   if (conPeso.isEmpty) {
-    return const BodyToday(weightKg: null, weightDelta: null, targetWeightKg: null);
+    return const BodyToday(
+      weightKg: null,
+      weightDelta: null,
+      targetWeightKg: null,
+    );
   }
 
   final ultimo = conPeso.first;
@@ -96,7 +102,9 @@ class AzioniCorpo {
   }) async {
     final quando = giorno ?? DateTime.now();
 
-    await _ref.read(archivioSaluteProvider).registraMisura(
+    await _ref
+        .read(archivioSaluteProvider)
+        .registraMisura(
           MisuraCorpo(
             id: 0,
             giorno: DateTime(quando.year, quando.month, quando.day),

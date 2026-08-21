@@ -77,8 +77,7 @@ class Cassaforte {
   /// Non deriva da niente — né dalla password, né dall'email, né dall'id utente.
   /// È il solo segreto che, perso, perde tutto: ogni altra chiave si ricalcola
   /// da questa.
-  SecureKey generaChiaveMaestra() =>
-      _sodium.crypto.kdf.keygen();
+  SecureKey generaChiaveMaestra() => _sodium.crypto.kdf.keygen();
 
   /// Chiude la chiave maestra dentro un pacchetto che solo la password apre.
   ///
@@ -199,19 +198,18 @@ class Cassaforte {
     required Uint8List salt,
     required int opsLimit,
     required int memLimit,
-  }) =>
-      _sodium.crypto.pwhash(
-        outLen: _sodium.crypto.secretBox.keyBytes,
-        password: password.toCharArray(),
-        salt: salt,
-        opsLimit: opsLimit,
-        memLimit: memLimit,
-        // Argon2id e non Argon2i: resiste sia agli attacchi con hardware
-        // dedicato sia a quelli che sfruttano i tempi di accesso alla memoria.
-        // È la scelta predefinita di libsodium da 1.0.13 e non c'è motivo di
-        // discostarsene.
-        alg: CryptoPwhashAlgorithm.argon2id13,
-      );
+  }) => _sodium.crypto.pwhash(
+    outLen: _sodium.crypto.secretBox.keyBytes,
+    password: password.toCharArray(),
+    salt: salt,
+    opsLimit: opsLimit,
+    memLimit: memLimit,
+    // Argon2id e non Argon2i: resiste sia agli attacchi con hardware
+    // dedicato sia a quelli che sfruttano i tempi di accesso alla memoria.
+    // È la scelta predefinita di libsodium da 1.0.13 e non c'è motivo di
+    // discostarsene.
+    alg: CryptoPwhashAlgorithm.argon2id13,
+  );
 }
 
 /// Il pacchetto incartato — **quello che sta sul nostro server**.
@@ -243,14 +241,14 @@ class PacchettoIncartato {
   /// domani renderebbe illeggibili tutti i pacchetti di ieri — e nessuno se ne
   /// accorgerebbe fino al primo utente che prova a recuperare l'account.
   Map<String, dynamic> toJson() => {
-        'version': versione,
-        'kdf': 'argon2id13',
-        'ops_limit': opsLimit,
-        'mem_limit': memLimit,
-        'salt': base64Encode(salt),
-        'nonce': base64Encode(nonce),
-        'wrapped_key': base64Encode(cifrato),
-      };
+    'version': versione,
+    'kdf': 'argon2id13',
+    'ops_limit': opsLimit,
+    'mem_limit': memLimit,
+    'salt': base64Encode(salt),
+    'nonce': base64Encode(nonce),
+    'wrapped_key': base64Encode(cifrato),
+  };
 
   factory PacchettoIncartato.fromJson(Map<String, dynamic> json) =>
       PacchettoIncartato(

@@ -34,11 +34,8 @@ class TargetScelto {
   final int carboidratiG;
   final int grassiG;
 
-  Macro get macro => Macro(
-    proteineG: proteineG,
-    carboidratiG: carboidratiG,
-    grassiG: grassiG,
-  );
+  Macro get macro =>
+      Macro(proteineG: proteineG, carboidratiG: carboidratiG, grassiG: grassiG);
 
   static const _chiave = 'target_scelto_a_mano';
 

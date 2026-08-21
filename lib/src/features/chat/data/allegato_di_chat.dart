@@ -96,7 +96,10 @@ class AllegatoDiChat {
   /// non c'è più niente da scaricare, e la foto deve venire da lì.
   ///
   /// @return il percorso relativo, o `null` se sul server non c'è più.
-  Future<String?> riprendi(ContenutoFoto busta, {TipoFoto dove = TipoFoto.chat}) async {
+  Future<String?> riprendi(
+    ContenutoFoto busta, {
+    TipoFoto dove = TipoFoto.chat,
+  }) async {
     if (!busta.completa) return null;
 
     final gia = await _giaScaricata(busta.token, dove);
@@ -205,8 +208,9 @@ class AllegatoDiChat {
       final chiaro = await cripto.decifra(chiave: chiave, contenuto: cifrato);
       final cartella = await archivio.cartellaDi(TipoFoto.chat);
 
-      await File(p.join(cartella.path, '${busta.token}$estensione'))
-          .writeAsBytes(chiaro);
+      await File(
+        p.join(cartella.path, '${busta.token}$estensione'),
+      ).writeAsBytes(chiaro);
 
       return relativo;
     } finally {

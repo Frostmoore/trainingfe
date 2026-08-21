@@ -163,7 +163,8 @@ final sleepProvider = FutureProvider.autoDispose<SleepNight?>((ref) async {
   // ⚠️ Nessuna notte scelta = **l'ultima con dati**, non «stanotte». Chi apre
   // l'app alle 18 senza aver sincronizzato vedrebbe altrimenti una schermata
   // vuota pur avendo dormito: il dato c'è, è solo di ieri.
-  final quale = ref.watch(sleepNightProvider) ?? await archivio.ultimaNotteConDati();
+  final quale =
+      ref.watch(sleepNightProvider) ?? await archivio.ultimaNotteConDati();
 
   if (quale == null) return null;
 

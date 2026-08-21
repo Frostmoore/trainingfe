@@ -97,11 +97,12 @@ class DashboardScreen extends ConsumerWidget {
                     StatoConsiglio.spento => null,
                     StatoConsiglio.inArrivo => const _ConsiglioInArrivo(),
                     _ => _Consiglio(
-                        testo: consiglio.valueOrNull?.testo ?? '',
-                        generatoIl: consiglio.valueOrNull?.generatoIl,
-                        vecchio:
-                            consiglio.valueOrNull?.stato == StatoConsiglio.vecchio,
-                      ),
+                      testo: consiglio.valueOrNull?.testo ?? '',
+                      generatoIl: consiglio.valueOrNull?.generatoIl,
+                      vecchio:
+                          consiglio.valueOrNull?.stato ==
+                          StatoConsiglio.vecchio,
+                    ),
                   },
 
                   /*
@@ -177,7 +178,11 @@ class _Blocchi extends StatelessWidget {
 /// «devi» sotto una riga che dice «non fidarti» si contraddice da solo, e a
 /// vincere è sempre il testo più grande.
 class _Consiglio extends ConsumerStatefulWidget {
-  const _Consiglio({required this.testo, this.generatoIl, this.vecchio = false});
+  const _Consiglio({
+    required this.testo,
+    this.generatoIl,
+    this.vecchio = false,
+  });
 
   final String testo;
 
@@ -295,14 +300,18 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
             if (widget.vecchio) ...[
               Row(
                 children: [
-                  Icon(Icons.history_rounded, size: 14, color: sopra.withValues(alpha: 0.75)),
+                  Icon(
+                    Icons.history_rounded,
+                    size: 14,
+                    color: sopra.withValues(alpha: 0.75),
+                  ),
                   const SizedBox(width: Gap.xs),
                   Expanded(
                     child: Text(
                       widget.generatoIl == null
                           ? 'Questo è l\'ultimo che avevi: sto preparando quello di oggi.'
                           : 'Consiglio del ${DateFormat('d MMMM', 'it').format(widget.generatoIl!)}: '
-                              'sto preparando quello di oggi.',
+                                'sto preparando quello di oggi.',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: sopra.withValues(alpha: 0.75),
                         fontStyle: FontStyle.italic,
@@ -327,7 +336,11 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline_rounded, size: 14, color: sopra.withValues(alpha: 0.75)),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: sopra.withValues(alpha: 0.75),
+                ),
                 const SizedBox(width: Gap.xs),
                 Expanded(
                   child: Text(
@@ -366,21 +379,31 @@ class _GraficoPeso extends ConsumerWidget {
         onCambia: (g) => ref.read(weightWindowProvider.notifier).state = g,
       ),
       child: serie.when(
-        loading: () => const SizedBox(height: 160, child: Center(child: CircularProgressIndicator())),
-        error: (_, _) => const SizedBox(height: 160, child: Center(child: Text('Non disponibile'))),
+        loading: () => const SizedBox(
+          height: 160,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (_, _) => const SizedBox(
+          height: 160,
+          child: Center(child: Text('Non disponibile')),
+        ),
         // ⚠️ «in due giorni diversi» e non «due volte»: pesarsi due volte lo
         // stesso giorno è una correzione e lascia **un** punto solo. Chi lo ha
         // fatto e legge «due volte» conclude che l'app abbia perso il dato.
         data: (s) => s.values.length < 2
             ? const _NienteDati(
-                messaggio: 'Registra il peso in almeno due giorni diversi '
+                messaggio:
+                    'Registra il peso in almeno due giorni diversi '
                     'per vedere l\'andamento.',
               )
             : SizedBox(
                 height: 180,
                 child: LineChart(
                   LineChartData(
-                    gridData: const FlGridData(show: true, drawVerticalLine: false),
+                    gridData: const FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                    ),
                     borderData: FlBorderData(show: false),
                     titlesData: _titoli(s.labels),
                     lineBarsData: [
@@ -395,7 +418,9 @@ class _GraficoPeso extends ConsumerWidget {
                         dotData: const FlDotData(show: false),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.12),
                         ),
                       ),
                     ],
@@ -426,7 +451,9 @@ class _GraficoCalorie extends ConsumerWidget {
 
     final daHealth = giorni.isEmpty
         ? const <String, int>{}
-        : (ref.watch(kcalAttivePerGiorniProvider(giorni.join(','))).valueOrNull ??
+        : (ref
+                  .watch(kcalAttivePerGiorniProvider(giorni.join(',')))
+                  .valueOrNull ??
               const <String, int>{});
 
     return _Riquadro(
@@ -435,11 +462,18 @@ class _GraficoCalorie extends ConsumerWidget {
       selettore: _Finestre(
         opzioni: const {7: '7g', 30: '30g', 90: '3m', 365: '1a', 0: 'tutto'},
         attuale: finestra.days,
-        onCambia: (g) => ref.read(caloriesWindowProvider.notifier).state = CaloriesWindow(days: g),
+        onCambia: (g) => ref.read(caloriesWindowProvider.notifier).state =
+            CaloriesWindow(days: g),
       ),
       child: serie.when(
-        loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
-        error: (_, _) => const SizedBox(height: 180, child: Center(child: Text('Non disponibile'))),
+        loading: () => const SizedBox(
+          height: 180,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (_, _) => const SizedBox(
+          height: 180,
+          child: Center(child: Text('Non disponibile')),
+        ),
         data: (s) => Column(
           children: [
             Row(
@@ -477,7 +511,10 @@ class _GraficoCalorie extends ConsumerWidget {
                 height: 180,
                 child: BarChart(
                   BarChartData(
-                    gridData: const FlGridData(show: true, drawVerticalLine: false),
+                    gridData: const FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                    ),
                     borderData: FlBorderData(show: false),
                     titlesData: _titoli(s.labels),
                     barGroups: [
@@ -538,7 +575,9 @@ class _GraficoCalorie extends ConsumerWidget {
 FlTitlesData _titoli(List<String> etichette) => FlTitlesData(
   topTitles: const AxisTitles(),
   rightTitles: const AxisTitles(),
-  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 38)),
+  leftTitles: const AxisTitles(
+    sideTitles: SideTitles(showTitles: true, reservedSize: 38),
+  ),
   bottomTitles: AxisTitles(
     sideTitles: SideTitles(
       showTitles: true,
@@ -588,18 +627,24 @@ class _Riquadro extends StatelessWidget {
                   children: [
                     Text(
                       titolo,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     if (sottotitolo != null)
-                      Text(sottotitolo!, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        sottotitolo!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),
             ],
           ),
-          if (selettore != null) ...[const SizedBox(height: Gap.sm), selettore!],
+          if (selettore != null) ...[
+            const SizedBox(height: Gap.sm),
+            selettore!,
+          ],
           const SizedBox(height: Gap.md),
           child,
         ],
@@ -609,7 +654,11 @@ class _Riquadro extends StatelessWidget {
 }
 
 class _Finestre extends StatelessWidget {
-  const _Finestre({required this.opzioni, required this.attuale, required this.onCambia});
+  const _Finestre({
+    required this.opzioni,
+    required this.attuale,
+    required this.onCambia,
+  });
 
   final Map<int, String> opzioni;
   final int attuale;
@@ -724,7 +773,10 @@ class _ConsensoAiMancante extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.auto_awesome_outlined, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: Gap.sm),
                 Text(
                   'Il consiglio del giorno',

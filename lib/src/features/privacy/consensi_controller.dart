@@ -105,16 +105,14 @@ final consensoSaluteProvider = FutureProvider<bool>((ref) async {
 /// chiamata, lo stesso campo, `false` invece di `true`. Un consenso che si dà
 /// con un tocco e si toglie scrivendo un'email non è liberamente revocabile —
 /// e quindi, a rigore, non è mai stato valido.
-final cambiaConsensoProvider =
-    Provider<Future<void> Function(String, bool)>((ref) {
-      return (String quale, bool dato) async {
-        await ref
-            .read(apiClientProvider)
-            .patch<Map<String, dynamic>>(
-              '/account/consents',
-              body: {quale: dato},
-            );
+final cambiaConsensoProvider = Provider<Future<void> Function(String, bool)>((
+  ref,
+) {
+  return (String quale, bool dato) async {
+    await ref
+        .read(apiClientProvider)
+        .patch<Map<String, dynamic>>('/account/consents', body: {quale: dato});
 
-        ref.invalidate(consensiProvider);
-      };
-    });
+    ref.invalidate(consensiProvider);
+  };
+});

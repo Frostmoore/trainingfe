@@ -85,10 +85,7 @@ class AvvertenzaNutrizionale extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline,
-              color: tema.colorScheme.onSurfaceVariant,
-            ),
+            Icon(Icons.info_outline, color: tema.colorScheme.onSurfaceVariant),
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Text(testoPerEsteso, style: tema.textTheme.bodySmall),

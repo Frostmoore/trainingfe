@@ -35,9 +35,8 @@ class PortaDelleChiavi extends ConsumerWidget {
     return ref
         .watch(statoChiaviProvider)
         .when(
-          loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, _) => _Guasto(
             errore: e,
             riprova: () => ref.invalidate(statoChiaviProvider),

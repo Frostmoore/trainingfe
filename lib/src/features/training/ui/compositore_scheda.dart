@@ -59,7 +59,8 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
       final stato = ref.watch(schedaProvider(widget.schedaId!));
 
       return stato.when(
-        loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (e, _) => Scaffold(
           appBar: AppBar(),
           body: ErrorState(
@@ -80,7 +81,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
             });
           });
 
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         },
       );
     }
@@ -94,7 +97,11 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
           TextButton(
             onPressed: _salvando ? null : _salva,
             child: _salvando
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Salva'),
           ),
         ],
@@ -111,7 +118,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
             corrente: _giornoCorrente,
             onCambio: (i) => setState(() => _giornoCorrente = i),
             onAggiungi: () => setState(() {
-              scheda.giorni.add(GiornoDellaScheda(esercizi: [EsercizioDellaScheda()]));
+              scheda.giorni.add(
+                GiornoDellaScheda(esercizi: [EsercizioDellaScheda()]),
+              );
               _giornoCorrente = scheda.giorni.length - 1;
             }),
           ),
@@ -123,11 +132,14 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
               // 🚨 `clamp`: togliere l'ultimo giorno lascia `_giornoCorrente`
               // oltre la fine della lista, e senza questo la schermata va in
               // errore invece di mostrare il giorno prima.
-              giorno: scheda.giorni[_giornoCorrente.clamp(0, scheda.giorni.length - 1)],
+              giorno: scheda
+                  .giorni[_giornoCorrente.clamp(0, scheda.giorni.length - 1)],
               onCambio: () => setState(() {}),
               onEliminaGiorno: scheda.giorni.length > 1
                   ? () => setState(() {
-                      scheda.giorni.removeAt(_giornoCorrente.clamp(0, scheda.giorni.length - 1));
+                      scheda.giorni.removeAt(
+                        _giornoCorrente.clamp(0, scheda.giorni.length - 1),
+                      );
                       _giornoCorrente = 0;
                     })
                   : null,
@@ -143,9 +155,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
     final scheda = _scheda!;
 
     if (scheda.nome.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dai un nome alla scheda.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Dai un nome alla scheda.')));
 
       return;
     }
@@ -181,17 +193,17 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
         _salvando = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Scheda salvata.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Scheda salvata.')));
     } on Object catch (e) {
       if (!mounted) return;
 
       setState(() => _salvando = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ApiClient.unwrapError(e).message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(e).message)));
     }
   }
 }
@@ -230,7 +242,8 @@ class _TestaDellaScheda extends StatelessWidget {
           initialValue: scheda.rifAllievo,
           decoration: const InputDecoration(
             labelText: 'Rif. Allievo',
-            helperText: 'Un tuo promemoria. Meglio le iniziali: lo vedi solo tu, ma resta sul server.',
+            helperText:
+                'Un tuo promemoria. Meglio le iniziali: lo vedi solo tu, ma resta sul server.',
             helperMaxLines: 3,
           ),
           onChanged: (v) => scheda.rifAllievo = v,
@@ -241,7 +254,9 @@ class _TestaDellaScheda extends StatelessWidget {
         TextFormField(
           initialValue: scheda.note,
           maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Note della scheda (facoltative)'),
+          decoration: const InputDecoration(
+            labelText: 'Note della scheda (facoltative)',
+          ),
           onChanged: (v) => scheda.note = v,
         ),
       ],
@@ -351,7 +366,9 @@ class _Giorno extends StatelessWidget {
             Text('Esercizi', style: theme.textTheme.titleMedium),
             Text(
               '${giorno.quantiEsercizi}',
-              style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
           ],
         ),
@@ -377,7 +394,9 @@ class _Giorno extends StatelessWidget {
           },
           icon: const Icon(Icons.add),
           label: const Text('Aggiungi esercizio'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
         ),
       ],
     );
@@ -448,7 +467,10 @@ class _Esercizio extends StatelessWidget {
                     key: ValueKey('s-${esercizio.hashCode}'),
                     initialValue: esercizio.serie?.toString(),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'serie', isDense: true),
+                    decoration: const InputDecoration(
+                      labelText: 'serie',
+                      isDense: true,
+                    ),
                     onChanged: (v) {
                       esercizio.serie = int.tryParse(v.trim());
                       onCambio();
@@ -488,7 +510,10 @@ class _Esercizio extends StatelessWidget {
                     key: ValueKey('rec-${esercizio.hashCode}'),
                     initialValue: esercizio.recuperoSec?.toString(),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'recupero (s)', isDense: true),
+                    decoration: const InputDecoration(
+                      labelText: 'recupero (s)',
+                      isDense: true,
+                    ),
                     onChanged: (v) {
                       esercizio.recuperoSec = int.tryParse(v.trim());
                       onCambio();
@@ -500,12 +525,19 @@ class _Esercizio extends StatelessWidget {
                   child: TextFormField(
                     key: ValueKey('kg-${esercizio.hashCode}'),
                     initialValue: esercizio.pesoTarget?.toString(),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'kg', isDense: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'kg',
+                      isDense: true,
+                    ),
                     onChanged: (v) {
                       // ⚠️ La virgola: su una tastiera italiana è quella che si
                       // digita, e `double.tryParse` non la accetta.
-                      esercizio.pesoTarget = double.tryParse(v.trim().replaceAll(',', '.'));
+                      esercizio.pesoTarget = double.tryParse(
+                        v.trim().replaceAll(',', '.'),
+                      );
                       onCambio();
                     },
                   ),
@@ -520,7 +552,10 @@ class _Esercizio extends StatelessWidget {
             TextFormField(
               key: ValueKey('note-${esercizio.hashCode}'),
               initialValue: esercizio.note,
-              decoration: const InputDecoration(labelText: 'note', isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'note',
+                isDense: true,
+              ),
               onChanged: (v) {
                 esercizio.note = v;
                 onCambio();
@@ -539,7 +574,9 @@ class _Esercizio extends StatelessWidget {
                       ? 'Alternative'
                       : 'Alternative (${esercizio.alternative.where((a) => !a.vuoto).length})',
                 ),
-                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.secondary),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.secondary,
+                ),
               ),
             ),
           ],
@@ -601,7 +638,9 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.esercizio.nome.trim().isEmpty ? 'Alternative' : 'Invece di ${widget.esercizio.nome}',
+              widget.esercizio.nome.trim().isEmpty
+                  ? 'Alternative'
+                  : 'Invece di ${widget.esercizio.nome}',
               style: theme.textTheme.titleMedium,
             ),
 
@@ -609,7 +648,9 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
 
             Text(
               'Chi le sceglie deve trovarci serie e ripetizioni, o non saprebbe cosa fare.',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
 
             const SizedBox(height: Gap.md),
@@ -617,7 +658,9 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
             if (alternative.isEmpty)
               Text(
                 'Nessuna alternativa.',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
 
             for (final alt in alternative)
@@ -630,7 +673,10 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                       child: TextFormField(
                         key: ValueKey('an-${alt.hashCode}'),
                         initialValue: alt.nome,
-                        decoration: const InputDecoration(labelText: 'Esercizio', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Esercizio',
+                          isDense: true,
+                        ),
                         onChanged: (v) => alt.nome = v,
                       ),
                     ),
@@ -641,7 +687,10 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                         key: ValueKey('as-${alt.hashCode}'),
                         initialValue: alt.serie?.toString(),
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'serie', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'serie',
+                          isDense: true,
+                        ),
                         onChanged: (v) => alt.serie = int.tryParse(v.trim()),
                       ),
                     ),
@@ -651,7 +700,10 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                       child: TextFormField(
                         key: ValueKey('ar-${alt.hashCode}'),
                         initialValue: alt.ripetizioni,
-                        decoration: const InputDecoration(labelText: 'rip.', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'rip.',
+                          isDense: true,
+                        ),
                         onChanged: (v) => alt.ripetizioni = v,
                       ),
                     ),
@@ -668,22 +720,29 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
 
             if (alternative.length < massimo)
               OutlinedButton.icon(
-                onPressed: () => setState(() => alternative.add(EsercizioDellaScheda())),
+                onPressed: () =>
+                    setState(() => alternative.add(EsercizioDellaScheda())),
                 icon: const Icon(Icons.add),
                 label: const Text('Aggiungi alternativa'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
               )
             else
               Text(
                 'Massimo $massimo: più di così non è una scelta, è un secondo allenamento.',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
 
             const SizedBox(height: Gap.md),
 
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
               child: const Text('Fatto'),
             ),
           ],

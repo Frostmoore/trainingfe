@@ -48,7 +48,9 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
     });
 
     try {
-      await ref.read(brandingControllerProvider.notifier).lookup(_controller.text);
+      await ref
+          .read(brandingControllerProvider.notifier)
+          .lookup(_controller.text);
 
       if (mounted) context.go(AppRoutes.login);
     } on Object catch (error) {
@@ -114,13 +116,19 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.fitness_center_rounded, size: 64, color: theme.colorScheme.primary),
+                    Icon(
+                      Icons.fitness_center_rounded,
+                      size: 64,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(height: Gap.lg),
 
                     Text(
                       'Benvenuto',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: Gap.sm),
                     Text(
@@ -178,12 +186,15 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                        FilteringTextInputFormatter.allow(
+                          RegExp('[A-Za-z0-9]'),
+                        ),
                         // Si maiuscolizza mentre si digita: il backend confronta
                         // in maiuscolo, e chiedere all'utente di ricordarsene è
                         // un errore che possiamo evitare noi.
                         TextInputFormatter.withFunction(
-                          (_, nuovo) => nuovo.copyWith(text: nuovo.text.toUpperCase()),
+                          (_, nuovo) =>
+                              nuovo.copyWith(text: nuovo.text.toUpperCase()),
                         ),
                       ],
                       decoration: const InputDecoration(
@@ -201,7 +212,9 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                       Text(
                         _errore!,
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
                       ),
                     ],
 
@@ -244,7 +257,9 @@ class _GymCodeScreenState extends ConsumerState<GymCodeScreen> {
                       children: [
                         const Expanded(child: Divider()),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Gap.md,
+                          ),
                           child: Text(
                             'oppure',
                             style: theme.textTheme.bodySmall?.copyWith(

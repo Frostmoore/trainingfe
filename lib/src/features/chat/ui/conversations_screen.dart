@@ -60,7 +60,10 @@ class ConversationsScreen extends ConsumerWidget {
       floatingActionButton: const _NuovoMessaggio(),
       body: elenco.when(
         loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(conversationsProvider)),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(conversationsProvider),
+        ),
         data: (conversazioni) => conversazioni.isEmpty
             ? EmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
@@ -77,24 +80,36 @@ class ConversationsScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(conversationsProvider)),
+                onRefresh: () => aggiornaTutto(
+                  context,
+                  ref,
+                  () => ref.invalidate(conversationsProvider),
+                ),
                 child: ListView.builder(
                   itemCount: conversazioni.length,
                   itemBuilder: (context, index) {
                     final c = conversazioni[index];
 
                     return ListTile(
-                      leading: CircleAvatar(child: Text(c.withName.characters.first.toUpperCase())),
+                      leading: CircleAvatar(
+                        child: Text(c.withName.characters.first.toUpperCase()),
+                      ),
                       title: Text(c.withName),
                       subtitle: c.lastMessageAt != null
-                          ? Text(DateFormat('d MMM, HH:mm', 'it').format(c.lastMessageAt!))
+                          ? Text(
+                              DateFormat(
+                                'd MMM, HH:mm',
+                                'it',
+                              ).format(c.lastMessageAt!),
+                            )
                           : null,
                       trailing: c.unread > 0
                           ? Badge(label: Text(c.unread.toString()))
                           : const Icon(Icons.chevron_right_rounded),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => ThreadScreen(id: c.id, titolo: c.withName),
+                          builder: (_) =>
+                              ThreadScreen(id: c.id, titolo: c.withName),
                         ),
                       ),
                     );
@@ -121,12 +136,13 @@ class _NuovoMessaggio extends ConsumerWidget {
   const _NuovoMessaggio();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
-    heroTag: 'fab-messaggi',
-    onPressed: () => _scegliDestinatario(context, ref),
-    icon: const Icon(Icons.edit_outlined),
-    label: const Text('Scrivi'),
-  );
+  Widget build(BuildContext context, WidgetRef ref) =>
+      FloatingActionButton.extended(
+        heroTag: 'fab-messaggi',
+        onPressed: () => _scegliDestinatario(context, ref),
+        icon: const Icon(Icons.edit_outlined),
+        label: const Text('Scrivi'),
+      );
 }
 
 /// Chiede a chi scrivere, apre il filo e ci porta dentro.
@@ -135,9 +151,9 @@ class _NuovoMessaggio extends ConsumerWidget {
 /// il caso di quasi tutti — un elenco con una voce sola è un tocco in più per
 /// scegliere l'unica cosa scegliibile.
 Future<void> _scegliDestinatario(BuildContext context, WidgetRef ref) async {
-  final contatti = await ref.read(chatContactsProvider.future).catchError(
-    (Object _) => const <ChatContact>[],
-  );
+  final contatti = await ref
+      .read(chatContactsProvider.future)
+      .catchError((Object _) => const <ChatContact>[]);
 
   if (!context.mounted) return;
 
@@ -167,7 +183,9 @@ Future<void> _scegliDestinatario(BuildContext context, WidgetRef ref) async {
                   ListTile(
                     leading: CircleAvatar(
                       child: Text(
-                        c.name.isEmpty ? '?' : c.name.characters.first.toUpperCase(),
+                        c.name.isEmpty
+                            ? '?'
+                            : c.name.characters.first.toUpperCase(),
                       ),
                     ),
                     title: Text(c.name),
@@ -301,7 +319,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       if (mounted) setState(() => _usaEGetta = false);
     } on Object catch (e) {
       messaggeria.showSnackBar(
-        SnackBar(content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString())),
+        SnackBar(
+          content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString()),
+        ),
       );
     } finally {
       if (mounted) setState(() => _inCorso = false);
@@ -364,7 +384,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       _inFondo();
     } on Object catch (e) {
       messaggeria.showSnackBar(
-        SnackBar(content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString())),
+        SnackBar(
+          content: Text(PermessoNegato.da(e)?.spiegazione ?? e.toString()),
+        ),
       );
     } finally {
       if (mounted) setState(() => _inCorso = false);
@@ -447,7 +469,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     _testo.clear();
 
     try {
-      await ref.read(threadProvider(widget.id).notifier).invia(testo, usaEGetta: _usaEGetta);
+      await ref
+          .read(threadProvider(widget.id).notifier)
+          .invia(testo, usaEGetta: _usaEGetta);
 
       /*
        * 🚨 **L'interruttore si spegne dopo ogni invio.**
@@ -669,7 +693,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
     try {
       // 🚨 R4 — la copia che parte non ha il promemoria di chi l'ha scritta.
-      final perLAllievo = Map<String, dynamic>.from(modelli)..remove('rif_allievo');
+      final perLAllievo = Map<String, dynamic>.from(modelli)
+        ..remove('rif_allievo');
 
       await ref
           .read(threadProvider(widget.id).notifier)
@@ -808,7 +833,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   // l'endpoint dei modelli risponde 403 a un iscritto, e un
                   // pulsante che dà sempre errore fa sembrare rotta tutta
                   // l'applicazione, non solo quel pulsante.
-                  if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+                  if (ref.watch(authControllerProvider).user?.isTrainer ??
+                      false)
                     IconButton(
                       onPressed: _inCorso ? null : _allega,
                       icon: const Icon(Icons.assignment_outlined),
@@ -817,7 +843,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   // 🆕 G8.2 — e un piano alimentare. `ContenutoPianoAlimentare`
                   // esisteva da S7 e **non lo mandava nessuno**: mancava solo
                   // il posto da cui sceglierlo.
-                  if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+                  if (ref.watch(authControllerProvider).user?.isTrainer ??
+                      false)
                     IconButton(
                       onPressed: _inCorso ? null : _allegaPiano,
                       icon: const Icon(Icons.eco_outlined),
@@ -913,10 +940,17 @@ class _Bolla extends StatelessWidget {
       alignment: mio ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: Gap.sm),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Gap.md,
+          vertical: Gap.sm,
+        ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+        ),
         decoration: BoxDecoration(
-          color: mio ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+          color: mio
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(Gap.radius),
         ),
         child: Column(
@@ -925,15 +959,20 @@ class _Bolla extends StatelessWidget {
             Text(
               messaggio.body,
               style: TextStyle(
-                color: mio ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                color: mio
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurface,
               ),
             ),
             if (messaggio.createdAt != null)
               Text(
                 DateFormat('HH:mm').format(messaggio.createdAt!),
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: (mio ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant)
-                      .withValues(alpha: 0.7),
+                  color:
+                      (mio
+                              ? theme.colorScheme.onPrimary
+                              : theme.colorScheme.onSurfaceVariant)
+                          .withValues(alpha: 0.7),
                 ),
               ),
           ],
@@ -1105,11 +1144,13 @@ class _SchedaInChat extends ConsumerWidget {
                     ],
                   )
                 : FilledButton.tonal(
-                    onPressed: () => ref.read(azioniSchedeProvider).importa(
-                      messaggioId: messaggio.id,
-                      mittenteId: messaggio.senderId,
-                      contenuto: contenuto,
-                    ),
+                    onPressed: () => ref
+                        .read(azioniSchedeProvider)
+                        .importa(
+                          messaggioId: messaggio.id,
+                          mittenteId: messaggio.senderId,
+                          contenuto: contenuto,
+                        ),
                     child: const Text('Aggiungi alle mie schede'),
                   ),
           ),

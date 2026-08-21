@@ -32,7 +32,11 @@ void main() {
     /// ⚠️ Scrivere `0` dove il catalogo non sa direbbe nel diario che quel
     /// cibo non ha proteine, ed è una cosa diversa dal non saperlo.
     test('quello che il catalogo non sa resta nullo, non diventa zero', () {
-      const senzaProteine = AlimentoCatalogo(id: 2, nome: 'Misterioso', kcal100: 100);
+      const senzaProteine = AlimentoCatalogo(
+        id: 2,
+        nome: 'Misterioso',
+        kcal100: 100,
+      );
 
       final v = senzaProteine.per(200);
 

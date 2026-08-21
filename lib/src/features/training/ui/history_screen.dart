@@ -56,24 +56,25 @@ class StoricoAllenamenti extends ConsumerWidget {
     final voci = ref.watch(storicoUnificatoProvider);
 
     return voci.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          error: ApiClient.unwrapError(e),
-          onRetry: () => ref.invalidate(storicoUnificatoProvider),
-        ),
-        data: (lista) => lista.isEmpty
-            ? const EmptyState(
-                icon: Icons.fitness_center_rounded,
-                title: 'Nessun allenamento',
-                message: 'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
-              )
-            : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () {
-                  ref.invalidate(sessionsProvider);
-                  ref.invalidate(allenamentiDalPolsoProvider);
-                }),
-                child: _PerSettimana(voci: lista),
-              ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => ErrorState(
+        error: ApiClient.unwrapError(e),
+        onRetry: () => ref.invalidate(storicoUnificatoProvider),
+      ),
+      data: (lista) => lista.isEmpty
+          ? const EmptyState(
+              icon: Icons.fitness_center_rounded,
+              title: 'Nessun allenamento',
+              message:
+                  'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
+            )
+          : RefreshIndicator(
+              onRefresh: () => aggiornaTutto(context, ref, () {
+                ref.invalidate(sessionsProvider);
+                ref.invalidate(allenamentiDalPolsoProvider);
+              }),
+              child: _PerSettimana(voci: lista),
+            ),
     );
   }
 }
@@ -331,7 +332,9 @@ class _CardAllenamento extends ConsumerWidget {
     if (seduta == null) return;
 
     context.push(
-      seduta.isOpen ? AppRoutes.player(seduta.id) : AppRoutes.riepilogo(seduta.id),
+      seduta.isOpen
+          ? AppRoutes.player(seduta.id)
+          : AppRoutes.riepilogo(seduta.id),
     );
   }
 }
@@ -445,49 +448,49 @@ class _Azioni extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<_Gesto>(
-        icon: const Icon(Icons.more_vert),
-        tooltip: 'Altro',
-        onSelected: (g) => switch (g) {
-          _Gesto.correggiKcal => _correggiKcal(context, ref),
-          _Gesto.assegnaScheda => _scegliScheda(context, ref),
-          _Gesto.stacca => _stacca(context, ref),
-        },
-        itemBuilder: (context) => [
-          if (voce.seduta != null)
-            const PopupMenuItem(
-              value: _Gesto.correggiKcal,
-              child: ListTile(
-                leading: Icon(Icons.local_fire_department_outlined),
-                title: Text('Correggi le calorie'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          if (voce.dalPolso.isNotEmpty)
-            const PopupMenuItem(
-              value: _Gesto.assegnaScheda,
-              child: ListTile(
-                leading: Icon(Icons.assignment_outlined),
-                title: Text('Assegna una scheda'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          /*
+    icon: const Icon(Icons.more_vert),
+    tooltip: 'Altro',
+    onSelected: (g) => switch (g) {
+      _Gesto.correggiKcal => _correggiKcal(context, ref),
+      _Gesto.assegnaScheda => _scegliScheda(context, ref),
+      _Gesto.stacca => _stacca(context, ref),
+    },
+    itemBuilder: (context) => [
+      if (voce.seduta != null)
+        const PopupMenuItem(
+          value: _Gesto.correggiKcal,
+          child: ListTile(
+            leading: Icon(Icons.local_fire_department_outlined),
+            title: Text('Correggi le calorie'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      if (voce.dalPolso.isNotEmpty)
+        const PopupMenuItem(
+          value: _Gesto.assegnaScheda,
+          child: ListTile(
+            leading: Icon(Icons.assignment_outlined),
+            title: Text('Assegna una scheda'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      /*
            * 🚨 Lo scollegamento compare **solo quando c'è qualcosa da
            * scollegare**: una riga con una sola registrazione non è un gruppo, e
            * offrire di dividerla sarebbe un comando che non fa niente.
            */
-          if (voce.dalPolso.isNotEmpty &&
-              (voce.sedute.isNotEmpty || voce.dalPolso.length > 1))
-            const PopupMenuItem(
-              value: _Gesto.stacca,
-              child: ListTile(
-                leading: Icon(Icons.call_split),
-                title: Text('Non è lo stesso allenamento'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-        ],
-      );
+      if (voce.dalPolso.isNotEmpty &&
+          (voce.sedute.isNotEmpty || voce.dalPolso.length > 1))
+        const PopupMenuItem(
+          value: _Gesto.stacca,
+          child: ListTile(
+            leading: Icon(Icons.call_split),
+            title: Text('Non è lo stesso allenamento'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+    ],
+  );
 
   /// Correzione manuale delle calorie della seduta.
   ///
@@ -498,7 +501,9 @@ class _Azioni extends ConsumerWidget {
     if (sessione == null) return;
 
     final controller = TextEditingController(
-      text: sessione.kcalSource == 'manual' ? sessione.kcal?.toString() ?? '' : '',
+      text: sessione.kcalSource == 'manual'
+          ? sessione.kcal?.toString() ?? ''
+          : '',
     );
 
     final valore = await showDialog<String>(

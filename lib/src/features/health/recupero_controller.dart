@@ -96,7 +96,9 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
   final ultima = await archivio.ultimaNotteConDati();
 
   return Recupero(
-    notte: ultima == null ? null : await AnalizzatoreSonno.notte(archivio, ultima),
+    notte: ultima == null
+        ? null
+        : await AnalizzatoreSonno.notte(archivio, ultima),
     parametri: await MediaDiRiferimento.tutte(archivio),
   );
 });
@@ -141,6 +143,7 @@ final recuperoPerIlConsiglioProvider =
         if (hrv?.media != null) 'hrv_baseline_ms': hrv!.media!.round(),
 
         if (battito != null) 'resting_hr': battito.valore.round(),
-        if (battito?.media != null) 'resting_hr_baseline': battito!.media!.round(),
+        if (battito?.media != null)
+          'resting_hr_baseline': battito!.media!.round(),
       };
     });

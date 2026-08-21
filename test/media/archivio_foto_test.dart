@@ -52,7 +52,10 @@ void main() {
     });
 
     test('la cartella si crea da sola', () async {
-      expect((await archivio.cartellaDi(TipoFoto.progressi)).existsSync(), isTrue);
+      expect(
+        (await archivio.cartellaDi(TipoFoto.progressi)).existsSync(),
+        isTrue,
+      );
     });
 
     test('🚨 la cartella madre resta `foto`', () async {
@@ -184,8 +187,10 @@ void main() {
   });
 
   group('le decisioni sul tipo', () {
-    test('🚨 nel backup entrano progressi, chat e piani, e nessun altro', () async {
-      /*
+    test(
+      '🚨 nel backup entrano progressi, chat e piani, e nessun altro',
+      () async {
+        /*
        * 🚨 **Questo test si rompe apposta quando si aggiunge un tipo.**
        *
        * Non e' un test sulla correttezza: e' il gancio che costringe chi ne
@@ -198,11 +203,13 @@ void main() {
        * e' fatto fare da un professionista e si e' pagato, quindi perderlo
        * cambiando telefono sarebbe come perdere una ricetta medica.
        */
-      expect(
-        TipoFoto.daSalvare.map((t) => t.name).toSet(),
-        {'progressi', 'chat', 'piani'},
-      );
-    });
+        expect(TipoFoto.daSalvare.map((t) => t.name).toSet(), {
+          'progressi',
+          'chat',
+          'piani',
+        });
+      },
+    );
 
     test('🚨 ai ed effimere non ci entrano MAI', () async {
       /*

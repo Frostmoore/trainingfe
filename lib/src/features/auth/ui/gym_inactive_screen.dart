@@ -37,7 +37,8 @@ class GymInactiveScreen extends ConsumerWidget {
                     'disponibili appena la palestra riattiverà l\'abbonamento. '
                     'Per informazioni, rivolgiti direttamente a loro.',
                 action: FilledButton.icon(
-                  onPressed: () => ref.read(authControllerProvider.notifier).refresh(),
+                  onPressed: () =>
+                      ref.read(authControllerProvider.notifier).refresh(),
                   icon: const Icon(Icons.refresh_rounded),
                   label: const Text('Controlla di nuovo'),
                 ),
@@ -46,7 +47,8 @@ class GymInactiveScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(Gap.lg),
               child: TextButton(
-                onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+                onPressed: () =>
+                    ref.read(authControllerProvider.notifier).logout(),
                 child: const Text('Esci'),
               ),
             ),

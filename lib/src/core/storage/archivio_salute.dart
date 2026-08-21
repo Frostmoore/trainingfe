@@ -50,20 +50,20 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onUpgrade: (m, da, a) async {
-          // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
-          if (da < 2) await m.createTable(misureCorpo);
+    onUpgrade: (m, da, a) async {
+      // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
+      if (da < 2) await m.createTable(misureCorpo);
 
-          // v2 → v3 (S5.3): e le foto dei progressi con loro.
-          if (da < 3) await m.createTable(fotoProgressi);
+      // v2 → v3 (S5.3): e le foto dei progressi con loro.
+      if (da < 3) await m.createTable(fotoProgressi);
 
-          // v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
-          if (da < 4) await m.createTable(schedeRicevute);
+      // v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
+      if (da < 4) await m.createTable(schedeRicevute);
 
-          // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
-          if (da < 5) await _riaccreditaLeNotti();
+      // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
+      if (da < 5) await _riaccreditaLeNotti();
 
-          /*
+      /*
            * v5 → v6 (G8): i piani alimentari ricevuti, i rifiutati, e
            * l'identita' stabile sulle schede.
            *
@@ -72,14 +72,14 @@ class ArchivioSalute extends _$ArchivioSalute {
            * aggiorna** — mai su quello di chi installa da zero, cioe' mai sui
            * nostri.
            */
-          if (da < 6) {
-            await m.createTable(pianiRicevuti);
-            await m.createTable(contenutiRifiutati);
-            await m.addColumn(schedeRicevute, schedeRicevute.origineId);
-            await m.addColumn(schedeRicevute, schedeRicevute.aggiornatoIl);
-          }
+      if (da < 6) {
+        await m.createTable(pianiRicevuti);
+        await m.createTable(contenutiRifiutati);
+        await m.addColumn(schedeRicevute, schedeRicevute.origineId);
+        await m.addColumn(schedeRicevute, schedeRicevute.aggiornatoIl);
+      }
 
-          /*
+      /*
            * v6 -> v7 (18/08/2026): notti e pennichelle si riconoscono davvero.
            *
            * La regola precedente decideva la giornata guardando l'ora d'inizio
@@ -93,9 +93,9 @@ class ArchivioSalute extends _$ArchivioSalute {
            * sempre — e il difetto sembrerebbe corretto solo a chi installa da
            * zero, cioe' a noi.
            */
-          if (da < 7) await _riaccreditaLeNotti();
+      if (da < 7) await _riaccreditaLeNotti();
 
-          /*
+      /*
            * v7 -> v8 (N20): il piano importato da PDF, e il suo originale.
            *
            * 🚨 **Due colonne nullable e nessuna tabella nuova**, di
@@ -110,12 +110,12 @@ class ArchivioSalute extends _$ArchivioSalute {
            * altrimenti fra un mese non c'e' piu' niente con cui confrontare i
            * numeri che si stanno seguendo.
            */
-          if (da < 8) {
-            await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
-            await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
-          }
+      if (da < 8) {
+        await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
+        await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
+      }
 
-          /*
+      /*
            * v8 -> v9 (FASE 1.8): gli allenamenti registrati dall'orologio.
            *
            * 🚨 **Una tabella nuova e non due colonne**, al contrario di v7->v8:
@@ -129,9 +129,9 @@ class ArchivioSalute extends _$ArchivioSalute {
            * `allTables` invece di elencare a mano, proprio perche' una tabella
            * aggiunta dopo non resti fuori senza che nessuno se ne accorga.
            */
-          if (da < 9) await m.createTable(allenamentiDaOrologio);
+      if (da < 9) await m.createTable(allenamentiDaOrologio);
 
-          /*
+      /*
            * v9 -> v10 (FASE 1-bis): «questo allenamento non si unisce a
            * nessuno».
            *
@@ -141,11 +141,14 @@ class ArchivioSalute extends _$ArchivioSalute {
            * colonna l'errore non sarebbe riparabile: uno dei due allenamenti
            * sparirebbe dallo storico per sempre.
            */
-          if (da < 10) {
-            await m.addColumn(allenamentiDaOrologio, allenamentiDaOrologio.staccato);
-          }
-        },
-      );
+      if (da < 10) {
+        await m.addColumn(
+          allenamentiDaOrologio,
+          allenamentiDaOrologio.staccato,
+        );
+      }
+    },
+  );
 
   /// Ricalcola `notte` su tutti i campioni già salvati — v4 → v5, e di nuovo
   /// v6 → v7.
@@ -229,11 +232,13 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     if (buone.isEmpty) return 0;
 
-    await batch((b) => b.insertAll(
-          lettureSalute,
-          buone.map(_companionLettura).toList(),
-          mode: InsertMode.insertOrIgnore,
-        ));
+    await batch(
+      (b) => b.insertAll(
+        lettureSalute,
+        buone.map(_companionLettura).toList(),
+        mode: InsertMode.insertOrIgnore,
+      ),
+    );
 
     return buone.length;
   }
@@ -242,11 +247,13 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<int> scriviCampioniSonno(List<CampioneSonno> campioni) async {
     if (campioni.isEmpty) return 0;
 
-    await batch((b) => b.insertAll(
-          campioniSonno,
-          campioni.map(_companionCampione).toList(),
-          mode: InsertMode.insertOrIgnore,
-        ));
+    await batch(
+      (b) => b.insertAll(
+        campioniSonno,
+        campioni.map(_companionCampione).toList(),
+        mode: InsertMode.insertOrIgnore,
+      ),
+    );
 
     return campioni.length;
   }
@@ -286,23 +293,28 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (allenamenti.isEmpty) return 0;
 
     await transaction(() async {
-      await batch((b) => b.insertAll(
-            allenamentiDaOrologio,
-            allenamenti.map(_companionAllenamento).toList(),
-            mode: InsertMode.insertOrIgnore,
-          ));
+      await batch(
+        (b) => b.insertAll(
+          allenamentiDaOrologio,
+          allenamenti.map(_companionAllenamento).toList(),
+          mode: InsertMode.insertOrIgnore,
+        ),
+      );
 
       for (final a in allenamenti) {
-        await (update(allenamentiDaOrologio)
-              ..where((t) =>
-                  t.fonte.equals(a.fonte) & t.iniziatoIl.equals(a.iniziatoIl)))
-            .write(AllenamentiDaOrologioCompanion(
-          tipo: Value(a.tipo),
-          finitoIl: Value(a.finitoIl),
-          kcal: Value(a.kcal),
-          distanzaMetri: Value(a.distanzaMetri),
-          passi: Value(a.passi),
-        ));
+        await (update(allenamentiDaOrologio)..where(
+              (t) =>
+                  t.fonte.equals(a.fonte) & t.iniziatoIl.equals(a.iniziatoIl),
+            ))
+            .write(
+              AllenamentiDaOrologioCompanion(
+                tipo: Value(a.tipo),
+                finitoIl: Value(a.finitoIl),
+                kcal: Value(a.kcal),
+                distanzaMetri: Value(a.distanzaMetri),
+                passi: Value(a.passi),
+              ),
+            );
       }
     });
 
@@ -314,7 +326,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// 💡 `nascosto` non si filtra qui: lo storico vuole nasconderli, la schermata
   /// che permette di **rimetterli** deve poterli vedere. Filtrare alla fonte
   /// renderebbe la scelta irreversibile.
-  Future<List<AllenamentoDaOrologio>> allenamentiDellOrologio({int quanti = 200}) =>
+  Future<List<AllenamentoDaOrologio>> allenamentiDellOrologio({
+    int quanti = 200,
+  }) =>
       (select(allenamentiDaOrologio)
             ..orderBy([(t) => OrderingTerm.desc(t.iniziatoIl)])
             ..limit(quanti))
@@ -357,7 +371,8 @@ class ArchivioSalute extends _$ArchivioSalute {
    * test `si scrivono e si rileggono dalla piu' recente` — a mano non si sarebbe
    * visto, perche' una lettura al giorno arriva comunque.
    */
-  LettureSaluteCompanion _companionLettura(LetturaSalute l) => LettureSaluteCompanion.insert(
+  LettureSaluteCompanion _companionLettura(LetturaSalute l) =>
+      LettureSaluteCompanion.insert(
         fonte: l.fonte,
         metrica: l.metrica,
         misurataIl: l.misurataIl,
@@ -365,7 +380,8 @@ class ArchivioSalute extends _$ArchivioSalute {
         valore: l.valore,
       );
 
-  CampioniSonnoCompanion _companionCampione(CampioneSonno c) => CampioniSonnoCompanion.insert(
+  CampioniSonnoCompanion _companionCampione(CampioneSonno c) =>
+      CampioniSonnoCompanion.insert(
         fonte: c.fonte,
         notte: c.notte,
         iniziatoIl: c.iniziatoIl,
@@ -376,16 +392,17 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ `schedaAssegnata` e `nascosto` **non si passano**: sono di chi usa
   /// l'app, non dell'orologio. Lasciarli assenti li fa nascere `null` e `false`,
   /// e — insieme a `insertOrIgnore` — garantisce che una rilettura non li tocchi.
-  AllenamentiDaOrologioCompanion _companionAllenamento(AllenamentoDaOrologio a) =>
-      AllenamentiDaOrologioCompanion.insert(
-        fonte: a.fonte,
-        tipo: a.tipo,
-        iniziatoIl: a.iniziatoIl,
-        finitoIl: a.finitoIl,
-        kcal: Value(a.kcal),
-        distanzaMetri: Value(a.distanzaMetri),
-        passi: Value(a.passi),
-      );
+  AllenamentiDaOrologioCompanion _companionAllenamento(
+    AllenamentoDaOrologio a,
+  ) => AllenamentiDaOrologioCompanion.insert(
+    fonte: a.fonte,
+    tipo: a.tipo,
+    iniziatoIl: a.iniziatoIl,
+    finitoIl: a.finitoIl,
+    kcal: Value(a.kcal),
+    distanzaMetri: Value(a.distanzaMetri),
+    passi: Value(a.passi),
+  );
 
   // ─────────────────────────── lettura ───────────────────────────
 
@@ -397,7 +414,11 @@ class ArchivioSalute extends _$ArchivioSalute {
     final da = DateTime.now().subtract(Duration(days: giorni));
 
     return (select(lettureSalute)
-          ..where((t) => t.metrica.equals(metrica.codice) & t.misurataIl.isBiggerOrEqualValue(da))
+          ..where(
+            (t) =>
+                t.metrica.equals(metrica.codice) &
+                t.misurataIl.isBiggerOrEqualValue(da),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.misurataIl)]))
         .get();
   }
@@ -429,7 +450,10 @@ class ArchivioSalute extends _$ArchivioSalute {
       'MAX(valore) AS massimo, COUNT(*) AS quante '
       'FROM letture_salute WHERE metrica = ?1 AND giorno >= ?2 '
       'GROUP BY giorno ORDER BY giorno ASC',
-      variables: [Variable.withString(metrica.codice), Variable.withDateTime(da)],
+      variables: [
+        Variable.withString(metrica.codice),
+        Variable.withDateTime(da),
+      ],
       readsFrom: {lettureSalute},
     ).get();
 
@@ -466,10 +490,12 @@ class ArchivioSalute extends _$ArchivioSalute {
     required DateTime a,
   }) {
     return (select(lettureSalute)
-          ..where((t) =>
-              t.metrica.equals(metrica.codice) &
-              t.giorno.isBiggerOrEqualValue(_soloGiorno(da)) &
-              t.giorno.isSmallerOrEqualValue(_soloGiorno(a)))
+          ..where(
+            (t) =>
+                t.metrica.equals(metrica.codice) &
+                t.giorno.isBiggerOrEqualValue(_soloGiorno(da)) &
+                t.giorno.isSmallerOrEqualValue(_soloGiorno(a)),
+          )
           ..orderBy([(t) => OrderingTerm.asc(t.misurataIl)]))
         .get();
   }
@@ -495,11 +521,13 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// È un dato di salute: vive qui e finisce **nel backup**, e il server non lo
   /// vede. La somma con l'obiettivo si fa **a runtime** nell'app.
   Future<int> kcalAttiveDi(DateTime giorno) async {
-    final righe = await (select(lettureSalute)
-          ..where((t) =>
-              t.metrica.equals(MetricaSalute.calorieAttive.codice) &
-              t.giorno.equals(_soloGiorno(giorno))))
-        .get();
+    final righe =
+        await (select(lettureSalute)..where(
+              (t) =>
+                  t.metrica.equals(MetricaSalute.calorieAttive.codice) &
+                  t.giorno.equals(_soloGiorno(giorno)),
+            ))
+            .get();
 
     if (righe.isEmpty) return 0;
 
@@ -522,10 +550,11 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   /// La notte più recente per cui esiste almeno un campione.
   Future<DateTime?> ultimaNotteConDati() async {
-    final riga = await (select(campioniSonno)
-          ..orderBy([(t) => OrderingTerm.desc(t.notte)])
-          ..limit(1))
-        .getSingleOrNull();
+    final riga =
+        await (select(campioniSonno)
+              ..orderBy([(t) => OrderingTerm.desc(t.notte)])
+              ..limit(1))
+            .getSingleOrNull();
 
     return riga?.notte;
   }
@@ -573,10 +602,13 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   /// Lo storico delle misure, **dalla più recente**.
   Future<List<MisuraCorpo>> storicoMisure({int? ultimiGiorni}) {
-    final q = select(misureCorpo)..orderBy([(t) => OrderingTerm.desc(t.giorno)]);
+    final q = select(misureCorpo)
+      ..orderBy([(t) => OrderingTerm.desc(t.giorno)]);
 
     if (ultimiGiorni != null) {
-      final da = _soloGiorno(DateTime.now().subtract(Duration(days: ultimiGiorni)));
+      final da = _soloGiorno(
+        DateTime.now().subtract(Duration(days: ultimiGiorni)),
+      );
       q.where((t) => t.giorno.isBiggerOrEqualValue(da));
     }
 
@@ -598,11 +630,14 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   // ─────────────────────────── foto (S5.3) ───────────────────────────
 
-  Future<int> registraFoto(FotoProgressiCompanion foto) => into(fotoProgressi).insert(foto);
+  Future<int> registraFoto(FotoProgressiCompanion foto) =>
+      into(fotoProgressi).insert(foto);
 
   /// La galleria, dalla più recente.
   Future<List<FotoProgresso>> galleria() {
-    return (select(fotoProgressi)..orderBy([(t) => OrderingTerm.desc(t.scattataIl)])).get();
+    return (select(
+      fotoProgressi,
+    )..orderBy([(t) => OrderingTerm.desc(t.scattataIl)])).get();
   }
 
   /// Le foto di una sessione di allenamento.
@@ -682,16 +717,18 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (origineId != null && await eRifiutato(origineId)) return false;
 
     if (origineId != null) {
-      final esistente = await (select(schedeRicevute)
-            ..where((t) => t.origineId.equals(origineId)))
-          .getSingleOrNull();
+      final esistente = await (select(
+        schedeRicevute,
+      )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
 
       if (esistente != null) {
         // ⚠️ Fuori ordine: una versione piu' vecchia che arriva dopo non
         // sovrascrive quella buona. Vedi `salvaPiano()`.
         if (esistente.messaggioId >= messaggioId) return false;
 
-        await (update(schedeRicevute)..where((t) => t.id.equals(esistente.id))).write(
+        await (update(
+          schedeRicevute,
+        )..where((t) => t.id.equals(esistente.id))).write(
           SchedeRicevuteCompanion(
             messaggioId: Value(messaggioId),
             mittenteId: Value(mittenteId),
@@ -721,24 +758,25 @@ class ArchivioSalute extends _$ArchivioSalute {
   }
 
   Future<List<SchedaRicevuta>> schede() {
-    return (select(schedeRicevute)
-          ..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
-        .get();
+    return (select(
+      schedeRicevute,
+    )..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)])).get();
   }
 
   /// C'è già? Serve alla chat per dire «aggiunta» invece di «aggiungi».
   Future<bool> schedaGiaSalvata(int messaggioId) async {
-    final riga = await (select(schedeRicevute)
-          ..where((t) => t.messaggioId.equals(messaggioId)))
-        .getSingleOrNull();
+    final riga = await (select(
+      schedeRicevute,
+    )..where((t) => t.messaggioId.equals(messaggioId))).getSingleOrNull();
 
     return riga != null;
   }
 
   /// Butta una scheda, e **ricorda che e' stata buttata** — G8.10.
   Future<void> dimenticaScheda(int id) async {
-    final riga = await (select(schedeRicevute)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final riga = await (select(
+      schedeRicevute,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
 
     if (riga?.origineId != null) {
       await into(contenutiRifiutati).insert(
@@ -787,14 +825,16 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (origineId != null && await eRifiutato(origineId)) return false;
 
     if (origineId != null) {
-      final esistente = await (select(pianiRicevuti)
-            ..where((t) => t.origineId.equals(origineId)))
-          .getSingleOrNull();
+      final esistente = await (select(
+        pianiRicevuti,
+      )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
 
       if (esistente != null) {
         if (esistente.messaggioId >= messaggioId) return false;
 
-        await (update(pianiRicevuti)..where((t) => t.id.equals(esistente.id))).write(
+        await (update(
+          pianiRicevuti,
+        )..where((t) => t.id.equals(esistente.id))).write(
           PianiRicevutiCompanion(
             messaggioId: Value(messaggioId),
             mittenteId: Value(mittenteId),
@@ -866,15 +906,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   }
 
   Future<List<PianoRicevuto>> piani() {
-    return (select(pianiRicevuti)
-          ..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
-        .get();
+    return (select(
+      pianiRicevuti,
+    )..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)])).get();
   }
 
   Future<bool> pianoGiaSalvato(int messaggioId) async {
-    final riga = await (select(pianiRicevuti)
-          ..where((t) => t.messaggioId.equals(messaggioId)))
-        .getSingleOrNull();
+    final riga = await (select(
+      pianiRicevuti,
+    )..where((t) => t.messaggioId.equals(messaggioId))).getSingleOrNull();
 
     return riga != null;
   }
@@ -884,8 +924,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// 🚨 Senza la seconda meta', il salvataggio automatico glielo rimetterebbe
   /// davanti al messaggio successivo. Buttare e' una decisione.
   Future<void> dimenticaPiano(int id) async {
-    final riga = await (select(pianiRicevuti)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final riga = await (select(
+      pianiRicevuti,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
 
     if (riga?.origineId != null) {
       await into(contenutiRifiutati).insert(
@@ -901,9 +942,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   }
 
   Future<bool> eRifiutato(String origineId) async {
-    final riga = await (select(contenutiRifiutati)
-          ..where((t) => t.origineId.equals(origineId)))
-        .getSingleOrNull();
+    final riga = await (select(
+      contenutiRifiutati,
+    )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
 
     return riga != null;
   }

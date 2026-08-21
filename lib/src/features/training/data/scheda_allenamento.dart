@@ -38,7 +38,9 @@ class EsercizioDellaScheda {
     List<EsercizioDellaScheda>? alternative,
   }) : alternative = alternative ?? [];
 
-  factory EsercizioDellaScheda.fromJson(Map<String, dynamic> json) => EsercizioDellaScheda(
+  factory EsercizioDellaScheda.fromJson(
+    Map<String, dynamic> json,
+  ) => EsercizioDellaScheda(
     id: (json['id'] as num?)?.toInt(),
     // ⚠️ `name` in cima, con `exercise.name` come ripiego: il primo è quello
     // che il server rimanda in scrittura, il secondo è il nome del catalogo.
@@ -54,7 +56,10 @@ class EsercizioDellaScheda {
     pesoTarget: (json['target_weight'] as num?)?.toDouble(),
     note: json['notes']?.toString(),
     alternative: ((json['alternatives'] as List?) ?? const [])
-        .map((e) => EsercizioDellaScheda.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) =>
+              EsercizioDellaScheda.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(),
   );
 
@@ -95,7 +100,8 @@ class EsercizioDellaScheda {
   String get prescrizione {
     final parti = <String>[
       if (serie != null) '$serie',
-      if (ripetizioni != null && ripetizioni!.trim().isNotEmpty) ripetizioni!.trim(),
+      if (ripetizioni != null && ripetizioni!.trim().isNotEmpty)
+        ripetizioni!.trim(),
     ];
 
     return parti.join(' × ');
@@ -104,7 +110,8 @@ class EsercizioDellaScheda {
   Map<String, dynamic> toJson() => {
     'name': nome.trim(),
     if (serie != null) 'sets': serie,
-    if (ripetizioni != null && ripetizioni!.trim().isNotEmpty) 'reps': ripetizioni!.trim(),
+    if (ripetizioni != null && ripetizioni!.trim().isNotEmpty)
+      'reps': ripetizioni!.trim(),
     if (recuperoSec != null) 'rest_sec': recuperoSec,
     if (durataSec != null) 'duration_sec': durataSec,
     if (pesoTarget != null) 'target_weight': pesoTarget,
@@ -112,7 +119,10 @@ class EsercizioDellaScheda {
     // ⚠️ Le alternative senza nome si scartano qui: l'editor ne tiene volentieri
     // una vuota, e il server la rifiuterebbe (`name` è `required`).
     if (alternative.any((a) => !a.vuoto))
-      'alternatives': alternative.where((a) => !a.vuoto).map((a) => a.toJson()).toList(),
+      'alternatives': alternative
+          .where((a) => !a.vuoto)
+          .map((a) => a.toJson())
+          .toList(),
   };
 }
 
@@ -124,18 +134,25 @@ class GiornoDellaScheda {
     this.note,
     List<EsercizioDellaScheda>? esercizi,
     List<GiornoDellaScheda>? alternative,
-  })  : esercizi = esercizi ?? [],
-        alternative = alternative ?? [];
+  }) : esercizi = esercizi ?? [],
+       alternative = alternative ?? [];
 
-  factory GiornoDellaScheda.fromJson(Map<String, dynamic> json) => GiornoDellaScheda(
+  factory GiornoDellaScheda.fromJson(
+    Map<String, dynamic> json,
+  ) => GiornoDellaScheda(
     id: (json['id'] as num?)?.toInt(),
     nome: json['name']?.toString(),
     note: json['notes']?.toString(),
     esercizi: ((json['exercises'] as List?) ?? const [])
-        .map((e) => EsercizioDellaScheda.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) =>
+              EsercizioDellaScheda.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(),
     alternative: ((json['alternatives'] as List?) ?? const [])
-        .map((e) => GiornoDellaScheda.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) => GiornoDellaScheda.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(),
   );
 
@@ -157,8 +174,12 @@ class GiornoDellaScheda {
   Map<String, dynamic> toJson() => {
     if (nome != null && nome!.trim().isNotEmpty) 'name': nome!.trim(),
     if (note != null && note!.trim().isNotEmpty) 'notes': note!.trim(),
-    'exercises': esercizi.where((e) => !e.vuoto).map((e) => e.toJson()).toList(),
-    if (alternative.isNotEmpty) 'alternatives': alternative.map((g) => g.toJson()).toList(),
+    'exercises': esercizi
+        .where((e) => !e.vuoto)
+        .map((e) => e.toJson())
+        .toList(),
+    if (alternative.isNotEmpty)
+      'alternatives': alternative.map((g) => g.toJson()).toList(),
   };
 }
 
@@ -175,7 +196,9 @@ class SchedaAllenamento {
 
   factory SchedaAllenamento.fromJson(Map<String, dynamic> json) {
     final giorni = ((json['days'] as List?) ?? const [])
-        .map((e) => GiornoDellaScheda.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) => GiornoDellaScheda.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList();
 
     /*
@@ -190,7 +213,11 @@ class SchedaAllenamento {
      */
     if (giorni.isEmpty && json['exercises'] is List) {
       final piatti = (json['exercises'] as List)
-          .map((e) => EsercizioDellaScheda.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => EsercizioDellaScheda.fromJson(
+              (e as Map).cast<String, dynamic>(),
+            ),
+          )
           .toList();
 
       if (piatti.isNotEmpty) {

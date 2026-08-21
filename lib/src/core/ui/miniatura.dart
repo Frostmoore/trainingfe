@@ -70,7 +70,11 @@ class Miniatura extends StatelessWidget {
           height: lato,
           color: theme.colorScheme.surfaceContainerHighest,
           alignment: Alignment.center,
-          child: Icon(icona, size: lato * 0.5, color: theme.colorScheme.outline),
+          child: Icon(
+            icona,
+            size: lato * 0.5,
+            color: theme.colorScheme.outline,
+          ),
         ),
       ),
     );

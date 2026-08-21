@@ -55,11 +55,7 @@ class CifraturaChat {
       secretKey: mieSegrete,
     );
 
-    return BustaMessaggio(
-      versione: versione,
-      nonce: nonce,
-      cifrato: cifrato,
-    );
+    return BustaMessaggio(versione: versione, nonce: nonce, cifrato: cifrato);
   }
 
   /// Riapre la busta. Lancia [BustaIllegibile] se il MAC non torna.
@@ -88,7 +84,9 @@ class CifraturaChat {
 
       return utf8.decode(chiaro);
     } on SodiumException {
-      throw const BustaIllegibile('Il messaggio non si apre con questa chiave.');
+      throw const BustaIllegibile(
+        'Il messaggio non si apre con questa chiave.',
+      );
     }
   }
 
@@ -155,16 +153,16 @@ class BustaMessaggio {
   /// poter confondere le due cose — è per questo che accanto c'è sempre
   /// `envelope_version`, che nei messaggi in chiaro non esisteva.
   factory BustaMessaggio.daApi(Map<String, dynamic> json) => BustaMessaggio(
-        versione: json['envelope_version'] as int,
-        nonce: base64Decode(json['nonce'] as String),
-        cifrato: base64Decode(json['body'] as String),
-      );
+    versione: json['envelope_version'] as int,
+    nonce: base64Decode(json['nonce'] as String),
+    cifrato: base64Decode(json['body'] as String),
+  );
 
   Map<String, dynamic> perApi() => {
-        'envelope_version': versione,
-        'nonce': base64Encode(nonce),
-        'body': base64Encode(cifrato),
-      };
+    'envelope_version': versione,
+    'nonce': base64Encode(nonce),
+    'body': base64Encode(cifrato),
+  };
 }
 
 /// La busta non si apre.

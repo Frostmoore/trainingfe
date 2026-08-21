@@ -42,9 +42,18 @@ class ProgressScreen extends ConsumerWidget {
                     'stessa luce, racconta i progressi meglio della bilancia.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(progressPhotosProvider)),
+                onRefresh: () => aggiornaTutto(
+                  context,
+                  ref,
+                  () => ref.invalidate(progressPhotosProvider),
+                ),
                 child: GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
+                  padding: const EdgeInsets.fromLTRB(
+                    Gap.sm,
+                    Gap.sm,
+                    Gap.sm,
+                    96,
+                  ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     childAspectRatio: 0.78,
@@ -183,38 +192,39 @@ class _Aggiungi extends ConsumerWidget {
   const _Aggiungi();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton.extended(
-    // Vedi la nota su `heroTag` in `conversations_screen.dart`.
-    heroTag: 'fab-foto',
-    onPressed: () => showModalBottomSheet<void>(
-      context: context,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Scatta'),
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _carica(context, ref, daFotocamera: true);
-              },
+  Widget build(BuildContext context, WidgetRef ref) =>
+      FloatingActionButton.extended(
+        // Vedi la nota su `heroTag` in `conversations_screen.dart`.
+        heroTag: 'fab-foto',
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          builder: (sheet) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Scatta'),
+                  onTap: () {
+                    Navigator.of(sheet).pop();
+                    _carica(context, ref, daFotocamera: true);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Scegli dalla galleria'),
+                  onTap: () {
+                    Navigator.of(sheet).pop();
+                    _carica(context, ref, daFotocamera: false);
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Scegli dalla galleria'),
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _carica(context, ref, daFotocamera: false);
-              },
-            ),
-          ],
+          ),
         ),
-      ),
-    ),
-    icon: const Icon(Icons.add_a_photo_outlined),
-    label: const Text('Aggiungi'),
-  );
+        icon: const Icon(Icons.add_a_photo_outlined),
+        label: const Text('Aggiungi'),
+      );
 
   Future<void> _carica(
     BuildContext context,
@@ -222,12 +232,14 @@ class _Aggiungi extends ConsumerWidget {
     required bool daFotocamera,
   }) async {
     try {
-      await ref.read(progressActionsProvider).upload(context: context, daFotocamera: daFotocamera);
+      await ref
+          .read(progressActionsProvider)
+          .upload(context: context, daFotocamera: daFotocamera);
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(error).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+        );
       }
     }
   }

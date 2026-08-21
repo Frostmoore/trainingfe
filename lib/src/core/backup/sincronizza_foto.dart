@@ -70,9 +70,7 @@ class SincronizzaFoto {
 
     if (nelCloud.isEmpty) return 0;
 
-    final locali = {
-      for (final f in await raccolta.elenca()) f.nomeNelCloud,
-    };
+    final locali = {for (final f in await raccolta.elenca()) f.nomeNelCloud};
 
     var riprese = 0;
 

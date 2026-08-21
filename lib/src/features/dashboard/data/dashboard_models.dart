@@ -21,7 +21,8 @@ class DashboardSummary {
   });
 
   factory DashboardSummary.fromJson(Map<String, dynamic> j) {
-    final parametri = (j['vitals'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final parametri =
+        (j['vitals'] as Map?)?.cast<String, dynamic>() ?? const {};
 
     return DashboardSummary(
       date: DateTime.parse(j['date'].toString()),
@@ -33,14 +34,19 @@ class DashboardSummary {
       training: TrainingToday.fromJson(
         (j['training'] as Map?)?.cast<String, dynamic>() ?? const {},
       ),
-      body: BodyToday.fromJson((j['body'] as Map?)?.cast<String, dynamic>() ?? const {}),
+      body: BodyToday.fromJson(
+        (j['body'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
       sleep: j['sleep'] == null
           ? null
           : SleepToday.fromJson((j['sleep'] as Map).cast<String, dynamic>()),
       hasVitals: parametri['has_any'] == true,
       vitals: parametri.entries
           .where((e) => e.key != 'has_any' && e.value != null)
-          .map((e) => Vital.fromJson(e.key, (e.value as Map).cast<String, dynamic>()))
+          .map(
+            (e) =>
+                Vital.fromJson(e.key, (e.value as Map).cast<String, dynamic>()),
+          )
           .toList(),
     );
   }
@@ -97,7 +103,8 @@ class NutritionToday {
     final target = (j['targets'] as Map?)?.cast<String, dynamic>();
     final bruciate = (j['burned'] as Map?)?.cast<String, dynamic>() ?? const {};
 
-    double n(Map<String, dynamic> m, String k) => (m[k] as num?)?.toDouble() ?? 0;
+    double n(Map<String, dynamic> m, String k) =>
+        (m[k] as num?)?.toDouble() ?? 0;
 
     return NutritionToday(
       kcal: n(totali, 'kcal'),
@@ -198,11 +205,18 @@ class RecentWorkout {
 }
 
 class BodyToday {
-  const BodyToday({this.weightKg, this.weightAt, this.weightDelta, this.targetWeightKg});
+  const BodyToday({
+    this.weightKg,
+    this.weightAt,
+    this.weightDelta,
+    this.targetWeightKg,
+  });
 
   factory BodyToday.fromJson(Map<String, dynamic> j) => BodyToday(
     weightKg: (j['weight_kg'] as num?)?.toDouble(),
-    weightAt: j['weight_at'] == null ? null : DateTime.tryParse(j['weight_at'].toString()),
+    weightAt: j['weight_at'] == null
+        ? null
+        : DateTime.tryParse(j['weight_at'].toString()),
     weightDelta: (j['weight_delta'] as num?)?.toDouble(),
     targetWeightKg: (j['target_weight_kg'] as num?)?.toDouble(),
   );

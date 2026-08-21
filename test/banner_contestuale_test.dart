@@ -14,8 +14,9 @@ import 'package:training_companion/src/core/pubblicita/banner_contestuale.dart';
 /// progetto — è l'incidente: qualcuno, mesi dopo, che aggiunge un banner «anche
 /// qui» per alzare il riempimento, senza aver mai letto D7.
 void main() {
-  Widget schermo(Widget figlio) =>
-      MaterialApp(home: Scaffold(body: Center(child: figlio)));
+  Widget schermo(Widget figlio) => MaterialApp(
+    home: Scaffold(body: Center(child: figlio)),
+  );
 
   /// 🚨 **Il test che vale per tutti gli altri.**
   ///

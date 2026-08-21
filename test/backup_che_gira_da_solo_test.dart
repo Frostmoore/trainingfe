@@ -35,10 +35,8 @@ void main() {
     return c;
   }
 
-  BackupCheGiraDaSolo daSolo(ProviderContainer c) => BackupCheGiraDaSolo(
-        c.read(_refProvider),
-        adesso: () => adesso,
-      );
+  BackupCheGiraDaSolo daSolo(ProviderContainer c) =>
+      BackupCheGiraDaSolo(c.read(_refProvider), adesso: () => adesso);
 
   Future<void> segnaFattoIl(DateTime quando) async {
     final prefs = await SharedPreferences.getInstance();
@@ -153,11 +151,7 @@ void main() {
     /// riusciti, non è una cosa da mostrare: mostrarlo insegnerebbe a ignorare
     /// l'avviso, che è il modo di renderlo inutile per la volta in cui conta.
     test('un errore vecchio, seguito da un successo, non si mostra', () {
-      const s = StatoBackup(
-        acceso: true,
-        disponibile: true,
-        fallitoIl: null,
-      );
+      const s = StatoBackup(acceso: true, disponibile: true, fallitoIl: null);
 
       expect(s.inErrore, isFalse);
 

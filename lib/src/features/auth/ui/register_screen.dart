@@ -116,7 +116,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
         .replaceAll(RegExp(r'\s+'), '.');
 
-    _username.text = proposta.length > 30 ? proposta.substring(0, 30) : proposta;
+    _username.text = proposta.length > 30
+        ? proposta.substring(0, 30)
+        : proposta;
   }
 
   Future<void> _registrati() async {
@@ -246,7 +248,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         // Controllo volutamente lasco: la validazione vera è
                         // del backend, e una regex severa qui rifiuterebbe
                         // indirizzi legittimi che il server accetta.
-                        return value.contains('@') ? null : 'Non sembra un\'email.';
+                        return value.contains('@')
+                            ? null
+                            : 'Non sembra un\'email.';
                       },
                     ),
                     const SizedBox(height: Gap.md),
@@ -260,16 +264,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       autocorrect: false,
                       textCapitalization: TextCapitalization.none,
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._\-]')),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9._\-]'),
+                        ),
                         TextInputFormatter.withFunction(
-                          (_, nuovo) => nuovo.copyWith(text: nuovo.text.toLowerCase()),
+                          (_, nuovo) =>
+                              nuovo.copyWith(text: nuovo.text.toLowerCase()),
                         ),
                       ],
                       maxLength: 30,
                       decoration: InputDecoration(
                         labelText: 'Nome utente',
                         prefixIcon: const Icon(Icons.alternate_email_rounded),
-                        helperText: 'Ti servirà per accedere, al posto dell\'email.',
+                        helperText:
+                            'Ti servirà per accedere, al posto dell\'email.',
                         counterText: '',
                         errorText: _erroriCampo['username']?.first,
                       ),
@@ -285,7 +293,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         // Deve cominciare e finire con lettera o numero: un
                         // nome utente che finisce con un punto confonde chi lo
                         // legge ad alta voce al telefono.
-                        return RegExp(r'^[a-z0-9](?:[a-z0-9._\-]*[a-z0-9])?$').hasMatch(value)
+                        return RegExp(
+                              r'^[a-z0-9](?:[a-z0-9._\-]*[a-z0-9])?$',
+                            ).hasMatch(value)
                             ? null
                             : 'Lettere, numeri, punto, trattino e trattino basso.';
                       },
@@ -299,11 +309,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        helperText: 'Almeno ${PasswordStrength.lunghezzaMinima} '
+                        helperText:
+                            'Almeno ${PasswordStrength.lunghezzaMinima} '
                             'caratteri, con lettere e numeri.',
                         errorText: _erroriCampo['password']?.first,
                         suffixIcon: IconButton(
-                          onPressed: () => setState(() => _nascondi = !_nascondi),
+                          onPressed: () =>
+                              setState(() => _nascondi = !_nascondi),
                           icon: Icon(
                             _nascondi
                                 ? Icons.visibility_outlined
@@ -344,7 +356,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         // ⚠️ La spunta compare solo quando **combaciano e non
                         // sono vuote**: un segno di conferma su due campi vuoti
                         // è una bugia rassicurante.
-                        suffixIcon: _conferma.text.isNotEmpty &&
+                        suffixIcon:
+                            _conferma.text.isNotEmpty &&
                                 _conferma.text == _password.text
                             ? Icon(
                                 Icons.check_circle_outline_rounded,
@@ -386,7 +399,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     CheckboxListTile(
                       value: _condizioni,
-                      onChanged: (v) => setState(() => _condizioni = v ?? false),
+                      onChanged: (v) =>
+                          setState(() => _condizioni = v ?? false),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                       dense: true,

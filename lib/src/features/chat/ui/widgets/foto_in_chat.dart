@@ -86,7 +86,8 @@ class FotoInChat extends ConsumerWidget {
                      */
                     ? const _Assente(
                         icona: Icons.hourglass_disabled_outlined,
-                        testo: 'Questa foto non è più disponibile.\n'
+                        testo:
+                            'Questa foto non è più disponibile.\n'
                             'Le foto restano 24 ore.',
                       )
                     : _Aperta(relativo: relativo),

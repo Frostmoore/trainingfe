@@ -49,7 +49,9 @@ class CaloriesCard extends ConsumerWidget {
      * 💡 L'ordine di precedenza è quello di sempre: **il piano del trainer
      * vince sul calcolo**, e il calcolo vince sul nulla.
      */
-    final esito = n.haTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
+    final esito = n.haTarget
+        ? null
+        : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
     // 🚨 Le bruciate entrano nell'obiettivo — N23.B1. La regola sta in
@@ -110,7 +112,10 @@ class CaloriesCard extends ConsumerWidget {
                         size: 18,
                         color: theme.colorScheme.tertiary,
                       ),
-                      Text('${bruciate.kcal}', style: theme.textTheme.titleSmall),
+                      Text(
+                        '${bruciate.kcal}',
+                        style: theme.textTheme.titleSmall,
+                      ),
                     ],
                   ),
               ],
@@ -129,7 +134,9 @@ class CaloriesCard extends ConsumerWidget {
                   // mostrando**: usare quello del server quando il numero viene
                   // dal calcolo locale darebbe una frase che non c'entra niente
                   // con la barra sopra.
-                  n.haTarget ? scostamento : n.kcal - target * riepilogo.dayProgressPct / 100,
+                  n.haTarget
+                      ? scostamento
+                      : n.kcal - target * riepilogo.dayProgressPct / 100,
                   target - n.kcal,
                   riepilogo.dayProgressPct,
                 ),
@@ -204,7 +211,8 @@ class CaloriesCard extends ConsumerWidget {
                 _Macro(
                   nome: 'C',
                   valore: n.carbs,
-                  target: n.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+                  target:
+                      n.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
                 ),
                 _Macro(
                   nome: 'G',
@@ -249,7 +257,10 @@ class CaloriesCard extends ConsumerWidget {
 
 /// La barra con il segno di dove **dovrebbe** essere la giornata.
 class _BarraConRitmo extends StatelessWidget {
-  const _BarraConRitmo({required this.percentualeMangiata, required this.percentualeGiornata});
+  const _BarraConRitmo({
+    required this.percentualeMangiata,
+    required this.percentualeGiornata,
+  });
 
   final double percentualeMangiata;
   final double percentualeGiornata;
@@ -270,13 +281,18 @@ class _BarraConRitmo extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percentualeMangiata.clamp(0.0, 1.0),
                 minHeight: 10,
-                color: sfora ? theme.colorScheme.error : theme.colorScheme.primary,
+                color: sfora
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
               ),
             ),
             // Il segno del ritmo: senza, la barra dice quanto si è mangiato ma
             // non se è troppo **per l'ora che è**.
             Positioned(
-              left: (vincoli.maxWidth * percentualeGiornata).clamp(0.0, vincoli.maxWidth - 2),
+              left: (vincoli.maxWidth * percentualeGiornata).clamp(
+                0.0,
+                vincoli.maxWidth - 2,
+              ),
               child: Container(
                 width: 2,
                 height: 14,
@@ -345,7 +361,9 @@ class RecoveryCard extends ConsumerWidget {
           children: [
             Text(
               'Recupero',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: Gap.sm),
 
@@ -373,18 +391,20 @@ class RecoveryCard extends ConsumerWidget {
                 ),
               ),
 
-            for (final lettura in recupero.parametri.values) _RigaParametro(lettura: lettura),
+            for (final lettura in recupero.parametri.values)
+              _RigaParametro(lettura: lettura),
           ],
         ),
       ),
     );
   }
 
-  static Color? _colore(BuildContext context, Giudizio giudizio) => switch (giudizio) {
-    Giudizio.bad => Theme.of(context).colorScheme.error,
-    Giudizio.warn => const Color(0xFFE0B341),
-    Giudizio.ok => null,
-  };
+  static Color? _colore(BuildContext context, Giudizio giudizio) =>
+      switch (giudizio) {
+        Giudizio.bad => Theme.of(context).colorScheme.error,
+        Giudizio.warn => const Color(0xFFE0B341),
+        Giudizio.ok => null,
+      };
 }
 
 /// Quando non c'è niente da mostrare.
@@ -449,7 +469,9 @@ class _RigaParametro extends StatelessWidget {
             Text(
               '${delta > 0 ? '+' : ''}${delta.round()}%',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: anomalo ? theme.colorScheme.error : theme.colorScheme.outline,
+                color: anomalo
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.outline,
                 fontWeight: anomalo ? FontWeight.w700 : null,
               ),
             ),
@@ -483,7 +505,9 @@ class TrainingCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     'Allenamento',
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -498,9 +522,12 @@ class TrainingCard extends ConsumerWidget {
               // palestra: un elenco di date costringe a fare il conto a mente.
               switch (t.daysSinceLast) {
                 null => 'Nessun allenamento registrato.',
-                0 => 'Ti sei allenato oggi. ${t.last30Days} sedute negli ultimi 30 giorni.',
-                1 => 'Ultimo allenamento ieri. ${t.last30Days} negli ultimi 30 giorni.',
-                final g => 'Non ti alleni da $g giorni. ${t.last30Days} negli ultimi 30.',
+                0 =>
+                  'Ti sei allenato oggi. ${t.last30Days} sedute negli ultimi 30 giorni.',
+                1 =>
+                  'Ultimo allenamento ieri. ${t.last30Days} negli ultimi 30 giorni.',
+                final g =>
+                  'Non ti alleni da $g giorni. ${t.last30Days} negli ultimi 30.',
               },
               style: theme.textTheme.bodySmall,
             ),
@@ -512,7 +539,9 @@ class TrainingCard extends ConsumerWidget {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
-                  s.isOpen ? Icons.play_circle_outline_rounded : Icons.fitness_center_rounded,
+                  s.isOpen
+                      ? Icons.play_circle_outline_rounded
+                      : Icons.fitness_center_rounded,
                   size: 20,
                 ),
                 title: Text(s.name),
@@ -591,7 +620,8 @@ class WeightCard extends ConsumerWidget {
         ),
         subtitle: Text(
           [
-            if (body.weightAt != null) DateFormat('d MMM', 'it').format(body.weightAt!),
+            if (body.weightAt != null)
+              DateFormat('d MMM', 'it').format(body.weightAt!),
             if (body.targetWeightKg != null)
               'obiettivo ${body.targetWeightKg!.toStringAsFixed(1)} kg',
           ].join(' · '),

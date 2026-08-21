@@ -135,7 +135,8 @@ class StatoSalute {
     collegato: collegato ?? this.collegato,
     inCorso: inCorso ?? this.inCorso,
     errore: azzeraErrore ? null : (errore ?? this.errore),
-    ultimaSincronizzazione: ultimaSincronizzazione ?? this.ultimaSincronizzazione,
+    ultimaSincronizzazione:
+        ultimaSincronizzazione ?? this.ultimaSincronizzazione,
   );
 }
 
@@ -196,7 +197,8 @@ class HealthController extends StateNotifier<StatoSalute> {
       state = state.copyWith(
         inCorso: false,
         collegato: false,
-        errore: 'Prima serve il tuo consenso al trattamento dei dati sanitari: '
+        errore:
+            'Prima serve il tuo consenso al trattamento dei dati sanitari: '
             'lo trovi in Profilo → Privacy e consensi.',
       );
 
@@ -209,7 +211,8 @@ class HealthController extends StateNotifier<StatoSalute> {
       state = state.copyWith(
         inCorso: false,
         collegato: false,
-        errore: 'Non è stato possibile collegare Health Connect. '
+        errore:
+            'Non è stato possibile collegare Health Connect. '
             'Se hai già rifiutato in passato, il permesso va riattivato dalle '
             'impostazioni di sistema.',
       );
@@ -236,10 +239,13 @@ class HealthController extends StateNotifier<StatoSalute> {
     state = state.copyWith(
       inCorso: false,
       collegato: true,
-      ultimaSincronizzazione: DateFormat('d MMM, HH:mm', 'it').format(DateTime.now()),
+      ultimaSincronizzazione: DateFormat(
+        'd MMM, HH:mm',
+        'it',
+      ).format(DateTime.now()),
       errore: quanti == 0
           ? 'Collegato, ma non è arrivato ancora nessun dato. '
-              'Succede se il tuo orologio non ha ancora sincronizzato con il telefono.'
+                'Succede se il tuo orologio non ha ancora sincronizzato con il telefono.'
           : null,
       azzeraErrore: quanti > 0,
     );
@@ -319,11 +325,11 @@ class HealthController extends StateNotifier<StatoSalute> {
 
 final healthControllerProvider =
     StateNotifierProvider<HealthController, StatoSalute>(
-  (ref) => HealthController(
-    ref.watch(ponteSaluteProvider),
-    ref.watch(archivioSaluteProvider),
+      (ref) => HealthController(
+        ref.watch(ponteSaluteProvider),
+        ref.watch(archivioSaluteProvider),
 
-    /*
+        /*
      * Il consenso si **rilegge** a ogni gesto, e non si cattura una volta: si
      * revoca da un'altra schermata, e una copia presa all'avvio direbbe «sì» a
      * chi ha appena detto di no.
@@ -332,18 +338,18 @@ final healthControllerProvider =
      * «in dubbio è no» — perché la stessa domanda se la fa anche
      * `recuperoProvider`, e due implementazioni divergono sempre.
      */
-    () => ref.read(consensoSaluteProvider.future),
+        () => ref.read(consensoSaluteProvider.future),
 
-    /*
+        /*
      * 🚨 `ref.read` e non `ref.watch` — la stessa distinzione che il 19/08 è
      * costata l'utente che spariva dopo un ripristino. Con `watch` questo
      * controller si ricreerebbe **a ogni incremento del contatore**, cioè a ogni
      * sincronizzazione: si ricrea il controller che ha appena finito di
      * sincronizzare, e la cosa si morde la coda.
      */
-    () => ref.read(revisioneAllenamentiProvider.notifier).state++,
-  ),
-);
+        () => ref.read(revisioneAllenamentiProvider.notifier).state++,
+      ),
+    );
 
 /// La risincronizzazione d'avvio — A5.
 ///

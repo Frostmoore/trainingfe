@@ -54,9 +54,7 @@ class FileDiBackup {
   String generaCodice() {
     final byte = _sodium.randombytes.buf(24);
 
-    final caratteri = byte
-        .map((b) => _alfabeto[b % _alfabeto.length])
-        .join();
+    final caratteri = byte.map((b) => _alfabeto[b % _alfabeto.length]).join();
 
     final gruppi = <String>[];
     for (var i = 0; i < 24; i += 4) {
@@ -82,11 +80,13 @@ class FileDiBackup {
     final chiave = _derivaDalCodice(codice: codice, salt: salt);
 
     try {
-      final contenuto = utf8.encode(json.encode({
-        'version': versione,
-        'master_key': base64Encode(chiaveMaestra),
-        'archivio': archivio,
-      }));
+      final contenuto = utf8.encode(
+        json.encode({
+          'version': versione,
+          'master_key': base64Encode(chiaveMaestra),
+          'archivio': archivio,
+        }),
+      );
 
       final cifrato = _sodium.crypto.secretBox.easy(
         message: Uint8List.fromList(contenuto),
@@ -97,16 +97,20 @@ class FileDiBackup {
       // L'intestazione resta in chiaro: senza, chi apre il file non saprebbe
       // nemmeno con quali parametri provare ad aprirlo. Non rivela niente —
       // sono gli stessi parametri per tutti.
-      return Uint8List.fromList(utf8.encode(json.encode({
-        'format': 'training-companion-backup',
-        'version': versione,
-        'kdf': 'argon2id13',
-        'ops_limit': Cassaforte.opsPredefinito,
-        'mem_limit': Cassaforte.memPredefinito,
-        'salt': base64Encode(salt),
-        'nonce': base64Encode(nonce),
-        'payload': base64Encode(cifrato),
-      })));
+      return Uint8List.fromList(
+        utf8.encode(
+          json.encode({
+            'format': 'training-companion-backup',
+            'version': versione,
+            'kdf': 'argon2id13',
+            'ops_limit': Cassaforte.opsPredefinito,
+            'mem_limit': Cassaforte.memPredefinito,
+            'salt': base64Encode(salt),
+            'nonce': base64Encode(nonce),
+            'payload': base64Encode(cifrato),
+          }),
+        ),
+      );
     } finally {
       chiave.dispose();
     }
@@ -175,15 +179,14 @@ class FileDiBackup {
     required Uint8List salt,
     int opsLimit = Cassaforte.opsPredefinito,
     int memLimit = Cassaforte.memPredefinito,
-  }) =>
-      _sodium.crypto.pwhash(
-        outLen: _sodium.crypto.secretBox.keyBytes,
-        password: normalizza(codice).toCharArray(),
-        salt: salt,
-        opsLimit: opsLimit,
-        memLimit: memLimit,
-        alg: CryptoPwhashAlgorithm.argon2id13,
-      );
+  }) => _sodium.crypto.pwhash(
+    outLen: _sodium.crypto.secretBox.keyBytes,
+    password: normalizza(codice).toCharArray(),
+    salt: salt,
+    opsLimit: opsLimit,
+    memLimit: memLimit,
+    alg: CryptoPwhashAlgorithm.argon2id13,
+  );
 
   /// Tutto maiuscolo, senza niente che non sia dell'alfabeto.
   // ═══════════════════════════ il formato v2 ═══════════════════════════
@@ -256,12 +259,16 @@ class FileDiBackup {
     final chiaveContenuto = _sodium.crypto.secretStream.keygen();
 
     try {
-      final corpo = utf8.encode(json.encode({
-        'master_key': base64Encode(chiaveMaestra),
-        'archivio': archivio,
-      }));
+      final corpo = utf8.encode(
+        json.encode({
+          'master_key': base64Encode(chiaveMaestra),
+          'archivio': archivio,
+        }),
+      );
 
-      final saltCodice = _sodium.randombytes.buf(_sodium.crypto.pwhash.saltBytes);
+      final saltCodice = _sodium.randombytes.buf(
+        _sodium.crypto.pwhash.saltBytes,
+      );
       final involucri = <String, dynamic>{
         'salt_codice': base64Encode(saltCodice),
         'wrap_codice': _avvolgi(chiaveContenuto, codice, saltCodice),
@@ -285,28 +292,36 @@ class FileDiBackup {
        * provare.
        */
       if (avvolgiConLaChiaveMaestra) {
-        involucri['wrap_maestra'] =
-            _avvolgiConChiave(chiaveContenuto, _daMaestra(chiaveMaestra));
+        involucri['wrap_maestra'] = _avvolgiConChiave(
+          chiaveContenuto,
+          _daMaestra(chiaveMaestra),
+        );
       }
 
       if (password != null && password.isNotEmpty) {
-        final saltPassword =
-            _sodium.randombytes.buf(_sodium.crypto.pwhash.saltBytes);
+        final saltPassword = _sodium.randombytes.buf(
+          _sodium.crypto.pwhash.saltBytes,
+        );
 
         involucri['salt_password'] = base64Encode(saltPassword);
-        involucri['wrap_password'] =
-            _avvolgi(chiaveContenuto, password, saltPassword);
+        involucri['wrap_password'] = _avvolgi(
+          chiaveContenuto,
+          password,
+          saltPassword,
+        );
       }
 
-      final intestazione = utf8.encode(json.encode({
-        'format': 'training-companion-backup',
-        'version': versione2,
-        'kdf': 'argon2id13',
-        'ops_limit': Cassaforte.opsPredefinito,
-        'mem_limit': Cassaforte.memPredefinito,
-        'chunk': _byteDelBlocco,
-        ...involucri,
-      }));
+      final intestazione = utf8.encode(
+        json.encode({
+          'format': 'training-companion-backup',
+          'version': versione2,
+          'kdf': 'argon2id13',
+          'ops_limit': Cassaforte.opsPredefinito,
+          'mem_limit': Cassaforte.memPredefinito,
+          'chunk': _byteDelBlocco,
+          ...involucri,
+        }),
+      );
 
       final cifrato = await _sodium.crypto.secretStream
           .pushChunked(
@@ -533,7 +548,9 @@ class FileDiBackup {
   SecureKey _daMaestra(Uint8List chiaveMaestra) => SecureKey.fromList(
     _sodium,
     _sodium.crypto.genericHash(
-      message: Uint8List.fromList(utf8.encode('training-companion/backup-wrap')),
+      message: Uint8List.fromList(
+        utf8.encode('training-companion/backup-wrap'),
+      ),
       key: SecureKey.fromList(_sodium, chiaveMaestra),
       outLen: _sodium.crypto.secretBox.keyBytes,
     ),
@@ -677,11 +694,8 @@ class FileDiBackup {
     );
   }
 
-  static String normalizza(String codice) => codice
-      .toUpperCase()
-      .split('')
-      .where(_alfabeto.contains)
-      .join();
+  static String normalizza(String codice) =>
+      codice.toUpperCase().split('').where(_alfabeto.contains).join();
 }
 
 /// Quello che c'era dentro il file.

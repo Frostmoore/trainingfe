@@ -55,7 +55,10 @@ void main() {
     });
 
     test('il residuo esiste solo quando esiste un target', () {
-      expect(con(oraPercentuale: 50, kcal: 1000, target: 2400).nutrition.residuo, 1400);
+      expect(
+        con(oraPercentuale: 50, kcal: 1000, target: 2400).nutrition.residuo,
+        1400,
+      );
       expect(con(oraPercentuale: 50, kcal: 1000).nutrition.residuo, isNull);
     });
   });
@@ -155,21 +158,24 @@ void main() {
     });
   });
 
-  test('il sonno porta con sé il giudizio del server, non lo ricalcola l\'app', () {
-    final r = con(
-      oraPercentuale: 50,
-      sleep: {
-        'asleep_minutes': 401,
-        'deep_pct': 12.0,
-        'rem_pct': 18.0,
-        'awake_minutes': 25,
-        'overall': 'warn',
-      },
-    );
+  test(
+    'il sonno porta con sé il giudizio del server, non lo ricalcola l\'app',
+    () {
+      final r = con(
+        oraPercentuale: 50,
+        sleep: {
+          'asleep_minutes': 401,
+          'deep_pct': 12.0,
+          'rem_pct': 18.0,
+          'awake_minutes': 25,
+          'overall': 'warn',
+        },
+      );
 
-    expect(r.sleep!.durata, '6h 41');
-    // Le soglie di ciò che è un sonno sano sono una scelta di prodotto e
-    // stanno in un posto solo: `SleepAnalyzer`.
-    expect(r.sleep!.overall, 'warn');
-  });
+      expect(r.sleep!.durata, '6h 41');
+      // Le soglie di ciò che è un sonno sano sono una scelta di prodotto e
+      // stanno in un posto solo: `SleepAnalyzer`.
+      expect(r.sleep!.overall, 'warn');
+    },
+  );
 }

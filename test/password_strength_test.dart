@@ -9,7 +9,12 @@ import 'package:training_companion/src/features/auth/data/password_strength.dart
 /// averlo: dopo tre volte che approva una password debole, nessuno lo guarda
 /// più.
 void main() {
-  PasswordStrength v(String p, {String? nome, String? email, String? username}) =>
+  PasswordStrength v(
+    String p, {
+    String? nome,
+    String? email,
+    String? username,
+  }) =>
       PasswordStrength.valuta(p, nome: nome, email: email, username: username);
 
   group('la lunghezza è la variabile che conta', () {
@@ -28,7 +33,8 @@ void main() {
       expect(
         lunga.score,
         greaterThan(corta.score),
-        reason: 'È il punto di tutta la classe: la composizione forzata '
+        reason:
+            'È il punto di tutta la classe: la composizione forzata '
             'produce password prevedibili, la lunghezza no.',
       );
       expect(lunga.accettabile, isTrue);
@@ -49,7 +55,8 @@ void main() {
       expect(
         forza.score,
         0,
-        reason: 'Una password nelle liste si indovina in un istante qualunque '
+        reason:
+            'Una password nelle liste si indovina in un istante qualunque '
             'sia la sua lunghezza: non esiste punteggio parziale.',
       );
       expect(forza.suggerimenti.first, contains('liste'));
@@ -67,7 +74,10 @@ void main() {
     });
 
     test('le lettere ripetute contano come sequenza', () {
-      expect(v('marooooo12').suggerimenti.any((s) => s.contains('sequenze')), isTrue);
+      expect(
+        v('marooooo12').suggerimenti.any((s) => s.contains('sequenze')),
+        isTrue,
+      );
     });
 
     test('tre caratteri in fila NON bastano a far scattare l\'avviso', () {
@@ -79,45 +89,54 @@ void main() {
     });
   });
 
-  group('🚨 i dati personali, che è il motivo per cui il controllo sta qui', () {
-    test('il proprio nome dentro la password viene detto subito', () {
-      final forza = v('riccardo1234', nome: 'Riccardo Ronconi');
+  group(
+    '🚨 i dati personali, che è il motivo per cui il controllo sta qui',
+    () {
+      test('il proprio nome dentro la password viene detto subito', () {
+        final forza = v('riccardo1234', nome: 'Riccardo Ronconi');
 
-      expect(forza.score, lessThanOrEqualTo(1));
-      expect(forza.suggerimenti.first, contains('il tuo nome'));
-    });
+        expect(forza.score, lessThanOrEqualTo(1));
+        expect(forza.suggerimenti.first, contains('il tuo nome'));
+      });
 
-    test('vale anche per il cognome da solo', () {
-      final forza = v('ronconi2026!', nome: 'Riccardo Ronconi');
+      test('vale anche per il cognome da solo', () {
+        final forza = v('ronconi2026!', nome: 'Riccardo Ronconi');
 
-      expect(forza.suggerimenti.first, contains('il tuo nome'));
-    });
+        expect(forza.suggerimenti.first, contains('il tuo nome'));
+      });
 
-    test('e per il nome utente e la parte locale dell\'email', () {
-      expect(
-        v('mariorossi88', username: 'mariorossi').suggerimenti.first,
-        contains('nome utente'),
-      );
-      expect(
-        v('geometra88xy', email: 'geometra@esempio.test').suggerimenti.first,
-        contains('email'),
-      );
-    });
+      test('e per il nome utente e la parte locale dell\'email', () {
+        expect(
+          v('mariorossi88', username: 'mariorossi').suggerimenti.first,
+          contains('nome utente'),
+        );
+        expect(
+          v('geometra88xy', email: 'geometra@esempio.test').suggerimenti.first,
+          contains('email'),
+        );
+      });
 
-    test('⚠️ un nome corto non fa scattare falsi allarmi', () {
-      // «Ada» comparirebbe dentro «adattamento»: sotto i 4 caratteri il
-      // confronto darebbe più fastidio che protezione.
-      final forza = v('adattamento47', nome: 'Ada');
+      test('⚠️ un nome corto non fa scattare falsi allarmi', () {
+        // «Ada» comparirebbe dentro «adattamento»: sotto i 4 caratteri il
+        // confronto darebbe più fastidio che protezione.
+        final forza = v('adattamento47', nome: 'Ada');
 
-      expect(forza.suggerimenti.any((s) => s.contains('il tuo nome')), isFalse);
-    });
+        expect(
+          forza.suggerimenti.any((s) => s.contains('il tuo nome')),
+          isFalse,
+        );
+      });
 
-    test('senza dati personali non si inventa un problema', () {
-      final forza = v('riccardo1234');
+      test('senza dati personali non si inventa un problema', () {
+        final forza = v('riccardo1234');
 
-      expect(forza.suggerimenti.any((s) => s.contains('il tuo nome')), isFalse);
-    });
-  });
+        expect(
+          forza.suggerimenti.any((s) => s.contains('il tuo nome')),
+          isFalse,
+        );
+      });
+    },
+  );
 
   group('la soglia coincide con quella del backend', () {
     test('senza numeri lo dice, perché il server rifiuterebbe', () {
@@ -142,10 +161,13 @@ void main() {
     });
   });
 
-  test('a chi ha già una password ottima non si dà nessun consiglio inutile', () {
-    final forza = v('lampada corvo 41 tenda viola');
+  test(
+    'a chi ha già una password ottima non si dà nessun consiglio inutile',
+    () {
+      final forza = v('lampada corvo 41 tenda viola');
 
-    expect(forza.level, PasswordLevel.ottima);
-    expect(forza.suggerimenti, isEmpty);
-  });
+      expect(forza.level, PasswordLevel.ottima);
+      expect(forza.suggerimenti, isEmpty);
+    },
+  );
 }

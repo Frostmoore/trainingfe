@@ -19,7 +19,15 @@ import '../calendar_controller.dart';
 class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
 
-  static const _intestazioni = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  static const _intestazioni = [
+    'Lun',
+    'Mar',
+    'Mer',
+    'Gio',
+    'Ven',
+    'Sab',
+    'Dom',
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,20 +46,22 @@ class CalendarScreen extends ConsumerWidget {
             Row(
               children: [
                 IconButton(
-                  onPressed: () => ref.read(calendarMonthProvider.notifier).state = p.prev,
+                  onPressed: () =>
+                      ref.read(calendarMonthProvider.notifier).state = p.prev,
                   icon: const Icon(Icons.chevron_left_rounded),
                 ),
                 Expanded(
                   child: Text(
                     p.title,
                     textAlign: TextAlign.center,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 IconButton(
-                  onPressed: () => ref.read(calendarMonthProvider.notifier).state = p.next,
+                  onPressed: () =>
+                      ref.read(calendarMonthProvider.notifier).state = p.next,
                   icon: const Icon(Icons.chevron_right_rounded),
                 ),
               ],
@@ -82,7 +92,8 @@ class CalendarScreen extends ConsumerWidget {
                   crossAxisSpacing: 4,
                 ),
                 itemCount: p.days.length,
-                itemBuilder: (context, i) => _Cella(giorno: p.days[i], target: p.targetKcal),
+                itemBuilder: (context, i) =>
+                    _Cella(giorno: p.days[i], target: p.targetKcal),
               ),
             ),
             Padding(
@@ -110,7 +121,8 @@ class _Cella extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sfora = target != null && giorno.kcal != null && giorno.kcal! > target!;
+    final sfora =
+        target != null && giorno.kcal != null && giorno.kcal! > target!;
 
     return Opacity(
       // I giorni dell'altro mese ci sono ma sfumati: toglierli spezzerebbe la
@@ -127,7 +139,9 @@ class _Cella extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(Gap.radiusSm),
             border: Border.all(
-              color: giorno.today ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+              color: giorno.today
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant,
               width: giorno.today ? 2 : 1,
             ),
           ),
@@ -141,7 +155,9 @@ class _Cella extends StatelessWidget {
                 Text(
                   '${giorno.kcal}',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: sfora ? theme.colorScheme.error : theme.colorScheme.primary,
+                    color: sfora
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -149,7 +165,9 @@ class _Cella extends StatelessWidget {
                   LinearProgressIndicator(
                     value: (giorno.kcal! / target!).clamp(0, 1),
                     minHeight: 3,
-                    color: sfora ? theme.colorScheme.error : theme.colorScheme.primary,
+                    color: sfora
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
                   ),
               ],
 
@@ -158,9 +176,16 @@ class _Cella extends StatelessWidget {
               if (giorno.workouts > 0)
                 Row(
                   children: [
-                    Icon(Icons.fitness_center_rounded, size: 10, color: theme.colorScheme.tertiary),
+                    Icon(
+                      Icons.fitness_center_rounded,
+                      size: 10,
+                      color: theme.colorScheme.tertiary,
+                    ),
                     if (giorno.workouts > 1)
-                      Text('${giorno.workouts}', style: theme.textTheme.labelSmall),
+                      Text(
+                        '${giorno.workouts}',
+                        style: theme.textTheme.labelSmall,
+                      ),
                   ],
                 ),
             ],

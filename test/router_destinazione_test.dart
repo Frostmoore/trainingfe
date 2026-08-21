@@ -71,10 +71,7 @@ void main() {
     /// di che colore essere e passerebbe oltre. Mostrare qualunque schermata a
     /// chi non ha sbloccato vorrebbe dire che il blocco non blocca niente.
     test('blocca anche senza palestra scelta', () {
-      expect(
-        dove(AuthStatus.locked, sceltaFatta: false),
-        AppRoutes.bloccata,
-      );
+      expect(dove(AuthStatus.locked, sceltaFatta: false), AppRoutes.bloccata);
     });
   });
 
@@ -103,10 +100,7 @@ void main() {
 
   group('nessuna palestra scelta', () {
     test('porta al codice e ce lo tiene', () {
-      expect(
-        dove(AuthStatus.loggedOut, sceltaFatta: false),
-        AppRoutes.gymCode,
-      );
+      expect(dove(AuthStatus.loggedOut, sceltaFatta: false), AppRoutes.gymCode);
       expect(
         dove(
           AuthStatus.loggedOut,
@@ -133,18 +127,12 @@ void main() {
     test('chi ha scelto di NON avere una palestra può andare avanti', () {
       // Ha scelto: `sceltaFatta` è vero anche se `hasGym` è falso.
       expect(
-        dove(
-          AuthStatus.loggedOut,
-          posizione: AppRoutes.register,
-        ),
+        dove(AuthStatus.loggedOut, posizione: AppRoutes.register),
         isNull,
         reason: 'La registrazione senza palestra viene rimandata al codice.',
       );
 
-      expect(
-        dove(AuthStatus.loggedOut, posizione: AppRoutes.login),
-        isNull,
-      );
+      expect(dove(AuthStatus.loggedOut, posizione: AppRoutes.login), isNull);
     });
 
     /// ⚠️ E il contrario resta vero: chi **non ha ancora scelto** non deve
@@ -214,4 +202,3 @@ void main() {
     }
   });
 }
-

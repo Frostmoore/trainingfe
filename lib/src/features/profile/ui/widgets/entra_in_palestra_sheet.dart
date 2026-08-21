@@ -23,17 +23,19 @@ import '../../../onboarding/branding_controller.dart';
 class EntraInPalestraSheet extends ConsumerStatefulWidget {
   const EntraInPalestraSheet({super.key});
 
-  static Future<void> mostra(BuildContext context) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => const Padding(
-      padding: EdgeInsets.only(bottom: 0),
-      child: EntraInPalestraSheet(),
-    ),
-  );
+  static Future<void> mostra(BuildContext context) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => const Padding(
+          padding: EdgeInsets.only(bottom: 0),
+          child: EntraInPalestraSheet(),
+        ),
+      );
 
   @override
-  ConsumerState<EntraInPalestraSheet> createState() => _EntraInPalestraSheetState();
+  ConsumerState<EntraInPalestraSheet> createState() =>
+      _EntraInPalestraSheetState();
 }
 
 class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
@@ -61,11 +63,13 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final risposta = await ref.read(apiClientProvider).post<Map<String, dynamic>>(
-        '/account/join-gym',
-        body: {'join_code': _codice.text.trim().toUpperCase()},
-        unwrap: false,
-      );
+      final risposta = await ref
+          .read(apiClientProvider)
+          .post<Map<String, dynamic>>(
+            '/account/join-gym',
+            body: {'join_code': _codice.text.trim().toUpperCase()},
+            unwrap: false,
+          );
 
       /*
        * 🚨 **Tre cose da rifare, e in quest'ordine.**
@@ -86,7 +90,11 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
 
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(content: Text(risposta['message']?.toString() ?? 'Sei entrato nella palestra.')),
+        SnackBar(
+          content: Text(
+            risposta['message']?.toString() ?? 'Sei entrato nella palestra.',
+          ),
+        ),
       );
     } on Object catch (errore) {
       setState(() => _errore = ApiClient.unwrapError(errore).message);
@@ -115,7 +123,9 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
           children: [
             Text(
               'Entra in una palestra',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: Gap.sm),
 
@@ -174,8 +184,9 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
                 hintText: 'ABCD1234',
                 counterText: '',
               ),
-              validator: (v) =>
-                  (v ?? '').trim().length == 8 ? null : 'Il codice è di 8 caratteri.',
+              validator: (v) => (v ?? '').trim().length == 8
+                  ? null
+                  : 'Il codice è di 8 caratteri.',
               onFieldSubmitted: (_) => _entra(),
             ),
 
@@ -184,7 +195,9 @@ class _EntraInPalestraSheetState extends ConsumerState<EntraInPalestraSheet> {
               Text(
                 _errore!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ],
 

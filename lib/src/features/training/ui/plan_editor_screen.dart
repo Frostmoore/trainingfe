@@ -184,7 +184,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             // (`a > da ? a - 1 : a`), e quella correzione dimenticata sposta
             // l'esercizio di una posizione sbagliata solo trascinando verso il
             // basso — un difetto che si nota tardi.
-            onReorderItem: (da, a) => setState(() => _righe.insert(a, _righe.removeAt(da))),
+            onReorderItem: (da, a) =>
+                setState(() => _righe.insert(a, _righe.removeAt(da))),
             children: [
               for (var i = 0; i < _righe.length; i++)
                 _CardRiga(
@@ -214,7 +215,11 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           FilledButton(
             onPressed: _inCorso ? null : _salva,
             child: _inCorso
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Salva scheda'),
           ),
           const SizedBox(height: Gap.xl),
@@ -226,16 +231,22 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
 /// Lo stato di una riga dell'editor.
 class _RigaEditor {
-  _RigaEditor({String? nome, int? serie, String? reps, int? riposo, double? peso, String? note})
-    : nome = TextEditingController(text: nome ?? ''),
-      serie = TextEditingController(text: (serie ?? 3).toString()),
-      // 🚨 Le ripetizioni sono una STRINGA: «8-12», «cedimento», «max»,
-      // «10+10» sono prescrizioni legittime. Un campo numerico qui
-      // renderebbe impossibile scrivere metà delle schede vere.
-      reps = TextEditingController(text: reps ?? '8-12'),
-      riposo = TextEditingController(text: (riposo ?? 90).toString()),
-      peso = TextEditingController(text: peso?.toString() ?? ''),
-      note = TextEditingController(text: note ?? '');
+  _RigaEditor({
+    String? nome,
+    int? serie,
+    String? reps,
+    int? riposo,
+    double? peso,
+    String? note,
+  }) : nome = TextEditingController(text: nome ?? ''),
+       serie = TextEditingController(text: (serie ?? 3).toString()),
+       // 🚨 Le ripetizioni sono una STRINGA: «8-12», «cedimento», «max»,
+       // «10+10» sono prescrizioni legittime. Un campo numerico qui
+       // renderebbe impossibile scrivere metà delle schede vere.
+       reps = TextEditingController(text: reps ?? '8-12'),
+       riposo = TextEditingController(text: (riposo ?? 90).toString()),
+       peso = TextEditingController(text: peso?.toString() ?? ''),
+       note = TextEditingController(text: note ?? '');
 
   final TextEditingController nome;
   final TextEditingController serie;
@@ -264,7 +275,12 @@ class _RigaEditor {
 }
 
 class _CardRiga extends StatelessWidget {
-  const _CardRiga({required this.indice, required this.riga, required this.onRimuovi, super.key});
+  const _CardRiga({
+    required this.indice,
+    required this.riga,
+    required this.onRimuovi,
+    super.key,
+  });
 
   final int indice;
   final _RigaEditor riga;
@@ -297,7 +313,10 @@ class _CardRiga extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              IconButton(onPressed: onRimuovi, icon: const Icon(Icons.close_rounded)),
+              IconButton(
+                onPressed: onRimuovi,
+                icon: const Icon(Icons.close_rounded),
+              ),
             ],
           ),
           Row(
@@ -306,7 +325,10 @@ class _CardRiga extends StatelessWidget {
                 child: TextField(
                   controller: riga.serie,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'serie', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'serie',
+                    isDense: true,
+                  ),
                 ),
               ),
               const SizedBox(width: Gap.sm),
@@ -314,7 +336,10 @@ class _CardRiga extends StatelessWidget {
                 flex: 2,
                 child: TextField(
                   controller: riga.reps,
-                  decoration: const InputDecoration(labelText: 'ripetizioni', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'ripetizioni',
+                    isDense: true,
+                  ),
                 ),
               ),
               const SizedBox(width: Gap.sm),
@@ -322,15 +347,23 @@ class _CardRiga extends StatelessWidget {
                 child: TextField(
                   controller: riga.riposo,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'rec. s', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'rec. s',
+                    isDense: true,
+                  ),
                 ),
               ),
               const SizedBox(width: Gap.sm),
               Expanded(
                 child: TextField(
                   controller: riga.peso,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'kg', isDense: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'kg',
+                    isDense: true,
+                  ),
                 ),
               ),
             ],

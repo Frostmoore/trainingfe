@@ -42,10 +42,15 @@ class MieSchedeScreen extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.fitness_center_outlined,
                 title: 'Nessuna scheda',
-                message: 'Scrivine una: potrai mandarla a un allievo dalla chat.',
+                message:
+                    'Scrivine una: potrai mandarla a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieSchedeProvider)),
+                onRefresh: () => aggiornaTutto(
+                  context,
+                  ref,
+                  () => ref.invalidate(mieSchedeProvider),
+                ),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: schede.length,
@@ -70,7 +75,10 @@ class _Riga extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        title: Text(scheda.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          scheda.nome,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -79,11 +87,14 @@ class _Riga extends StatelessWidget {
              * si chiamano uguale. ⚠️ Se manca la chiave non vuol dire che sia
              * vuoto: vuol dire che quella scheda l'ha scritta un altro (R4).
              */
-            if (scheda.rifAllievo != null && scheda.rifAllievo!.trim().isNotEmpty)
+            if (scheda.rifAllievo != null &&
+                scheda.rifAllievo!.trim().isNotEmpty)
               Text(scheda.rifAllievo!, style: theme.textTheme.bodySmall),
             Text(
               '${scheda.giorni.length} ${scheda.giorni.length == 1 ? "giorno" : "giorni"}',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),

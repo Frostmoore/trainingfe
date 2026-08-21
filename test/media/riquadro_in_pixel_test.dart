@@ -86,7 +86,11 @@ void main() {
 
       // scala = 2000/600 → 60 disegnati sono 200 originali.
       expect(r.left, closeTo(700, 0.5));
-      expect(r.width, closeTo(1000, 0.5), reason: 'la misura non doveva cambiare');
+      expect(
+        r.width,
+        closeTo(1000, 0.5),
+        reason: 'la misura non doveva cambiare',
+      );
     });
 
     test('🚨 ingrandendo si prende MENO immagine, non di più', () {

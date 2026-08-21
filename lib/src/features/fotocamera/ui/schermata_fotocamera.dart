@@ -1,4 +1,3 @@
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -180,7 +179,9 @@ class _SchermataFotocameraState extends State<SchermataFotocamera> {
        * silenzio**: nessun test lo direbbe, e lo scoprirebbe qualcuno con una
        * foto tagliata male.
        */
-      final ritagliata = await ritagliaQuadrato(byte: await scatto.readAsBytes());
+      final ritagliata = await ritagliaQuadrato(
+        byte: await scatto.readAsBytes(),
+      );
 
       if (!mounted) return;
 
@@ -305,7 +306,9 @@ class _SchermataFotocameraState extends State<SchermataFotocamera> {
             inCorso: _scattando,
           ),
           IconButton(
-            onPressed: acceso && _fotocamere.length > 1 ? _giraFotocamera : null,
+            onPressed: acceso && _fotocamere.length > 1
+                ? _giraFotocamera
+                : null,
             icon: const Icon(
               Icons.flip_camera_ios_outlined,
               color: Colors.white,
@@ -374,8 +377,11 @@ class _Guasto extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.no_photography_outlined,
-                color: Colors.white70, size: 48),
+            const Icon(
+              Icons.no_photography_outlined,
+              color: Colors.white70,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               messaggio,

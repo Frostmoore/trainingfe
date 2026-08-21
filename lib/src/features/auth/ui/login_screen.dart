@@ -21,6 +21,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+
   /// Accetta **email o nome utente**: si chiama così perché è quello che è.
   final _login = TextEditingController();
   final _password = TextEditingController();
@@ -71,7 +72,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // quali sono registrati in questa palestra, e il backend risponde già
         // allo stesso modo apposta.
         _errore = switch (tradotto) {
-          ValidationException() => 'Email, nome utente o password non corretti.',
+          ValidationException() =>
+            'Email, nome utente o password non corretti.',
           NetworkException() => tradotto.message,
           GymInactiveException() => tradotto.message,
           RateLimitedException() => 'Troppi tentativi. Aspetta un minuto.',
@@ -133,8 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
-                          onPressed: () =>
-                              setState(() => _nascondiPassword = !_nascondiPassword),
+                          onPressed: () => setState(
+                            () => _nascondiPassword = !_nascondiPassword,
+                          ),
                           icon: Icon(
                             _nascondiPassword
                                 ? Icons.visibility_outlined
@@ -194,7 +197,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: Gap.md),
                     OutlinedButton.icon(
                       onPressed: () async {
-                        await ref.read(brandingControllerProvider.notifier).forget();
+                        await ref
+                            .read(brandingControllerProvider.notifier)
+                            .forget();
                       },
                       icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                       label: Text(

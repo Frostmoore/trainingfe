@@ -52,7 +52,8 @@ class CartelleFinte extends PathProviderPlatform
   }
 
   @override
-  Future<String?> getApplicationDocumentsPath() async => _sotto('documenti').path;
+  Future<String?> getApplicationDocumentsPath() async =>
+      _sotto('documenti').path;
 
   @override
   Future<String?> getApplicationCachePath() async => _sotto('cache').path;

@@ -47,7 +47,8 @@ class Gettoni {
   /// 💡 Sotto il costo di una foto il numero va segnalato: chi ha 6 gettoni non
   /// è a zero, ma la prossima foto non la fa — e scoprirlo dopo aver inquadrato
   /// il piatto è la sequenza peggiore.
-  bool get quasiFiniti => !illimitata && disponibili != null && disponibili! < 10;
+  bool get quasiFiniti =>
+      !illimitata && disponibili != null && disponibili! < 10;
 }
 
 /// 🚨 **Non è `autoDispose`**, ed è voluto: il numero sta nell'intestazione di

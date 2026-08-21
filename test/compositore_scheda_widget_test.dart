@@ -18,13 +18,13 @@ import 'package:training_companion/src/features/training/ui/compositore_scheda.d
 void main() {
   Widget suUnoSchermoStretto(Widget figlio) => ProviderScope(
     child: MaterialApp(
-      home: Center(
-        child: SizedBox(width: 328, child: figlio),
-      ),
+      home: Center(child: SizedBox(width: 328, child: figlio)),
     ),
   );
 
-  testWidgets('una scheda nuova si apre senza sforare a 328 px', (tester) async {
+  testWidgets('una scheda nuova si apre senza sforare a 328 px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(656, 1400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.reset);
@@ -43,26 +43,29 @@ void main() {
     expect(find.text('Esercizio'), findsOneWidget);
   });
 
-  testWidgets('serie e ripetizioni stanno su due righe da due, non una da quattro', (tester) async {
-    tester.view.physicalSize = const Size(656, 1400);
-    tester.view.devicePixelRatio = 2.0;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'serie e ripetizioni stanno su due righe da due, non una da quattro',
+    (tester) async {
+      tester.view.physicalSize = const Size(656, 1400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(suUnoSchermoStretto(const CompositoreScheda()));
-    await tester.pump();
+      await tester.pumpWidget(suUnoSchermoStretto(const CompositoreScheda()));
+      await tester.pump();
 
-    /*
+      /*
      * ⚠️ `plan_editor_screen.dart` mette serie/ripetizioni/recupero/kg tutti in
      * fila: a questa larghezza quattro etichette si accavallano. Qui sono due
      * righe da due, e questo test è ciò che impedisce a qualcuno di
      * «compattarle» un giorno.
      */
-    expect(find.text('serie'), findsOneWidget);
-    expect(find.text('ripetizioni'), findsOneWidget);
-    expect(find.text('recupero (s)'), findsOneWidget);
-    expect(find.text('kg'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('serie'), findsOneWidget);
+      expect(find.text('ripetizioni'), findsOneWidget);
+      expect(find.text('recupero (s)'), findsOneWidget);
+      expect(find.text('kg'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('il Rif. Allievo dice che resta sul server', (tester) async {
     tester.view.physicalSize = const Size(656, 1400);
@@ -100,7 +103,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('il foglio delle alternative si apre e si ferma a tre', (tester) async {
+  testWidgets('il foglio delle alternative si apre e si ferma a tre', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(656, 1600);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.reset);

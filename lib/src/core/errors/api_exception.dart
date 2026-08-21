@@ -22,7 +22,8 @@ sealed class ApiException implements Exception {
 /// Il telefono non ha rete, o il server non risponde.
 class NetworkException extends ApiException {
   const NetworkException([
-    super.message = 'Non riesco a raggiungere il server. Controlla la connessione.',
+    super.message =
+        'Non riesco a raggiungere il server. Controlla la connessione.',
   ]);
 }
 
@@ -89,6 +90,25 @@ class RateLimitedException extends ApiException {
 }
 
 /// 5xx, o una risposta che non ha la forma attesa.
+/// 🆕 L'app è troppo vecchia per parlare con questo server — FASE 10.
+///
+/// ══ 🚨 PERCHÉ HA UNA CLASSE SUA ═══════════════════════════════════════════
+///
+/// Perché il `catch (Object)` che sta in mezza app la trasformerebbe in
+/// *«non ha funzionato, riprova»* — e la persona **riproverebbe per sempre**,
+/// perché riprovare non può funzionare: quello che serve è aggiornare.
+///
+/// ⚠️ E non è un `ForbiddenException`: quello è il cancello del consenso, che è
+/// un'altra cosa e ha un'altra schermata.
+class AppDaAggiornareException extends ApiException {
+  const AppDaAggiornareException(super.message, {this.store});
+
+  /// 💡 Lo manda **il server**: il giorno che l'identificativo del pacchetto
+  /// cambia, le copie già installate manderebbero la gente sulla scheda
+  /// sbagliata — e sono proprio quelle che non si possono aggiornare.
+  final String? store;
+}
+
 class ServerException extends ApiException {
   const ServerException([
     super.message = 'Il servizio ha avuto un problema. Riprova fra poco.',

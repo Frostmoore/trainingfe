@@ -88,7 +88,10 @@ class _ImportaPianoScreenState extends ConsumerState<ImportaPianoScreen> {
           ],
 
           if (_errore != null) ...[
-            Text(_errore!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _errore!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             const SizedBox(height: Gap.md),
           ],
 
@@ -100,7 +103,9 @@ class _ImportaPianoScreenState extends ConsumerState<ImportaPianoScreen> {
              */
             onPressed: _dichiarazione && !_inCorso ? _scegliEImporta : null,
             icon: const Icon(Icons.upload_file),
-            label: const Text('Scegli il PDF · ${ImportaPianoScreen.gettoni} gettoni'),
+            label: const Text(
+              'Scegli il PDF · ${ImportaPianoScreen.gettoni} gettoni',
+            ),
           ),
           const SizedBox(height: Gap.lg),
 
@@ -125,7 +130,9 @@ class _ImportaPianoScreenState extends ConsumerState<ImportaPianoScreen> {
     if (byte == null || !mounted) return;
 
     if (byte.length > ImportaPianoScreen.tetto) {
-      setState(() => _errore = 'Questo PDF supera i 10 MB: non riesco a caricarlo.');
+      setState(
+        () => _errore = 'Questo PDF supera i 10 MB: non riesco a caricarlo.',
+      );
 
       return;
     }

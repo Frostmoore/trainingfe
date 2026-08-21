@@ -67,7 +67,8 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
       final stato = ref.watch(pianoProvider(widget.pianoId!));
 
       return stato.when(
-        loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (e, _) => Scaffold(
           appBar: AppBar(),
           body: ErrorState(
@@ -88,7 +89,9 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
             });
           });
 
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         },
       );
     }
@@ -102,7 +105,11 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
           TextButton(
             onPressed: _salvando ? null : _salva,
             child: _salvando
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Salva'),
           ),
         ],
@@ -140,9 +147,9 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
     final piano = _piano!;
 
     if (piano.nome.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dai un nome al piano.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Dai un nome al piano.')));
 
       return;
     }
@@ -159,17 +166,17 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
         _salvando = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Piano salvato.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Piano salvato.')));
     } on Object catch (e) {
       if (!mounted) return;
 
       setState(() => _salvando = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ApiClient.unwrapError(e).message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(e).message)));
     }
   }
 }
@@ -207,7 +214,8 @@ class _TestaDelPiano extends StatelessWidget {
           initialValue: piano.rifAllievo,
           decoration: const InputDecoration(
             labelText: 'Rif. Allievo',
-            helperText: 'Un tuo promemoria. Meglio le iniziali: lo vedi solo tu, ma resta sul server.',
+            helperText:
+                'Un tuo promemoria. Meglio le iniziali: lo vedi solo tu, ma resta sul server.',
             helperMaxLines: 3,
           ),
           onChanged: (v) => piano.rifAllievo = v,
@@ -264,7 +272,9 @@ class _SceltaGiorno extends StatelessWidget {
           const SizedBox(width: Gap.sm),
           Text(
             '${piano.kcalMedie.round()} kcal/giorno',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
           ),
         ],
       ),
@@ -306,7 +316,9 @@ class _Giorno extends StatelessWidget {
             Text('Pasti', style: theme.textTheme.titleMedium),
             Text(
               '${giorno.kcal.round()} kcal',
-              style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
           ],
         ),
@@ -332,7 +344,9 @@ class _Giorno extends StatelessWidget {
           },
           icon: const Icon(Icons.add),
           label: const Text('Aggiungi pasto'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
         ),
       ],
     );
@@ -340,7 +354,11 @@ class _Giorno extends StatelessWidget {
 }
 
 class _Pasto extends ConsumerWidget {
-  const _Pasto({required this.pasto, required this.onCambio, required this.onElimina});
+  const _Pasto({
+    required this.pasto,
+    required this.onCambio,
+    required this.onElimina,
+  });
 
   final PastoDelPiano pasto;
   final VoidCallback onCambio;
@@ -370,9 +388,14 @@ class _Pasto extends ConsumerWidget {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _tipi.containsKey(pasto.pasto) ? pasto.pasto : 'lunch',
+                    initialValue: _tipi.containsKey(pasto.pasto)
+                        ? pasto.pasto
+                        : 'lunch',
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Pasto', isDense: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Pasto',
+                      isDense: true,
+                    ),
                     items: [
                       for (final e in _tipi.entries)
                         DropdownMenuItem(
@@ -380,7 +403,11 @@ class _Pasto extends ConsumerWidget {
                           // ⚠️ `overflow: ellipsis` e non un testo che sborda:
                           // è la lezione della tendina del profilo, misurata a
                           // 328 px.
-                          child: Text(e.value, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            e.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                     ],
                     onChanged: (v) {
@@ -433,7 +460,9 @@ class _Pasto extends ConsumerWidget {
               alignment: Alignment.centerRight,
               child: Text(
                 '${pasto.kcal.round()} kcal',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
             ),
           ],
@@ -472,7 +501,11 @@ class _BottoneStimaState extends ConsumerState<_BottoneStima> {
     return TextButton.icon(
       onPressed: _inCorso ? null : _chiedi,
       icon: _inCorso
-          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           : const Icon(Icons.auto_awesome_outlined, size: 18),
       label: const Text('Stima'),
     );
@@ -500,9 +533,9 @@ class _BottoneStimaState extends ConsumerState<_BottoneStima> {
     } on Object catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ApiClient.unwrapError(e).message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(e).message)));
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
@@ -540,7 +573,10 @@ class _ChiediAlimentoState extends State<_ChiediAlimento> {
         onSubmitted: (v) => Navigator.of(context).pop(v),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Annulla')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annulla'),
+        ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
           child: const Text('Calcola'),
@@ -577,7 +613,10 @@ class _Alimento extends StatelessWidget {
                 child: TextFormField(
                   key: ValueKey('d-${alimento.hashCode}'),
                   initialValue: alimento.descrizione,
-                  decoration: const InputDecoration(labelText: 'Alimento', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Alimento',
+                    isDense: true,
+                  ),
                   onChanged: (v) {
                     alimento.descrizione = v;
                     // 🚨 Toccare un campo riporta l'origine a «a mano»: è così
@@ -595,7 +634,10 @@ class _Alimento extends StatelessWidget {
                   key: ValueKey('k-${alimento.hashCode}'),
                   initialValue: alimento.kcal?.round().toString(),
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'kcal', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'kcal',
+                    isDense: true,
+                  ),
                   onChanged: (v) {
                     alimento.kcal = double.tryParse(v);
                     alimento.origineValori = 'manual';
@@ -615,7 +657,9 @@ class _Alimento extends StatelessWidget {
               padding: const EdgeInsets.only(left: Gap.xs),
               child: Text(
                 'valori proposti dall\'AI',
-                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
             ),
         ],

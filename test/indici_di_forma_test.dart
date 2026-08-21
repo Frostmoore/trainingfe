@@ -33,7 +33,8 @@ void main() {
       expect(
         salendo,
         greaterThan(scendendo),
-        reason: 'Un allenamento ieri conta più dello stesso di una settimana fa.',
+        reason:
+            'Un allenamento ieri conta più dello stesso di una settimana fa.',
       );
     });
 
@@ -114,9 +115,16 @@ void main() {
     /// ⚠️ I giorni di riposo **contano come zero**, non si saltano. Saltandoli,
     /// il carico acuto sembrerebbe sempre pieno e l'indice non scenderebbe mai.
     test('i giorni di riposo abbassano il carico, non spariscono', () {
-      final conRiposo = IndiciDiForma.stanchezza(
-        [...giorni(21, 400), 400, 0, 0, 0, 0, 0, 0],
-      );
+      final conRiposo = IndiciDiForma.stanchezza([
+        ...giorni(21, 400),
+        400,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      ]);
       final senzaRiposo = IndiciDiForma.stanchezza(giorni(28, 400));
 
       expect(conRiposo.valore, lessThan(senzaRiposo.valore!));
@@ -317,7 +325,16 @@ void main() {
     test('media e deviazione, e sotto i due valori non esistono', () {
       expect(IndiciDiForma.mediaEDeviazione([10]), isNull);
 
-      final (media, dev) = IndiciDiForma.mediaEDeviazione([2, 4, 4, 4, 5, 5, 7, 9])!;
+      final (media, dev) = IndiciDiForma.mediaEDeviazione([
+        2,
+        4,
+        4,
+        4,
+        5,
+        5,
+        7,
+        9,
+      ])!;
 
       expect(media, closeTo(5, 0.001));
       expect(dev, closeTo(2, 0.001));
@@ -329,8 +346,8 @@ void main() {
 /// chi i dati li ha letti. Qui si simula quello che fa `formaProvider`.
 extension on Indice {
   Indice _come(int giorni) => Indice(
-        valore: valore,
-        giorniDiStoria: giorni,
-        giorniPerEsserePieno: giorniPerEsserePieno,
-      );
+    valore: valore,
+    giorniDiStoria: giorni,
+    giorniPerEsserePieno: giorniPerEsserePieno,
+  );
 }

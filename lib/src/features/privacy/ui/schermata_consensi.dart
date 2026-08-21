@@ -109,7 +109,10 @@ class SchermataConsensi extends ConsumerWidget {
              * una riga e con un titolo che non parla di dati.
              */
             const Divider(height: Gap.xl),
-            Text('Come funziona il consiglio', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Come funziona il consiglio',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: Gap.sm),
 
             _InterruttoreConsiglio(acceso: dati.consiglioAutomatico),
@@ -167,9 +170,9 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
       await ref.read(cambiaConsensoProvider)(widget.chiave, dato);
     } on Object catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Non ha funzionato: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Non ha funzionato: $e')));
       }
     } finally {
       if (mounted) setState(() => _inCorso = false);
@@ -199,7 +202,7 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
                 ),
                 Switch(
                   value: concesso && widget.abilitato,
-                  onChanged: (_inCorso || ! widget.abilitato) ? null : _cambia,
+                  onChanged: (_inCorso || !widget.abilitato) ? null : _cambia,
                 ),
               ],
             ),
@@ -208,7 +211,7 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
 
             // 💡 Se è spento perché dipende da un altro, si dice **perché**:
             // un interruttore grigio senza spiegazione sembra un guasto.
-            if (! widget.abilitato) ...[
+            if (!widget.abilitato) ...[
               const SizedBox(height: Gap.sm),
               Text(
                 'Per attivarlo serve prima il consenso qui sopra.',
@@ -251,7 +254,8 @@ class _InterruttoreConsiglio extends ConsumerStatefulWidget {
       _InterruttoreConsiglioState();
 }
 
-class _InterruttoreConsiglioState extends ConsumerState<_InterruttoreConsiglio> {
+class _InterruttoreConsiglioState
+    extends ConsumerState<_InterruttoreConsiglio> {
   bool _inCorso = false;
 
   Future<void> _cambia(bool acceso) async {
@@ -261,9 +265,9 @@ class _InterruttoreConsiglioState extends ConsumerState<_InterruttoreConsiglio> 
       await ref.read(cambiaConsensoProvider)('consiglio_automatico', acceso);
     } on Object catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Non ha funzionato: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Non ha funzionato: $e')));
       }
     } finally {
       if (mounted) setState(() => _inCorso = false);
@@ -285,7 +289,9 @@ class _InterruttoreConsiglioState extends ConsumerState<_InterruttoreConsiglio> 
                 Expanded(
                   child: Text(
                     'Aggiorna il consiglio da solo',
-                    style: testo.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: testo.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 Switch(

@@ -21,7 +21,16 @@ void main() {
       'items':
           voci ??
           const [
-            {'name': 'Cotoletta di pollo', 'qty': 200, 'unit': 'g', 'grams': 200, 'kcal': 330, 'protein': 48, 'carbs': 0, 'fat': 15},
+            {
+              'name': 'Cotoletta di pollo',
+              'qty': 200,
+              'unit': 'g',
+              'grams': 200,
+              'kcal': 330,
+              'protein': 48,
+              'carbs': 0,
+              'fat': 15,
+            },
           ],
       'confidence': confidenza,
       'note': nota,
@@ -45,7 +54,10 @@ void main() {
       dentroUnFoglio(stima(nota: 'Non è stato specificato se sono panate.')),
     );
 
-    expect(find.text('Non è stato specificato se sono panate.'), findsOneWidget);
+    expect(
+      find.text('Non è stato specificato se sono panate.'),
+      findsOneWidget,
+    );
   });
 
   /// ⚠️ Senza nota non deve comparire un riquadro vuoto: un avviso senza
@@ -56,7 +68,9 @@ void main() {
     expect(find.byIcon(Icons.info_outline), findsNothing);
   });
 
-  testWidgets('il totale e il livello di confidenza sono in cima', (tester) async {
+  testWidgets('il totale e il livello di confidenza sono in cima', (
+    tester,
+  ) async {
     await tester.pumpWidget(dentroUnFoglio(stima(confidenza: 0.5)));
 
     // ⚠️ La stringa intera, non «330 kcal»: quello compare anche nel
@@ -104,7 +118,9 @@ void main() {
   /// *«Quando modifico i grammi, i calcoli li deve fare in tempo reale mentre
   /// scrivo.»* Da 200 a 250 g: 330 kcal diventano 412,5 e 48 g di proteine
   /// diventano 60, **mentre si digita**.
-  testWidgets('correggere la quantità riscala calorie e macro subito', (tester) async {
+  testWidgets('correggere la quantità riscala calorie e macro subito', (
+    tester,
+  ) async {
     await tester.pumpWidget(dentroUnFoglio(stima()));
 
     await tester.enterText(find.widgetWithText(TextField, '200'), '250');
@@ -134,7 +150,11 @@ void main() {
       findsNothing,
       reason: 'le proteine erano state corrette a mano: non si riscalano',
     );
-    expect(find.widgetWithText(TextField, '18.8'), findsOneWidget, reason: 'i grassi sì');
+    expect(
+      find.widgetWithText(TextField, '18.8'),
+      findsOneWidget,
+      reason: 'i grassi sì',
+    );
   });
 
   testWidgets('con più voci i dettagli partono chiusi', (tester) async {
@@ -142,8 +162,22 @@ void main() {
       dentroUnFoglio(
         stima(
           voci: const [
-            {'name': 'Pasta', 'grams': 80, 'kcal': 280, 'protein': 10, 'carbs': 56, 'fat': 1},
-            {'name': 'Sugo', 'grams': 100, 'kcal': 60, 'protein': 2, 'carbs': 8, 'fat': 3},
+            {
+              'name': 'Pasta',
+              'grams': 80,
+              'kcal': 280,
+              'protein': 10,
+              'carbs': 56,
+              'fat': 1,
+            },
+            {
+              'name': 'Sugo',
+              'grams': 100,
+              'kcal': 60,
+              'protein': 2,
+              'carbs': 8,
+              'fat': 3,
+            },
           ],
         ),
       ),
@@ -167,14 +201,31 @@ void main() {
       dentroUnFoglio(
         stima(
           voci: const [
-            {'name': 'Focaccia', 'grams': 100, 'kcal': 297, 'protein': 8, 'carbs': 36, 'fat': 14},
-            {'name': 'Coppiette', 'grams': 100, 'kcal': 588, 'protein': 56, 'carbs': 4, 'fat': 40},
+            {
+              'name': 'Focaccia',
+              'grams': 100,
+              'kcal': 297,
+              'protein': 8,
+              'carbs': 36,
+              'fat': 14,
+            },
+            {
+              'name': 'Coppiette',
+              'grams': 100,
+              'kcal': 588,
+              'protein': 56,
+              'carbs': 4,
+              'fat': 40,
+            },
           ],
         ),
       ),
     );
 
-    expect(find.textContaining('più proteine, carboidrati e grassi di quanto'), findsOneWidget);
+    expect(
+      find.textContaining('più proteine, carboidrati e grassi di quanto'),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.scale_outlined), findsOneWidget);
 
     // La riga sbagliata è aperta, quella sana no.
@@ -185,7 +236,9 @@ void main() {
 
   /// 🚨 **«Precisa» restituisce la frase**, che è il modo in cui chi ha aperto
   /// il foglio sa di dover riaprire il campo di testo invece di chiudere tutto.
-  testWidgets('«Precisa» torna indietro con la frase originale', (tester) async {
+  testWidgets('«Precisa» torna indietro con la frase originale', (
+    tester,
+  ) async {
     String? uscita = 'non chiamato';
 
     await tester.pumpWidget(
@@ -255,7 +308,14 @@ void main() {
       dentroUnFoglio(
         stima(
           voci: const [
-            {'name': 'Coppiette', 'grams': 100, 'kcal': 588, 'protein': 56, 'carbs': 4, 'fat': 40},
+            {
+              'name': 'Coppiette',
+              'grams': 100,
+              'kcal': 588,
+              'protein': 56,
+              'carbs': 4,
+              'fat': 40,
+            },
           ],
         ),
       ),
@@ -265,15 +325,29 @@ void main() {
       find.widgetWithText(FilledButton, 'Aggiungi al diario'),
     );
 
-    expect(bottone().onPressed, isNull, reason: 'spento finché i numeri sono impossibili');
-    expect(find.textContaining('non si può aggiungere al diario'), findsOneWidget);
+    expect(
+      bottone().onPressed,
+      isNull,
+      reason: 'spento finché i numeri sono impossibili',
+    );
+    expect(
+      find.textContaining('non si può aggiungere al diario'),
+      findsOneWidget,
+    );
 
     // Si corregge il grasso: 56 + 4 + 20 = 80 g su 100. Adesso è possibile.
     await tester.enterText(find.widgetWithText(TextField, '40'), '20');
     await tester.pump();
 
-    expect(bottone().onPressed, isNotNull, reason: 'corretto il numero, si riaccende');
-    expect(find.textContaining('non si può aggiungere al diario'), findsNothing);
+    expect(
+      bottone().onPressed,
+      isNotNull,
+      reason: 'corretto il numero, si riaccende',
+    );
+    expect(
+      find.textContaining('non si può aggiungere al diario'),
+      findsNothing,
+    );
   });
 
   /// ⚠️ Una stima vuota non si può confermare: il pulsante resta spento e si

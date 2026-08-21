@@ -35,21 +35,25 @@ class AlimentoDelPiano {
     List<AlimentoDelPiano>? alternative,
   }) : alternative = alternative ?? [];
 
-  factory AlimentoDelPiano.fromJson(Map<String, dynamic> json) => AlimentoDelPiano(
-    id: (json['id'] as num?)?.toInt(),
-    descrizione: json['description']?.toString() ?? '',
-    qty: (json['qty'] as num?)?.toDouble(),
-    unita: json['unit']?.toString(),
-    grammi: (json['grams'] as num?)?.toDouble(),
-    kcal: (json['kcal'] as num?)?.toDouble(),
-    proteine: (json['protein'] as num?)?.toDouble(),
-    carboidrati: (json['carbs'] as num?)?.toDouble(),
-    grassi: (json['fat'] as num?)?.toDouble(),
-    origineValori: json['origine_valori']?.toString() ?? 'manual',
-    alternative: ((json['alternatives'] as List?) ?? const [])
-        .map((e) => AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()))
-        .toList(),
-  );
+  factory AlimentoDelPiano.fromJson(Map<String, dynamic> json) =>
+      AlimentoDelPiano(
+        id: (json['id'] as num?)?.toInt(),
+        descrizione: json['description']?.toString() ?? '',
+        qty: (json['qty'] as num?)?.toDouble(),
+        unita: json['unit']?.toString(),
+        grammi: (json['grams'] as num?)?.toDouble(),
+        kcal: (json['kcal'] as num?)?.toDouble(),
+        proteine: (json['protein'] as num?)?.toDouble(),
+        carboidrati: (json['carbs'] as num?)?.toDouble(),
+        grassi: (json['fat'] as num?)?.toDouble(),
+        origineValori: json['origine_valori']?.toString() ?? 'manual',
+        alternative: ((json['alternatives'] as List?) ?? const [])
+            .map(
+              (e) =>
+                  AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()),
+            )
+            .toList(),
+      );
 
   final int? id;
   String descrizione;
@@ -105,7 +109,10 @@ class AlimentoDelPiano {
     if (grassi != null) 'fat': grassi,
     'origine_valori': origineValori,
     if (alternative.isNotEmpty)
-      'alternatives': alternative.where((a) => !a.vuoto).map((a) => a.toJson()).toList(),
+      'alternatives': alternative
+          .where((a) => !a.vuoto)
+          .map((a) => a.toJson())
+          .toList(),
   };
 }
 
@@ -118,8 +125,8 @@ class PastoDelPiano {
     this.note,
     List<AlimentoDelPiano>? alimenti,
     List<PastoDelPiano>? alternative,
-  })  : alimenti = alimenti ?? [],
-        alternative = alternative ?? [];
+  }) : alimenti = alimenti ?? [],
+       alternative = alternative ?? [];
 
   factory PastoDelPiano.fromJson(Map<String, dynamic> json) => PastoDelPiano(
     id: (json['id'] as num?)?.toInt(),
@@ -127,7 +134,9 @@ class PastoDelPiano {
     titolo: json['title']?.toString(),
     note: json['notes']?.toString(),
     alimenti: ((json['items'] as List?) ?? const [])
-        .map((e) => AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) => AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(),
     alternative: ((json['alternatives'] as List?) ?? const [])
         .map((e) => PastoDelPiano.fromJson((e as Map).cast<String, dynamic>()))
@@ -167,8 +176,8 @@ class GiornoDelPiano {
     this.note,
     List<PastoDelPiano>? pasti,
     List<GiornoDelPiano>? alternative,
-  })  : pasti = pasti ?? [],
-        alternative = alternative ?? [];
+  }) : pasti = pasti ?? [],
+       alternative = alternative ?? [];
 
   factory GiornoDelPiano.fromJson(Map<String, dynamic> json) => GiornoDelPiano(
     id: (json['id'] as num?)?.toInt(),
@@ -215,20 +224,24 @@ class PianoAlimentare {
     List<GiornoDelPiano>? giorni,
   }) : giorni = giorni ?? [];
 
-  factory PianoAlimentare.fromJson(Map<String, dynamic> json) => PianoAlimentare(
-    id: (json['id'] as num?)?.toInt(),
-    origineId: json['origine_id']?.toString(),
-    nome: json['name']?.toString() ?? '',
-    tipo: TipoPiano.da(json['tipo']?.toString()),
-    // 🚨 La chiave **manca del tutto** se chi guarda non è chi l'ha scritto
-    // (R4): `null` qui vuol dire «non è mio», non «non l'ha compilato».
-    rifAllievo: json['rif_allievo']?.toString(),
-    note: json['notes']?.toString(),
-    targetKcal: (json['target_kcal'] as num?)?.toInt(),
-    giorni: ((json['days'] as List?) ?? const [])
-        .map((e) => GiornoDelPiano.fromJson((e as Map).cast<String, dynamic>()))
-        .toList(),
-  );
+  factory PianoAlimentare.fromJson(Map<String, dynamic> json) =>
+      PianoAlimentare(
+        id: (json['id'] as num?)?.toInt(),
+        origineId: json['origine_id']?.toString(),
+        nome: json['name']?.toString() ?? '',
+        tipo: TipoPiano.da(json['tipo']?.toString()),
+        // 🚨 La chiave **manca del tutto** se chi guarda non è chi l'ha scritto
+        // (R4): `null` qui vuol dire «non è mio», non «non l'ha compilato».
+        rifAllievo: json['rif_allievo']?.toString(),
+        note: json['notes']?.toString(),
+        targetKcal: (json['target_kcal'] as num?)?.toInt(),
+        giorni: ((json['days'] as List?) ?? const [])
+            .map(
+              (e) =>
+                  GiornoDelPiano.fromJson((e as Map).cast<String, dynamic>()),
+            )
+            .toList(),
+      );
 
   final int? id;
 

@@ -38,7 +38,13 @@ enum MetricaSalute {
   /// sposta **quanto qualcuno può mangiare**.
   calorieAttive('active_kcal', 'Calorie attive', 'kcal', 0.0, 5000.0);
 
-  const MetricaSalute(this.codice, this.etichetta, this.unita, this._min, this._max);
+  const MetricaSalute(
+    this.codice,
+    this.etichetta,
+    this.unita,
+    this._min,
+    this._max,
+  );
 
   final String codice;
   final String etichetta;

@@ -68,12 +68,42 @@ class PasswordStrength {
   /// davvero in un modulo di iscrizione in italiano, perché il messaggio arrivi
   /// **mentre** sta digitando invece che dopo il rifiuto.
   static const _comuni = {
-    'password', 'passw0rd', 'qwerty', 'qwertyuiop', 'asdfgh', '123456',
-    '12345678', '123456789', '1234567890', 'iloveyou', 'admin', 'welcome',
-    'letmein', 'monkey', 'dragon', 'abc123', 'ciaociao', 'password1',
-    'juventus', 'milan', 'inter', 'napoli', 'roma', 'ferrari', 'amoremio',
-    'ti amo', 'tiamo', 'gennaio', 'estate', 'palestra', 'allenamento',
-    'francesco', 'alessandro', 'giuseppe', 'antonio', 'giovanni',
+    'password',
+    'passw0rd',
+    'qwerty',
+    'qwertyuiop',
+    'asdfgh',
+    '123456',
+    '12345678',
+    '123456789',
+    '1234567890',
+    'iloveyou',
+    'admin',
+    'welcome',
+    'letmein',
+    'monkey',
+    'dragon',
+    'abc123',
+    'ciaociao',
+    'password1',
+    'juventus',
+    'milan',
+    'inter',
+    'napoli',
+    'roma',
+    'ferrari',
+    'amoremio',
+    'ti amo',
+    'tiamo',
+    'gennaio',
+    'estate',
+    'palestra',
+    'allenamento',
+    'francesco',
+    'alessandro',
+    'giuseppe',
+    'antonio',
+    'giovanni',
   };
 
   /// Valuta la password.
@@ -130,7 +160,12 @@ class PasswordStrength {
     final haNumeri = RegExp(r'[0-9]').hasMatch(password);
     final haSimboli = RegExp(r'[^a-zA-Z0-9]').hasMatch(password);
 
-    final classi = [haMinuscole, haMaiuscole, haNumeri, haSimboli].where((c) => c).length;
+    final classi = [
+      haMinuscole,
+      haMaiuscole,
+      haNumeri,
+      haSimboli,
+    ].where((c) => c).length;
 
     // 🚨 Il bonus varietà **non si applica sotto la lunghezza minima**. `Ab1c`
     // ha tre classi su quattro e resterebbe a «debole» invece che a zero: una
@@ -177,7 +212,12 @@ class PasswordStrength {
       );
     }
 
-    final personale = _datoPersonale(minuscola, nome: nome, email: email, username: username);
+    final personale = _datoPersonale(
+      minuscola,
+      nome: nome,
+      email: email,
+      username: username,
+    );
 
     if (personale != null) {
       punti = punti.clamp(0, 1);

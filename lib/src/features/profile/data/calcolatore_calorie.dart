@@ -2,7 +2,11 @@ import 'dart:math' as math;
 
 /// I grammi dei tre macronutrienti.
 class Macro {
-  const Macro({required this.proteineG, required this.carboidratiG, required this.grassiG});
+  const Macro({
+    required this.proteineG,
+    required this.carboidratiG,
+    required this.grassiG,
+  });
 
   final int proteineG;
   final int carboidratiG;
@@ -157,7 +161,8 @@ class CalcolatoreCalorie {
   }
 
   double tdee(double bmr, String attivitaScelta) {
-    final fattore = attivita[attivitaScelta.toLowerCase()] ?? attivita['sedentary']!;
+    final fattore =
+        attivita[attivitaScelta.toLowerCase()] ?? attivita['sedentary']!;
 
     return _arrotonda(bmr * fattore, 1);
   }
@@ -177,19 +182,19 @@ class CalcolatoreCalorie {
   /// I grammi di ciascun macro per un dato target.
   Macro macro(int kcal, String obiettivo) {
     final split =
-        ripartizioneMacro[normalizzaObiettivo(obiettivo)] ?? ripartizioneMacro['maintain']!;
+        ripartizioneMacro[normalizzaObiettivo(obiettivo)] ??
+        ripartizioneMacro['maintain']!;
 
     return Macro(
-      proteineG: (kcal * split['protein']! / _kcalPerGrammo['protein']!).round(),
+      proteineG: (kcal * split['protein']! / _kcalPerGrammo['protein']!)
+          .round(),
       carboidratiG: (kcal * split['carbs']! / _kcalPerGrammo['carbs']!).round(),
       grassiG: (kcal * split['fat']! / _kcalPerGrammo['fat']!).round(),
     );
   }
 
-  int kcalDaMacro(double proteineG, double carboidratiG, double grassiG) => (proteineG * 4 +
-          carboidratiG * 4 +
-          grassiG * 9)
-      .round();
+  int kcalDaMacro(double proteineG, double carboidratiG, double grassiG) =>
+      (proteineG * 4 + carboidratiG * 4 + grassiG * 9).round();
 
   /// L'età compiuta a partire dalla data di nascita.
   ///
@@ -200,7 +205,8 @@ class CalcolatoreCalorie {
     final oggi = adesso ?? DateTime.now();
     var anni = oggi.year - nascita.year;
 
-    final compiuti = (oggi.month > nascita.month) ||
+    final compiuti =
+        (oggi.month > nascita.month) ||
         (oggi.month == nascita.month && oggi.day >= nascita.day);
 
     if (!compiuti) anni--;

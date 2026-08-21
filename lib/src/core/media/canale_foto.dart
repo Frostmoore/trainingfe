@@ -81,7 +81,10 @@ class CanaleFoto {
 
     final relativo = await archivio.salva(tipo: tipo, byte: byte);
 
-    return FotoScelta(relativo: relativo, file: await archivio.fileDi(relativo));
+    return FotoScelta(
+      relativo: relativo,
+      file: await archivio.fileDi(relativo),
+    );
   }
 }
 

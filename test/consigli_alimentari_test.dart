@@ -35,10 +35,7 @@ void main() {
       expect(letto.tipo, TipoPiano.piano);
       expect(letto.toJson()['tipo'], 'piano');
 
-      expect(
-        PianoAlimentare(nome: 'Spesa').toJson()['tipo'],
-        'consigli',
-      );
+      expect(PianoAlimentare(nome: 'Spesa').toJson()['tipo'], 'consigli');
     });
 
     test('una risposta senza il campo resta consigli', () {
@@ -76,7 +73,10 @@ void main() {
        * i due devono disegnarsi in modo diverso — perché sono due cose diverse,
        * e una delle due è un atto riservato.
        */
-      const busta = ContenutoConsigliAlimentari({'name': 'X', 'foods': ['Pane']});
+      const busta = ContenutoConsigliAlimentari({
+        'name': 'X',
+        'foods': ['Pane'],
+      });
 
       final dentro = json.decode(busta.perLaBusta()) as Map<String, dynamic>;
 

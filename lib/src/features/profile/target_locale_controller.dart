@@ -129,7 +129,9 @@ class EsitoTarget {
 ///
 /// ⚠️ Il peso arriva dall'**archivio locale**, non dal server: dopo S5 il server
 /// non ce l'ha, e chiederglielo restituirebbe sempre niente.
-final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((ref) async {
+final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
+  ref,
+) async {
   /*
    * 🚨 **TUTTE le `ref.watch` PRIMA del primo `await`.**
    *

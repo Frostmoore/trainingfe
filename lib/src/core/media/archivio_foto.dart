@@ -66,7 +66,8 @@ class ArchivioFoto {
      * restano diversi comunque. Non serve che sopravviva al riavvio dell'app —
      * lo distingue gia' l'ora.
      */
-    final nome = '${DateTime.now().microsecondsSinceEpoch}-${_progressivo++}.jpg';
+    final nome =
+        '${DateTime.now().microsecondsSinceEpoch}-${_progressivo++}.jpg';
 
     await File(p.join(cartella.path, nome)).writeAsBytes(byte);
 

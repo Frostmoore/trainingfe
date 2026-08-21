@@ -68,7 +68,12 @@ class TodayHeader extends ConsumerWidget {
 
     final obiettivo = TargetDelGiorno.scegli(
       dalServer: n.haTarget ? n.targetKcal : null,
-      locale: ref.watch(targetLocaleProvider).valueOrNull?.target?.kcal.toDouble(),
+      locale: ref
+          .watch(targetLocaleProvider)
+          .valueOrNull
+          ?.target
+          ?.kcal
+          .toDouble(),
       bruciate: bruciate.kcal,
     );
 
@@ -141,7 +146,8 @@ class TodayHeader extends ConsumerWidget {
                            * chi sei e che giorno è, che è ciò per cui questa
                            * intestazione esiste.
                            */
-                          if (palestra.name != null && palestra.name!.isNotEmpty)
+                          if (palestra.name != null &&
+                              palestra.name!.isNotEmpty)
                             Text(
                               palestra.name!,
                               style: theme.textTheme.titleMedium?.copyWith(
@@ -320,7 +326,11 @@ class _Logo extends StatelessWidget {
                   fontSize: 20,
                 ),
               )
-            : const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 22),
+            : const Icon(
+                Icons.fitness_center_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
       );
     }
 
@@ -388,10 +398,12 @@ class _SaldoGettoni extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return ref.watch(gettoniProvider).maybeWhen(
-      orElse: () => const SizedBox.shrink(),
-      data: (g) {
-        /*
+    return ref
+        .watch(gettoniProvider)
+        .maybeWhen(
+          orElse: () => const SizedBox.shrink(),
+          data: (g) {
+            /*
          * 🚨 Il contatore c'è **sempre**: illimitato, pieno o a zero.
          *
          * ⚠️ Nasconderlo a chi non ha gettoni comprati sembrava gentile e non
@@ -400,50 +412,55 @@ class _SaldoGettoni extends ConsumerWidget {
          *
          * 💡 `null` = illimitata: si disegna un simbolo, mai uno zero.
          */
-        final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
+            final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
 
-        return Tooltip(
-          message: g.illimitata
-              ? 'Gettoni AI illimitati'
-              // 💡 «comprati», non «questo mese»: sono i soli che questo numero
-              // conta, e chiamarli come non sono farebbe cercare una ricarica
-              // che non è mancata.
-              : 'Ti restano ${g.disponibili ?? 0} gettoni AI comprati',
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.toll_outlined,
-                  size: 16,
-                  // 💡 Sotto il costo di una foto cambia colore: chi ha 6
-                  // gettoni non è a zero, ma la prossima foto non la fa — e
-                  // scoprirlo dopo aver inquadrato il piatto è la sequenza
-                  // peggiore.
-                  color: g.quasiFiniti
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.onPrimaryContainer,
+            return Tooltip(
+              message: g.illimitata
+                  ? 'Gettoni AI illimitati'
+                  // 💡 «comprati», non «questo mese»: sono i soli che questo numero
+                  // conta, e chiamarli come non sono farebbe cercare una ricarica
+                  // che non è mancata.
+                  : 'Ti restano ${g.disponibili ?? 0} gettoni AI comprati',
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.sm,
+                  vertical: 4,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  testo,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: g.quasiFiniti
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onPrimaryContainer,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onPrimaryContainer.withValues(
+                    alpha: 0.10,
                   ),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              ],
-            ),
-          ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.toll_outlined,
+                      size: 16,
+                      // 💡 Sotto il costo di una foto cambia colore: chi ha 6
+                      // gettoni non è a zero, ma la prossima foto non la fa — e
+                      // scoprirlo dopo aver inquadrato il piatto è la sequenza
+                      // peggiore.
+                      color: g.quasiFiniti
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      testo,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: g.quasiFiniti
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
-      },
-    );
   }
 }

@@ -51,96 +51,119 @@ void main() {
     ]);
   }
 
-  group('la media di riferimento — da the_vitals_carry_the_persons_own_baseline', () {
-    /// 🚨 Il valore assoluto non si può giudicare: 40 ms sono ottimi per
-    /// qualcuno e pessimi per un altro. Conta lo scostamento dalla media **di
-    /// questa persona**, ed è per questo che viaggia insieme al valore.
-    test('la lettura porta con sé la media e lo scostamento', () async {
-      for (var g = 1; g <= 7; g++) {
-        await misura(MetricaSalute.hrv, 50, giorniFa: g);
-      }
+  group(
+    'la media di riferimento — da the_vitals_carry_the_persons_own_baseline',
+    () {
+      /// 🚨 Il valore assoluto non si può giudicare: 40 ms sono ottimi per
+      /// qualcuno e pessimi per un altro. Conta lo scostamento dalla media **di
+      /// questa persona**, ed è per questo che viaggia insieme al valore.
+      test('la lettura porta con sé la media e lo scostamento', () async {
+        for (var g = 1; g <= 7; g++) {
+          await misura(MetricaSalute.hrv, 50, giorniFa: g);
+        }
 
-      await misura(MetricaSalute.hrv, 40, giorniFa: 0);
+        await misura(MetricaSalute.hrv, 40, giorniFa: 0);
 
-      final lettura = await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv);
+        final lettura = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.hrv,
+        );
 
-      expect(lettura!.valore, 40.0);
-      expect(lettura.media, 50.0);
-      expect(lettura.scostamentoPct, -20.0);
-    });
+        expect(lettura!.valore, 40.0);
+        expect(lettura.media, 50.0);
+        expect(lettura.scostamentoPct, -20.0);
+      });
 
-    /// ⚠️ Da `todays_reading_is_not_part_of_its_own_baseline`.
-    ///
-    /// Con la misura di oggi dentro, la media sarebbe 40 e lo scostamento
-    /// -50%. Senza, la media è 60 e lo scostamento è -66,7%: è nel giorno
-    /// storto che serve vedere lo scostamento intero.
-    test('la misura di oggi non entra nella propria media', () async {
-      await misura(MetricaSalute.hrv, 60, giorniFa: 1);
-      await misura(MetricaSalute.hrv, 20, giorniFa: 0);
+      /// ⚠️ Da `todays_reading_is_not_part_of_its_own_baseline`.
+      ///
+      /// Con la misura di oggi dentro, la media sarebbe 40 e lo scostamento
+      /// -50%. Senza, la media è 60 e lo scostamento è -66,7%: è nel giorno
+      /// storto che serve vedere lo scostamento intero.
+      test('la misura di oggi non entra nella propria media', () async {
+        await misura(MetricaSalute.hrv, 60, giorniFa: 1);
+        await misura(MetricaSalute.hrv, 20, giorniFa: 0);
 
-      final lettura = await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv);
+        final lettura = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.hrv,
+        );
 
-      expect(lettura!.media, 60.0);
-      expect(lettura.scostamentoPct, -66.7);
-    });
+        expect(lettura!.media, 60.0);
+        expect(lettura.scostamentoPct, -66.7);
+      });
 
-    /// Da `without_any_watch_data_the_vitals_say_so_instead_of_showing_zeros`.
-    test('senza nessuna lettura si torna null, non uno zero', () async {
-      expect(await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv), isNull);
-      expect(await MediaDiRiferimento.tutte(archivio), isEmpty);
-    });
+      /// Da `without_any_watch_data_the_vitals_say_so_instead_of_showing_zeros`.
+      test('senza nessuna lettura si torna null, non uno zero', () async {
+        expect(
+          await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv),
+          isNull,
+        );
+        expect(await MediaDiRiferimento.tutte(archivio), isEmpty);
+      });
 
-    test('con una lettura sola non c\'è media, e non si inventa', () async {
-      await misura(MetricaSalute.hrv, 48, giorniFa: 0);
+      test('con una lettura sola non c\'è media, e non si inventa', () async {
+        await misura(MetricaSalute.hrv, 48, giorniFa: 0);
 
-      final lettura = await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv);
+        final lettura = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.hrv,
+        );
 
-      expect(lettura!.valore, 48.0);
-      // 🚨 `null`, non «uguale a sé stessa»: una media di un solo valore
-      // darebbe sempre scostamento zero, cioè «tutto normale» a chiunque.
-      expect(lettura.media, isNull);
-      expect(lettura.scostamentoPct, isNull);
-      expect(lettura.anomalo, isFalse);
-    });
+        expect(lettura!.valore, 48.0);
+        // 🚨 `null`, non «uguale a sé stessa»: una media di un solo valore
+        // darebbe sempre scostamento zero, cioè «tutto normale» a chiunque.
+        expect(lettura.media, isNull);
+        expect(lettura.scostamentoPct, isNull);
+        expect(lettura.anomalo, isFalse);
+      });
 
-    /// ⚠️ La finestra parte dal giorno **dell'ultima misura**, non da oggi:
-    /// con una misura vecchia, «gli ultimi sette da adesso» darebbe vuoto e la
-    /// media sparirebbe senza motivo.
-    test('una misura vecchia conserva la sua media', () async {
-      for (var g = 4; g <= 9; g++) {
-        await misura(MetricaSalute.hrv, 50, giorniFa: g);
-      }
+      /// ⚠️ La finestra parte dal giorno **dell'ultima misura**, non da oggi:
+      /// con una misura vecchia, «gli ultimi sette da adesso» darebbe vuoto e la
+      /// media sparirebbe senza motivo.
+      test('una misura vecchia conserva la sua media', () async {
+        for (var g = 4; g <= 9; g++) {
+          await misura(MetricaSalute.hrv, 50, giorniFa: g);
+        }
 
-      await misura(MetricaSalute.hrv, 44, giorniFa: 3);
+        await misura(MetricaSalute.hrv, 44, giorniFa: 3);
 
-      final lettura = await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv);
+        final lettura = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.hrv,
+        );
 
-      expect(lettura!.valore, 44.0);
-      expect(lettura.media, 50.0);
-    });
+        expect(lettura!.valore, 44.0);
+        expect(lettura.media, 50.0);
+      });
 
-    /// 🚨 Un HRV **sopra** la media è una buona notizia, non un allarme.
-    /// Un battito a riposo sopra la media invece sì.
-    test('l\'anomalia guarda la direzione giusta per ogni metrica', () async {
-      for (var g = 1; g <= 7; g++) {
-        await misura(MetricaSalute.hrv, 50, giorniFa: g);
-        await misura(MetricaSalute.battitoARiposo, 50, giorniFa: g);
-      }
+      /// 🚨 Un HRV **sopra** la media è una buona notizia, non un allarme.
+      /// Un battito a riposo sopra la media invece sì.
+      test('l\'anomalia guarda la direzione giusta per ogni metrica', () async {
+        for (var g = 1; g <= 7; g++) {
+          await misura(MetricaSalute.hrv, 50, giorniFa: g);
+          await misura(MetricaSalute.battitoARiposo, 50, giorniFa: g);
+        }
 
-      await misura(MetricaSalute.hrv, 70, giorniFa: 0);
-      await misura(MetricaSalute.battitoARiposo, 70, giorniFa: 0);
+        await misura(MetricaSalute.hrv, 70, giorniFa: 0);
+        await misura(MetricaSalute.battitoARiposo, 70, giorniFa: 0);
 
-      final hrv = await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.hrv);
-      final battito =
-          await MediaDiRiferimento.perMetrica(archivio, MetricaSalute.battitoARiposo);
+        final hrv = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.hrv,
+        );
+        final battito = await MediaDiRiferimento.perMetrica(
+          archivio,
+          MetricaSalute.battitoARiposo,
+        );
 
-      expect(hrv!.scostamentoPct, 40.0);
-      expect(hrv.anomalo, isFalse, reason: 'un HRV alto è un buon segno');
+        expect(hrv!.scostamentoPct, 40.0);
+        expect(hrv.anomalo, isFalse, reason: 'un HRV alto è un buon segno');
 
-      expect(battito!.scostamentoPct, 40.0);
-      expect(battito.anomalo, isTrue, reason: 'un battito a riposo alto no');
-    });
-  });
+        expect(battito!.scostamentoPct, 40.0);
+        expect(battito.anomalo, isTrue, reason: 'un battito a riposo alto no');
+      });
+    },
+  );
 
   group('il giudizio della notte — da HealthApiTest', () {
     /// 🚨 **Il complessivo è il PEGGIORE dei quattro, non la media.**
@@ -153,7 +176,11 @@ void main() {
 
       // 8 ore: 7h40 leggero + 20 min REM, niente profondo.
       await dormi(FaseSonno.leggero, da: sera, minuti: 460);
-      await dormi(FaseSonno.rem, da: sera.add(const Duration(minutes: 460)), minuti: 20);
+      await dormi(
+        FaseSonno.rem,
+        da: sera.add(const Duration(minutes: 460)),
+        minuti: 20,
+      );
 
       final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
@@ -170,9 +197,21 @@ void main() {
 
       // 8 ore: 60% leggero, 20% profondo, 20% REM, 15 min svegli.
       await dormi(FaseSonno.leggero, da: sera, minuti: 288);
-      await dormi(FaseSonno.profondo, da: sera.add(const Duration(minutes: 288)), minuti: 96);
-      await dormi(FaseSonno.rem, da: sera.add(const Duration(minutes: 384)), minuti: 96);
-      await dormi(FaseSonno.sveglio, da: sera.add(const Duration(minutes: 480)), minuti: 15);
+      await dormi(
+        FaseSonno.profondo,
+        da: sera.add(const Duration(minutes: 288)),
+        minuti: 96,
+      );
+      await dormi(
+        FaseSonno.rem,
+        da: sera.add(const Duration(minutes: 384)),
+        minuti: 96,
+      );
+      await dormi(
+        FaseSonno.sveglio,
+        da: sera.add(const Duration(minutes: 480)),
+        minuti: 15,
+      );
 
       final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
@@ -228,7 +267,10 @@ void main() {
         minuti: 100,
       );
 
-      expect(await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)), isNull);
+      expect(
+        await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)),
+        isNull,
+      );
     });
 
     /// ⚠️ I minuti da svegli **non** contano come sonno, anche se il sensore li
@@ -238,7 +280,11 @@ void main() {
       final sera = DateTime(2026, 8, 10, 23);
 
       await dormi(FaseSonno.leggero, da: sera, minuti: 300);
-      await dormi(FaseSonno.sveglio, da: sera.add(const Duration(minutes: 300)), minuti: 90);
+      await dormi(
+        FaseSonno.sveglio,
+        da: sera.add(const Duration(minutes: 300)),
+        minuti: 90,
+      );
 
       final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
@@ -250,8 +296,16 @@ void main() {
 
     /// Da `the_night_belongs_to_the_previous_day`.
     test('la notte a cavallo di mezzanotte resta una notte sola', () async {
-      await dormi(FaseSonno.leggero, da: DateTime(2026, 8, 10, 23, 30), minuti: 60);
-      await dormi(FaseSonno.profondo, da: DateTime(2026, 8, 11, 0, 30), minuti: 120);
+      await dormi(
+        FaseSonno.leggero,
+        da: DateTime(2026, 8, 10, 23, 30),
+        minuti: 60,
+      );
+      await dormi(
+        FaseSonno.profondo,
+        da: DateTime(2026, 8, 11, 0, 30),
+        minuti: 120,
+      );
 
       final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 
@@ -261,11 +315,18 @@ void main() {
     });
 
     test('senza campioni si torna null, non una notte di zeri', () async {
-      expect(await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)), isNull);
+      expect(
+        await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11)),
+        isNull,
+      );
     });
 
     test('la durata si legge in ore e minuti', () async {
-      await dormi(FaseSonno.leggero, da: DateTime(2026, 8, 10, 23), minuti: 425);
+      await dormi(
+        FaseSonno.leggero,
+        da: DateTime(2026, 8, 10, 23),
+        minuti: 425,
+      );
 
       final g = await AnalizzatoreSonno.notte(archivio, DateTime(2026, 8, 11));
 

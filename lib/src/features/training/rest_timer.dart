@@ -217,21 +217,23 @@ class RestTimer extends ChangeNotifier {
   ///
   /// Serve sia alla programmata sia a quella immediata: due copie divergono, e
   /// la copia sbagliata è quella che resta muta.
-  static const AndroidNotificationDetails _dettagliFine = AndroidNotificationDetails(
-    _canaleFine,
-    'Fine del recupero',
-    channelDescription: 'Suona e vibra quando finisce il recupero fra le serie.',
-    importance: Importance.max,
-    priority: Priority.max,
-    category: AndroidNotificationCategory.alarm,
-    playSound: true,
-    enableVibration: true,
-    // Una pulsazione lunga: fra le serie il telefono è appoggiato, e un
-    // singolo colpo breve non si sente.
-    vibrationPattern: null,
-    fullScreenIntent: false,
-    audioAttributesUsage: AudioAttributesUsage.alarm,
-  );
+  static const AndroidNotificationDetails _dettagliFine =
+      AndroidNotificationDetails(
+        _canaleFine,
+        'Fine del recupero',
+        channelDescription:
+            'Suona e vibra quando finisce il recupero fra le serie.',
+        importance: Importance.max,
+        priority: Priority.max,
+        category: AndroidNotificationCategory.alarm,
+        playSound: true,
+        enableVibration: true,
+        // Una pulsazione lunga: fra le serie il telefono è appoggiato, e un
+        // singolo colpo breve non si sente.
+        vibrationPattern: null,
+        fullScreenIntent: false,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+      );
 
   Future<void> _programmaAvviso(int fraSecondi) async {
     if (!notificheAttive || fraSecondi <= 0) return;
@@ -360,7 +362,9 @@ class RestTimer extends ChangeNotifier {
   Future<bool> _puoProgrammareEsatte() async {
     try {
       final android = _notifiche
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
 
       if (android == null) return true;
 

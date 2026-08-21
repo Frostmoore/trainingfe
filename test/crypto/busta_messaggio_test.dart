@@ -91,8 +91,10 @@ void main() {
     final riga = busta.perApi();
 
     expect(riga['body'], isNot(contains('spalla')));
-    expect(utf8.decode(base64Decode(riga['body'] as String), allowMalformed: true),
-        isNot(contains('spalla')));
+    expect(
+      utf8.decode(base64Decode(riga['body'] as String), allowMalformed: true),
+      isNot(contains('spalla')),
+    );
 
     expect(
       () => cifratura.decifra(

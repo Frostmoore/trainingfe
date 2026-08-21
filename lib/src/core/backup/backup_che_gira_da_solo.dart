@@ -41,7 +41,7 @@ import 'backup_controller.dart';
 /// la persona a cui il backup serve di più.
 class BackupCheGiraDaSolo {
   BackupCheGiraDaSolo(this._ref, {DateTime Function()? adesso})
-      : _adesso = adesso ?? DateTime.now;
+    : _adesso = adesso ?? DateTime.now;
 
   final Ref _ref;
   final DateTime Function() _adesso;
@@ -81,7 +81,10 @@ class BackupCheGiraDaSolo {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      await prefs.setInt(chiaveUltimoErrore, DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+        chiaveUltimoErrore,
+        DateTime.now().millisecondsSinceEpoch,
+      );
     } on Object {
       // 💡 Se non si riesce a scrivere una preferenza, il problema non e' il
       // backup: si lascia perdere in silenzio.
@@ -134,10 +137,7 @@ class BackupCheGiraDaSolo {
 
       return true;
     } on Object catch (errore, stack) {
-      debugPrintStack(
-        label: 'BackupCheGiraDaSolo: $errore',
-        stackTrace: stack,
-      );
+      debugPrintStack(label: 'BackupCheGiraDaSolo: $errore', stackTrace: stack);
 
       /*
        * 🚨 **Il fallimento si SCRIVE**, non si limita a non scrivere il
@@ -151,7 +151,10 @@ class BackupCheGiraDaSolo {
       try {
         final prefs = await SharedPreferences.getInstance();
 
-        await prefs.setInt(chiaveUltimoErrore, _adesso().millisecondsSinceEpoch);
+        await prefs.setInt(
+          chiaveUltimoErrore,
+          _adesso().millisecondsSinceEpoch,
+        );
       } on Object {
         // 💡 Se non si riesce nemmeno a scrivere una preferenza, il problema
         // non e' il backup: si lascia perdere in silenzio.

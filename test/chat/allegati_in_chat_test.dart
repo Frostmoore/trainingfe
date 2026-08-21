@@ -29,10 +29,7 @@ void main() {
       final cifrata = await cripto.cifra(chiave: chiave, contenuto: chiara);
 
       expect(cifrata, isNot(equals(chiara)));
-      expect(
-        await cripto.decifra(chiave: chiave, contenuto: cifrata),
-        chiara,
-      );
+      expect(await cripto.decifra(chiave: chiave, contenuto: cifrata), chiara);
     });
 
     test('🚨 ogni foto ha una chiave DIVERSA', () async {
@@ -89,10 +86,7 @@ void main() {
       final riletta = cripto.chiaveDa(base64Decode(scritta));
       addTearDown(riletta.dispose);
 
-      expect(
-        await cripto.decifra(chiave: riletta, contenuto: cifrata),
-        chiara,
-      );
+      expect(await cripto.decifra(chiave: riletta, contenuto: cifrata), chiara);
     });
   });
 
@@ -205,20 +199,25 @@ void main() {
       );
 
       expect(
-        const ContenutoDocumento(token: 't', chiaveBase64: 'k', nome: 'x.pdf')
-            .pesoLeggibile,
+        const ContenutoDocumento(
+          token: 't',
+          chiaveBase64: 'k',
+          nome: 'x.pdf',
+        ).pesoLeggibile,
         isNull,
       );
     });
 
     test('senza nome ne inventa uno invece di restare vuota', () {
-      final letta = ContenutoMessaggio.daChiaro(
-        json.encode({
-          't': 'document',
-          'v': 2,
-          'data': {'token': 'a', 'k': 'b'},
-        }),
-      ) as ContenutoDocumento;
+      final letta =
+          ContenutoMessaggio.daChiaro(
+                json.encode({
+                  't': 'document',
+                  'v': 2,
+                  'data': {'token': 'a', 'k': 'b'},
+                }),
+              )
+              as ContenutoDocumento;
 
       expect(letta.nome, 'documento.pdf');
       expect(letta.completa, isTrue);
@@ -226,8 +225,11 @@ void main() {
 
     test('⚠️ una busta a metà si dichiara incompleta', () {
       expect(
-        const ContenutoDocumento(token: '', chiaveBase64: 'k', nome: 'x.pdf')
-            .completa,
+        const ContenutoDocumento(
+          token: '',
+          chiaveBase64: 'k',
+          nome: 'x.pdf',
+        ).completa,
         isFalse,
       );
     });

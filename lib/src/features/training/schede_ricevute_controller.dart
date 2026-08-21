@@ -18,24 +18,27 @@ import '../health/health_controller.dart';
 /// Si incrementa per far rileggere l'elenco dopo un'importazione.
 final revisioneSchedeProvider = StateProvider<int>((ref) => 0);
 
-final schedeRicevuteProvider =
-    FutureProvider.autoDispose<List<SchedaRicevuta>>((ref) async {
-      ref.watch(revisioneSchedeProvider);
+final schedeRicevuteProvider = FutureProvider.autoDispose<List<SchedaRicevuta>>(
+  (ref) async {
+    ref.watch(revisioneSchedeProvider);
 
-      return ref.watch(archivioSaluteProvider).schede();
-    });
+    return ref.watch(archivioSaluteProvider).schede();
+  },
+);
 
 /// Se una scheda arrivata in un certo messaggio è già stata aggiunta.
 ///
 /// 💡 Serve alla chat per dire *«aggiunta»* invece di *«aggiungi»*: senza,
 /// l'unico modo di sapere se si è già premuto il pulsante è provare — e
 /// riprovare su un messaggio vecchio è la cosa più naturale del mondo.
-final schedaGiaSalvataProvider =
-    FutureProvider.autoDispose.family<bool, int>((ref, messaggioId) async {
-      ref.watch(revisioneSchedeProvider);
+final schedaGiaSalvataProvider = FutureProvider.autoDispose.family<bool, int>((
+  ref,
+  messaggioId,
+) async {
+  ref.watch(revisioneSchedeProvider);
 
-      return ref.watch(archivioSaluteProvider).schedaGiaSalvata(messaggioId);
-    });
+  return ref.watch(archivioSaluteProvider).schedaGiaSalvata(messaggioId);
+});
 
 class AzioniSchede {
   const AzioniSchede(this._ref);
@@ -80,12 +83,13 @@ final azioniSchedeProvider = Provider<AzioniSchede>(AzioniSchede.new);
 /// 🚨 **Vivono sul telefono**, come le schede e per la stessa ragione: da un
 /// piano si capisce molto di chi lo segue, e il legame fra la persona e il piano
 /// sul server non ci arriva mai (D4).
-final pianiRicevutiProvider =
-    FutureProvider.autoDispose<List<PianoRicevuto>>((ref) async {
-      ref.watch(revisioneSchedeProvider);
+final pianiRicevutiProvider = FutureProvider.autoDispose<List<PianoRicevuto>>((
+  ref,
+) async {
+  ref.watch(revisioneSchedeProvider);
 
-      return ref.watch(archivioSaluteProvider).piani();
-    });
+  return ref.watch(archivioSaluteProvider).piani();
+});
 
 class AzioniPianiRicevuti {
   const AzioniPianiRicevuti(this._ref);
@@ -104,8 +108,9 @@ class AzioniPianiRicevuti {
   }
 }
 
-final azioniPianiRicevutiProvider =
-    Provider<AzioniPianiRicevuti>(AzioniPianiRicevuti.new);
+final azioniPianiRicevutiProvider = Provider<AzioniPianiRicevuti>(
+  AzioniPianiRicevuti.new,
+);
 
 /// I modelli della palestra — solo per chi allena.
 ///

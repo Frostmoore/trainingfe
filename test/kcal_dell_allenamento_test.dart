@@ -25,38 +25,37 @@ void main() {
     required HealthValue valore,
     required DateTime da,
     required DateTime a,
-  }) =>
-      HealthDataPoint(
-        uuid: '$tipo-$da',
-        value: valore,
-        type: tipo,
-        unit: HealthDataUnit.NO_UNIT,
-        dateFrom: da,
-        dateTo: a,
-        sourcePlatform: HealthPlatformType.googleHealthConnect,
-        sourceDeviceId: 'orologio',
-        sourceId: 'com.huami.watch.hmwatchmanager',
-        sourceName: 'com.huami.watch.hmwatchmanager',
-      );
+  }) => HealthDataPoint(
+    uuid: '$tipo-$da',
+    value: valore,
+    type: tipo,
+    unit: HealthDataUnit.NO_UNIT,
+    dateFrom: da,
+    dateTo: a,
+    sourcePlatform: HealthPlatformType.googleHealthConnect,
+    sourceDeviceId: 'orologio',
+    sourceId: 'com.huami.watch.hmwatchmanager',
+    sourceName: 'com.huami.watch.hmwatchmanager',
+  );
 
   HealthDataPoint allenamento({int? totali}) => punto(
-        tipo: HealthDataType.WORKOUT,
-        valore: WorkoutHealthValue(
-          workoutActivityType: HealthWorkoutActivityType.STRENGTH_TRAINING,
-          totalEnergyBurned: totali,
-          totalDistance: 211,
-          totalSteps: 662,
-        ),
-        da: inizio,
-        a: fine,
-      );
+    tipo: HealthDataType.WORKOUT,
+    valore: WorkoutHealthValue(
+      workoutActivityType: HealthWorkoutActivityType.STRENGTH_TRAINING,
+      totalEnergyBurned: totali,
+      totalDistance: 211,
+      totalSteps: 662,
+    ),
+    da: inizio,
+    a: fine,
+  );
 
   HealthDataPoint attive(num kcal, {DateTime? da, DateTime? a}) => punto(
-        tipo: HealthDataType.ACTIVE_ENERGY_BURNED,
-        valore: NumericHealthValue(numericValue: kcal),
-        da: da ?? inizio,
-        a: a ?? fine,
-      );
+    tipo: HealthDataType.ACTIVE_ENERGY_BURNED,
+    valore: NumericHealthValue(numericValue: kcal),
+    da: da ?? inizio,
+    a: a ?? fine,
+  );
 
   /// ══ Il caso vero, con i numeri veri del 19/08 ═══════════════════════════
   test('vince il campione ATTIVO, non il totale con il basale dentro', () {
@@ -65,7 +64,11 @@ void main() {
       attive(680),
     ]);
 
-    expect(letti.single.kcal, 680, reason: 'È il numero che mostra l\'app dell\'orologio.');
+    expect(
+      letti.single.kcal,
+      680,
+      reason: 'È il numero che mostra l\'app dell\'orologio.',
+    );
   });
 
   /// 🚨 Nessun ripiego su `totalEnergyBurned`: sarebbe rimettere dentro il

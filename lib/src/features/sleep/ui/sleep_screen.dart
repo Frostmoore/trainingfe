@@ -57,11 +57,12 @@ class _Notte extends StatelessWidget {
 
   /// Il colore del giudizio: verde non serve, l'assenza di allarme è già
   /// l'informazione.
-  static Color? _coloreGiudizio(BuildContext context, String? giudizio) => switch (giudizio) {
-    'bad' => Theme.of(context).colorScheme.error,
-    'warn' => const Color(0xFFE0B341),
-    _ => null,
-  };
+  static Color? _coloreGiudizio(BuildContext context, String? giudizio) =>
+      switch (giudizio) {
+        'bad' => Theme.of(context).colorScheme.error,
+        'warn' => const Color(0xFFE0B341),
+        _ => null,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -73,22 +74,22 @@ class _Notte extends StatelessWidget {
         Row(
           children: [
             IconButton(
-              onPressed: () => ref.read(sleepNightProvider.notifier).state = notte.night.subtract(
-                const Duration(days: 1),
-              ),
+              onPressed: () => ref.read(sleepNightProvider.notifier).state =
+                  notte.night.subtract(const Duration(days: 1)),
               icon: const Icon(Icons.chevron_left_rounded),
             ),
             Expanded(
               child: Text(
                 DateFormat('EEEE d MMMM', 'it').format(notte.night),
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             IconButton(
-              onPressed: () => ref.read(sleepNightProvider.notifier).state = notte.night.add(
-                const Duration(days: 1),
-              ),
+              onPressed: () => ref.read(sleepNightProvider.notifier).state =
+                  notte.night.add(const Duration(days: 1)),
               icon: const Icon(Icons.chevron_right_rounded),
             ),
           ],
@@ -129,7 +130,11 @@ class _Notte extends StatelessWidget {
           percentuale: notte.remPct,
           giudizio: notte.ratings['rem_pct'],
         ),
-        _Fase(colore: SleepScreen._colori[2]!, nome: 'Leggero', minuti: notte.lightMinutes),
+        _Fase(
+          colore: SleepScreen._colori[2]!,
+          nome: 'Leggero',
+          minuti: notte.lightMinutes,
+        ),
         _Fase(
           colore: SleepScreen._colori[1]!,
           nome: 'Sveglio',
@@ -186,7 +191,8 @@ class _IpnogrammaState extends State<_Ipnogramma> {
   DateTime _istanteA(double frazione) => _notte.from.add(
     Duration(
       seconds:
-          (_notte.to.difference(_notte.from).inSeconds * frazione.clamp(0.0, 1.0))
+          (_notte.to.difference(_notte.from).inSeconds *
+                  frazione.clamp(0.0, 1.0))
               .round(),
     ),
   );
@@ -350,7 +356,10 @@ class _Fase extends StatelessWidget {
       leading: Container(
         width: 12,
         height: 12,
-        decoration: BoxDecoration(color: colore, borderRadius: BorderRadius.circular(3)),
+        decoration: BoxDecoration(
+          color: colore,
+          borderRadius: BorderRadius.circular(3),
+        ),
       ),
       title: Text(nome),
       trailing: Text(

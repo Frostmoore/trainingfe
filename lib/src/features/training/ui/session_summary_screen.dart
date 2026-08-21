@@ -110,7 +110,9 @@ class _Corpo extends ConsumerWidget {
             _Numero(valore: '${gruppi.length}', etichetta: 'esercizi'),
             _Numero(valore: '${sessione.sets.length}', etichetta: 'serie'),
             _Numero(
-              valore: _volume == 0 ? '—' : NumberFormat.compact(locale: 'it').format(_volume),
+              valore: _volume == 0
+                  ? '—'
+                  : NumberFormat.compact(locale: 'it').format(_volume),
               etichetta: 'kg totali',
             ),
           ],
@@ -149,12 +151,17 @@ class _Corpo extends ConsumerWidget {
                 children: [
                   Text(
                     voce.key,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: Gap.xs),
                   Text(
                     voce.value
-                        .map((s) => '${s.reps ?? '—'}${s.weight == null ? '' : ' × ${_kg(s.weight!)} kg'}')
+                        .map(
+                          (s) =>
+                              '${s.reps ?? '—'}${s.weight == null ? '' : ' × ${_kg(s.weight!)} kg'}',
+                        )
                         .join('   ·   '),
                     style: theme.textTheme.bodyMedium,
                   ),
@@ -246,7 +253,10 @@ class _CalorieState extends ConsumerState<_Calorie> {
           children: [
             Row(
               children: [
-                Icon(Icons.local_fire_department_rounded, color: theme.colorScheme.tertiary),
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: Gap.sm),
                 Text('Calorie bruciate', style: theme.textTheme.titleMedium),
               ],
@@ -375,7 +385,11 @@ class _FotoState extends ConsumerState<_Foto> {
     try {
       await ref
           .read(progressActionsProvider)
-          .upload(context: context, daFotocamera: daFotocamera, workoutSessionId: widget.sessione.id);
+          .upload(
+            context: context,
+            daFotocamera: daFotocamera,
+            workoutSessionId: widget.sessione.id,
+          );
 
       // 🚨 Si ricarica la sessione, non solo la galleria: la foto va mostrata
       // **qui**, e senza questo resterebbe una schermata che dice «caricata»
@@ -399,7 +413,9 @@ class _FotoState extends ConsumerState<_Foto> {
     final theme = Theme.of(context);
     // 🚨 Le foto vengono dal TELEFONO — S5.3. `sessione.photos` arrivava dal
     // server e da S5 non c'e' piu'.
-    final foto = ref.watch(fotoSessioneProvider(widget.sessione.id)).valueOrNull ?? const [];
+    final foto =
+        ref.watch(fotoSessioneProvider(widget.sessione.id)).valueOrNull ??
+        const [];
 
     return Card(
       child: Padding(
@@ -409,7 +425,10 @@ class _FotoState extends ConsumerState<_Foto> {
           children: [
             Row(
               children: [
-                Icon(Icons.photo_camera_outlined, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.photo_camera_outlined,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: Gap.sm),
                 Text('Foto', style: theme.textTheme.titleMedium),
               ],
@@ -422,7 +441,8 @@ class _FotoState extends ConsumerState<_Foto> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: foto.length,
-                  separatorBuilder: (context, i) => const SizedBox(width: Gap.sm),
+                  separatorBuilder: (context, i) =>
+                      const SizedBox(width: Gap.sm),
                   itemBuilder: (context, i) => ClipRRect(
                     borderRadius: BorderRadius.circular(Gap.radiusSm),
                     // 💡 File locale da S5.3: niente token, niente 401 in
@@ -481,7 +501,9 @@ class _Numero extends StatelessWidget {
         children: [
           Text(
             valore,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
             maxLines: 1,
           ),
           Text(

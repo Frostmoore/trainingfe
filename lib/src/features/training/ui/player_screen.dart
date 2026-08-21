@@ -94,7 +94,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       // 1. Gli esercizi previsti dalla scheda, con dentro ciò che è già stato
       //    registrato: riaprendo una sessione interrotta si ritrova tutto.
       if (sessione.planId != null) {
-        final piano = await ref.read(planDetailProvider(sessione.planId!).future);
+        final piano = await ref.read(
+          planDetailProvider(sessione.planId!).future,
+        );
 
         for (final riga in piano.exercises) {
           righe.add(
@@ -154,7 +156,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   /// Fonde le serie già registrate con gli esercizi previsti.
-  void _riempiConIlGiaFatto(List<PlayerExercise> righe, WorkoutSession sessione) {
+  void _riempiConIlGiaFatto(
+    List<PlayerExercise> righe,
+    WorkoutSession sessione,
+  ) {
     final perEsercizio = <String, List<LoggedSet>>{};
 
     for (final serie in sessione.sets) {
@@ -259,17 +264,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void _avvisa(String messaggio) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(messaggio)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(messaggio)));
   }
 
   void _aggiungiEsercizio() {
     setState(() {
-      _esercizi.add(
-        PlayerExercise(
-          name: '',
-          rows: [PlayerSet(setNumber: 1)],
-        ),
-      );
+      _esercizi.add(PlayerExercise(name: '', rows: [PlayerSet(setNumber: 1)]));
       _modificato = true;
     });
   }
@@ -309,7 +311,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
     if (conferma != true || !mounted) return;
 
-
     // Se durante la seduta la scheda è cambiata, si chiede se salvarla — ma
     // **solo se è sua**: proporlo per la scheda del trainer prometterebbe una
     // cosa che il server rifiuterà con un 403.
@@ -321,7 +322,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Salvare le modifiche alla scheda?'),
-            content: const Text('Hai cambiato gli esercizi durante l\'allenamento.'),
+            content: const Text(
+              'Hai cambiato gli esercizi durante l\'allenamento.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -418,7 +421,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_planName ?? 'Sessione libera', style: theme.textTheme.titleMedium),
+            Text(
+              _planName ?? 'Sessione libera',
+              style: theme.textTheme.titleMedium,
+            ),
             Text(_durata, style: theme.textTheme.bodySmall),
           ],
         ),
@@ -434,7 +440,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           if (_errore != null)
             Padding(
               padding: const EdgeInsets.all(Gap.md),
-              child: Text(_errore!, style: TextStyle(color: theme.colorScheme.error)),
+              child: Text(
+                _errore!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             ),
           Expanded(
             child: ListView(
@@ -518,8 +527,12 @@ class _CardEsercizio extends StatefulWidget {
 
 class _CardEsercizioState extends State<_CardEsercizio> {
   late final _nome = TextEditingController(text: widget.esercizio.name);
-  late final _repsPreviste = TextEditingController(text: widget.esercizio.reps ?? '');
-  late final _recupero = TextEditingController(text: widget.esercizio.restSec.toString());
+  late final _repsPreviste = TextEditingController(
+    text: widget.esercizio.reps ?? '',
+  );
+  late final _recupero = TextEditingController(
+    text: widget.esercizio.restSec.toString(),
+  );
   late final _pesoObiettivo = TextEditingController(
     text: widget.esercizio.targetWeight == null
         ? ''
@@ -568,7 +581,9 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                       border: InputBorder.none,
                       isDense: true,
                     ),
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                     onChanged: (v) {
                       e.name = v;
                       // Cambiando nome l'esercizio non è più quello di prima:
@@ -587,8 +602,13 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                 // bastano. Doverli correggere dopo, dall'editor delle schede,
                 // vuol dire non correggerli mai.
                 IconButton(
-                  onPressed: () => setState(() => _apertoIlDettaglio = !_apertoIlDettaglio),
-                  icon: Icon(_apertoIlDettaglio ? Icons.expand_less_rounded : Icons.edit_outlined),
+                  onPressed: () =>
+                      setState(() => _apertoIlDettaglio = !_apertoIlDettaglio),
+                  icon: Icon(
+                    _apertoIlDettaglio
+                        ? Icons.expand_less_rounded
+                        : Icons.edit_outlined,
+                  ),
                   tooltip: 'Parametri',
                 ),
                 IconButton(
@@ -599,7 +619,8 @@ class _CardEsercizioState extends State<_CardEsercizio> {
               ],
             ),
 
-            if (!_apertoIlDettaglio && (e.reps != null || e.targetWeight != null))
+            if (!_apertoIlDettaglio &&
+                (e.reps != null || e.targetWeight != null))
               Text(
                 [
                   if (e.reps != null) '${e.rows.length} × ${e.reps}',
@@ -651,14 +672,18 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                     Expanded(
                       child: TextField(
                         controller: _pesoObiettivo,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Peso',
                           suffixText: 'kg',
                           isDense: true,
                         ),
                         onChanged: (v) {
-                          e.targetWeight = double.tryParse(v.trim().replaceAll(',', '.'));
+                          e.targetWeight = double.tryParse(
+                            v.trim().replaceAll(',', '.'),
+                          );
                           widget.onCambiato();
                         },
                       ),
@@ -701,7 +726,9 @@ class _RigaSerie extends StatefulWidget {
 }
 
 class _RigaSerieState extends State<_RigaSerie> {
-  late final _reps = TextEditingController(text: widget.riga.reps?.toString() ?? '');
+  late final _reps = TextEditingController(
+    text: widget.riga.reps?.toString() ?? '',
+  );
   late final _peso = TextEditingController(
     text: widget.riga.weight == null ? '' : _pulito(widget.riga.weight!),
   );
@@ -754,14 +781,20 @@ class _RigaSerieState extends State<_RigaSerie> {
         children: [
           SizedBox(
             width: 28,
-            child: Text('${riga.setNumber}', style: Theme.of(context).textTheme.bodySmall),
+            child: Text(
+              '${riga.setNumber}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
           Expanded(
             child: TextField(
               controller: _reps,
               focusNode: _fuocoReps,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'rip.', isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'rip.',
+                isDense: true,
+              ),
               onChanged: (v) => riga.reps = int.tryParse(v),
             ),
           ),
@@ -770,9 +803,12 @@ class _RigaSerieState extends State<_RigaSerie> {
             child: TextField(
               controller: _peso,
               focusNode: _fuocoPeso,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(labelText: 'kg', isDense: true),
-              onChanged: (v) => riga.weight = double.tryParse(v.replaceAll(',', '.')),
+              onChanged: (v) =>
+                  riga.weight = double.tryParse(v.replaceAll(',', '.')),
             ),
           ),
           const SizedBox(width: Gap.sm),
@@ -782,12 +818,18 @@ class _RigaSerieState extends State<_RigaSerie> {
           IconButton.filled(
             onPressed: widget.onOk,
             isSelected: riga.done,
-            icon: Icon(riga.done ? Icons.check_rounded : Icons.done_outline_rounded),
+            icon: Icon(
+              riga.done ? Icons.check_rounded : Icons.done_outline_rounded,
+            ),
             style: riga.done
                 ? null
                 : IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant,
                   ),
           ),
         ],

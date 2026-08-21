@@ -87,7 +87,10 @@ void main() {
       final contenuto = await backup.importaV2(file: file, codice: codice);
 
       expect(contenuto.archivio, equals(prima));
-      expect(contenuto.chiaveMaestra, equals(Uint8List.fromList(List.filled(32, 7))));
+      expect(
+        contenuto.chiaveMaestra,
+        equals(Uint8List.fromList(List.filled(32, 7))),
+      );
 
       await db.close();
     });
@@ -198,7 +201,13 @@ void main() {
         throwsA(isA<CodiceDiRipristinoSbagliato>()),
       );
 
-      expect((await backup.importaV2(file: file, codice: codice)).chiaveMaestra.first, 3);
+      expect(
+        (await backup.importaV2(
+          file: file,
+          codice: codice,
+        )).chiaveMaestra.first,
+        3,
+      );
     });
 
     test('un segreto sbagliato non apre niente', () async {
@@ -212,7 +221,11 @@ void main() {
       );
 
       await expectLater(
-        backup.importaV2(file: file, password: 'sbagliata', codice: 'AAAA-BBBB'),
+        backup.importaV2(
+          file: file,
+          password: 'sbagliata',
+          codice: 'AAAA-BBBB',
+        ),
         throwsA(isA<CodiceDiRipristinoSbagliato>()),
       );
     });
@@ -408,29 +421,32 @@ void main() {
       );
     });
 
-    test('un file SENZA quell\x27involucro lo dice invece di fallire a caso', () async {
-      // 💡 È il caso di un file manuale: si apre col codice, non con la chiave.
-      final backup = FileDiBackup(sodium);
+    test(
+      'un file SENZA quell\x27involucro lo dice invece di fallire a caso',
+      () async {
+        // 💡 È il caso di un file manuale: si apre col codice, non con la chiave.
+        final backup = FileDiBackup(sodium);
 
-      final file = await backup.esportaV2(
-        chiaveMaestra: Uint8List.fromList(List.filled(32, 13)),
-        archivio: const {},
-        codice: backup.generaCodice(),
-      );
-
-      await expectLater(
-        backup.importaConChiaveMaestra(
-          file: file,
+        final file = await backup.esportaV2(
           chiaveMaestra: Uint8List.fromList(List.filled(32, 13)),
-        ),
-        throwsA(
-          isA<CodiceDiRipristinoSbagliato>().having(
-            (e) => e.motivo,
-            'motivo',
-            contains('codice'),
+          archivio: const {},
+          codice: backup.generaCodice(),
+        );
+
+        await expectLater(
+          backup.importaConChiaveMaestra(
+            file: file,
+            chiaveMaestra: Uint8List.fromList(List.filled(32, 13)),
           ),
-        ),
-      );
-    });
+          throwsA(
+            isA<CodiceDiRipristinoSbagliato>().having(
+              (e) => e.motivo,
+              'motivo',
+              contains('codice'),
+            ),
+          ),
+        );
+      },
+    );
   });
 }

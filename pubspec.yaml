@@ -2,7 +2,25 @@ name: training_companion
 description: "App degli iscritti di Training Companion"
 publish_to: 'none'
 
-version: 1.0.0+1
+# 🚨 **La versione è vera, dal 21/08/2026** — FASE 10.1.
+#
+# Fino a oggi era `1.0.0+1` e non l'aveva mai toccata nessuno: **ogni APK mai
+# costruito si dichiarava «1.0.0» con `versionCode` 1**.
+#
+# ⚠️ Due guai, e il secondo è immediato:
+#   1. il cancello della versione (FASE 10) confronta numeri che erano tutti
+#      uguali, quindi non poteva funzionare;
+#   2. il Play Store **rifiuta** un caricamento con un `versionCode` già usato.
+#      Alla prima pubblicazione passa; alla seconda no.
+#
+# 💡 Il numero dopo il `+` non si sceglie a mano: è `major*10000 +
+# minor*100 + patch`. Così cresce da solo insieme alla versione, e non può
+# succedere che due versioni diverse abbiano lo stesso `versionCode` — che è
+# l'errore che il Play Store non perdona.
+#
+# ⚠️ Lo controlla `strumenti/costruisci-apk.ps1`: una versione ferma a `1.0.0`
+# o un `versionCode` che non torna **fermano la build**.
+version: 7.45.0+74500
 
 environment:
   sdk: ^3.12.2
@@ -145,6 +163,8 @@ dependencies:
   file_picker: 10.0.0
   open_filex: ^4.7.0
   workmanager: ^0.10.9
+  package_info_plus: ^9.0.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

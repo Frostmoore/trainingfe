@@ -40,11 +40,8 @@ void main() {
     return f;
   }
 
-  SincronizzaFoto sincronizzatore(CloudFinto cloud) => SincronizzaFoto(
-    cloud: cloud,
-    backup: backup,
-    chiaveMaestra: maestra,
-  );
+  SincronizzaFoto sincronizzatore(CloudFinto cloud) =>
+      SincronizzaFoto(cloud: cloud, backup: backup, chiaveMaestra: maestra);
 
   group('l\'inventario', () {
     test('🚨 guarda solo i tipi che vanno nel backup — N12.2', () async {

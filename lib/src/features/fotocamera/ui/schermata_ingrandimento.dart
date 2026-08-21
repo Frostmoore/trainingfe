@@ -125,7 +125,9 @@ class _SchermataIngrandimentoState extends State<SchermataIngrandimento> {
       ),
       body: SafeArea(
         child: immagine == null
-            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
             : Column(
                 children: [
                   Expanded(child: Center(child: _finestra(immagine))),

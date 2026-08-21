@@ -85,34 +85,34 @@ const _chiaveRicordo = 'consiglio.ultimo';
 /// sparire proprio perché aveva usato l'app.
 final consiglioDaMostrareProvider =
     FutureProvider.autoDispose<ConsiglioDaMostrare>((ref) async {
-  final cache = ref.watch(localCacheProvider);
+      final cache = ref.watch(localCacheProvider);
 
-  ConsiglioDaMostrare? ricordo() {
-    final grezzo = cache.getString(_chiaveRicordo);
-    if (grezzo == null) return null;
+      ConsiglioDaMostrare? ricordo() {
+        final grezzo = cache.getString(_chiaveRicordo);
+        if (grezzo == null) return null;
 
-    try {
-      final m = jsonDecode(grezzo) as Map<String, dynamic>;
-      final testo = m['testo']?.toString();
+        try {
+          final m = jsonDecode(grezzo) as Map<String, dynamic>;
+          final testo = m['testo']?.toString();
 
-      if (testo == null || testo.isEmpty) return null;
+          if (testo == null || testo.isEmpty) return null;
 
-      return ConsiglioDaMostrare(
-        stato: StatoConsiglio.vecchio,
-        testo: testo,
-        generatoIl: DateTime.tryParse(m['generato_il']?.toString() ?? ''),
-      );
-    } on Object {
-      /*
+          return ConsiglioDaMostrare(
+            stato: StatoConsiglio.vecchio,
+            testo: testo,
+            generatoIl: DateTime.tryParse(m['generato_il']?.toString() ?? ''),
+          );
+        } on Object {
+          /*
        * ⚠️ Un ricordo illeggibile si **butta**, non fa cadere la schermata: è
        * una comodità, e il prezzo di perderla è rivedere il consiglio di oggi
        * un istante dopo.
        */
-      return null;
-    }
-  }
+          return null;
+        }
+      }
 
-  /*
+      /*
    * 🚨 **L'interruttore si guarda per PRIMO, e con `valueOrNull`.**
    *
    * Spento vuol dire «non voglio vedere questa card»: mostrargli il consiglio
@@ -120,22 +120,24 @@ final consiglioDaMostrareProvider =
    * ancora arrivato si tira dritto — aspettarlo vorrebbe dire far sparire la
    * card mentre si carica, cioè il difetto che stiamo chiudendo.
    */
-  final consensi = ref.watch(consensiProvider).valueOrNull;
+      final consensi = ref.watch(consensiProvider).valueOrNull;
 
-  if (consensi != null && !consensi.consiglioAutomatico) {
-    return const ConsiglioDaMostrare(stato: StatoConsiglio.spento);
-  }
-
-  final adesso = ref.watch(adviceProvider);
-
-  return adesso.when(
-    data: (c) {
-      if (c.serveConsenso) {
-        return const ConsiglioDaMostrare(stato: StatoConsiglio.serveConsenso);
+      if (consensi != null && !consensi.consiglioAutomatico) {
+        return const ConsiglioDaMostrare(stato: StatoConsiglio.spento);
       }
 
-      if (c.haTesto) {
-        /*
+      final adesso = ref.watch(adviceProvider);
+
+      return adesso.when(
+        data: (c) {
+          if (c.serveConsenso) {
+            return const ConsiglioDaMostrare(
+              stato: StatoConsiglio.serveConsenso,
+            );
+          }
+
+          if (c.haTesto) {
+            /*
          * 💡 Si ricorda **appena arriva**, non quando serve: il momento in cui
          * servirà è quello in cui non ce l'abbiamo.
          *
@@ -143,29 +145,35 @@ final consiglioDaMostrareProvider =
          * aspettare il disegno della schermata per un `SharedPreferences`
          * sarebbe sproporzionato.
          */
-        cache.setString(
-          _chiaveRicordo,
-          jsonEncode({
-            'testo': c.testo,
-            'generato_il': (c.generatoIl ?? DateTime.now()).toIso8601String(),
-          }),
-        );
+            cache.setString(
+              _chiaveRicordo,
+              jsonEncode({
+                'testo': c.testo,
+                'generato_il': (c.generatoIl ?? DateTime.now())
+                    .toIso8601String(),
+              }),
+            );
 
-        return ConsiglioDaMostrare(
-          stato: StatoConsiglio.fresco,
-          testo: c.testo,
-          generatoIl: c.generatoIl,
-        );
-      }
+            return ConsiglioDaMostrare(
+              stato: StatoConsiglio.fresco,
+              testo: c.testo,
+              generatoIl: c.generatoIl,
+            );
+          }
 
-      /*
+          /*
        * 🚨 Risposta vuota **con l'interruttore acceso** vuol dire che il server
        * lo sta rifacendo, o che l'AI è spenta lato server. In entrambi i casi
        * l'ultimo che abbiamo è meglio del niente.
        */
-      return ricordo() ?? const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo);
-    },
-    loading: () => ricordo() ?? const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo),
-    error: (_, _) => ricordo() ?? const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo),
-  );
-});
+          return ricordo() ??
+              const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo);
+        },
+        loading: () =>
+            ricordo() ??
+            const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo),
+        error: (_, _) =>
+            ricordo() ??
+            const ConsiglioDaMostrare(stato: StatoConsiglio.inArrivo),
+      );
+    });

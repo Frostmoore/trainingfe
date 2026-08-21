@@ -63,15 +63,9 @@ void main() {
         ['1800', 'centoquaranta', '160', '60'],
         ['1800', '-5', '160', '60'],
       ]) {
-        SharedPreferences.setMockInitialValues({
-          'target_scelto_a_mano': rotta,
-        });
+        SharedPreferences.setMockInitialValues({'target_scelto_a_mano': rotta});
 
-        expect(
-          await TargetScelto.leggi(),
-          isNull,
-          reason: '$rotta è passata',
-        );
+        expect(await TargetScelto.leggi(), isNull, reason: '$rotta è passata');
       }
     });
 

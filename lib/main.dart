@@ -12,6 +12,7 @@ import 'src/core/media/archivio_foto.dart';
 import 'src/core/notifications/notifications.dart';
 import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
+import 'src/features/aggiornamento/aggiornamento_controller.dart';
 import 'src/features/auth/auth_controller.dart';
 import 'src/features/onboarding/branding_controller.dart';
 
@@ -26,28 +27,27 @@ Future<void> main() async {
   // `runZonedGuarded` avvolge tutto: senza, un errore asincrono fuori dal ciclo
   // dei widget termina il processo senza lasciare traccia, e l'utente vede
   // l'app «che si chiude da sola».
-  await runZonedGuarded(
-    () async {
-      WidgetsFlutterBinding.ensureInitialized();
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-      // I nomi dei mesi in italiano: `DateFormat(…, 'it')` lancia se questa non
-      // è stata chiamata, e lo fa alla **prima data formattata**, cioè in una
-      // schermata a caso e non all'avvio.
-      await initializeDateFormatting('it');
+    // I nomi dei mesi in italiano: `DateFormat(…, 'it')` lancia se questa non
+    // è stata chiamata, e lo fa alla **prima data formattata**, cioè in una
+    // schermata a caso e non all'avvio.
+    await initializeDateFormatting('it');
 
-      // 🚨 Il fuso e i canali delle notifiche: senza, `tz.local` lancia alla
-      // prima serie registrata nel player — in palestra, non all'avvio.
-      await initNotifications();
+    // 🚨 Il fuso e i canali delle notifiche: senza, `tz.local` lancia alla
+    // prima serie registrata nel player — in palestra, non all'avvio.
+    await initNotifications();
 
-      FlutterError.onError = (dettagli) {
-        FlutterError.presentError(dettagli);
-        _segnala(dettagli.exception, dettagli.stack);
-      };
+    FlutterError.onError = (dettagli) {
+      FlutterError.presentError(dettagli);
+      _segnala(dettagli.exception, dettagli.stack);
+    };
 
-      final config = AppConfig.fromEnvironment();
-      final cache = await LocalCache.open();
+    final config = AppConfig.fromEnvironment();
+    final cache = await LocalCache.open();
 
-      /*
+    /*
        * 🆕 FASE 2.1 — si dice ad Android **a chi** dare il lavoro in background.
        *
        * 🚨 `initialize` registra il punto d'ingresso, **non pianifica niente**:
@@ -59,34 +59,48 @@ Future<void> main() async {
        * concede WorkManager, si apre lo stesso: c'e' il backup che parte
        * all'accesso, e quello non dipende da Android.
        */
-      try {
-        await const BackupInBackground().avvia();
-      } on Object catch (errore, stack) {
-        debugPrintStack(
-          label: 'WorkManager non disponibile: $errore',
-          stackTrace: stack,
-        );
-      }
-
-      final container = ProviderContainer(
-        overrides: [
-          appConfigProvider.overrideWithValue(config),
-          localCacheProvider.overrideWithValue(cache),
-        ],
+    try {
+      await const BackupInBackground().avvia();
+    } on Object catch (errore, stack) {
+      debugPrintStack(
+        label: 'WorkManager non disponibile: $errore',
+        stackTrace: stack,
       );
+    }
 
-      // 🚨 Si fa partire il ripristino della sessione **prima** di disegnare:
-      // il router resta su `AuthStatus.unknown` e non decide niente finché non
-      // c'è una risposta. Senza, ogni avvio manderebbe al login per la frazione
-      // di secondo che serve a leggere il Keychain — e quel salto si vede.
-      unawaited(container.read(authControllerProvider.notifier).restore());
+    final container = ProviderContainer(
+      overrides: [
+        appConfigProvider.overrideWithValue(config),
+        localCacheProvider.overrideWithValue(cache),
+      ],
+    );
 
-      // Il branding si riallinea in sottofondo: se fallisce, resta quello in
-      // cache. I colori sbagliati sono un problema estetico, un'app che non
-      // parte no.
-      unawaited(container.read(brandingControllerProvider.notifier).refreshQuietly());
+    // 🚨 Si fa partire il ripristino della sessione **prima** di disegnare:
+    // il router resta su `AuthStatus.unknown` e non decide niente finché non
+    // c'è una risposta. Senza, ogni avvio manderebbe al login per la frazione
+    // di secondo che serve a leggere il Keychain — e quel salto si vede.
+    /*
+       * 🆕 **Il cancello della versione si accende all'avvio** — FASE 10.
+       *
+       * 🚨 `read` e non `watch`: serve solo a **farlo nascere**, perché è nel
+       * costruttore che si iscrive allo stream dei 426. ⚠️ Senza questa riga il
+       * controller nascerebbe alla prima `watch` — cioè dentro `builder` di
+       * `MaterialApp`, dopo che la prima richiesta è già partita: e quel 426
+       * andrebbe perso, perché uno stream broadcast non conserva niente per chi
+       * arriva dopo.
+       */
+    container.read(aggiornamentoProvider);
 
-      /*
+    unawaited(container.read(authControllerProvider.notifier).restore());
+
+    // Il branding si riallinea in sottofondo: se fallisce, resta quello in
+    // cache. I colori sbagliati sono un problema estetico, un'app che non
+    // parte no.
+    unawaited(
+      container.read(brandingControllerProvider.notifier).refreshQuietly(),
+    );
+
+    /*
        * 🧹 **La spazzata delle foto scadute** — N11.6.
        *
        * Butta quello che e' rimasto in `Cache/foto/ai` e `Cache/foto/effimere`
@@ -98,19 +112,17 @@ Future<void> main() async {
        * sempre vuote, e non deve rallentare di un millisecondo il primo
        * disegno. Se fallisce, riprova al prossimo avvio.
        */
-      unawaited(
-        const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0),
-      );
+    unawaited(
+      const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0),
+    );
 
-      runApp(
-        UncontrolledProviderScope(
-          container: container,
-          child: const TrainingCompanionApp(),
-        ),
-      );
-    },
-    (errore, stack) => _segnala(errore, stack),
-  );
+    runApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TrainingCompanionApp(),
+      ),
+    );
+  }, (errore, stack) => _segnala(errore, stack));
 }
 
 /// Il punto unico in cui finiscono gli errori non gestiti.

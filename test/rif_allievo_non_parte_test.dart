@@ -26,7 +26,8 @@ void main() {
     };
 
     // È lo stesso gesto di `_allegaPiano()` in `conversations_screen.dart`.
-    final perLAllievo = Map<String, dynamic>.from(dalServer)..remove('rif_allievo');
+    final perLAllievo = Map<String, dynamic>.from(dalServer)
+      ..remove('rif_allievo');
 
     expect(perLAllievo.containsKey('rif_allievo'), isFalse);
 

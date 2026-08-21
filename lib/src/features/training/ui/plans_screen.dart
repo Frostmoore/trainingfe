@@ -94,43 +94,56 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     );
   }
 
-  Widget _corpo(BuildContext context, WidgetRef ref, AsyncValue<List<WorkoutPlan>> schede) {
+  Widget _corpo(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<WorkoutPlan>> schede,
+  ) {
     return schede.when(
-        loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(schedeUniteProvider)),
-        data: (elenco) => elenco.isEmpty
-            // 🚨 Il vuoto dice **di chi è la palla**: l'iscritto non può darsi
-            // una scheda da solo, e un «nessuna scheda» senza spiegazione lo
-            // lascerebbe a chiedersi se l'app è rotta.
-            // 🚨 Il vuoto è cambiato con C2: adesso l'iscritto **può** farsi
-            // una scheda, quindi il messaggio non deve più dire che dipende
-            // dal trainer — sarebbe una bugia che scoraggia dal provarci.
-            ? EmptyState(
-                icon: Icons.assignment_outlined,
-                title: 'Nessuna scheda',
-                message: 'Il tuo trainer non te ne ha ancora assegnata una, '
-                    'ma puoi scrivertene una tu.',
-                action: FilledButton.icon(
-                  onPressed: () => context.push(AppRoutes.planNew),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Crea una scheda'),
-                ),
-              )
-            : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(schedeUniteProvider)),
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
-                  itemCount: elenco.length + 1,
-                  separatorBuilder: (context, index) => const SizedBox(height: Gap.md),
-                  itemBuilder: (context, index) => index == elenco.length
-                      ? OutlinedButton.icon(
-                          onPressed: () => context.push(AppRoutes.planNew),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Nuova scheda'),
-                        )
-                      : _SchedaCard(scheda: elenco[index]),
-                ),
+      loading: () => const LoadingState(),
+      error: (e, _) => ErrorState(
+        error: e,
+        onRetry: () => ref.invalidate(schedeUniteProvider),
+      ),
+      data: (elenco) => elenco.isEmpty
+          // 🚨 Il vuoto dice **di chi è la palla**: l'iscritto non può darsi
+          // una scheda da solo, e un «nessuna scheda» senza spiegazione lo
+          // lascerebbe a chiedersi se l'app è rotta.
+          // 🚨 Il vuoto è cambiato con C2: adesso l'iscritto **può** farsi
+          // una scheda, quindi il messaggio non deve più dire che dipende
+          // dal trainer — sarebbe una bugia che scoraggia dal provarci.
+          ? EmptyState(
+              icon: Icons.assignment_outlined,
+              title: 'Nessuna scheda',
+              message:
+                  'Il tuo trainer non te ne ha ancora assegnata una, '
+                  'ma puoi scrivertene una tu.',
+              action: FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.planNew),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Crea una scheda'),
               ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => aggiornaTutto(
+                context,
+                ref,
+                () => ref.invalidate(schedeUniteProvider),
+              ),
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
+                itemCount: elenco.length + 1,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: Gap.md),
+                itemBuilder: (context, index) => index == elenco.length
+                    ? OutlinedButton.icon(
+                        onPressed: () => context.push(AppRoutes.planNew),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Nuova scheda'),
+                      )
+                    : _SchedaCard(scheda: elenco[index]),
+              ),
+            ),
     );
   }
 }
@@ -160,10 +173,16 @@ class _SessioneAperta extends ConsumerWidget {
       child: InkWell(
         onTap: () => context.push(AppRoutes.player(aperta.id)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Gap.md,
+            vertical: Gap.sm,
+          ),
           child: Row(
             children: [
-              Icon(Icons.play_circle_outline_rounded, color: theme.colorScheme.onTertiaryContainer),
+              Icon(
+                Icons.play_circle_outline_rounded,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
               const SizedBox(width: Gap.sm),
               Expanded(
                 child: Column(
@@ -213,7 +232,9 @@ class _SchedaCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(Gap.radius),
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => _DettaglioScheda(id: scheda.id, nome: scheda.name)),
+          MaterialPageRoute<void>(
+            builder: (_) => _DettaglioScheda(id: scheda.id, nome: scheda.name),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(Gap.md),
@@ -229,7 +250,9 @@ class _SchedaCard extends StatelessWidget {
                   children: [
                     Text(
                       scheda.name,
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     Text(
                       '${scheda.exercisesCount} esercizi',
@@ -277,7 +300,10 @@ class _DettaglioScheda extends ConsumerWidget {
       ),
       body: scheda.when(
         loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(planDetailProvider(id))),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(planDetailProvider(id)),
+        ),
         data: (p) => ListView(
           padding: const EdgeInsets.all(Gap.md),
           children: [
@@ -302,13 +328,22 @@ class _DettaglioScheda extends ConsumerWidget {
               Card(
                 margin: const EdgeInsets.only(bottom: Gap.sm),
                 child: ListTile(
-                  leading: Miniatura(url: e.imageUrl, etichetta: e.name, lato: 44),
-                  title: Text(e.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text([
-                    e.prescription,
-                    if (e.restSec != null) 'rec. ${e.restSec}s',
-                    if (e.targetWeight != null) '${e.targetWeight} kg',
-                  ].where((s) => s.isNotEmpty).join(' · '),),
+                  leading: Miniatura(
+                    url: e.imageUrl,
+                    etichetta: e.name,
+                    lato: 44,
+                  ),
+                  title: Text(
+                    e.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    [
+                      e.prescription,
+                      if (e.restSec != null) 'rec. ${e.restSec}s',
+                      if (e.targetWeight != null) '${e.targetWeight} kg',
+                    ].where((s) => s.isNotEmpty).join(' · '),
+                  ),
                   isThreeLine: e.notes != null && e.notes!.isNotEmpty,
                 ),
               ),
@@ -318,7 +353,6 @@ class _DettaglioScheda extends ConsumerWidget {
     );
   }
 }
-
 
 /// Il pulsante che apre una sessione — C9.
 ///
@@ -336,19 +370,26 @@ class _AvviaAllenamento extends ConsumerWidget {
       // Vedi la nota su `heroTag` in `conversations_screen.dart`.
       heroTag: 'fab-allenamento',
       onPressed: () => _avvia(context, ref, aperta?.id),
-      icon: Icon(aperta == null ? Icons.play_arrow_rounded : Icons.replay_rounded),
+      icon: Icon(
+        aperta == null ? Icons.play_arrow_rounded : Icons.replay_rounded,
+      ),
       label: Text(aperta == null ? 'Inizia' : 'Riprendi'),
     );
   }
 
-  Future<void> _avvia(BuildContext context, WidgetRef ref, int? apertaId) async {
+  Future<void> _avvia(
+    BuildContext context,
+    WidgetRef ref,
+    int? apertaId,
+  ) async {
     if (apertaId != null) {
       await context.push(AppRoutes.player(apertaId));
 
       return;
     }
 
-    final schede = ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[];
+    final schede =
+        ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[];
 
     int? scelta;
 

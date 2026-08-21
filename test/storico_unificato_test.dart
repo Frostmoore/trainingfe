@@ -19,7 +19,8 @@ import 'package:training_companion/src/features/training/data/storico_unificato.
 /// sfiorano restano due» era verde il 19/08 e oggi è falso. Non è una
 /// regressione, è una decisione — ed è scritto qui perché nessuno lo «ripari».
 void main() {
-  DateTime alle(int ora, [int minuti = 0]) => DateTime(2026, 8, 19, ora, minuti);
+  DateTime alle(int ora, [int minuti = 0]) =>
+      DateTime(2026, 8, 19, ora, minuti);
 
   WorkoutSession seduta({
     required int id,
@@ -28,21 +29,22 @@ void main() {
     bool aperta = false,
     int? kcal,
     bool aMano = false,
-  }) =>
-      WorkoutSession(
-        id: id,
-        startedAt: inizio,
-        endedAt: durataMinuti == null ? null : inizio.add(Duration(minutes: durataMinuti)),
-        durationMinutes: durataMinuti,
-        isOpen: aperta,
-        kcal: kcal,
-        // 💡 `kcal` è già il valore **che vale**: il server ci mette la
-        // correzione a mano se c'è, altrimenti la stima. `kcalSource` dice solo
-        // quale delle due storie raccontare.
-        kcalSource: aMano ? 'manual' : 'estimate',
-        sets: const [],
-        photos: const [],
-      );
+  }) => WorkoutSession(
+    id: id,
+    startedAt: inizio,
+    endedAt: durataMinuti == null
+        ? null
+        : inizio.add(Duration(minutes: durataMinuti)),
+    durationMinutes: durataMinuti,
+    isOpen: aperta,
+    kcal: kcal,
+    // 💡 `kcal` è già il valore **che vale**: il server ci mette la
+    // correzione a mano se c'è, altrimenti la stima. `kcalSource` dice solo
+    // quale delle due storie raccontare.
+    kcalSource: aMano ? 'manual' : 'estimate',
+    sets: const [],
+    photos: const [],
+  );
 
   AllenamentoDaOrologio dalPolso({
     required int id,
@@ -52,17 +54,16 @@ void main() {
     int? kcal = 400,
     bool nascosto = false,
     bool staccato = false,
-  }) =>
-      AllenamentoDaOrologio(
-        id: id,
-        fonte: 'com.huami.watch.hmwatchmanager',
-        tipo: tipo,
-        iniziatoIl: inizio,
-        finitoIl: inizio.add(Duration(minutes: durataMinuti)),
-        kcal: kcal,
-        nascosto: nascosto,
-        staccato: staccato,
-      );
+  }) => AllenamentoDaOrologio(
+    id: id,
+    fonte: 'com.huami.watch.hmwatchmanager',
+    tipo: tipo,
+    iniziatoIl: inizio,
+    finitoIl: inizio.add(Duration(minutes: durataMinuti)),
+    kcal: kcal,
+    nascosto: nascosto,
+    staccato: staccato,
+  );
 
   group('D-1bis/A — basta la sovrapposizione', () {
     /// 📌 Lo scenario testuale del committente: parto dall'app, faccio partire
@@ -86,7 +87,9 @@ void main() {
     test('anche quando è l orologio a partire tardi', () {
       final voci = StoricoUnificato.fondi(
         sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 60)],
-        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 50), durataMinuti: 60)],
+        dallOrologio: [
+          dalPolso(id: 10, inizio: alle(18, 50), durataMinuti: 60),
+        ],
       );
 
       expect(voci, hasLength(1));
@@ -162,7 +165,12 @@ void main() {
         sessioni: const [],
         dallOrologio: [
           dalPolso(id: 10, inizio: alle(18), durataMinuti: 30, tipo: 'RUNNING'),
-          dalPolso(id: 11, inizio: alle(18, 35), durataMinuti: 25, tipo: 'BIKING'),
+          dalPolso(
+            id: 11,
+            inizio: alle(18, 35),
+            durataMinuti: 25,
+            tipo: 'BIKING',
+          ),
         ],
       );
 
@@ -192,7 +200,9 @@ void main() {
           seduta(id: 2, inizio: alle(19, 10), durataMinuti: 30),
         ],
         // L'orologio copre il mezzo e lega le due.
-        dallOrologio: [dalPolso(id: 10, inizio: alle(18, 10), durataMinuti: 65)],
+        dallOrologio: [
+          dalPolso(id: 10, inizio: alle(18, 10), durataMinuti: 65),
+        ],
       );
 
       expect(voci, hasLength(1));
@@ -207,8 +217,18 @@ void main() {
         sessioni: const [],
         dallOrologio: [
           dalPolso(id: 10, inizio: alle(18), durataMinuti: 30, tipo: 'RUNNING'),
-          dalPolso(id: 11, inizio: alle(18, 32), durataMinuti: 3, tipo: 'BIKING'),
-          dalPolso(id: 12, inizio: alle(18, 36), durataMinuti: 24, tipo: 'RUNNING'),
+          dalPolso(
+            id: 11,
+            inizio: alle(18, 32),
+            durataMinuti: 3,
+            tipo: 'BIKING',
+          ),
+          dalPolso(
+            id: 12,
+            inizio: alle(18, 36),
+            durataMinuti: 24,
+            tipo: 'RUNNING',
+          ),
         ],
       );
 
@@ -317,7 +337,13 @@ void main() {
       final voci = StoricoUnificato.fondi(
         sessioni: [
           seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180),
-          seduta(id: 2, inizio: alle(18, 35), durataMinuti: 25, kcal: 900, aMano: true),
+          seduta(
+            id: 2,
+            inizio: alle(18, 35),
+            durataMinuti: 25,
+            kcal: 900,
+            aMano: true,
+          ),
         ],
         dallOrologio: const [],
       );
@@ -328,7 +354,9 @@ void main() {
 
     test('e senza nessuna correzione il gruppo non è a mano', () {
       final voci = StoricoUnificato.fondi(
-        sessioni: [seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180)],
+        sessioni: [
+          seduta(id: 1, inizio: alle(18), durataMinuti: 30, kcal: 180),
+        ],
         dallOrologio: const [],
       );
 

@@ -55,7 +55,9 @@ class TrainerActions {
   Future<String> invita({String? email}) async {
     final dati = await _api.post<Map<String, dynamic>>(
       '/trainer/invites',
-      body: {if (email != null && email.trim().isNotEmpty) 'email': email.trim()},
+      body: {
+        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      },
     );
 
     _ref.invalidate(mieiUtentiProvider);

@@ -42,23 +42,28 @@ void main() {
     return c;
   }
 
-  test('senza chiave maestra il ripristino lancia e NON carica niente', () async {
-    final cloud = CloudFinto();
-    final c = contenitore(cloud);
+  test(
+    'senza chiave maestra il ripristino lancia e NON carica niente',
+    () async {
+      final cloud = CloudFinto();
+      final c = contenitore(cloud);
 
-    await c.read(backupAutomaticoProvider.future);
+      await c.read(backupAutomaticoProvider.future);
 
-    await expectLater(
-      c.read(backupAutomaticoProvider.notifier).ripristinaDalCloudERiaccendi(),
-      throwsA(isA<CloudNonRaggiungibile>()),
-    );
+      await expectLater(
+        c
+            .read(backupAutomaticoProvider.notifier)
+            .ripristinaDalCloudERiaccendi(),
+        throwsA(isA<CloudNonRaggiungibile>()),
+      );
 
-    /*
+      /*
      * 🚨 **Questa è l'asserzione che conta.** Un `carica()` qui vorrebbe dire
      * aver scritto sopra la copia buona con quella vuota di questo telefono.
      */
-    expect(cloud.caricamenti, isEmpty, reason: 'ha sovrascritto il backup');
-  });
+      expect(cloud.caricamenti, isEmpty, reason: 'ha sovrascritto il backup');
+    },
+  );
 
   test('un ripristino fallito lascia l\'interruttore spento', () async {
     final cloud = CloudFinto();
@@ -113,7 +118,10 @@ void main() {
   test('cercaNelCloud torna null se la persona rifiuta l\'accesso', () async {
     // 🚨 Rifiutare non è un errore: la porta delle chiavi deve poter dire
     // «non l'ho trovata» e lasciar proseguire con la sola password.
-    final cloud = CloudFinto(ultimo: DateTime(2026, 8, 18), accettaIlCollegamento: false);
+    final cloud = CloudFinto(
+      ultimo: DateTime(2026, 8, 18),
+      accettaIlCollegamento: false,
+    );
     final c = contenitore(cloud);
 
     await c.read(backupAutomaticoProvider.future);

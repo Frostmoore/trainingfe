@@ -97,7 +97,7 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
 
         for (final provider in disponibili) ...[
           OutlinedButton.icon(
-            onPressed: _inCorso != null || ! widget.dichiarazioniDate
+            onPressed: _inCorso != null || !widget.dichiarazioniDate
                 ? null
                 : () => _accedi(provider),
             icon: _inCorso == provider
@@ -118,7 +118,9 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
             child: Text(
               _errore!,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
       ],

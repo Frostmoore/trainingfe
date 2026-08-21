@@ -68,9 +68,7 @@ class _CompositoreConsigliState extends ConsumerState<CompositoreConsigli> {
      * un elenco a mano rischia di ripetersi, e due «pollo» in fila fanno
      * sembrare sciatto un consiglio che non lo è.
      */
-    final gia = _alimenti.any(
-      (a) => a.toLowerCase() == testo.toLowerCase(),
-    );
+    final gia = _alimenti.any((a) => a.toLowerCase() == testo.toLowerCase());
 
     setState(() {
       if (!gia) _alimenti.add(testo);
@@ -91,16 +89,18 @@ class _CompositoreConsigliState extends ConsumerState<CompositoreConsigli> {
     });
 
     try {
-      await ref.read(azioniPianoProvider).salva(
-        PianoAlimentare(
-          id: widget.pianoId,
-          nome: _nome.text.trim(),
-          // 🚨 Esplicito, anche se è già il default: qui si vede cosa si sta
-          // creando senza doverlo andare a cercare nel modello.
-          tipo: TipoPiano.consigli,
-          note: _testoDegliAlimenti(),
-        ),
-      );
+      await ref
+          .read(azioniPianoProvider)
+          .salva(
+            PianoAlimentare(
+              id: widget.pianoId,
+              nome: _nome.text.trim(),
+              // 🚨 Esplicito, anche se è già il default: qui si vede cosa si sta
+              // creando senza doverlo andare a cercare nel modello.
+              tipo: TipoPiano.consigli,
+              note: _testoDegliAlimenti(),
+            ),
+          );
 
       if (mounted) context.pop();
     } on Object catch (e) {
@@ -146,7 +146,10 @@ class _CompositoreConsigliState extends ConsumerState<CompositoreConsigli> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: tema.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.info_outline,
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
@@ -182,7 +185,9 @@ class _CompositoreConsigliState extends ConsumerState<CompositoreConsigli> {
                 child: TextField(
                   controller: _nuovo,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Es. Petto di pollo'),
+                  decoration: const InputDecoration(
+                    hintText: 'Es. Petto di pollo',
+                  ),
                   onSubmitted: (_) => _aggiungi(),
                 ),
               ),

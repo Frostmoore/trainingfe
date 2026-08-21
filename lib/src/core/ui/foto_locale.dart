@@ -62,7 +62,9 @@ class FotoLocale extends StatelessWidget {
       errorBuilder: (_, _, _) => segnaposto(Icons.broken_image_outlined),
       // La cache in memoria evita di rileggere il file a ogni scorrimento
       // della griglia: sono immagini grandi, e senza si vede scattare.
-      cacheWidth: width == null ? null : (width! * MediaQuery.devicePixelRatioOf(context)).round(),
+      cacheWidth: width == null
+          ? null
+          : (width! * MediaQuery.devicePixelRatioOf(context)).round(),
     );
   }
 }
@@ -85,7 +87,10 @@ class RiquadroFotoAssente extends StatelessWidget {
       child: SizedBox(
         width: lato,
         height: lato,
-        child: Icon(Icons.fitness_center_rounded, color: theme.colorScheme.onSurfaceVariant),
+        child: Icon(
+          Icons.fitness_center_rounded,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

@@ -59,11 +59,11 @@ class SettimanaPerIlConsiglio {
   /// ⚠️ Quello che non ha esattamente questi nomi **non parte**, e non lo dice a
   /// nessuno.
   Map<String, Object> get payload => {
-        if (notti.isNotEmpty) 'week_sleep': notti,
-        if (hrv.isNotEmpty) 'week_hrv': hrv,
-        if (battito.isNotEmpty) 'week_resting_hr': battito,
-        if (allenamenti.isNotEmpty) 'week_workouts': allenamenti,
-      };
+    if (notti.isNotEmpty) 'week_sleep': notti,
+    if (hrv.isNotEmpty) 'week_hrv': hrv,
+    if (battito.isNotEmpty) 'week_resting_hr': battito,
+    if (allenamenti.isNotEmpty) 'week_workouts': allenamenti,
+  };
 }
 
 /// Quanti giorni indietro. **Sette**, come chiesto.
@@ -76,69 +76,74 @@ String _giorno(DateTime d) => '${d.day}/${d.month}';
 
 final settimanaPerIlConsiglioProvider =
     FutureProvider.autoDispose<SettimanaPerIlConsiglio>((ref) async {
-  final archivio = ref.watch(archivioSaluteProvider);
-  final oggi = DateTime.now();
+      final archivio = ref.watch(archivioSaluteProvider);
+      final oggi = DateTime.now();
 
-  // ── Le notti ────────────────────────────────────────────────────────────
-  final notti = <Map<String, Object>>[];
+      // ── Le notti ────────────────────────────────────────────────────────────
+      final notti = <Map<String, Object>>[];
 
-  for (var i = 0; i < _giorni; i++) {
-    final quale = DateTime(oggi.year, oggi.month, oggi.day)
-        .subtract(Duration(days: i));
+      for (var i = 0; i < _giorni; i++) {
+        final quale = DateTime(
+          oggi.year,
+          oggi.month,
+          oggi.day,
+        ).subtract(Duration(days: i));
 
-    final n = await AnalizzatoreSonno.notte(archivio, quale);
+        final n = await AnalizzatoreSonno.notte(archivio, quale);
 
-    /*
+        /*
      * ⚠️ **I buchi non si riempiono.** Una notte senza dati non compare: un
      * valore inventato per la notte in cui l'orologio era scarico e'
      * indistinguibile da una misura vera, ed e' peggio del silenzio.
      *
      * 💡 E il prompt lo sa: «se una notte manca, non c'era il sensore».
      */
-    if (n == null) continue;
+        if (n == null) continue;
 
-    notti.add({
-      'day': _giorno(quale),
-      'hours': (n.minutiDormiti / 60).toStringAsFixed(1),
-      'deep_min': n.minutiProfondo,
-      'rem_min': n.minutiRem,
-      'awake_min': n.minutiSvegli,
-    });
-  }
+        notti.add({
+          'day': _giorno(quale),
+          'hours': (n.minutiDormiti / 60).toStringAsFixed(1),
+          'deep_min': n.minutiProfondo,
+          'rem_min': n.minutiRem,
+          'awake_min': n.minutiSvegli,
+        });
+      }
 
-  // ── HRV e battito, media per giorno ─────────────────────────────────────
-  Future<List<Map<String, Object>>> serie(MetricaSalute m) async {
-    final righe = await archivio.mediePerGiorno(m, giorni: _giorni);
+      // ── HRV e battito, media per giorno ─────────────────────────────────────
+      Future<List<Map<String, Object>>> serie(MetricaSalute m) async {
+        final righe = await archivio.mediePerGiorno(m, giorni: _giorni);
 
-    return righe.reversed
-        .map((r) => <String, Object>{
-              'day': _giorno(r.giorno),
-              'v': r.media.round(),
-            })
-        .toList();
-  }
+        return righe.reversed
+            .map(
+              (r) => <String, Object>{
+                'day': _giorno(r.giorno),
+                'v': r.media.round(),
+              },
+            )
+            .toList();
+      }
 
-  final hrv = await serie(MetricaSalute.hrv);
-  final battito = await serie(MetricaSalute.battitoARiposo);
+      final hrv = await serie(MetricaSalute.hrv);
+      final battito = await serie(MetricaSalute.battitoARiposo);
 
-  // ── Gli allenamenti, da qualunque fonte ─────────────────────────────────
-  final voci = await ref.watch(storicoUnificatoProvider.future);
-  final da = oggi.subtract(const Duration(days: _giorni));
+      // ── Gli allenamenti, da qualunque fonte ─────────────────────────────────
+      final voci = await ref.watch(storicoUnificatoProvider.future);
+      final da = oggi.subtract(const Duration(days: _giorni));
 
-  final allenamenti = <Map<String, Object>>[];
+      final allenamenti = <Map<String, Object>>[];
 
-  for (final v in voci) {
-    if (v.quando.isBefore(da)) continue;
+      for (final v in voci) {
+        if (v.quando.isBefore(da)) continue;
 
-    final tipo = v.dalPolso.isEmpty
-        ? null
-        : TipoAllenamento.da(v.dalPolso.first.tipo);
+        final tipo = v.dalPolso.isEmpty
+            ? null
+            : TipoAllenamento.da(v.dalPolso.first.tipo);
 
-    allenamenti.add({
-      'day': _giorno(v.quando),
-      'minutes': v.durata.inMinutes,
+        allenamenti.add({
+          'day': _giorno(v.quando),
+          'minutes': v.durata.inMinutes,
 
-      /*
+          /*
        * 🚨 **Il tipo tradotto, non il codice** — e qui, a differenza di
        * `training_types`, e' giusto cosi'.
        *
@@ -148,24 +153,24 @@ final settimanaPerIlConsiglioProvider =
        * difendersi, e «Pesi» il modello lo legge meglio di
        * `STRENGTH_TRAINING`.
        */
-      if (tipo != null) 'type': tipo.nome,
+          if (tipo != null) 'type': tipo.nome,
 
-      /*
+          /*
        * ⚠️ Le calorie **attive**, mai le totali: vedi la nota su
        * `AllenamentiDaOrologio.kcal`. E se l'orologio non c'era, la stima del
        * server e' meglio di niente.
        */
-      if (v.kcalDalPolso != null)
-        'kcal': v.kcalDalPolso!
-      else if (v.kcalDalleSedute != null)
-        'kcal': v.kcalDalleSedute!,
-    });
-  }
+          if (v.kcalDalPolso != null)
+            'kcal': v.kcalDalPolso!
+          else if (v.kcalDalleSedute != null)
+            'kcal': v.kcalDalleSedute!,
+        });
+      }
 
-  return SettimanaPerIlConsiglio(
-    notti: notti,
-    hrv: hrv,
-    battito: battito,
-    allenamenti: allenamenti,
-  );
-});
+      return SettimanaPerIlConsiglio(
+        notti: notti,
+        hrv: hrv,
+        battito: battito,
+        allenamenti: allenamenti,
+      );
+    });

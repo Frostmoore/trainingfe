@@ -39,12 +39,14 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         localCacheProvider.overrideWithValue(cache),
-        adviceProvider.overrideWith((ref) => switch (consiglio) {
-              AsyncData(:final value) => Future.value(value),
-              AsyncError(:final error) => Future<Consiglio>.error(error),
-              // Un future che non si risolve mai: è «sta ancora caricando».
-              _ => Completer<Consiglio>().future,
-            }),
+        adviceProvider.overrideWith(
+          (ref) => switch (consiglio) {
+            AsyncData(:final value) => Future.value(value),
+            AsyncError(:final error) => Future<Consiglio>.error(error),
+            // Un future che non si risolve mai: è «sta ancora caricando».
+            _ => Completer<Consiglio>().future,
+          },
+        ),
         consensiProvider.overrideWith(
           (ref) async => Consensi(consiglioAutomatico: automatico),
         ),
@@ -68,12 +70,14 @@ void main() {
   }
 
   void ricorda(String testo, DateTime quando) => cache.setString(
-        'consiglio.ultimo',
-        jsonEncode({'testo': testo, 'generato_il': quando.toIso8601String()}),
-      );
+    'consiglio.ultimo',
+    jsonEncode({'testo': testo, 'generato_il': quando.toIso8601String()}),
+  );
 
   test('un consiglio fresco si mostra, e si ricorda', () async {
-    final c = conta(consiglio: const AsyncData(Consiglio(testo: 'Bevi di più')));
+    final c = conta(
+      consiglio: const AsyncData(Consiglio(testo: 'Bevi di più')),
+    );
 
     final v = await c.read(consiglioDaMostrareProvider.future);
 
@@ -118,7 +122,9 @@ void main() {
     test('e anche se l AI non risponde', () async {
       ricorda('Il consiglio di ieri', DateTime(2026, 8, 19));
 
-      final c = conta(consiglio: AsyncError(Exception('giù'), StackTrace.empty));
+      final c = conta(
+        consiglio: AsyncError(Exception('giù'), StackTrace.empty),
+      );
       final v = await c.read(consiglioDaMostrareProvider.future);
 
       expect(v.stato, StatoConsiglio.vecchio);
@@ -153,7 +159,10 @@ void main() {
     test('con l interruttore spento non si mostra niente', () async {
       ricorda('Il consiglio di ieri', DateTime(2026, 8, 19));
 
-      final c = conta(consiglio: const AsyncData(Consiglio()), automatico: false);
+      final c = conta(
+        consiglio: const AsyncData(Consiglio()),
+        automatico: false,
+      );
       final v = await c.read(consiglioDaMostrareProvider.future);
 
       expect(v.stato, StatoConsiglio.spento);
@@ -166,7 +175,9 @@ void main() {
     test('ma il consenso mancante si mostra comunque', () async {
       ricorda('Il consiglio di ieri', DateTime(2026, 8, 19));
 
-      final c = conta(consiglio: const AsyncData(Consiglio(serveConsenso: true)));
+      final c = conta(
+        consiglio: const AsyncData(Consiglio(serveConsenso: true)),
+      );
       final v = await c.read(consiglioDaMostrareProvider.future);
 
       expect(v.stato, StatoConsiglio.serveConsenso);

@@ -89,14 +89,16 @@ class _ModuloState extends ConsumerState<_Modulo> {
             heightCm: int.tryParse(_altezza.text.trim()),
             activityLevel: _attivita,
             goal: _obiettivo,
-            targetWeightKg: double.tryParse(_pesoObiettivo.text.trim().replaceAll(',', '.')),
+            targetWeightKg: double.tryParse(
+              _pesoObiettivo.text.trim().replaceAll(',', '.'),
+            ),
             mealHours: _orari,
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profilo salvato')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profilo salvato')));
       }
     } on Object catch (error) {
       setState(() => _errore = ApiClient.unwrapError(error).message);
@@ -145,7 +147,8 @@ class _ModuloState extends ConsumerState<_Modulo> {
           ],
           selected: _sesso == null ? <String>{} : {_sesso!},
           emptySelectionAllowed: true,
-          onSelectionChanged: (s) => setState(() => _sesso = s.isEmpty ? null : s.first),
+          onSelectionChanged: (s) =>
+              setState(() => _sesso = s.isEmpty ? null : s.first),
         ),
         const SizedBox(height: Gap.md),
 
@@ -226,7 +229,11 @@ class _ModuloState extends ConsumerState<_Modulo> {
         FilledButton(
           onPressed: _inCorso ? null : _salva,
           child: _inCorso
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Salva'),
         ),
         const SizedBox(height: Gap.xl),
@@ -252,6 +259,7 @@ class _ModuloState extends ConsumerState<_Modulo> {
     if (scelta != null) setState(() => _nascita = scelta);
   }
 }
+
 /// L'obiettivo calcolato — oppure cosa manca per calcolarlo.
 ///
 /// ── 🚨 Perché ha preso il posto di due schede ────────────────────────────
@@ -458,12 +466,19 @@ class TendinaProfilo extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: valido,
       isExpanded: true,
-      decoration: InputDecoration(labelText: etichetta, prefixIcon: Icon(icona)),
+      decoration: InputDecoration(
+        labelText: etichetta,
+        prefixIcon: Icon(icona),
+      ),
       selectedItemBuilder: (context) => voci.values
           .map(
             (v) => Align(
               alignment: Alignment.centerLeft,
-              child: Text(_breve(v), maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(
+                _breve(v),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
           .toList(),
@@ -471,7 +486,11 @@ class TendinaProfilo extends StatelessWidget {
           .map(
             (e) => DropdownMenuItem(
               value: e.key,
-              child: Text(e.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+              child: Text(
+                e.value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
           .toList(),
@@ -518,12 +537,15 @@ class _CambiaObiettivo extends StatefulWidget {
 
 class _CambiaObiettivoState extends State<_CambiaObiettivo> {
   late final _kcal = TextEditingController(text: '${widget.attuale.kcal}');
-  late final _pro =
-      TextEditingController(text: '${widget.attuale.macro.proteineG}');
-  late final _car =
-      TextEditingController(text: '${widget.attuale.macro.carboidratiG}');
-  late final _gra =
-      TextEditingController(text: '${widget.attuale.macro.grassiG}');
+  late final _pro = TextEditingController(
+    text: '${widget.attuale.macro.proteineG}',
+  );
+  late final _car = TextEditingController(
+    text: '${widget.attuale.macro.carboidratiG}',
+  );
+  late final _gra = TextEditingController(
+    text: '${widget.attuale.macro.grassiG}',
+  );
 
   @override
   void dispose() {
@@ -542,8 +564,8 @@ class _CambiaObiettivoState extends State<_CambiaObiettivo> {
 
     if (k == null || widget.attuale.kcalStimato == 0) return false;
 
-    final scarto = (k - widget.attuale.kcalStimato).abs() /
-        widget.attuale.kcalStimato;
+    final scarto =
+        (k - widget.attuale.kcalStimato).abs() / widget.attuale.kcalStimato;
 
     return scarto > 0.35;
   }

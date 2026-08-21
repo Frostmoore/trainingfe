@@ -131,13 +131,17 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.phone_android_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: Gap.sm),
                       Expanded(
                         child: Text(
                           'Questi dati restano sul tuo telefono',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -168,17 +172,20 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
           const _Voce(
             icona: Icons.bedtime_outlined,
             titolo: 'Le fasi del sonno',
-            testo: 'Per dirti quanto hai dormito davvero e quanto era sonno profondo.',
+            testo:
+                'Per dirti quanto hai dormito davvero e quanto era sonno profondo.',
           ),
           const _Voce(
             icona: Icons.monitor_heart_outlined,
             titolo: 'Variabilità cardiaca (HRV)',
-            testo: 'Confrontata solo con la tua media: un valore assoluto non vuol dire niente.',
+            testo:
+                'Confrontata solo con la tua media: un valore assoluto non vuol dire niente.',
           ),
           const _Voce(
             icona: Icons.favorite_outline,
             titolo: 'Battito a riposo',
-            testo: 'Anche questo letto come scostamento dalla tua media, non come voto.',
+            testo:
+                'Anche questo letto come scostamento dalla tua media, non come voto.',
           ),
 
           /*
@@ -195,13 +202,15 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
           const _Voce(
             icona: Icons.local_fire_department_outlined,
             titolo: 'Calorie bruciate con l\'attività',
-            testo: 'Si sommano al tuo obiettivo del giorno, così mangi in base a '
+            testo:
+                'Si sommano al tuo obiettivo del giorno, così mangi in base a '
                 'quanto ti sei mosso davvero.',
           ),
           const _Voce(
             icona: Icons.fitness_center_outlined,
             titolo: 'Gli allenamenti',
-            testo: 'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
+            testo:
+                'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
                 'storico anche quando ti alleni senza aprire l\'app, e puoi dire '
                 'quale scheda hai fatto.',
           ),
@@ -280,7 +289,9 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.link_rounded),
-            label: Text(stato.collegato ? 'Aggiorna adesso' : 'Collega Health Connect'),
+            label: Text(
+              stato.collegato ? 'Aggiorna adesso' : 'Collega Health Connect',
+            ),
           ),
 
           if (stato.collegato) ...[
@@ -320,7 +331,10 @@ class _SchermataSaluteState extends ConsumerState<SchermataSalute>
     );
   }
 
-  Future<void> _confermaCancellazione(BuildContext context, WidgetRef ref) async {
+  Future<void> _confermaCancellazione(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final conferma = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

@@ -11,13 +11,16 @@ void main() {
   group('la forma che il server accetta', () {
     test('le alternative escono dentro il loro alimento, non accanto', () {
       final pollo = AlimentoDelPiano(descrizione: '120 g di pollo', kcal: 198);
-      pollo.alternative.add(AlimentoDelPiano(descrizione: '150 g di merluzzo', kcal: 123));
+      pollo.alternative.add(
+        AlimentoDelPiano(descrizione: '150 g di merluzzo', kcal: 123),
+      );
 
       final json = pollo.toJson();
 
       expect(json['description'], '120 g di pollo');
       expect((json['alternatives'] as List).length, 1);
-      final prima = (json['alternatives'] as List).first as Map<String, dynamic>;
+      final prima =
+          (json['alternatives'] as List).first as Map<String, dynamic>;
 
       expect(prima['kcal'], 123);
     });
@@ -53,7 +56,9 @@ void main() {
   group('i totali', () {
     test('un pasto non conta le proprie alternative', () {
       final pollo = AlimentoDelPiano(descrizione: 'Pollo', kcal: 198);
-      pollo.alternative.add(AlimentoDelPiano(descrizione: 'Merluzzo', kcal: 123));
+      pollo.alternative.add(
+        AlimentoDelPiano(descrizione: 'Merluzzo', kcal: 123),
+      );
 
       final pasto = PastoDelPiano(alimenti: [pollo]);
 
@@ -65,12 +70,20 @@ void main() {
     test('il piano è la MEDIA dei giorni, non la somma', () {
       final piano = PianoAlimentare(
         giorni: [
-          GiornoDelPiano(pasti: [
-            PastoDelPiano(alimenti: [AlimentoDelPiano(descrizione: 'a', kcal: 200)]),
-          ]),
-          GiornoDelPiano(pasti: [
-            PastoDelPiano(alimenti: [AlimentoDelPiano(descrizione: 'b', kcal: 400)]),
-          ]),
+          GiornoDelPiano(
+            pasti: [
+              PastoDelPiano(
+                alimenti: [AlimentoDelPiano(descrizione: 'a', kcal: 200)],
+              ),
+            ],
+          ),
+          GiornoDelPiano(
+            pasti: [
+              PastoDelPiano(
+                alimenti: [AlimentoDelPiano(descrizione: 'b', kcal: 400)],
+              ),
+            ],
+          ),
         ],
       );
 
@@ -91,10 +104,16 @@ void main() {
 
   group('la stima AI', () {
     test('non azzera quello che il trainer aveva già scritto', () {
-      final mio = AlimentoDelPiano(descrizione: 'Pollo', kcal: 200, proteine: 37);
+      final mio = AlimentoDelPiano(
+        descrizione: 'Pollo',
+        kcal: 200,
+        proteine: 37,
+      );
 
       // La stima torna senza proteine.
-      mio.adottaStima(AlimentoDelPiano(descrizione: '120 g di petto di pollo', kcal: 198));
+      mio.adottaStima(
+        AlimentoDelPiano(descrizione: '120 g di petto di pollo', kcal: 198),
+      );
 
       expect(mio.descrizione, '120 g di petto di pollo');
       expect(mio.kcal, 198);

@@ -5,8 +5,12 @@ import '../../core/providers.dart';
 import 'data/session_models.dart';
 
 /// Lo storico degli allenamenti — C10.
-final sessionsProvider = FutureProvider.autoDispose<List<WorkoutSession>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/workout-sessions');
+final sessionsProvider = FutureProvider.autoDispose<List<WorkoutSession>>((
+  ref,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/workout-sessions');
 
   return data
       .map((e) => WorkoutSession.fromJson((e as Map).cast<String, dynamic>()))
@@ -14,8 +18,13 @@ final sessionsProvider = FutureProvider.autoDispose<List<WorkoutSession>>((ref) 
 });
 
 /// Una sessione singola: il player la ricarica dopo ogni chiusura.
-final sessionProvider = FutureProvider.autoDispose.family<WorkoutSession, int>((ref, id) async {
-  final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/workout-sessions/$id');
+final sessionProvider = FutureProvider.autoDispose.family<WorkoutSession, int>((
+  ref,
+  id,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>('/workout-sessions/$id');
 
   return WorkoutSession.fromJson(data);
 });
@@ -25,7 +34,9 @@ final sessionProvider = FutureProvider.autoDispose.family<WorkoutSession, int>((
 /// ⚠️ Serve a riprendere un allenamento interrotto: senza, chi chiude l'app a
 /// metà seduta si ritrova a doverne aprire una nuova, e lo storico si riempie
 /// di sessioni monche.
-final openSessionProvider = FutureProvider.autoDispose<WorkoutSession?>((ref) async {
+final openSessionProvider = FutureProvider.autoDispose<WorkoutSession?>((
+  ref,
+) async {
   final sessioni = await ref.watch(sessionsProvider.future);
 
   for (final s in sessioni) {
@@ -76,7 +87,8 @@ class SessionActions {
       '/workout-sessions/$sessionId/sets',
       body: {
         'exercise_id': ?exerciseId,
-        if (exerciseId == null && exerciseName != null) 'exercise_name': exerciseName,
+        if (exerciseId == null && exerciseName != null)
+          'exercise_name': exerciseName,
         'set_number': setNumber,
         'reps': ?reps,
         'weight': ?weight,
@@ -97,7 +109,10 @@ class SessionActions {
 
   /// Corregge a mano le calorie. `null` **rimette la stima**, non azzera.
   Future<void> setKcal(int sessionId, int? kcal) async {
-    await _api.patch<dynamic>('/workout-sessions/$sessionId/kcal', body: {'kcal': kcal});
+    await _api.patch<dynamic>(
+      '/workout-sessions/$sessionId/kcal',
+      body: {'kcal': kcal},
+    );
 
     _ref.invalidate(sessionsProvider);
     _ref.invalidate(sessionProvider(sessionId));

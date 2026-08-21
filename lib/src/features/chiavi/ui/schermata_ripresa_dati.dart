@@ -33,7 +33,8 @@ class SchermataRipresaDati extends ConsumerStatefulWidget {
   const SchermataRipresaDati({super.key});
 
   @override
-  ConsumerState<SchermataRipresaDati> createState() => _SchermataRipresaDatiState();
+  ConsumerState<SchermataRipresaDati> createState() =>
+      _SchermataRipresaDatiState();
 }
 
 /// A che punto è la ripresa.

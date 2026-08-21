@@ -57,7 +57,12 @@ class RestBar extends StatelessWidget {
               ),
 
               Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, Gap.sm),
+                padding: const EdgeInsets.fromLTRB(
+                  Gap.md,
+                  Gap.sm,
+                  Gap.md,
+                  Gap.sm,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -79,7 +84,9 @@ class RestBar extends StatelessWidget {
                         Flexible(
                           child: Text(
                             'recupero',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: colore),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colore,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

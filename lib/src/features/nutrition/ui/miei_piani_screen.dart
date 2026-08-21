@@ -42,10 +42,15 @@ class MieiPianiScreen extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
                 title: 'Nessun consiglio',
-                message: 'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
+                message:
+                    'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
               )
             : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieiPianiProvider)),
+                onRefresh: () => aggiornaTutto(
+                  context,
+                  ref,
+                  () => ref.invalidate(mieiPianiProvider),
+                ),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(Gap.md),
                   itemCount: piani.length,
@@ -70,7 +75,10 @@ class _Riga extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        title: Text(piano.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          piano.nome,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -83,7 +91,9 @@ class _Riga extends StatelessWidget {
               Text(piano.rifAllievo!, style: theme.textTheme.bodySmall),
             Text(
               '${piano.giorni.length} ${piano.giorni.length == 1 ? "giorno" : "giorni"}',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),

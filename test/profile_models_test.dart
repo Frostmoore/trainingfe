@@ -56,11 +56,14 @@ void main() {
       expect(p.missing, ['weight_kg', 'birthdate']);
     });
 
-    test('i campi mancanti hanno un nome leggibile, non quello della colonna', () {
-      // «manca weight_kg» non si può mostrare a una persona.
-      expect(UserProfile.labelFor('weight_kg'), 'il tuo peso');
-      expect(UserProfile.labelFor('birthdate'), 'la data di nascita');
-    });
+    test(
+      'i campi mancanti hanno un nome leggibile, non quello della colonna',
+      () {
+        // «manca weight_kg» non si può mostrare a una persona.
+        expect(UserProfile.labelFor('weight_kg'), 'il tuo peso');
+        expect(UserProfile.labelFor('birthdate'), 'la data di nascita');
+      },
+    );
   });
 
   group('serie', () {

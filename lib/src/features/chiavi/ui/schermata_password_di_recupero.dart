@@ -143,8 +143,8 @@ class _SchermataPasswordDiRecuperoState
             autofillHints: const [AutofillHints.newPassword],
             decoration: InputDecoration(
               labelText: 'Ripetila',
-              errorText: _conferma.text.isNotEmpty &&
-                      _conferma.text != _password.text
+              errorText:
+                  _conferma.text.isNotEmpty && _conferma.text != _password.text
                   ? 'Le due password non coincidono'
                   : null,
             ),

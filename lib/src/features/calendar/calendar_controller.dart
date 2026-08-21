@@ -82,9 +82,9 @@ final calendarProvider = FutureProvider.autoDispose<CalendarPage>((ref) async {
 });
 
 /// Il dettaglio di un giorno.
-final calendarDayProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((
-  ref,
-  data,
-) async {
-  return ref.watch(apiClientProvider).get<Map<String, dynamic>>('/calendar/$data');
-});
+final calendarDayProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, String>((ref, data) async {
+      return ref
+          .watch(apiClientProvider)
+          .get<Map<String, dynamic>>('/calendar/$data');
+    });

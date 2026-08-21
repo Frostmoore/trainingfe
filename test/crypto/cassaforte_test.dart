@@ -107,7 +107,10 @@ void main() {
 
     // Il cambio password nella vita reale: si riapre con la vecchia, si
     // richiude con la nuova. Niente tocca i messaggi.
-    final tiraFuori = cassaforte.scarta(pacchetto: vecchio, password: 'vecchia');
+    final tiraFuori = cassaforte.scarta(
+      pacchetto: vecchio,
+      password: 'vecchia',
+    );
     final nuovo = cassaforte.incarta(
       chiaveMaestra: tiraFuori,
       password: 'nuova',
@@ -196,8 +199,10 @@ void main() {
       expect(tornato.memLimit, 16384);
 
       // E con quei parametri si riapre davvero, non solo si rileggono.
-      final maestra =
-          cassaforte.scarta(pacchetto: tornato, password: 'segreta');
+      final maestra = cassaforte.scarta(
+        pacchetto: tornato,
+        password: 'segreta',
+      );
       expect(maestra.extractBytes().length, 32);
     });
 

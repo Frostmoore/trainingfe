@@ -128,7 +128,9 @@ class ContenutoPianoAlimentare extends ContenutoMessaggio {
   /// ⚠️ Il server manda `name`; `title` resta accettato perche' le buste
   /// scritte prima di G8 lo usavano.
   String get titolo =>
-      piano['name']?.toString() ?? piano['title']?.toString() ?? 'Piano alimentare';
+      piano['name']?.toString() ??
+      piano['title']?.toString() ??
+      'Piano alimentare';
 
   /// L'identità stabile — D15. `null` per le buste `v1`.
   String? get origineId => piano['origine_id']?.toString();
@@ -155,10 +157,8 @@ class ContenutoSconosciuto extends ContenutoMessaggio {
   final String tipo;
 
   @override
-  String perLaBusta() => json.encode({
-    't': tipo,
-    'v': ContenutoMessaggio.versione,
-  });
+  String perLaBusta() =>
+      json.encode({'t': tipo, 'v': ContenutoMessaggio.versione});
 }
 
 /// Una foto: **il riferimento e la chiave, non i byte** — N13.2.

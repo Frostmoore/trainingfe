@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/aggiornamento/aggiornamento_controller.dart';
+import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/onboarding/branding_controller.dart';
 
 /// La radice dell'app.
@@ -43,6 +45,25 @@ class TrainingCompanionApp extends ConsumerWidget {
       ],
 
       routerConfig: router,
+
+      /*
+       * 🆕 **Il cancello della versione sta SOPRA il router** — FASE 10.
+       *
+       * 🚨 Non è una rotta, ed è deliberato: una rotta si può lasciare con il
+       * tasto indietro, e da questa schermata **non si deve uscire**. Il
+       * `builder` avvolge qualunque cosa il router stia mostrando, compresi i
+       * fogli modali aperti.
+       *
+       * ⚠️ E vale anche prima dell'accesso: una copia vecchia non deve poter
+       * fare il login per poi sbattere una schermata alla volta.
+       */
+      builder: (context, figlio) {
+        final daAggiornare = ref.watch(aggiornamentoProvider).serve;
+
+        return daAggiornare
+            ? const SchermataAggiorna()
+            : (figlio ?? const SizedBox.shrink());
+      },
     );
   }
 }

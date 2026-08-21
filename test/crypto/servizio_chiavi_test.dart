@@ -91,17 +91,22 @@ void main() {
   /// Se il server non risponde non si può sapere se un pacchetto esista. Andare
   /// su `daCreare` genererebbe una chiave maestra nuova che scriverebbe sopra
   /// quella vera, chiudendo la persona fuori dai propri messaggi per sempre.
-  test('se il server non risponde si chiede il ripristino, non si crea', () async {
-    adapter.onGet(
-      '/account/recovery-key',
-      (s) => s.throws(
-        500,
-        DioException(requestOptions: RequestOptions(path: '/account/recovery-key')),
-      ),
-    );
+  test(
+    'se il server non risponde si chiede il ripristino, non si crea',
+    () async {
+      adapter.onGet(
+        '/account/recovery-key',
+        (s) => s.throws(
+          500,
+          DioException(
+            requestOptions: RequestOptions(path: '/account/recovery-key'),
+          ),
+        ),
+      );
 
-    expect(await servizio.stato(), StatoChiavi.daRipristinare);
-  });
+      expect(await servizio.stato(), StatoChiavi.daRipristinare);
+    },
+  );
 }
 
 class _TokenStoreFinto implements TokenStore {

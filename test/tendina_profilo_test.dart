@@ -25,13 +25,13 @@ void main() {
   /// manca davvero, e un test su una larghezza generosa non proverebbe niente.
   Widget suUnoSchermoStretto(Widget figlio) => MaterialApp(
     home: Scaffold(
-      body: Center(
-        child: SizedBox(width: 320, child: figlio),
-      ),
+      body: Center(child: SizedBox(width: 320, child: figlio)),
     ),
   );
 
-  testWidgets('l\'etichetta lunga non manda in overflow il campo', (tester) async {
+  testWidgets('l\'etichetta lunga non manda in overflow il campo', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(720, 1280);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.reset);
@@ -129,7 +129,9 @@ void main() {
   ///
   /// 💡 1.3 non è un numero scelto per far passare il test: è dentro la forbice
   /// che Android offre di serie (fino a 1.3 senza accessibilità, oltre con).
-  testWidgets('a carattere ingrandito il menu aperto non sfora', (tester) async {
+  testWidgets('a carattere ingrandito il menu aperto non sfora', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MediaQuery(
         data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
@@ -159,7 +161,9 @@ void main() {
   /// I 320 usati sopra sono già più stretti del vero; qui si scende a **280**,
   /// che è il caso peggiore realistico (schermo piccolo **e** finestra divisa).
   for (final larghezza in [280.0, 328.0, 360.0]) {
-    testWidgets('nessuno sforo a ${larghezza.toInt()} px di larghezza', (tester) async {
+    testWidgets('nessuno sforo a ${larghezza.toInt()} px di larghezza', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),

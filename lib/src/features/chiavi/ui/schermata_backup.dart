@@ -126,7 +126,9 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
                     child: Text(
                       'Questo file vale quanto il tuo account. Chi lo ha, '
                       'insieme al codice, può leggere i tuoi messaggi.',
-                      style: TextStyle(color: tema.colorScheme.onErrorContainer),
+                      style: TextStyle(
+                        color: tema.colorScheme.onErrorContainer,
+                      ),
                     ),
                   ),
                 ],
@@ -144,7 +146,10 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
              * una password si **ricorda** — e si dimentica, ed è il guasto da
              * cui stiamo scappando. Un codice si **conserva** insieme al file.
              */
-            Text('Il tuo codice di ripristino', style: tema.textTheme.titleMedium),
+            Text(
+              'Il tuo codice di ripristino',
+              style: tema.textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             SelectableText(
               _codice!,
@@ -162,9 +167,9 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
             OutlinedButton.icon(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: _codice!));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Codice copiato')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Codice copiato')));
               },
               icon: const Icon(Icons.copy_rounded),
               label: const Text('Copia il codice'),
@@ -181,7 +186,9 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.ios_share_rounded),
-            label: Text(_codice == null ? 'Crea il file' : 'Crea un file nuovo'),
+            label: Text(
+              _codice == null ? 'Crea il file' : 'Crea un file nuovo',
+            ),
           ),
         ],
       ),
@@ -251,7 +258,6 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
     }
   }
 }
-
 
 /// L'interruttore del backup automatico sul cloud — N3.5 e N3.6.
 ///
@@ -449,7 +455,8 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
 
     final quando = s.ultimo;
 
-    if (quando == null) return 'Acceso · non so ancora quando è stato l\'ultimo';
+    if (quando == null)
+      return 'Acceso · non so ancora quando è stato l\'ultimo';
 
     return 'Ultimo backup: ${_daQuando(quando)}';
   }
@@ -477,7 +484,9 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
     final messaggeria = ScaffoldMessenger.of(context);
 
     try {
-      final acceso = await ref.read(backupAutomaticoProvider.notifier).accendi();
+      final acceso = await ref
+          .read(backupAutomaticoProvider.notifier)
+          .accendi();
 
       if (!acceso) {
         // 💡 Ha detto di no: non è un errore, e non merita un messaggio rosso.
@@ -575,9 +584,7 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
 
       ref.invalidate(backupAutomaticoProvider);
 
-      messaggeria.showSnackBar(
-        SnackBar(content: Text(_perUnaPersona(errore))),
-      );
+      messaggeria.showSnackBar(SnackBar(content: Text(_perUnaPersona(errore))));
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
@@ -608,7 +615,6 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
         'riprova più tardi.';
   }
 }
-
 
 /// «Riprendi quello che c'è nel cloud» — N4.2.
 ///
@@ -676,7 +682,9 @@ class _RipristinoDalCloudState extends ConsumerState<_RipristinoDalCloud> {
       if (quando == null) {
         messaggeria.showSnackBar(
           const SnackBar(
-            content: Text('Non c\'è nessuna copia di sicurezza in questo account.'),
+            content: Text(
+              'Non c\'è nessuna copia di sicurezza in questo account.',
+            ),
           ),
         );
 

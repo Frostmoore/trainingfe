@@ -118,7 +118,12 @@ class BrandingController extends StateNotifier<BrandingState> {
   Future<GymBranding> lookup(String code) async {
     final normalizzato = code.trim().toUpperCase();
 
-    state = BrandingState(branding: state.branding, joinCode: state.joinCode, senzaPalestra: state.senzaPalestra, isLoading: true);
+    state = BrandingState(
+      branding: state.branding,
+      joinCode: state.joinCode,
+      senzaPalestra: state.senzaPalestra,
+      isLoading: true,
+    );
 
     try {
       final data = await _api.get<Map<String, dynamic>>(
@@ -136,7 +141,11 @@ class BrandingController extends StateNotifier<BrandingState> {
       return branding;
     } finally {
       if (state.isLoading) {
-        state = BrandingState(branding: state.branding, joinCode: state.joinCode, senzaPalestra: state.senzaPalestra);
+        state = BrandingState(
+          branding: state.branding,
+          joinCode: state.joinCode,
+          senzaPalestra: state.senzaPalestra,
+        );
       }
     }
   }
@@ -159,7 +168,10 @@ class BrandingController extends StateNotifier<BrandingState> {
 
       await _cache.setBranding(data);
 
-      state = BrandingState(branding: GymBranding.fromJson(data), joinCode: code);
+      state = BrandingState(
+        branding: GymBranding.fromJson(data),
+        joinCode: code,
+      );
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
 
@@ -179,7 +191,10 @@ class BrandingController extends StateNotifier<BrandingState> {
   }
 }
 
-final brandingControllerProvider = StateNotifierProvider<BrandingController, BrandingState>(
-  (ref) => BrandingController(ref.watch(apiClientProvider), ref.watch(localCacheProvider)),
-);
-
+final brandingControllerProvider =
+    StateNotifierProvider<BrandingController, BrandingState>(
+      (ref) => BrandingController(
+        ref.watch(apiClientProvider),
+        ref.watch(localCacheProvider),
+      ),
+    );

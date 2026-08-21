@@ -34,7 +34,9 @@ void main() {
     expect(predefinitoDiFlutter, isEmpty);
   });
 
-  testWidgets('il campo del codice palestra ha l autofill spento', (tester) async {
+  testWidgets('il campo del codice palestra ha l autofill spento', (
+    tester,
+  ) async {
     /*
      * 🚨 Si guarda **il widget costruito**, non lo schermo: la richiesta
      * dell'impronta la disegna il sistema operativo, e in un test non compare
@@ -54,10 +56,16 @@ void main() {
 
     final campo = tester.widget<TextField>(find.byType(TextField));
 
-    expect(campo.autofillHints, isNull, reason: 'con una lista vuota l\'autofill resta acceso');
+    expect(
+      campo.autofillHints,
+      isNull,
+      reason: 'con una lista vuota l\'autofill resta acceso',
+    );
   });
 
-  testWidgets('un campo di accesso vero invece l autofill lo VUOLE', (tester) async {
+  testWidgets('un campo di accesso vero invece l autofill lo VUOLE', (
+    tester,
+  ) async {
     /*
      * 💡 La correzione non è «togliere l'autofill dappertutto». Su email e
      * password serve: là il gestore di password fa esattamente il proprio

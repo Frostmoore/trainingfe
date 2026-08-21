@@ -40,7 +40,8 @@ void main() {
       expect(
         s.startedAt.isUtc,
         isFalse,
-        reason: 'un DateTime in UTC verrebbe formattato con l\'ora di Greenwich',
+        reason:
+            'un DateTime in UTC verrebbe formattato con l\'ora di Greenwich',
       );
       expect(s.endedAt!.isUtc, isFalse);
     });
@@ -51,7 +52,8 @@ void main() {
       expect(
         s.startedAt.toUtc(),
         DateTime.parse(dopoMezzanotteARoma).toUtc(),
-        reason: '.toLocal() non deve spostare l\'istante, solo come lo si legge',
+        reason:
+            '.toLocal() non deve spostare l\'istante, solo come lo si legge',
       );
     });
 

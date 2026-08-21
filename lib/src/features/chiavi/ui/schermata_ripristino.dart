@@ -42,7 +42,8 @@ class SchermataRipristino extends ConsumerStatefulWidget {
   const SchermataRipristino({super.key});
 
   @override
-  ConsumerState<SchermataRipristino> createState() => _SchermataRipristinoState();
+  ConsumerState<SchermataRipristino> createState() =>
+      _SchermataRipristinoState();
 }
 
 class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
@@ -414,7 +415,9 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
             controller: _password,
             obscureText: true,
             autofillHints: const [AutofillHints.password],
-            decoration: const InputDecoration(labelText: 'Password di recupero'),
+            decoration: const InputDecoration(
+              labelText: 'Password di recupero',
+            ),
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _password.text.isEmpty ? null : _conPassword(),
           ),
@@ -556,11 +559,13 @@ class _ChiediFileECodiceState extends State<_ChiediFileECodice> {
         ),
         FilledButton(
           onPressed: _valido
-              ? () => Navigator.of(context).pop(_DatiDelFile(
+              ? () => Navigator.of(context).pop(
+                  _DatiDelFile(
                     percorso: _percorso.text.trim(),
                     codice: _codice.text,
                     nuovaPassword: _password.text,
-                  ))
+                  ),
+                )
               : null,
           child: const Text('Ripristina'),
         ),

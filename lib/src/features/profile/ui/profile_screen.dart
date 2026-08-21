@@ -148,7 +148,9 @@ class ProfileScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.groups_2_outlined),
                     title: const Text('I miei utenti'),
-                    subtitle: const Text('Invita, segui e gestisci le persone che alleni'),
+                    subtitle: const Text(
+                      'Invita, segui e gestisci le persone che alleni',
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.mieiUtenti),
                   ),
@@ -164,7 +166,9 @@ class ProfileScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.restaurant_menu_outlined),
                     title: const Text('I miei piani alimentari'),
-                    subtitle: const Text('Scrivili qui, poi mandali dalla chat'),
+                    subtitle: const Text(
+                      'Scrivili qui, poi mandali dalla chat',
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.mieiPiani),
                   ),
@@ -181,7 +185,9 @@ class ProfileScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.fitness_center_outlined),
                     title: const Text('Le mie schede'),
-                    subtitle: const Text('Quelle che scrivi per i tuoi allievi'),
+                    subtitle: const Text(
+                      'Quelle che scrivi per i tuoi allievi',
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.mieSchede),
                   ),

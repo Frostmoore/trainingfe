@@ -78,7 +78,8 @@ void main() {
     expect(
       auth.state.user,
       isNotNull,
-      reason: 'Senza utente la chat attribuisce ogni messaggio all\'altra '
+      reason:
+          'Senza utente la chat attribuisce ogni messaggio all\'altra '
           'persona e «Oggi» non saluta nessuno.',
     );
     expect(auth.state.user!.id, 7);
@@ -193,14 +194,17 @@ void main() {
     expect(auth.state.user?.id, 7);
   });
 
-  test('senza token salvato si parte disconnessi, senza chiamare il server', () async {
-    final auth = AuthController(client, token);
+  test(
+    'senza token salvato si parte disconnessi, senza chiamare il server',
+    () async {
+      final auth = AuthController(client, token);
 
-    await auth.restore();
+      await auth.restore();
 
-    expect(auth.state.status, AuthStatus.loggedOut);
-    expect(auth.state.user, isNull);
-  });
+      expect(auth.state.status, AuthStatus.loggedOut);
+      expect(auth.state.user, isNull);
+    },
+  );
 
   /// 🚨 Dopo l'eliminazione dell'account il token è **già** revocato: una
   /// `logout()` farebbe una chiamata destinata a un 401.
@@ -254,7 +258,11 @@ void main() {
     });
 
     test('uscire NON cancella i dati locali', () async {
-      adapter.onPost('/auth/logout', (s) => s.reply(200, {}), data: Matchers.any);
+      adapter.onPost(
+        '/auth/logout',
+        (s) => s.reply(200, {}),
+        data: Matchers.any,
+      );
 
       final auth = AuthController(client, token, archivio.svuota, null, cache);
 
@@ -265,7 +273,8 @@ void main() {
       expect(
         archivio.svuotato,
         isFalse,
-        reason: 'Uscire dal proprio account ha cancellato peso, misure e sonno.',
+        reason:
+            'Uscire dal proprio account ha cancellato peso, misure e sonno.',
       );
     });
 
@@ -281,7 +290,11 @@ void main() {
       await auth.forgetSession();
 
       expect(archivio.svuotato, isTrue);
-      expect(cache.ultima, isNull, reason: 'Un id che punta a un account cancellato mente.');
+      expect(
+        cache.ultima,
+        isNull,
+        reason: 'Un id che punta a un account cancellato mente.',
+      );
     });
 
     /// 💡 La protezione del telefono condiviso resta, spostata dove serve.
@@ -333,7 +346,11 @@ void main() {
       adapter.onGet(
         '/auth/me',
         (s) => s.reply(200, {
-          'data': {'id': 7, 'name': 'Mario Rossi', 'email': 'mario@esempio.test'},
+          'data': {
+            'id': 7,
+            'name': 'Mario Rossi',
+            'email': 'mario@esempio.test',
+          },
           'branding': {'name': 'Palestra Demo'},
         }),
       );
@@ -342,17 +359,28 @@ void main() {
     /// 🚨 Il blocco sta **davanti alla lettura del token**: se scattasse dopo,
     /// l'app avrebbe già chiesto al server chi siamo — cioè avrebbe già usato
     /// la credenziale che il blocco dovrebbe proteggere.
-    test('con il blocco acceso si parte bloccati, senza chiamare il server', () async {
-      blocco.acceso = true;
+    test(
+      'con il blocco acceso si parte bloccati, senza chiamare il server',
+      () async {
+        blocco.acceso = true;
 
-      final auth = AuthController(client, token, null, blocco);
+        final auth = AuthController(client, token, null, blocco);
 
-      await auth.restore();
+        await auth.restore();
 
-      expect(auth.state.status, AuthStatus.locked);
-      expect(auth.state.user, isNull, reason: '/auth/me non deve essere stata chiamata');
-      expect(token.salvato, '1|abcdef', reason: 'il token NON si cancella: la sessione esiste');
-    });
+        expect(auth.state.status, AuthStatus.locked);
+        expect(
+          auth.state.user,
+          isNull,
+          reason: '/auth/me non deve essere stata chiamata',
+        );
+        expect(
+          token.salvato,
+          '1|abcdef',
+          reason: 'il token NON si cancella: la sessione esiste',
+        );
+      },
+    );
 
     test('con il blocco spento si entra come prima', () async {
       final auth = AuthController(client, token, null, blocco);

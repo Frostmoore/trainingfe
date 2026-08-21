@@ -54,7 +54,9 @@ class UsaEGettaCoperta extends ConsumerWidget {
       alignment: mio ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: Gap.sm),
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Gap.radius),
           border: Border.all(color: colori.outlineVariant),
@@ -67,11 +69,17 @@ class UsaEGettaCoperta extends ConsumerWidget {
             borderRadius: BorderRadius.circular(Gap.radius),
             onTap: () => _apri(context, ref),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Gap.md,
+                vertical: Gap.sm,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.local_fire_department_outlined, color: colori.primary),
+                  Icon(
+                    Icons.local_fire_department_outlined,
+                    color: colori.primary,
+                  ),
                   const SizedBox(width: Gap.sm),
                   Flexible(
                     child: Column(
@@ -79,7 +87,9 @@ class UsaEGettaCoperta extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _eFoto ? 'Foto una volta sola' : 'Messaggio una volta sola',
+                          _eFoto
+                              ? 'Foto una volta sola'
+                              : 'Messaggio una volta sola',
                           style: tema.textTheme.labelLarge,
                         ),
                         Text(
@@ -148,7 +158,9 @@ class UsaEGettaCoperta extends ConsumerWidget {
       }
     }
 
-    await ref.read(threadProvider(conversationId).notifier).segnaVista(messaggio.id);
+    await ref
+        .read(threadProvider(conversationId).notifier)
+        .segnaVista(messaggio.id);
   }
 }
 
@@ -308,7 +320,11 @@ class _FotoEffimera extends ConsumerWidget {
 /// l'ha mandato ha chiesto. Una riga sparita farebbe pensare a un guasto; una
 /// che dice «Foto effimera» dice cos'è successo.
 class UsaEGettaSpenta extends StatelessWidget {
-  const UsaEGettaSpenta({required this.messaggio, required this.mio, super.key});
+  const UsaEGettaSpenta({
+    required this.messaggio,
+    required this.mio,
+    super.key,
+  });
 
   final ChatMessage messaggio;
   final bool mio;
@@ -321,7 +337,10 @@ class UsaEGettaSpenta extends StatelessWidget {
       alignment: mio ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: Gap.sm),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Gap.md,
+          vertical: Gap.sm,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Gap.radius),
           border: Border.all(color: tema.colorScheme.outlineVariant),

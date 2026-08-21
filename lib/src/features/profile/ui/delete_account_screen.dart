@@ -19,7 +19,8 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
 
   @override
-  ConsumerState<DeleteAccountScreen> createState() => _DeleteAccountScreenState();
+  ConsumerState<DeleteAccountScreen> createState() =>
+      _DeleteAccountScreenState();
 }
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
@@ -86,8 +87,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         future: ref.read(profileActionsProvider).deletionPreview(),
         builder: (context, snapshot) {
           final dati = snapshot.data;
-          final cancellati = ((dati?['deleted'] as List?) ?? const []).cast<String>();
-          final conservati = ((dati?['kept'] as List?) ?? const []).cast<String>();
+          final cancellati = ((dati?['deleted'] as List?) ?? const [])
+              .cast<String>();
+          final conservati = ((dati?['kept'] as List?) ?? const [])
+              .cast<String>();
 
           return ListView(
             padding: const EdgeInsets.all(Gap.md),
@@ -153,12 +156,17 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
 
               if (_errore != null) ...[
                 const SizedBox(height: Gap.sm),
-                Text(_errore!, style: TextStyle(color: theme.colorScheme.error)),
+                Text(
+                  _errore!,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ],
 
               const SizedBox(height: Gap.lg),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                ),
                 onPressed: _inCorso || _password.text.isEmpty ? null : _elimina,
                 child: _inCorso
                     ? const SizedBox(

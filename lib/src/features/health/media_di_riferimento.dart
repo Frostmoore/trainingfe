@@ -98,7 +98,11 @@ class MediaDiRiferimento {
     final fine = ultima.giorno.subtract(const Duration(days: 1));
     final inizio = ultima.giorno.subtract(Duration(days: giorniBase));
 
-    final precedenti = await archivio.lettureFraGiorni(metrica, da: inizio, a: fine);
+    final precedenti = await archivio.lettureFraGiorni(
+      metrica,
+      da: inizio,
+      a: fine,
+    );
 
     if (precedenti.isEmpty) {
       return LetturaConMedia(
@@ -119,7 +123,9 @@ class MediaDiRiferimento {
       // ⚠️ Una media <= 0 non produce uno scostamento: dividerci sarebbe una
       // divisione per zero travestita, e con valori negativi il segno del
       // risultato sarebbe pure invertito.
-      scostamentoPct: media <= 0 ? null : _arrotonda((ultima.valore - media) / media * 100, 1),
+      scostamentoPct: media <= 0
+          ? null
+          : _arrotonda((ultima.valore - media) / media * 100, 1),
     );
   }
 

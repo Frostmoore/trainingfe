@@ -348,13 +348,12 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
   Future<SincronizzaFoto> _sincronizzatore(
     CloudDiBackup cloud,
     Uint8List maestra,
-  ) async =>
-      SincronizzaFoto(
-        cloud: cloud,
-        backup: FileDiBackup(await ref.read(sodiumProvider.future)),
-        raccolta: ref.read(raccoltaFotoProvider),
-        chiaveMaestra: maestra,
-      );
+  ) async => SincronizzaFoto(
+    cloud: cloud,
+    backup: FileDiBackup(await ref.read(sodiumProvider.future)),
+    raccolta: ref.read(raccoltaFotoProvider),
+    chiaveMaestra: maestra,
+  );
 
   /// Riprende l'archivio dal cloud **e riaccende il backup automatico** — N7.1.
   ///
@@ -464,10 +463,9 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
 
     final sodium = await ref.read(sodiumProvider.future);
 
-    final contenuto = await FileDiBackup(sodium).importaConChiaveMaestra(
-      file: byte,
-      chiaveMaestra: maestra,
-    );
+    final contenuto = await FileDiBackup(
+      sodium,
+    ).importaConChiaveMaestra(file: byte, chiaveMaestra: maestra);
 
     if (contenuto.archivio.isNotEmpty) {
       await ref
@@ -490,7 +488,10 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     var foto = 0;
 
     try {
-      foto = await (await _sincronizzatore(cloud, maestra)).riprendiLeMancanti();
+      foto = await (await _sincronizzatore(
+        cloud,
+        maestra,
+      )).riprendiLeMancanti();
     } on Object {
       // Le foto sono l'unica cosa che il committente ha detto di poter perdere.
     }

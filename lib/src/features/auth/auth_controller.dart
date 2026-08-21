@@ -273,7 +273,9 @@ class AuthController extends StateNotifier<AuthState> {
     final data = await _api.post<Map<String, dynamic>>(
       '/auth/register',
       body: {
-        'join_code': joinCode == null || joinCode.trim().isEmpty ? null : joinCode.trim(),
+        'join_code': joinCode == null || joinCode.trim().isEmpty
+            ? null
+            : joinCode.trim(),
         'name': name.trim(),
         'email': email.trim(),
         'username': username.trim().toLowerCase(),
@@ -406,7 +408,9 @@ class AuthController extends StateNotifier<AuthState> {
     // salutava nessuno. Difetto invisibile a chi riapriva l'app, cioè a chi
     // provava — che è esattamente il motivo per cui è sopravvissuto.
     final utente = data['data'];
-    final persona = utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null;
+    final persona = utente is Map<String, dynamic>
+        ? AppUser.fromJson(utente)
+        : null;
 
     // 🚨 **Prima di dichiarare la sessione aperta.** Se la pulizia avvenisse
     // dopo, per un istante lo stato sarebbe `loggedIn` con dentro l'archivio
@@ -426,7 +430,9 @@ class AuthController extends StateNotifier<AuthState> {
       );
 
       final utente = risposta['data'];
-      final persona = utente is Map<String, dynamic> ? AppUser.fromJson(utente) : null;
+      final persona = utente is Map<String, dynamic>
+          ? AppUser.fromJson(utente)
+          : null;
 
       // ⚠️ Anche qui, e **prima** dello stato: `restore()` passa da questa
       // strada, quindi è il punto in cui un telefono che ha cambiato padrone se

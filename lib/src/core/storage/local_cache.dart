@@ -20,7 +20,8 @@ class LocalCache {
   /// Va costruita in `bootstrap()`: `getInstance()` è asincrona, e farla
   /// aspettare al primo `build()` di un widget significa esattamente la
   /// schermata bianca che questa classe esiste per evitare.
-  static Future<LocalCache> open() async => LocalCache(await SharedPreferences.getInstance());
+  static Future<LocalCache> open() async =>
+      LocalCache(await SharedPreferences.getInstance());
 
   final SharedPreferences _prefs;
 
@@ -68,13 +69,14 @@ class LocalCache {
   /// 💡 Un id numerico e non un'email: questo file è in chiaro, e un id non
   /// dice a chi legge il telefono **chi** ci sia stato dentro.
   bool accoglienzaFatta(int utenteId) =>
-      (_prefs.getStringList(_accoglienzaFatta) ?? const [])
-          .contains(utenteId.toString());
+      (_prefs.getStringList(_accoglienzaFatta) ?? const []).contains(
+        utenteId.toString(),
+      );
 
   Future<void> segnaAccoglienzaFatta(int utenteId) async {
-    final fatti = (_prefs.getStringList(_accoglienzaFatta) ?? const <String>[])
-        .toSet()
-      ..add(utenteId.toString());
+    final fatti =
+        (_prefs.getStringList(_accoglienzaFatta) ?? const <String>[]).toSet()
+          ..add(utenteId.toString());
 
     await _prefs.setStringList(_accoglienzaFatta, fatti.toList());
   }
@@ -143,7 +145,8 @@ class LocalCache {
 
   String? getString(String key) => _prefs.getString(key);
 
-  Future<void> setString(String key, String value) => _prefs.setString(key, value);
+  Future<void> setString(String key, String value) =>
+      _prefs.setString(key, value);
 
   Future<void> remove(String key) => _prefs.remove(key);
 }

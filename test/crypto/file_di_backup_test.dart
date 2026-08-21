@@ -27,8 +27,7 @@ void main() {
     cassaforte = Cassaforte(sodium);
   });
 
-  Uint8List maestraFinta() =>
-      cassaforte.generaChiaveMaestra().extractBytes();
+  Uint8List maestraFinta() => cassaforte.generaChiaveMaestra().extractBytes();
 
   group('il codice di ripristino', () {
     test('sono sei gruppi da quattro, leggibili su un foglio', () {

@@ -24,7 +24,8 @@ void main() {
     adesso = DateTime(2026, 8, 20, 12);
   });
 
-  RisincronizzazioneHealth costruisci({Duration? attesa}) => RisincronizzazioneHealth(
+  RisincronizzazioneHealth costruisci({Duration? attesa}) =>
+      RisincronizzazioneHealth(
         () async => quante++,
         adesso: () => adesso,
         attesa: attesa,
@@ -95,14 +96,11 @@ void main() {
     final lenta = Completer<void>();
     var partite = 0;
 
-    final r = RisincronizzazioneHealth(
-      () {
-        partite++;
+    final r = RisincronizzazioneHealth(() {
+      partite++;
 
-        return lenta.future;
-      },
-      adesso: () => adesso,
-    );
+      return lenta.future;
+    }, adesso: () => adesso);
 
     // Due strisciamenti nello stesso istante: il secondo arriva mentre il
     // primo sta ancora leggendo.
@@ -112,7 +110,8 @@ void main() {
     expect(
       await secondo,
       isFalse,
-      reason: 'Il secondo trova il segnaposto già scritto, anche se la lettura non è finita.',
+      reason:
+          'Il secondo trova il segnaposto già scritto, anche se la lettura non è finita.',
     );
 
     lenta.complete();
@@ -199,14 +198,11 @@ void main() {
   test('e un fallimento consuma comunque la soglia', () async {
     var tentativi = 0;
 
-    final r = RisincronizzazioneHealth(
-      () async {
-        tentativi++;
+    final r = RisincronizzazioneHealth(() async {
+      tentativi++;
 
-        throw StateError('Health Connect non c\'è');
-      },
-      adesso: () => adesso,
-    );
+      throw StateError('Health Connect non c\'è');
+    }, adesso: () => adesso);
 
     await r.forse();
     await r.forse();

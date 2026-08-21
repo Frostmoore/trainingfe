@@ -16,10 +16,7 @@ import 'formato_foto.dart';
 Future<Uint8List?> ritagliaQuadrato({
   required Uint8List byte,
   Rect? riquadro,
-}) => compute(
-  eseguiRitaglio,
-  OrdineDiRitaglio(byte: byte, riquadro: riquadro),
-);
+}) => compute(eseguiRitaglio, OrdineDiRitaglio(byte: byte, riquadro: riquadro));
 
 /// L'ordine che attraversa il confine dell'isolato: solo dati, niente oggetti.
 class OrdineDiRitaglio {
@@ -125,8 +122,16 @@ img.Image _ritaglia(img.Image immagine, Rect? riquadro) {
         .toDouble(),
   ).round();
 
-  final x = _fraDueEstremi(riquadro.left, 0, (immagine.width - lato).toDouble());
-  final y = _fraDueEstremi(riquadro.top, 0, (immagine.height - lato).toDouble());
+  final x = _fraDueEstremi(
+    riquadro.left,
+    0,
+    (immagine.width - lato).toDouble(),
+  );
+  final y = _fraDueEstremi(
+    riquadro.top,
+    0,
+    (immagine.height - lato).toDouble(),
+  );
 
   return img.copyCrop(
     immagine,

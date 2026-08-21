@@ -37,6 +37,35 @@ $radice = Split-Path -Parent $PSScriptRoot
 Push-Location $radice
 
 try {
+    # ══ 🆕 LA VERSIONE, PRIMA DI COMPILARE — FASE 10.1 ═══════════════════
+    #
+    # 🚨 Fino al 21/08 `pubspec.yaml` diceva `1.0.0+1` e non l'aveva mai
+    # toccata nessuno: ogni APK si dichiarava «1.0.0» con `versionCode` 1.
+    #
+    # ⚠️ Due guai: il cancello della versione confronta numeri tutti uguali, e
+    # **il Play Store rifiuta un caricamento con un `versionCode` già usato** —
+    # alla prima pubblicazione passa, alla seconda no.
+    #
+    # 💡 Si controlla qui e non in un documento: una regola che si può violare
+    # da riga di comando, prima o poi si viola. È la stessa lezione dell'ENV.
+    $riga = (Select-String -Path 'pubspec.yaml' -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+
+    if ($riga -eq '1.0.0+1') {
+        throw "pubspec.yaml e' ancora a 1.0.0+1: la versione non e' mai stata alzata (FASE 10.1)."
+    }
+
+    if ($riga -notmatch '^(\d+)\.(\d+)\.(\d+)\+(\d+)$') {
+        throw "versione '$riga' non riconosciuta: serve X.Y.Z+N."
+    }
+
+    $atteso = [int]$Matches[1] * 10000 + [int]$Matches[2] * 100 + [int]$Matches[3]
+
+    if ([int]$Matches[4] -ne $atteso) {
+        throw "versionCode $($Matches[4]) non torna: per $($Matches[1]).$($Matches[2]).$($Matches[3]) deve essere $atteso (major*10000 + minor*100 + patch)."
+    }
+
+    Write-Host "Versione: $riga (versionCode $atteso)" -ForegroundColor Green
+
     Write-Host "Costruisco per '$Ambiente'..." -ForegroundColor Cyan
     fvm flutter build apk --release --dart-define=ENV=$Ambiente
     if ($LASTEXITCODE -ne 0) { throw "la compilazione è fallita" }

@@ -1,4 +1,3 @@
-
 /// Una dormita intera: dal momento in cui ti sei addormentato a quando ti sei
 /// svegliato.
 class SessioneSonno {
@@ -89,8 +88,11 @@ class SessioniDiSonno {
   ///
   /// 🚨 I segmenti vanno passati **tutti insieme**, non uno per volta: è
   /// esattamente l'informazione che mancava alla regola vecchia.
-  static List<SessioneSonno> da(Iterable<({DateTime inizio, DateTime fine})> segmenti) {
-    final ordinati = segmenti.toList()..sort((a, b) => a.inizio.compareTo(b.inizio));
+  static List<SessioneSonno> da(
+    Iterable<({DateTime inizio, DateTime fine})> segmenti,
+  ) {
+    final ordinati = segmenti.toList()
+      ..sort((a, b) => a.inizio.compareTo(b.inizio));
 
     if (ordinati.isEmpty) return const [];
 
@@ -132,8 +134,10 @@ class SessioniDiSonno {
   static SessioneSonno _classifica(DateTime inizio, DateTime fine) {
     final durata = fine.difference(inizio);
 
-    final eNotte = durata >= durataDaNotte ||
-        (durata >= durataMinimaNotte && _dentroIlCuoreDellaNotte(inizio, fine) >= dentroIlCuore);
+    final eNotte =
+        durata >= durataDaNotte ||
+        (durata >= durataMinimaNotte &&
+            _dentroIlCuoreDellaNotte(inizio, fine) >= dentroIlCuore);
 
     return SessioneSonno(inizio: inizio, fine: fine, eNotte: eNotte);
   }
@@ -152,8 +156,18 @@ class SessioniDiSonno {
     final ultimo = DateTime(fine.year, fine.month, fine.day + 1);
 
     while (giorno.isBefore(ultimo)) {
-      final apre = DateTime(giorno.year, giorno.month, giorno.day, oraInizioCuoreNotte);
-      final chiude = DateTime(giorno.year, giorno.month, giorno.day + 1, oraFineCuoreNotte);
+      final apre = DateTime(
+        giorno.year,
+        giorno.month,
+        giorno.day,
+        oraInizioCuoreNotte,
+      );
+      final chiude = DateTime(
+        giorno.year,
+        giorno.month,
+        giorno.day + 1,
+        oraFineCuoreNotte,
+      );
 
       final da = inizio.isAfter(apre) ? inizio : apre;
       final a = fine.isBefore(chiude) ? fine : chiude;

@@ -22,17 +22,18 @@ void main() {
     DateTime? quando,
     String fonte = 'com.huami.watch.hmwatchmanager',
     int kcal = 400,
-  }) =>
-      AllenamentoDaOrologio(
-        id: 0,
-        fonte: fonte,
-        tipo: 'RUNNING',
-        iniziatoIl: quando ?? DateTime(2026, 8, 19, 7),
-        finitoIl: (quando ?? DateTime(2026, 8, 19, 7)).add(const Duration(minutes: 40)),
-        kcal: kcal,
-        nascosto: false,
-        staccato: false,
-      );
+  }) => AllenamentoDaOrologio(
+    id: 0,
+    fonte: fonte,
+    tipo: 'RUNNING',
+    iniziatoIl: quando ?? DateTime(2026, 8, 19, 7),
+    finitoIl: (quando ?? DateTime(2026, 8, 19, 7)).add(
+      const Duration(minutes: 40),
+    ),
+    kcal: kcal,
+    nascosto: false,
+    staccato: false,
+  );
 
   group('La rilettura non duplica', () {
     /// 🚨 Si rileggono **sempre** gli ultimi sette giorni: senza la chiave
@@ -90,7 +91,10 @@ void main() {
       await archivio.assegnaSchedaAllenamento(salvato.id, 77);
       await archivio.assegnaSchedaAllenamento(salvato.id, null);
 
-      expect((await archivio.allenamentiDellOrologio()).single.schedaAssegnata, isNull);
+      expect(
+        (await archivio.allenamentiDellOrologio()).single.schedaAssegnata,
+        isNull,
+      );
     });
 
     /// ══ 🚨 E però i dati del SENSORE si correggono ═══════════════════════
@@ -134,7 +138,10 @@ void main() {
       await archivio.nascondiAllenamento(salvato.id, nascosto: true);
       await archivio.scriviAllenamenti([corsa()]);
 
-      expect((await archivio.allenamentiDellOrologio()).single.nascosto, isTrue);
+      expect(
+        (await archivio.allenamentiDellOrologio()).single.nascosto,
+        isTrue,
+      );
     });
 
     /// 🚨 **Nemmeno lo scollegamento** — FASE 1-bis. È la contropartita della
@@ -151,7 +158,11 @@ void main() {
       final dopo = (await archivio.allenamentiDellOrologio()).single;
 
       expect(dopo.staccato, isTrue, reason: 'La correzione a mano resta.');
-      expect(dopo.kcal, 680, reason: 'Ma il dato del sensore si aggiorna comunque.');
+      expect(
+        dopo.kcal,
+        680,
+        reason: 'Ma il dato del sensore si aggiorna comunque.',
+      );
     });
 
     /// 💡 E si può rimettere insieme: *«Puoi rimetterlo insieme quando vuoi»* è
@@ -163,7 +174,10 @@ void main() {
       await archivio.staccaAllenamento(salvato.id, staccato: true);
       await archivio.staccaAllenamento(salvato.id, staccato: false);
 
-      expect((await archivio.allenamentiDellOrologio()).single.staccato, isFalse);
+      expect(
+        (await archivio.allenamentiDellOrologio()).single.staccato,
+        isFalse,
+      );
     });
   });
 

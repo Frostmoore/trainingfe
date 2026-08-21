@@ -72,14 +72,18 @@ class _CambiaEmailState extends ConsumerState<_CambiaEmail> {
     try {
       await ref
           .read(profileActionsProvider)
-          .cambiaEmail(email: _email.text.trim(), passwordAttuale: _password.text);
+          .cambiaEmail(
+            email: _email.text.trim(),
+            passwordAttuale: _password.text,
+          );
 
       if (!mounted) return;
 
       _password.clear();
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Email aggiornata.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Email aggiornata.')));
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
 
@@ -87,8 +91,9 @@ class _CambiaEmailState extends ConsumerState<_CambiaEmail> {
         if (tradotto is ValidationException) {
           _errori = tradotto.errors;
         } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(tradotto.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(tradotto.message)));
         }
       });
     } finally {
@@ -187,9 +192,11 @@ class _CambiaPasswordState extends ConsumerState<_CambiaPassword> {
 
   Future<void> _salva() async {
     if (_nuova.text != _conferma.text) {
-      setState(() => _errori = {
-        'password': ['Le due password non coincidono.'],
-      });
+      setState(
+        () => _errori = {
+          'password': ['Le due password non coincidono.'],
+        },
+      );
 
       return;
     }
@@ -197,9 +204,11 @@ class _CambiaPasswordState extends ConsumerState<_CambiaPassword> {
     // Stessa soglia della registrazione: sotto, il server risponde 422 e far
     // premere il pulsante per fallire dopo un giro di rete è solo più lento.
     if (!_forza.accettabile) {
-      setState(() => _errori = {
-        'password': ['Troppo debole: segui il consiglio qui sotto.'],
-      });
+      setState(
+        () => _errori = {
+          'password': ['Troppo debole: segui il consiglio qui sotto.'],
+        },
+      );
 
       return;
     }
@@ -210,11 +219,13 @@ class _CambiaPasswordState extends ConsumerState<_CambiaPassword> {
     });
 
     try {
-      await ref.read(profileActionsProvider).cambiaPassword(
-        passwordAttuale: _attuale.text,
-        nuova: _nuova.text,
-        conferma: _conferma.text,
-      );
+      await ref
+          .read(profileActionsProvider)
+          .cambiaPassword(
+            passwordAttuale: _attuale.text,
+            nuova: _nuova.text,
+            conferma: _conferma.text,
+          );
 
       if (!mounted) return;
 
@@ -232,7 +243,9 @@ class _CambiaPasswordState extends ConsumerState<_CambiaPassword> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password aggiornata. Gli altri dispositivi sono stati disconnessi.'),
+          content: Text(
+            'Password aggiornata. Gli altri dispositivi sono stati disconnessi.',
+          ),
         ),
       );
     } on Object catch (error) {
@@ -242,8 +255,9 @@ class _CambiaPasswordState extends ConsumerState<_CambiaPassword> {
         if (tradotto is ValidationException) {
           _errori = tradotto.errors;
         } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(tradotto.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(tradotto.message)));
         }
       });
     } finally {

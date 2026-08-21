@@ -28,14 +28,15 @@ class ImportazionePiano {
     this.errore,
   });
 
-  factory ImportazionePiano.fromJson(Map<String, dynamic> json) => ImportazionePiano(
-    id: (json['id'] as num).toInt(),
-    stato: StatoImportazione.da(json['stato']?.toString()),
-    nomeFile: json['nome_file']?.toString() ?? 'piano.pdf',
-    righe: (json['righe'] as num?)?.toInt() ?? 0,
-    bozza: (json['bozza'] as Map?)?.cast<String, dynamic>(),
-    errore: json['errore']?.toString(),
-  );
+  factory ImportazionePiano.fromJson(Map<String, dynamic> json) =>
+      ImportazionePiano(
+        id: (json['id'] as num).toInt(),
+        stato: StatoImportazione.da(json['stato']?.toString()),
+        nomeFile: json['nome_file']?.toString() ?? 'piano.pdf',
+        righe: (json['righe'] as num?)?.toInt() ?? 0,
+        bozza: (json['bozza'] as Map?)?.cast<String, dynamic>(),
+        errore: json['errore']?.toString(),
+      );
 
   final int id;
   final StatoImportazione stato;
@@ -57,15 +58,17 @@ class ImportazionePiano {
   /// sulle righe che contano: senza, la revisione è un elenco di trenta voci
   /// tutte uguali, e chi la fa si stanca alla decima — proprio prima di
   /// arrivare a quella sbagliata.
-  List<String> get dubbi =>
-      ((bozza?['dubbi'] as List?) ?? const []).map((e) => e.toString()).toList();
+  List<String> get dubbi => ((bozza?['dubbi'] as List?) ?? const [])
+      .map((e) => e.toString())
+      .toList();
 
   String get nome => bozza?['nome']?.toString() ?? 'Piano importato';
 
   double get confidenza => (bozza?['confidenza'] as num?)?.toDouble() ?? 0;
 
   bool get inLavorazione =>
-      stato == StatoImportazione.inCoda || stato == StatoImportazione.inLavorazione;
+      stato == StatoImportazione.inCoda ||
+      stato == StatoImportazione.inLavorazione;
 }
 
 enum StatoImportazione {
@@ -110,13 +113,16 @@ class ImportazioniPiani {
   }
 
   Future<ImportazionePiano> stato(int id) async {
-    final risposta = await _api.get<Map<String, dynamic>>('/importazioni-piani/$id');
+    final risposta = await _api.get<Map<String, dynamic>>(
+      '/importazioni-piani/$id',
+    );
 
     return ImportazionePiano.fromJson(risposta);
   }
 
   /// Il PDF originale, per guardarlo accanto alla bozza — N20.4.
-  Future<Uint8List> pdf(int id) => _api.scaricaByte('/importazioni-piani/$id/pdf');
+  Future<Uint8List> pdf(int id) =>
+      _api.scaricaByte('/importazioni-piani/$id/pdf');
 
   /// Chiude l'importazione: il PDF e la bozza se ne vanno dal server.
   ///

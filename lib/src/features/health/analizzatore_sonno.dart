@@ -44,7 +44,8 @@ class GiudizioNotte {
   /// ⚠️ **Non è una valutazione medica**, e l'interfaccia deve dirlo. Era il
   /// campo `disclaimer` che il backend mandava con ogni risposta: qui è una
   /// costante, ma il dovere di mostrarla è lo stesso.
-  static const avvertenza = 'Indicazioni orientative, non una valutazione medica.';
+  static const avvertenza =
+      'Indicazioni orientative, non una valutazione medica.';
 
   String get durata {
     final ore = minutiDormiti ~/ 60;
@@ -82,7 +83,10 @@ class AnalizzatoreSonno {
 
   /// Il riepilogo di una notte. `null` se per quella notte non c'è nessun
   /// campione — **non** un oggetto con tutti zeri.
-  static Future<GiudizioNotte?> notte(ArchivioSalute archivio, DateTime quale) async {
+  static Future<GiudizioNotte?> notte(
+    ArchivioSalute archivio,
+    DateTime quale,
+  ) async {
     final tutti = await archivio.campioniDellaNotte(quale);
 
     if (tutti.isEmpty) return null;
@@ -150,14 +154,31 @@ class AnalizzatoreSonno {
     // sonno: sono esattamente ciò che rende una notte lunga poco riposante.
     final dormito = leggero + profondo + rem;
 
-    final profondoPct = dormito > 0 ? _arrotonda(profondo / dormito * 100, 1) : 0.0;
+    final profondoPct = dormito > 0
+        ? _arrotonda(profondo / dormito * 100, 1)
+        : 0.0;
     final remPct = dormito > 0 ? _arrotonda(rem / dormito * 100, 1) : 0.0;
 
     final valutazioni = <String, Giudizio>{
-      'asleep_minutes': _valuta(dormito, _minutiDormitiOk, _minutiDormitiWarn, piuEMeglio: true),
-      'deep_pct': _valuta(profondoPct, _profondoPctOk, _profondoPctWarn, piuEMeglio: true),
+      'asleep_minutes': _valuta(
+        dormito,
+        _minutiDormitiOk,
+        _minutiDormitiWarn,
+        piuEMeglio: true,
+      ),
+      'deep_pct': _valuta(
+        profondoPct,
+        _profondoPctOk,
+        _profondoPctWarn,
+        piuEMeglio: true,
+      ),
       'rem_pct': _valuta(remPct, _remPctOk, _remPctWarn, piuEMeglio: true),
-      'awake_minutes': _valuta(sveglio, _minutiSvegliOk, _minutiSvegliWarn, piuEMeglio: false),
+      'awake_minutes': _valuta(
+        sveglio,
+        _minutiSvegliOk,
+        _minutiSvegliWarn,
+        piuEMeglio: false,
+      ),
     };
 
     return GiudizioNotte(

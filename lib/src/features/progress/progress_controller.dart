@@ -43,33 +43,45 @@ Future<File> _fileDi(String relativo) async =>
     const ArchivioFoto().fileDi(relativo);
 
 /// La galleria.
-final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((ref) async {
+final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((
+  ref,
+) async {
   ref.watch(revisioneFotoProvider);
 
   final righe = await ref.watch(archivioSaluteProvider).galleria();
 
-  return Future.wait(righe.map((r) async => ProgressPhoto(
+  return Future.wait(
+    righe.map(
+      (r) async => ProgressPhoto(
         id: r.id,
         file: await _fileDi(r.percorso),
         takenOn: r.scattataIl,
         workoutSessionId: r.sessioneId,
-      )));
+      ),
+    ),
+  );
 });
 
 /// Le foto di una sessione di allenamento.
-final fotoSessioneProvider =
-    FutureProvider.autoDispose.family<List<ProgressPhoto>, int>((ref, sessioneId) async {
-  ref.watch(revisioneFotoProvider);
+final fotoSessioneProvider = FutureProvider.autoDispose
+    .family<List<ProgressPhoto>, int>((ref, sessioneId) async {
+      ref.watch(revisioneFotoProvider);
 
-  final righe = await ref.watch(archivioSaluteProvider).fotoDellaSessione(sessioneId);
+      final righe = await ref
+          .watch(archivioSaluteProvider)
+          .fotoDellaSessione(sessioneId);
 
-  return Future.wait(righe.map((r) async => ProgressPhoto(
-        id: r.id,
-        file: await _fileDi(r.percorso),
-        takenOn: r.scattataIl,
-        workoutSessionId: r.sessioneId,
-      )));
-});
+      return Future.wait(
+        righe.map(
+          (r) async => ProgressPhoto(
+            id: r.id,
+            file: await _fileDi(r.percorso),
+            takenOn: r.scattataIl,
+            workoutSessionId: r.sessioneId,
+          ),
+        ),
+      );
+    });
 
 class ProgressActions {
   ProgressActions(this._ref);
@@ -118,7 +130,9 @@ class ProgressActions {
 
     if (scelta == null) return false;
 
-    await _ref.read(archivioSaluteProvider).registraFoto(
+    await _ref
+        .read(archivioSaluteProvider)
+        .registraFoto(
           FotoProgressiCompanion.insert(
             percorso: scelta.relativo,
             scattataIl: DateTime.now(),

@@ -44,7 +44,9 @@ class GymHeader extends StatelessWidget {
           Text(
             nome,
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ],
@@ -68,13 +70,24 @@ class _Iniziale extends StatelessWidget {
     return Container(
       height: 88,
       width: 88,
-      decoration: BoxDecoration(color: branding.primary, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: branding.primary,
+        shape: BoxShape.circle,
+      ),
       alignment: Alignment.center,
       child: iniziale == null
-          ? const Icon(Icons.fitness_center_rounded, size: 40, color: Colors.white)
+          ? const Icon(
+              Icons.fitness_center_rounded,
+              size: 40,
+              color: Colors.white,
+            )
           : Text(
               iniziale,
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
     );
   }

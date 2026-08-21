@@ -31,8 +31,9 @@ class AppUser {
     // 🆕 F5/F6 — anche `free_trainer` allena: è un trainer indipendente, senza
     // una palestra alle spalle. ⚠️ Guardare solo `trainer` gli nasconderebbe
     // «i miei utenti», cioè l'unica cosa per cui usa questa applicazione.
-    isTrainer: ((json['roles'] as List?) ?? const [])
-        .any((r) => r == 'trainer' || r == 'free_trainer'),
+    isTrainer: ((json['roles'] as List?) ?? const []).any(
+      (r) => r == 'trainer' || r == 'free_trainer',
+    ),
 
     /*
      * 🚨 **Di serie `true`, e la direzione è deliberata** — F4.
@@ -106,12 +107,17 @@ class AppUser {
 
   /// Le iniziali per l'avatar quando non c'è una foto.
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
 
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.characters.first.toUpperCase();
 
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+    return (parts.first.characters.first + parts.last.characters.first)
+        .toUpperCase();
   }
 }
 

@@ -71,7 +71,10 @@ void main() {
     });
 
     test('un obiettivo sconosciuto vale mantenimento', () {
-      expect(calc.targetCalorico(2500, 'qualcosa'), calc.targetCalorico(2500, 'maintain'));
+      expect(
+        calc.targetCalorico(2500, 'qualcosa'),
+        calc.targetCalorico(2500, 'maintain'),
+      );
     });
   });
 
@@ -96,7 +99,13 @@ void main() {
     /// 🚨 I macro devono **ricomporre** il target, o l'app mostrerebbe tre
     /// barre che sommate danno un numero diverso da quello scritto sopra.
     test('i macro ricompongono il target entro l\'arrotondamento', () {
-      for (final obiettivo in ['lose_fast', 'lose_slow', 'maintain', 'gain_lean', 'gain_fast']) {
+      for (final obiettivo in [
+        'lose_fast',
+        'lose_slow',
+        'maintain',
+        'gain_lean',
+        'gain_fast',
+      ]) {
         final m = calc.macro(2000, obiettivo);
         final ricomposto = calc.kcalDaMacro(
           m.proteineG.toDouble(),

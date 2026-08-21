@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../config/app_config.dart';
 import '../errors/api_exception.dart';
 import '../storage/token_store.dart';
+import 'identita_app.dart';
 
 /// Il client HTTP dell'app — A1.3.
 ///
@@ -24,12 +25,12 @@ class ApiClient {
     required AppConfig config,
     required TokenStore tokenStore,
     Dio? dio,
-  })  // `prefer_initializing_formals` non è applicabile: un parametro **con
-      // nome** non può chiamarsi come un campo privato, e rendere il campo
-      // pubblico solo per soddisfare il lint aprirebbe l'accesso al token
-      // store dall'esterno.
-      // ignore: prefer_initializing_formals
-      : _tokenStore = tokenStore,
+  }) // `prefer_initializing_formals` non è applicabile: un parametro **con
+    // nome** non può chiamarsi come un campo privato, e rendere il campo
+    // pubblico solo per soddisfare il lint aprirebbe l'accesso al token
+    // store dall'esterno.
+    // ignore: prefer_initializing_formals
+    : _tokenStore = tokenStore,
        _dio =
            dio ??
            Dio(
@@ -66,6 +67,14 @@ class ApiClient {
 
   final _sessionExpired = StreamController<void>.broadcast();
 
+  /// 🆕 L'app è troppo vecchia — FASE 10.
+  ///
+  /// 🚨 Uno stream e non un'eccezione da catturare in ogni schermata, per la
+  /// stessa ragione già scritta per il 401: **la prima schermata che se ne
+  /// dimenticasse** lascerebbe la persona davanti a un errore generico su
+  /// un'app che non può funzionare, e le farebbe premere «riprova» all'infinito.
+  final _daAggiornare = StreamController<AppDaAggiornareException>.broadcast();
+
   /// Emette quando il server dice che la sessione non vale più.
   ///
   /// È uno stream e non una callback perché ad ascoltarlo sono due cose
@@ -73,6 +82,8 @@ class ApiClient {
   /// dimentica l'utente). Con una callback sola, una delle due resterebbe
   /// scoperta.
   Stream<void> get onSessionExpired => _sessionExpired.stream;
+
+  Stream<AppDaAggiornareException> get onDaAggiornare => _daAggiornare.stream;
 
   Dio get raw => _dio;
 
@@ -97,7 +108,11 @@ class ApiClient {
 
   // ───────────────────────── verbi ─────────────────────────
 
-  Future<T> get<T>(String path, {Map<String, dynamic>? query, bool unwrap = true}) async {
+  Future<T> get<T>(
+    String path, {
+    Map<String, dynamic>? query,
+    bool unwrap = true,
+  }) async {
     final response = await _dio.get<dynamic>(path, queryParameters: query);
 
     return _unwrap<T>(response, unwrap);
@@ -109,7 +124,11 @@ class ApiClient {
     Map<String, dynamic>? query,
     bool unwrap = true,
   }) async {
-    final response = await _dio.post<dynamic>(path, data: body, queryParameters: query);
+    final response = await _dio.post<dynamic>(
+      path,
+      data: body,
+      queryParameters: query,
+    );
 
     return _unwrap<T>(response, unwrap);
   }
@@ -195,18 +214,36 @@ class ApiClient {
     return body as T;
   }
 
-  Future<void> _onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> _onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     final token = await _tokenStore.read();
 
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
 
+    /*
+     * 🆕 **Chi è questa copia dell'app** — FASE 10.2.
+     *
+     * 🚨 Su **ogni** richiesta e non solo all'avvio: un controllo fatto una
+     * volta all'apertura si può saltare — l'app resta aperta per giorni — e nel
+     * frattempo il server potrebbe aver alzato il minimo.
+     *
+     * 💡 `IdentitaApp` legge una volta sola e tiene: il numero non cambia
+     * mentre l'app è aperta, perché per aggiornarla bisogna chiuderla.
+     */
+    options.headers.addAll(await IdentitaApp.intestazioni());
+
     handler.next(options);
   }
 
   /// `validateStatus` lascia passare i 4xx: qui si decide cosa farne.
-  void _onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void _onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     final status = response.statusCode ?? 0;
 
     if (status < 400) {
@@ -278,11 +315,23 @@ class ApiClient {
         // l'utente al login lo farebbe riprovare all'infinito con la password
         // giusta.
         return code == 'tenant_inactive'
-            ? GymInactiveException(message ?? const GymInactiveException().message)
+            ? GymInactiveException(
+                message ?? const GymInactiveException().message,
+              )
             : ForbiddenException(message ?? const ForbiddenException().message);
 
       case 404:
         return NotFoundException(message ?? const NotFoundException().message);
+
+      /*
+       * 🆕 **426 — questa versione non parla più con questo server** (FASE 10).
+       *
+       * 🚨 Ha una classe sua perché il `catch (Object)` che sta in mezza app la
+       * trasformerebbe in «non ha funzionato, riprova» — e riprovare **non può
+       * funzionare**: quello che serve è aggiornare.
+       */
+      case 426:
+        return _annunciaCheVaAggiornata(message, body['store']?.toString());
 
       case 422:
         return ValidationException(
@@ -293,7 +342,8 @@ class ApiClient {
       case 429:
         if (code == 'ai_quota_exceeded') {
           return AiQuotaExceededException(
-            message ?? 'La tua palestra ha esaurito le funzioni AI di questo mese.',
+            message ??
+                'La tua palestra ha esaurito le funzioni AI di questo mese.',
             DateTime.tryParse(body['resets_at']?.toString() ?? ''),
           );
         }
@@ -327,10 +377,34 @@ class ApiClient {
     return raw.map(
       (key, value) => MapEntry(
         key.toString(),
-        value is List ? value.map((e) => e.toString()).toList() : [value.toString()],
+        value is List
+            ? value.map((e) => e.toString()).toList()
+            : [value.toString()],
       ),
     );
   }
 
-  Future<void> dispose() async => _sessionExpired.close();
+  /// 🚨 Si annuncia **una volta sola**, da qui — come per il 401.
+  ///
+  /// 💡 Sta in un metodo e non dentro la `switch` perché una dichiarazione in un
+  /// `case` senza graffe perde di vista dove finisce, e questo `switch` è
+  /// l'unico posto dell'app che traduce i codici HTTP: va tenuto leggibile.
+  AppDaAggiornareException _annunciaCheVaAggiornata(
+    String? messaggio,
+    String? store,
+  ) {
+    final tradotto = AppDaAggiornareException(
+      messaggio ?? 'Questa versione dell\'app non è più supportata.',
+      store: store,
+    );
+
+    _daAggiornare.add(tradotto);
+
+    return tradotto;
+  }
+
+  Future<void> dispose() async {
+    await _sessionExpired.close();
+    await _daAggiornare.close();
+  }
 }

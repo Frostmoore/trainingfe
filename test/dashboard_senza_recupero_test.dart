@@ -30,7 +30,12 @@ void main() {
     'day_progress_pct': 23,
     'nutrition': {
       'totals': {'kcal': 800.0, 'protein': 40.0, 'carbs': 90.0, 'fat': 25.0},
-      'targets': {'kcal': 2400.0, 'protein': 150.0, 'carbs': 250.0, 'fat': 80.0},
+      'targets': {
+        'kcal': 2400.0,
+        'protein': 150.0,
+        'carbs': 250.0,
+        'fat': 80.0,
+      },
       'burned': {'kcal': 300},
       'entries_count': 2,
     },
@@ -82,7 +87,9 @@ void main() {
       );
     }
 
-    testWidgets('senza dati invita a collegare, invece di promettere', (tester) async {
+    testWidgets('senza dati invita a collegare, invece di promettere', (
+      tester,
+    ) async {
       await tester.pumpWidget(conArchivioVuoto(const RecoveryCard()));
       await tester.pumpAndSettle();
 
@@ -95,7 +102,9 @@ void main() {
       expect(find.textContaining('restano sul tuo telefono'), findsOneWidget);
     });
 
-    testWidgets('e non fa esplodere il layout dentro una colonna stretta', (tester) async {
+    testWidgets('e non fa esplodere il layout dentro una colonna stretta', (
+      tester,
+    ) async {
       // 320 px: la larghezza sotto cui la barra del recupero era già esplosa
       // una volta (F1). Il layout si prova dove rompe, non dove sta comodo.
       await tester.binding.setSurfaceSize(const Size(320, 640));
@@ -104,7 +113,10 @@ void main() {
       await tester.pumpWidget(
         conArchivioVuoto(
           const Column(
-            children: [RecoveryCard(), Expanded(child: SizedBox())],
+            children: [
+              RecoveryCard(),
+              Expanded(child: SizedBox()),
+            ],
           ),
         ),
       );

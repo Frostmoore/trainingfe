@@ -7,7 +7,11 @@ import 'package:flutter/material.dart';
 /// pasto finisce un cibo. Chi cena alle 18:30 vuole che uno spuntino delle 19
 /// risulti cena, non merenda.
 class MealHoursEditor extends StatelessWidget {
-  const MealHoursEditor({required this.orari, required this.onChanged, super.key});
+  const MealHoursEditor({
+    required this.orari,
+    required this.onChanged,
+    super.key,
+  });
 
   final Map<String, String> orari;
   final ValueChanged<Map<String, String>> onChanged;
@@ -35,7 +39,10 @@ class MealHoursEditor extends StatelessWidget {
               onPressed: () => _scegli(context, chiave),
               child: Text(
                 orari[chiave] ?? '—',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),

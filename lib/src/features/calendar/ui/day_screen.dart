@@ -28,9 +28,12 @@ class DayScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(calendarDayProvider(date)),
         ),
         data: (d) {
-          final voci = ((d['entries'] as List?) ?? const []).cast<Map<String, dynamic>>();
-          final sessioni = ((d['sessions'] as List?) ?? const []).cast<Map<String, dynamic>>();
-          final bruciate = (d['burned'] as Map?)?.cast<String, dynamic>() ?? const {};
+          final voci = ((d['entries'] as List?) ?? const [])
+              .cast<Map<String, dynamic>>();
+          final sessioni = ((d['sessions'] as List?) ?? const [])
+              .cast<Map<String, dynamic>>();
+          final bruciate =
+              (d['burned'] as Map?)?.cast<String, dynamic>() ?? const {};
 
           return ListView(
             padding: const EdgeInsets.all(Gap.md),
@@ -48,10 +51,19 @@ class DayScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(Gap.md),
                   child: Row(
                     children: [
-                      _Numero(valore: '${d['kcal'] ?? 0}', etichetta: 'kcal assunte'),
-                      _Numero(valore: '${bruciate['kcal'] ?? 0}', etichetta: 'kcal bruciate'),
+                      _Numero(
+                        valore: '${d['kcal'] ?? 0}',
+                        etichetta: 'kcal assunte',
+                      ),
+                      _Numero(
+                        valore: '${bruciate['kcal'] ?? 0}',
+                        etichetta: 'kcal bruciate',
+                      ),
                       _Numero(valore: '${voci.length}', etichetta: 'alimenti'),
-                      _Numero(valore: '${sessioni.length}', etichetta: 'allenamenti'),
+                      _Numero(
+                        valore: '${sessioni.length}',
+                        etichetta: 'allenamenti',
+                      ),
                     ],
                   ),
                 ),
@@ -77,7 +89,10 @@ class DayScreen extends ConsumerWidget {
                   ),
 
               const SizedBox(height: Gap.md),
-              Text('Allenamenti', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Allenamenti',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               if (sessioni.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: Gap.sm),
@@ -88,7 +103,9 @@ class DayScreen extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(s['plan_name']?.toString() ?? 'Sessione libera'),
+                    title: Text(
+                      s['plan_name']?.toString() ?? 'Sessione libera',
+                    ),
                     subtitle: Text(
                       [
                         if (s['is_open'] == true)
@@ -98,7 +115,9 @@ class DayScreen extends ConsumerWidget {
                         '${s['sets_count'] ?? 0} serie',
                       ].join(' · '),
                     ),
-                    trailing: s['kcal'] == null ? null : Text('${s['kcal']} kcal'),
+                    trailing: s['kcal'] == null
+                        ? null
+                        : Text('${s['kcal']} kcal'),
                     // Il **riepilogo**, non il player: dal calendario si
                     // guarda una seduta passata, e riaprirla come allenamento
                     // in corso non ha senso. Vedi la nota in `history_screen`.
@@ -106,7 +125,8 @@ class DayScreen extends ConsumerWidget {
                     // ⚠️ go_router e non `Navigator.pushNamed`: con un router
                     // dichiarativo il `Navigator` non ha `onGenerateRoute` e
                     // una rotta con nome lancia sempre.
-                    onTap: () => context.push(AppRoutes.riepilogo(s['id'] as int)),
+                    onTap: () =>
+                        context.push(AppRoutes.riepilogo(s['id'] as int)),
                   ),
               const SizedBox(height: Gap.xl),
             ],

@@ -24,14 +24,17 @@ class WeightSheet extends ConsumerStatefulWidget {
 
   final double? iniziale;
 
-  static Future<void> mostra(BuildContext context, {double? iniziale}) => showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: WeightSheet(iniziale: iniziale),
-    ),
-  );
+  static Future<void> mostra(BuildContext context, {double? iniziale}) =>
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: WeightSheet(iniziale: iniziale),
+        ),
+      );
 
   @override
   ConsumerState<WeightSheet> createState() => _WeightSheetState();
@@ -115,7 +118,9 @@ class _WeightSheetState extends ConsumerState<WeightSheet> {
           .logWeight(
             kg: kg,
             date: _giorno,
-            bodyFatPct: double.tryParse(_massaGrassa.text.trim().replaceAll(',', '.')),
+            bodyFatPct: double.tryParse(
+              _massaGrassa.text.trim().replaceAll(',', '.'),
+            ),
           );
 
       if (mounted) Navigator.of(context).pop();
@@ -153,12 +158,19 @@ class _WeightSheetState extends ConsumerState<WeightSheet> {
           // Il giorno, visibile e modificabile.
           Row(
             children: [
-              Icon(Icons.event_outlined, size: 18, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.event_outlined,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(_etichettaGiorno, style: theme.textTheme.bodyLarge),
               ),
-              TextButton(onPressed: _scegliGiorno, child: const Text('Cambia giorno')),
+              TextButton(
+                onPressed: _scegliGiorno,
+                child: const Text('Cambia giorno'),
+              ),
             ],
           ),
 
@@ -201,7 +213,11 @@ class _WeightSheetState extends ConsumerState<WeightSheet> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, size: 18, color: theme.colorScheme.onTertiaryContainer),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: theme.colorScheme.onTertiaryContainer,
+                  ),
                   const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
@@ -230,7 +246,11 @@ class _WeightSheetState extends ConsumerState<WeightSheet> {
           FilledButton(
             onPressed: _inCorso ? null : _salva,
             child: _inCorso
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : Text(gia != null ? 'Correggi' : 'Salva'),
           ),
         ],

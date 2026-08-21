@@ -56,8 +56,9 @@ class WorkoutPlan {
 
   /// Da mostrare sotto il nome: «scritta dal tuo trainer» dà contesto a un
   /// elenco che altrimenti è solo una lista di nomi.
-  String get attribuzione =>
-      authorIsMe ? 'Scheda tua' : (authorName == null ? '' : 'Scritta da $authorName');
+  String get attribuzione => authorIsMe
+      ? 'Scheda tua'
+      : (authorName == null ? '' : 'Scritta da $authorName');
 }
 
 /// Una riga della scheda.
@@ -97,10 +98,16 @@ class PlanExercise {
 }
 
 /// Le schede pubblicate dell'iscritto.
-final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/workout-plans');
+final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
+  ref,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/workout-plans');
 
-  return data.map((e) => WorkoutPlan.fromJson((e as Map).cast<String, dynamic>())).toList();
+  return data
+      .map((e) => WorkoutPlan.fromJson((e as Map).cast<String, dynamic>()))
+      .toList();
 });
 
 /// Tutte le schede: quelle sul server **più quelle ricevute in chat** — S7.4.
@@ -114,7 +121,9 @@ final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) async 
 /// ⚠️ **Se il server non risponde, le schede ricevute si vedono lo stesso.** È
 /// la conseguenza pratica più visibile di averle in locale, e non va persa
 /// dietro un `Future.wait` che fallisce insieme.
-final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) async {
+final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
+  ref,
+) async {
   final locali = await ref.watch(schedeRicevuteProvider.future);
 
   final dalServer = await ref
@@ -144,7 +153,10 @@ final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((ref) 
 ///
 /// ⚠️ **Id negativo = scheda ricevuta in chat**, che vive nell'archivio locale.
 /// Vedi `schedeUniteProvider` per il perché del segno.
-final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((ref, id) async {
+final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
+  ref,
+  id,
+) async {
   if (id < 0) {
     final locali = await ref.watch(schedeRicevuteProvider.future);
     final riga = locali.firstWhere((r) => -r.id == id);
@@ -156,7 +168,9 @@ final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
     });
   }
 
-  final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/workout-plans/$id');
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>('/workout-plans/$id');
 
   return WorkoutPlan.fromJson(data);
 });

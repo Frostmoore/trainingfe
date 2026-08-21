@@ -13,8 +13,16 @@ import 'package:training_companion/src/features/chat/chat_controller.dart';
 void main() {
   group('la traccia di ciò che non c\'è più', () {
     test('dice se era una foto o un messaggio', () {
-      final foto = ChatMessage.effimeraSpenta(id: 1, senderId: 2, eraFoto: true);
-      final testo = ChatMessage.effimeraSpenta(id: 2, senderId: 2, eraFoto: false);
+      final foto = ChatMessage.effimeraSpenta(
+        id: 1,
+        senderId: 2,
+        eraFoto: true,
+      );
+      final testo = ChatMessage.effimeraSpenta(
+        id: 2,
+        senderId: 2,
+        eraFoto: false,
+      );
 
       expect(foto.body, 'Foto effimera');
       expect(testo.body, 'Messaggio effimero');
@@ -27,7 +35,11 @@ void main() {
      * Il messaggio non è rotto: è stato usato.
      */
     test('non si confonde con una busta che non si apre', () {
-      final spenta = ChatMessage.effimeraSpenta(id: 1, senderId: 2, eraFoto: true);
+      final spenta = ChatMessage.effimeraSpenta(
+        id: 1,
+        senderId: 2,
+        eraFoto: true,
+      );
 
       expect(spenta.leggibile, isTrue);
       expect(spenta.spenta, isTrue);

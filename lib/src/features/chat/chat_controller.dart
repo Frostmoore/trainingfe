@@ -176,7 +176,9 @@ class ChatContact {
 /// `POST /conversations` vuole l'id della persona, e l'app non aveva nessun
 /// modo di saperlo: chi non aveva già una conversazione vedeva una schermata
 /// vuota e nessun modo di cominciarne una.
-final chatContactsProvider = FutureProvider.autoDispose<List<ChatContact>>((ref) async {
+final chatContactsProvider = FutureProvider.autoDispose<List<ChatContact>>((
+  ref,
+) async {
   final data = await ref
       .watch(apiClientProvider)
       .get<List<dynamic>>('/conversations/contacts');
@@ -196,7 +198,10 @@ final apriConversazioneProvider = Provider<Future<int> Function(int)>((ref) {
   return (int userId) async {
     final data = await ref
         .read(apiClientProvider)
-        .post<Map<String, dynamic>>('/conversations', body: {'user_id': userId});
+        .post<Map<String, dynamic>>(
+          '/conversations',
+          body: {'user_id': userId},
+        );
 
     ref.invalidate(conversationsProvider);
 
@@ -204,10 +209,16 @@ final apriConversazioneProvider = Provider<Future<int> Function(int)>((ref) {
   };
 });
 
-final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<List<dynamic>>('/conversations');
+final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((
+  ref,
+) async {
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/conversations');
 
-  return data.map((e) => Conversation.fromJson((e as Map).cast<String, dynamic>())).toList();
+  return data
+      .map((e) => Conversation.fromJson((e as Map).cast<String, dynamic>()))
+      .toList();
 });
 
 /// Il filo di una conversazione, **con il polling** — A7.4 / ADR-A04.
@@ -222,7 +233,8 @@ final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((re
 /// ogni quindici secondi lo renderebbe inutilizzabile con qualche centinaio di
 /// messaggi.
 class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
-  ThreadController(this._ref, this.conversationId) : super(const AsyncValue.loading()) {
+  ThreadController(this._ref, this.conversationId)
+    : super(const AsyncValue.loading()) {
     _carica();
     _timer = Timer.periodic(const Duration(seconds: 15), (_) => _cercaNuovi());
 
@@ -237,7 +249,9 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
      * quasi sempre vuote, e non deve rallentare l'apertura della chat. Se
      * fallisce, riprova alla prossima.
      */
-    unawaited(const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0));
+    unawaited(
+      const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0),
+    );
   }
 
   final Ref _ref;
@@ -278,7 +292,9 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     final id = (j['id'] as num).toInt();
     final mittente = (j['sender_id'] as num).toInt();
     // A3: l'orario sotto la nuvoletta e' quello dell'orologio di chi legge.
-    final quando = DateTime.tryParse(j['created_at']?.toString() ?? '')?.toLocal();
+    final quando = DateTime.tryParse(
+      j['created_at']?.toString() ?? '',
+    )?.toLocal();
 
     /*
      * 🚨 **Prima di tutto il resto** — N16.4b.
@@ -303,7 +319,11 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     }
 
     if (_sua == null) {
-      return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
+      return ChatMessage.illeggibile(
+        id: id,
+        senderId: mittente,
+        createdAt: quando,
+      );
     }
 
     try {
@@ -371,7 +391,11 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
       // malformato, versione sconosciuta — **non deve far sparire il filo**.
       // Una singola busta illeggibile è un caso normale; una schermata che
       // esplode per un messaggio su duecento no.
-      return ChatMessage.illeggibile(id: id, senderId: mittente, createdAt: quando);
+      return ChatMessage.illeggibile(
+        id: id,
+        senderId: mittente,
+        createdAt: quando,
+      );
     }
   }
 
@@ -379,7 +403,11 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   ///
   /// ⚠️ **Non lancia mai.** Un archivio che non si scrive è un fastidio; una
   /// conversazione che non si apre è un guasto.
-  Future<void> _conserva(int messaggioId, int mittente, ContenutoMessaggio c) async {
+  Future<void> _conserva(
+    int messaggioId,
+    int mittente,
+    ContenutoMessaggio c,
+  ) async {
     final archivio = _ref.read(archivioSaluteProvider);
 
     try {
@@ -550,14 +578,15 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     void Function(double)? avanzamento,
     bool usaEGetta = false,
   }) async {
-    final busta = await AllegatoDiChat(
-      api: _ref.read(apiClientProvider),
-      cripto: CifraturaAllegati(await _ref.read(sodiumProvider.future)),
-    ).carica(
-      conversationId: conversationId,
-      foto: foto,
-      avanzamento: avanzamento,
-    );
+    final busta =
+        await AllegatoDiChat(
+          api: _ref.read(apiClientProvider),
+          cripto: CifraturaAllegati(await _ref.read(sodiumProvider.future)),
+        ).carica(
+          conversationId: conversationId,
+          foto: foto,
+          avanzamento: avanzamento,
+        );
 
     // ⚠️ Un token vuoto vorrebbe dire un messaggio che punta al nulla: meglio
     // fallire adesso, mentre chi ha premuto sta ancora guardando.
@@ -574,11 +603,7 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     final busta = await AllegatoDiChat(
       api: _ref.read(apiClientProvider),
       cripto: CifraturaAllegati(await _ref.read(sodiumProvider.future)),
-    ).caricaDocumento(
-      conversationId: conversationId,
-      byte: byte,
-      nome: nome,
-    );
+    ).caricaDocumento(conversationId: conversationId, byte: byte, nome: nome);
 
     if (!busta.completa) throw const AllegatoNonSiApre();
 
@@ -601,7 +626,9 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     try {
       await _ref
           .read(apiClientProvider)
-          .post<dynamic>('/conversations/$conversationId/messages/$messaggioId/vista');
+          .post<dynamic>(
+            '/conversations/$conversationId/messages/$messaggioId/vista',
+          );
     } on Object {
       // Vedi il dartdoc: si tace di proposito.
     }
@@ -617,7 +644,9 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
 
   Future<void> _segnaLetti() async {
     try {
-      await _ref.read(apiClientProvider).post<dynamic>('/conversations/$conversationId/read');
+      await _ref
+          .read(apiClientProvider)
+          .post<dynamic>('/conversations/$conversationId/read');
     } on Object {
       // Non è critico: al prossimo giro ci riprova.
     }

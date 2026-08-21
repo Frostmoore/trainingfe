@@ -47,7 +47,11 @@ void main() {
     });
 
     test('la prescrizione si legge mentre si scrive', () {
-      final e = EsercizioDellaScheda(nome: 'Panca', serie: 4, ripetizioni: '8-12');
+      final e = EsercizioDellaScheda(
+        nome: 'Panca',
+        serie: 4,
+        ripetizioni: '8-12',
+      );
 
       // 💡 Calcolata nell'app: il server non ha ancora visto niente, e una riga
       // che resta muta finché non si salva non aiuta a scrivere.
@@ -60,10 +64,17 @@ void main() {
     test('sono la stessa classe, quindi hanno serie e ripetizioni', () {
       final e = EsercizioDellaScheda(
         nome: 'Panca piana',
-        alternative: [EsercizioDellaScheda(nome: 'Panca manubri', serie: 4, ripetizioni: '10')],
+        alternative: [
+          EsercizioDellaScheda(
+            nome: 'Panca manubri',
+            serie: 4,
+            ripetizioni: '10',
+          ),
+        ],
       );
 
-      final alt = (e.toJson()['alternatives'] as List).first as Map<String, dynamic>;
+      final alt =
+          (e.toJson()['alternatives'] as List).first as Map<String, dynamic>;
 
       /*
        * 🚨 Chi sceglie l'alternativa deve trovarci cosa fare. Se fossero due
@@ -120,7 +131,13 @@ void main() {
               'reps': '8-10',
               'notes': 'fermo un secondo al petto',
               'alternatives': [
-                {'id': 11, 'name': 'Panca manubri', 'sets': 4, 'reps': '10', 'alternatives': []},
+                {
+                  'id': 11,
+                  'name': 'Panca manubri',
+                  'sets': 4,
+                  'reps': '10',
+                  'alternatives': [],
+                },
               ],
             },
           ],
@@ -149,7 +166,8 @@ void main() {
       expect(giorni.length, 2);
 
       final primo = giorni.first as Map<String, dynamic>;
-      final esercizio = (primo['exercises'] as List).first as Map<String, dynamic>;
+      final esercizio =
+          (primo['exercises'] as List).first as Map<String, dynamic>;
 
       expect(primo['name'], 'Giorno A');
       expect(esercizio['name'], 'Panca piana');
@@ -206,7 +224,10 @@ void main() {
 
   group('il Rif. Allievo', () {
     test('la chiave assente vuol dire «non è mia», non «vuoto»', () {
-      final altrui = SchedaAllenamento.fromJson({'id': 9, 'name': 'Di un collega'});
+      final altrui = SchedaAllenamento.fromJson({
+        'id': 9,
+        'name': 'Di un collega',
+      });
 
       // 🚨 R4 — il server **toglie la chiave** a chi non l'ha scritta. `null`
       // qui non è un campo non compilato: è un campo che non ci compete.

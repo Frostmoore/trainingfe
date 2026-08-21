@@ -43,7 +43,12 @@ void main() {
 
   group('inviluppo', () {
     test('srotola `data` senza che il chiamante debba saperlo', () async {
-      adapter.onGet('/diario', (s) => s.reply(200, {'data': {'kcal': 1200}}));
+      adapter.onGet(
+        '/diario',
+        (s) => s.reply(200, {
+          'data': {'kcal': 1200},
+        }),
+      );
 
       final risposta = await client.get<Map<String, dynamic>>('/diario');
 
@@ -109,42 +114,56 @@ void main() {
       expect(
         risposta['token'],
         isNull,
-        reason: 'Srotolando `data` il token sparisce: è esattamente il difetto '
+        reason:
+            'Srotolando `data` il token sparisce: è esattamente il difetto '
             'che rendeva impossibile il login.',
       );
     });
   });
 
   group('traduzione degli errori', () {
-    test('401 diventa UnauthenticatedException e avvisa una volta sola', () async {
-      adapter.onGet('/me', (s) => s.reply(401, {'message': 'Unauthenticated.'}));
+    test(
+      '401 diventa UnauthenticatedException e avvisa una volta sola',
+      () async {
+        adapter.onGet(
+          '/me',
+          (s) => s.reply(401, {'message': 'Unauthenticated.'}),
+        );
 
-      final avvisi = <void>[];
-      final sub = client.onSessionExpired.listen(avvisi.add);
+        final avvisi = <void>[];
+        final sub = client.onSessionExpired.listen(avvisi.add);
 
-      await expectLater(
-        client.get<dynamic>('/me'),
-        throwsA(
-          isA<DioException>().having(
-            (e) => e.error,
-            'error',
-            isA<UnauthenticatedException>(),
+        await expectLater(
+          client.get<dynamic>('/me'),
+          throwsA(
+            isA<DioException>().having(
+              (e) => e.error,
+              'error',
+              isA<UnauthenticatedException>(),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Il tempo di far scorrere lo stream.
-      await Future<void>.delayed(Duration.zero);
+        // Il tempo di far scorrere lo stream.
+        await Future<void>.delayed(Duration.zero);
 
-      expect(avvisi, hasLength(1), reason: 'La sessione scaduta va segnalata una volta sola.');
+        expect(
+          avvisi,
+          hasLength(1),
+          reason: 'La sessione scaduta va segnalata una volta sola.',
+        );
 
-      await sub.cancel();
-    });
+        await sub.cancel();
+      },
+    );
 
     test('🚨 403 tenant_inactive NON è un problema di credenziali', () async {
       adapter.onGet(
         '/me',
-        (s) => s.reply(403, {'code': 'tenant_inactive', 'message': 'Palestra sospesa.'}),
+        (s) => s.reply(403, {
+          'code': 'tenant_inactive',
+          'message': 'Palestra sospesa.',
+        }),
       );
 
       try {
@@ -183,7 +202,9 @@ void main() {
       );
 
       final tradotto = ApiClient.unwrapError(
-        await _cattura(() => client.post<dynamic>('/auth/register', body: {'email': 'x'})),
+        await _cattura(
+          () => client.post<dynamic>('/auth/register', body: {'email': 'x'}),
+        ),
       );
 
       expect(tradotto, isA<ValidationException>());
@@ -205,7 +226,9 @@ void main() {
       );
 
       final tradotto = ApiClient.unwrapError(
-        await _cattura(() => client.post<dynamic>('/ai/food/text', body: {'text': 'mela'})),
+        await _cattura(
+          () => client.post<dynamic>('/ai/food/text', body: {'text': 'mela'}),
+        ),
       );
 
       // La differenza conta: la quota NON si sblocca riprovando, e mostrare un

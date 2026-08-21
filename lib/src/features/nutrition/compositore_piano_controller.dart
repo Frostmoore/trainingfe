@@ -12,8 +12,12 @@ import 'data/piano_alimentare.dart';
 ///
 /// ⚠️ **Plurale**: `/nutrition-plans`. Il singolare `/nutrition-plan` è il piano
 /// **dell'iscritto**, ed è un'altra cosa a un carattere di distanza.
-final mieiPianiProvider = FutureProvider.autoDispose<List<PianoAlimentare>>((ref) async {
-  final dati = await ref.watch(apiClientProvider).get<List<dynamic>>('/nutrition-plans');
+final mieiPianiProvider = FutureProvider.autoDispose<List<PianoAlimentare>>((
+  ref,
+) async {
+  final dati = await ref
+      .watch(apiClientProvider)
+      .get<List<dynamic>>('/nutrition-plans');
 
   return dati
       .map((e) => PianoAlimentare.fromJson((e as Map).cast<String, dynamic>()))
@@ -37,7 +41,10 @@ final mieiPianiTemplateProvider =
     });
 
 /// Un piano per intero, con giorni, pasti e alimenti.
-final pianoProvider = FutureProvider.autoDispose.family<PianoAlimentare, int>((ref, id) async {
+final pianoProvider = FutureProvider.autoDispose.family<PianoAlimentare, int>((
+  ref,
+  id,
+) async {
   final dati = await ref
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>('/nutrition-plans/$id');
@@ -67,7 +74,10 @@ class AzioniPiano {
 
     final dati = piano.nuovo
         ? await _api.post<Map<String, dynamic>>('/nutrition-plans', body: corpo)
-        : await _api.put<Map<String, dynamic>>('/nutrition-plans/${piano.id}', body: corpo);
+        : await _api.put<Map<String, dynamic>>(
+            '/nutrition-plans/${piano.id}',
+            body: corpo,
+          );
 
     _ref.invalidate(mieiPianiProvider);
 
@@ -103,7 +113,9 @@ class AzioniPiano {
     );
 
     return ((dati['items'] as List?) ?? const [])
-        .map((e) => AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) => AlimentoDelPiano.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(growable: false);
   }
 }

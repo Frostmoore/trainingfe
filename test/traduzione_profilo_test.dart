@@ -70,8 +70,14 @@ void main() {
     /// funzionare: un valore vecchio che ricadesse su «mantenimento» sarebbe
     /// **esattamente** il difetto che ha fatto nascere questo file.
     test('il vocabolario vecchio si traduce ancora', () {
-      expect(profilo(obiettivo: 'lose_weight').obiettivoPerFormula, 'lose_slow');
-      expect(profilo(obiettivo: 'gain_muscle').obiettivoPerFormula, 'gain_lean');
+      expect(
+        profilo(obiettivo: 'lose_weight').obiettivoPerFormula,
+        'lose_slow',
+      );
+      expect(
+        profilo(obiettivo: 'gain_muscle').obiettivoPerFormula,
+        'gain_lean',
+      );
       expect(profilo(obiettivo: 'lose').obiettivoPerFormula, 'lose_slow');
       expect(profilo(obiettivo: 'cut').obiettivoPerFormula, 'lose_fast');
       expect(profilo(obiettivo: 'bulk').obiettivoPerFormula, 'gain_lean');
@@ -109,7 +115,8 @@ void main() {
         expect(
           CalcolatoreCalorie.deltaObiettivo.containsKey(tradotto),
           isTrue,
-          reason: '«$salvato» si traduce in «$tradotto», che il calcolatore '
+          reason:
+              '«$salvato» si traduce in «$tradotto», che il calcolatore '
               'non conosce: userebbe 0% di scostamento senza dirlo',
         );
         expect(
@@ -133,7 +140,8 @@ void main() {
         expect(
           CalcolatoreCalorie.attivita.containsKey(tradotto),
           isTrue,
-          reason: '«$salvato» si traduce in «$tradotto», che non è un '
+          reason:
+              '«$salvato» si traduce in «$tradotto», che non è un '
               'moltiplicatore noto: userebbe 1.2 senza dirlo',
         );
       }
@@ -149,7 +157,11 @@ void main() {
   test('il caso reale che ha fatto trovare il difetto', () {
     const c = CalcolatoreCalorie();
 
-    final p = profilo(sesso: 'm', attivita: 'sedentary', obiettivo: 'lose_slow');
+    final p = profilo(
+      sesso: 'm',
+      attivita: 'sedentary',
+      obiettivo: 'lose_slow',
+    );
 
     final bmr = c.bmr(sesso: p.sessoPerFormula, kg: 96.7, cm: 175, eta: 37);
     final tdee = c.tdee(bmr, p.attivitaPerFormula);

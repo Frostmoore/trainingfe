@@ -26,21 +26,24 @@ void main() {
   /// La disposizione che rompeva: un campo che si allarga e un pulsante
   /// accanto. È quella del riepilogo (calorie + «Salva») e della riga
   /// dell'allenamento in corso (testo + «Riprendi»).
-  testWidgets('un FilledButton accanto a un Expanded non fa esplodere il layout', (tester) async {
-    await tester.pumpWidget(
-      conTema(
-        Row(
-          children: [
-            const Expanded(child: TextField()),
-            FilledButton(onPressed: () {}, child: const Text('Salva')),
-          ],
+  testWidgets(
+    'un FilledButton accanto a un Expanded non fa esplodere il layout',
+    (tester) async {
+      await tester.pumpWidget(
+        conTema(
+          Row(
+            children: [
+              const Expanded(child: TextField()),
+              FilledButton(onPressed: () {}, child: const Text('Salva')),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('Salva'), findsOneWidget);
-  });
+      expect(tester.takeException(), isNull);
+      expect(find.text('Salva'), findsOneWidget);
+    },
+  );
 
   testWidgets('e nemmeno un OutlinedButton', (tester) async {
     await tester.pumpWidget(
@@ -70,7 +73,10 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(FilledButton)).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getSize(find.byType(FilledButton)).height,
+      greaterThanOrEqualTo(48),
+    );
   });
 
   /// Chi vuole tutta la larghezza la chiede: continua a funzionare.

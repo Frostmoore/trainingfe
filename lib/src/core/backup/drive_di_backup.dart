@@ -67,7 +67,9 @@ class DriveDiBackup implements CloudDiBackup {
   /// temporaneamente — farebbe scattare la verifica ristretta di Google: un
   /// assessment di sicurezza da terza parte, con costi e settimane. Questa riga
   /// vale migliaia di euro e va lasciata com'è.
-  static const _ambiti = <String>['https://www.googleapis.com/auth/drive.appdata'];
+  static const _ambiti = <String>[
+    'https://www.googleapis.com/auth/drive.appdata',
+  ];
 
   /// I due nomi, e sono **due generazioni** — N3.4.
   ///
@@ -120,7 +122,9 @@ class DriveDiBackup implements CloudDiBackup {
        */
       if (e.code == GoogleSignInExceptionCode.canceled) return false;
 
-      throw CloudNonRaggiungibile('Google ha rifiutato l\'accesso: ${e.code.name}');
+      throw CloudNonRaggiungibile(
+        'Google ha rifiutato l\'accesso: ${e.code.name}',
+      );
     }
   }
 
@@ -140,15 +144,15 @@ class DriveDiBackup implements CloudDiBackup {
   Future<bool> eCollegato() async {
     await _avvia();
 
-    final conto = await GoogleSignIn.instance.attemptLightweightAuthentication();
+    final conto = await GoogleSignIn.instance
+        .attemptLightweightAuthentication();
 
     if (conto == null) return false;
 
     // ⚠️ Essere identificati non basta: serve **anche** l'autorizzazione agli
     // ambiti, e le due cose si revocano separatamente.
-    final autorizzazione = await conto.authorizationClient.authorizationForScopes(
-      _ambiti,
-    );
+    final autorizzazione = await conto.authorizationClient
+        .authorizationForScopes(_ambiti);
 
     return autorizzazione != null;
   }
@@ -173,10 +177,7 @@ class DriveDiBackup implements CloudDiBackup {
         await api.files.delete(precedente.id!);
       }
 
-      await api.files.update(
-        drive.File()..name = _nomePrecedente,
-        vecchio.id!,
-      );
+      await api.files.update(drive.File()..name = _nomePrecedente, vecchio.id!);
     }
 
     await api.files.create(
@@ -207,10 +208,12 @@ class DriveDiBackup implements CloudDiBackup {
 
       if (file == null) continue;
 
-      final media = await api.files.get(
-        file.id!,
-        downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      final media =
+          await api.files.get(
+                file.id!,
+                downloadOptions: drive.DownloadOptions.fullMedia,
+              )
+              as drive.Media;
 
       final byte = <int>[];
       await for (final pezzo in media.stream) {
@@ -291,10 +294,12 @@ class DriveDiBackup implements CloudDiBackup {
 
     if (file == null) return null;
 
-    final media = await api.files.get(
-      file.id!,
-      downloadOptions: drive.DownloadOptions.fullMedia,
-    ) as drive.Media;
+    final media =
+        await api.files.get(
+              file.id!,
+              downloadOptions: drive.DownloadOptions.fullMedia,
+            )
+            as drive.Media;
 
     final byte = <int>[];
 
@@ -362,21 +367,23 @@ class DriveDiBackup implements CloudDiBackup {
     final tenuto = _clientTenuto;
     final dal = _tenutoDal;
 
-    if (tenuto != null && dal != null && DateTime.now().difference(dal) < _duraLaTenuta) {
+    if (tenuto != null &&
+        dal != null &&
+        DateTime.now().difference(dal) < _duraLaTenuta) {
       return tenuto;
     }
 
     await _avvia();
 
-    final conto = await GoogleSignIn.instance.attemptLightweightAuthentication();
+    final conto = await GoogleSignIn.instance
+        .attemptLightweightAuthentication();
 
     if (conto == null) {
       throw const CloudNonRaggiungibile('Non sei collegato a Google Drive.');
     }
 
-    final autorizzazione = await conto.authorizationClient.authorizationForScopes(
-      _ambiti,
-    );
+    final autorizzazione = await conto.authorizationClient
+        .authorizationForScopes(_ambiti);
 
     if (autorizzazione == null) {
       throw const CloudNonRaggiungibile(

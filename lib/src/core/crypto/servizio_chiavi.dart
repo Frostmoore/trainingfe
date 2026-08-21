@@ -86,7 +86,9 @@ class ServizioChiavi {
     try {
       final pacchetto = await _pacchettoDalServer();
 
-      return pacchetto == null ? StatoChiavi.daCreare : StatoChiavi.daRipristinare;
+      return pacchetto == null
+          ? StatoChiavi.daCreare
+          : StatoChiavi.daRipristinare;
     } on Object {
       // 🚨 **`on Object` e non `on ApiException`.** Il primo difetto di questa
       // fase è passato esattamente di qui: un `TypeError` sul 204 non è
@@ -217,9 +219,7 @@ class ServizioChiavi {
       throw StateError('Nessuna chiave maestra su questo dispositivo.');
     }
 
-    return _cassaforte.chiaveBackup(
-      SecureKey.fromList(_sodium, maestra),
-    );
+    return _cassaforte.chiaveBackup(SecureKey.fromList(_sodium, maestra));
   }
 
   /// La chiave pubblica dell'altra persona in una conversazione.

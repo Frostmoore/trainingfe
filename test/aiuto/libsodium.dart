@@ -49,7 +49,8 @@ Uri _radiceDelPacchetto(String nome) {
   }
 
   final pacchetti =
-      (json.decode(config.readAsStringSync()) as Map<String, dynamic>)['packages']
+      (json.decode(config.readAsStringSync())
+              as Map<String, dynamic>)['packages']
           as List<dynamic>;
 
   for (final p in pacchetti.cast<Map<String, dynamic>>()) {

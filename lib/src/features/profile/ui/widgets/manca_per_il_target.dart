@@ -24,7 +24,11 @@ import 'weight_sheet.dart';
 /// 💡 Adesso si dice **quale** pezzo manca e si porta **dove serve** — al
 /// foglio della pesata se manca solo quella, al profilo altrimenti.
 class MancaPerIlTarget extends ConsumerWidget {
-  const MancaPerIlTarget({required this.esito, this.compatto = false, super.key});
+  const MancaPerIlTarget({
+    required this.esito,
+    this.compatto = false,
+    super.key,
+  });
 
   final EsitoTarget esito;
 
@@ -38,10 +42,7 @@ class MancaPerIlTarget extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          esito.spiegazione,
-          style: theme.textTheme.bodySmall,
-        ),
+        Text(esito.spiegazione, style: theme.textTheme.bodySmall),
 
         if (!compatto)
           Text(

@@ -18,7 +18,11 @@ void main() {
     /// committente: *«devono overriddare le calorie totali ricevute da google
     /// health»*.
     test('il manuale batte l\'orologio e la stima', () {
-      final b = BruciateDelGiorno.scegli(manuale: 700, daHealth: 450, stimate: 300);
+      final b = BruciateDelGiorno.scegli(
+        manuale: 700,
+        daHealth: 450,
+        stimate: 300,
+      );
 
       expect(b.kcal, 700);
       expect(b.fonte, FonteBruciate.manuale);
@@ -27,21 +31,33 @@ void main() {
     /// 🚨 *«Se cancello le calorie bruciate dalla scheda cibo deve tornare a
     /// considerare quelle ricevute da google health»*.
     test('senza manuale vince l\'orologio', () {
-      final b = BruciateDelGiorno.scegli(manuale: null, daHealth: 450, stimate: 300);
+      final b = BruciateDelGiorno.scegli(
+        manuale: null,
+        daHealth: 450,
+        stimate: 300,
+      );
 
       expect(b.kcal, 450);
       expect(b.fonte, FonteBruciate.orologio);
     });
 
     test('senza orologio resta la stima', () {
-      final b = BruciateDelGiorno.scegli(manuale: null, daHealth: 0, stimate: 300);
+      final b = BruciateDelGiorno.scegli(
+        manuale: null,
+        daHealth: 0,
+        stimate: 300,
+      );
 
       expect(b.kcal, 300);
       expect(b.fonte, FonteBruciate.stima);
     });
 
     test('senza niente, niente', () {
-      final b = BruciateDelGiorno.scegli(manuale: null, daHealth: 0, stimate: 0);
+      final b = BruciateDelGiorno.scegli(
+        manuale: null,
+        daHealth: 0,
+        stimate: 0,
+      );
 
       expect(b.kcal, 0);
       expect(b.esistono, isFalse);
@@ -57,7 +73,11 @@ void main() {
      * comparire il numero dell'orologio al posto suo.
      */
     test('zero dichiarato a mano batte l\'orologio', () {
-      final b = BruciateDelGiorno.scegli(manuale: 0, daHealth: 450, stimate: 300);
+      final b = BruciateDelGiorno.scegli(
+        manuale: 0,
+        daHealth: 450,
+        stimate: 300,
+      );
 
       expect(b.kcal, 0);
       expect(b.fonte, FonteBruciate.manuale);
@@ -67,7 +87,11 @@ void main() {
     /// conteggio dello stesso allenamento.
     test('le fonti non si sommano mai fra loro', () {
       expect(
-        BruciateDelGiorno.scegli(manuale: null, daHealth: 450, stimate: 300).kcal,
+        BruciateDelGiorno.scegli(
+          manuale: null,
+          daHealth: 450,
+          stimate: 300,
+        ).kcal,
         450,
       );
     });
@@ -75,8 +99,16 @@ void main() {
 
   group('l\'obiettivo del giorno le comprende', () {
     test('le bruciate risolte entrano nel target calcolato in locale', () {
-      final b = BruciateDelGiorno.scegli(manuale: null, daHealth: 450, stimate: 300);
-      final t = TargetDelGiorno.scegli(dalServer: null, locale: 2000, bruciate: b.kcal);
+      final b = BruciateDelGiorno.scegli(
+        manuale: null,
+        daHealth: 450,
+        stimate: 300,
+      );
+      final t = TargetDelGiorno.scegli(
+        dalServer: null,
+        locale: 2000,
+        bruciate: b.kcal,
+      );
 
       expect(t.kcal, 2450);
       expect(t.bruciateIncluse, isTrue);
@@ -89,14 +121,15 @@ void main() {
     setUp(() => archivio = ArchivioSalute.inMemoria());
     tearDown(() => archivio.close());
 
-    LetturaSalute campione(String fonte, double kcal, DateTime quando) => LetturaSalute(
-      id: 0,
-      fonte: fonte,
-      metrica: MetricaSalute.calorieAttive.codice,
-      misurataIl: quando,
-      giorno: DateTime(quando.year, quando.month, quando.day),
-      valore: kcal,
-    );
+    LetturaSalute campione(String fonte, double kcal, DateTime quando) =>
+        LetturaSalute(
+          id: 0,
+          fonte: fonte,
+          metrica: MetricaSalute.calorieAttive.codice,
+          misurataIl: quando,
+          giorno: DateTime(quando.year, quando.month, quando.day),
+          valore: kcal,
+        );
 
     test('i campioni di una sorgente si sommano', () async {
       final oggi = DateTime(2026, 8, 19, 10);

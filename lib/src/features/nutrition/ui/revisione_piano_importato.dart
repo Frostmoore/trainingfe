@@ -39,10 +39,12 @@ class RevisionePianoImportato extends ConsumerStatefulWidget {
   final ImportazionePiano importazione;
 
   @override
-  ConsumerState<RevisionePianoImportato> createState() => _RevisionePianoImportatoState();
+  ConsumerState<RevisionePianoImportato> createState() =>
+      _RevisionePianoImportatoState();
 }
 
-class _RevisionePianoImportatoState extends ConsumerState<RevisionePianoImportato> {
+class _RevisionePianoImportatoState
+    extends ConsumerState<RevisionePianoImportato> {
   late final List<_Giorno> _giorni;
   late final TextEditingController _nome;
 
@@ -83,8 +85,10 @@ class _RevisionePianoImportatoState extends ConsumerState<RevisionePianoImportat
         .toList();
   }
 
-  int get _righe =>
-      _giorni.fold(0, (t, g) => t + g.pasti.fold(0, (p, m) => p + m.alimenti.length));
+  int get _righe => _giorni.fold(
+    0,
+    (t, g) => t + g.pasti.fold(0, (p, m) => p + m.alimenti.length),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +131,10 @@ class _RevisionePianoImportatoState extends ConsumerState<RevisionePianoImportat
           ],
 
           if (_errore != null) ...[
-            Text(_errore!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _errore!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             const SizedBox(height: Gap.sm),
           ],
 
@@ -207,15 +214,21 @@ class _RevisionePianoImportatoState extends ConsumerState<RevisionePianoImportat
     try {
       _pdfLocale ??= await _scaricaOriginale();
 
-      await ref.read(archivioSaluteProvider).salvaPianoImportato(
-        importazioneId: widget.importazione.id,
-        nome: _nome.text.trim().isEmpty ? 'Piano importato' : _nome.text.trim(),
-        piano: json.encode(_perLArchivio()),
-        pdfOriginale: _pdfLocale,
-      );
+      await ref
+          .read(archivioSaluteProvider)
+          .salvaPianoImportato(
+            importazioneId: widget.importazione.id,
+            nome: _nome.text.trim().isEmpty
+                ? 'Piano importato'
+                : _nome.text.trim(),
+            piano: json.encode(_perLArchivio()),
+            pdfOriginale: _pdfLocale,
+          );
 
       try {
-        await ref.read(importazioniPianiProvider).chiudi(widget.importazione.id);
+        await ref
+            .read(importazioniPianiProvider)
+            .chiudi(widget.importazione.id);
       } on Object {
         // Vedi il dartdoc: la riga scade da sola, il piano e' gia' al sicuro.
       }
@@ -410,9 +423,13 @@ class _GiornoCard extends StatelessWidget {
             ),
             for (final pasto in giorno.pasti) ...[
               const Divider(),
-              Text(pasto.etichetta, style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                pasto.etichetta,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
               const SizedBox(height: Gap.xs),
-              for (final alimento in pasto.alimenti) _RigaAlimento(alimento: alimento),
+              for (final alimento in pasto.alimenti)
+                _RigaAlimento(alimento: alimento),
             ],
           ],
         ),
@@ -448,7 +465,9 @@ class _RigaAlimento extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: alimento.quantita,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
@@ -561,15 +580,18 @@ class _Alimento {
        * con una conversione inventata sarebbe esattamente il tipo di errore che
        * questa schermata esiste per intercettare.
        */
-      quantita: TextEditingController(text: grammi == null ? '' : _pulito(grammi)),
+      quantita: TextEditingController(
+        text: grammi == null ? '' : _pulito(grammi),
+      ),
     );
   }
 
   final TextEditingController descrizione;
   final TextEditingController quantita;
 
-  static String _pulito(double valore) =>
-      valore == valore.roundToDouble() ? valore.round().toString() : valore.toString();
+  static String _pulito(double valore) => valore == valore.roundToDouble()
+      ? valore.round().toString()
+      : valore.toString();
 
   void smonta() {
     descrizione.dispose();
@@ -579,9 +601,6 @@ class _Alimento {
   Map<String, dynamic> perLArchivio() {
     final grammi = double.tryParse(quantita.text.trim().replaceAll(',', '.'));
 
-    return {
-      'description': descrizione.text.trim(),
-      'grams': ?grammi,
-    };
+    return {'description': descrizione.text.trim(), 'grams': ?grammi};
   }
 }

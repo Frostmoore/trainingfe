@@ -14,23 +14,25 @@ void main() {
   setUp(() => archivio = ArchivioSalute.inMemoria());
   tearDown(() => archivio.close());
 
-  LetturaSalute lettura(MetricaSalute m, double valore, DateTime quando) => LetturaSalute(
-    id: 0,
-    fonte: 'test',
-    metrica: m.codice,
-    misurataIl: quando,
-    giorno: DateTime(quando.year, quando.month, quando.day),
-    valore: valore,
-  );
+  LetturaSalute lettura(MetricaSalute m, double valore, DateTime quando) =>
+      LetturaSalute(
+        id: 0,
+        fonte: 'test',
+        metrica: m.codice,
+        misurataIl: quando,
+        giorno: DateTime(quando.year, quando.month, quando.day),
+        valore: valore,
+      );
 
-  CampioneSonno campione(DateTime da, DateTime a, FaseSonno fase) => CampioneSonno(
-    id: 0,
-    fonte: 'test',
-    notte: notteDi(da),
-    iniziatoIl: da,
-    finitoIl: a,
-    fase: fase.codice,
-  );
+  CampioneSonno campione(DateTime da, DateTime a, FaseSonno fase) =>
+      CampioneSonno(
+        id: 0,
+        fonte: 'test',
+        notte: notteDi(da),
+        iniziatoIl: da,
+        finitoIl: a,
+        fase: fase.codice,
+      );
 
   group('le letture', () {
     test('si scrivono e si rileggono dalla più recente', () async {
@@ -41,7 +43,10 @@ void main() {
         lettura(MetricaSalute.hrv, 52, oggi),
       ]);
 
-      final letto = await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30);
+      final letto = await archivio.lettureRecenti(
+        MetricaSalute.hrv,
+        giorni: 30,
+      );
 
       expect(letto, hasLength(2));
       expect(letto.first.valore, 52);
@@ -60,7 +65,10 @@ void main() {
       await archivio.scriviLetture([lettura(MetricaSalute.hrv, 48, quando)]);
       await archivio.scriviLetture([lettura(MetricaSalute.hrv, 48, quando)]);
 
-      expect(await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30), hasLength(1));
+      expect(
+        await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30),
+        hasLength(1),
+      );
     });
 
     /// 🚨 Un valore fuori scala **non entra**.
@@ -78,7 +86,10 @@ void main() {
       ]);
 
       expect(scritte, 1);
-      final letto = await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30);
+      final letto = await archivio.lettureRecenti(
+        MetricaSalute.hrv,
+        giorni: 30,
+      );
       expect(letto, hasLength(1));
       expect(letto.single.valore, 48);
     });
@@ -91,9 +102,15 @@ void main() {
         lettura(MetricaSalute.battitoARiposo, 52, quando),
       ]);
 
-      expect(await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30), hasLength(1));
       expect(
-        (await archivio.lettureRecenti(MetricaSalute.battitoARiposo, giorni: 30)).single.valore,
+        await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 30),
+        hasLength(1),
+      );
+      expect(
+        (await archivio.lettureRecenti(
+          MetricaSalute.battitoARiposo,
+          giorni: 30,
+        )).single.valore,
         52,
       );
     });
@@ -128,9 +145,21 @@ void main() {
     /// convenzione è stata cambiata, non aggirata.
     test('una notte a cavallo di mezzanotte resta una notte sola', () async {
       await archivio.scriviCampioniSonno([
-        campione(DateTime(2026, 8, 10, 23, 30), DateTime(2026, 8, 11, 0, 30), FaseSonno.leggero),
-        campione(DateTime(2026, 8, 11, 0, 30), DateTime(2026, 8, 11, 2, 0), FaseSonno.profondo),
-        campione(DateTime(2026, 8, 11, 2, 0), DateTime(2026, 8, 11, 6, 30), FaseSonno.rem),
+        campione(
+          DateTime(2026, 8, 10, 23, 30),
+          DateTime(2026, 8, 11, 0, 30),
+          FaseSonno.leggero,
+        ),
+        campione(
+          DateTime(2026, 8, 11, 0, 30),
+          DateTime(2026, 8, 11, 2, 0),
+          FaseSonno.profondo,
+        ),
+        campione(
+          DateTime(2026, 8, 11, 2, 0),
+          DateTime(2026, 8, 11, 6, 30),
+          FaseSonno.rem,
+        ),
       ]);
 
       final notte = await archivio.campioniDellaNotte(DateTime(2026, 8, 11));
@@ -149,7 +178,10 @@ void main() {
       await archivio.scriviCampioniSonno([c]);
       await archivio.scriviCampioniSonno([c]);
 
-      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 11)), hasLength(1));
+      expect(
+        await archivio.campioniDellaNotte(DateTime(2026, 8, 11)),
+        hasLength(1),
+      );
     });
 
     test('i minuti si contano dagli estremi, e non vanno mai sotto zero', () {
@@ -174,8 +206,16 @@ void main() {
 
     test('l\'ultima notte con dati è quella giusta', () async {
       await archivio.scriviCampioniSonno([
-        campione(DateTime(2026, 8, 8, 23, 0), DateTime(2026, 8, 9, 6, 0), FaseSonno.leggero),
-        campione(DateTime(2026, 8, 10, 23, 0), DateTime(2026, 8, 11, 6, 0), FaseSonno.leggero),
+        campione(
+          DateTime(2026, 8, 8, 23, 0),
+          DateTime(2026, 8, 9, 6, 0),
+          FaseSonno.leggero,
+        ),
+        campione(
+          DateTime(2026, 8, 10, 23, 0),
+          DateTime(2026, 8, 11, 6, 0),
+          FaseSonno.leggero,
+        ),
       ]);
 
       expect(await archivio.ultimaNotteConDati(), DateTime(2026, 8, 11));
@@ -209,25 +249,34 @@ void main() {
       expect(notteDi(DateTime(2026, 8, 13, 16, 30)), DateTime(2026, 8, 13));
     });
 
-    test('la notte e la pennica dello stesso giorno finiscono insieme', () async {
-      // Dorme dalle 21:00 del 12 alle 08:00 del 13.
-      await archivio.scriviCampioniSonno([
-        campione(
-          DateTime(2026, 8, 12, 21, 0),
-          DateTime(2026, 8, 13, 8, 0),
-          FaseSonno.leggero,
-        ),
-        // E si fa una pennica il pomeriggio del 13.
-        campione(
-          DateTime(2026, 8, 13, 15, 0),
-          DateTime(2026, 8, 13, 16, 30),
-          FaseSonno.leggero,
-        ),
-      ]);
+    test(
+      'la notte e la pennica dello stesso giorno finiscono insieme',
+      () async {
+        // Dorme dalle 21:00 del 12 alle 08:00 del 13.
+        await archivio.scriviCampioniSonno([
+          campione(
+            DateTime(2026, 8, 12, 21, 0),
+            DateTime(2026, 8, 13, 8, 0),
+            FaseSonno.leggero,
+          ),
+          // E si fa una pennica il pomeriggio del 13.
+          campione(
+            DateTime(2026, 8, 13, 15, 0),
+            DateTime(2026, 8, 13, 16, 30),
+            FaseSonno.leggero,
+          ),
+        ]);
 
-      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 13)), hasLength(2));
-      expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 12)), isEmpty);
-    });
+        expect(
+          await archivio.campioniDellaNotte(DateTime(2026, 8, 13)),
+          hasLength(2),
+        );
+        expect(
+          await archivio.campioniDellaNotte(DateTime(2026, 8, 12)),
+          isEmpty,
+        );
+      },
+    );
 
     /// ⚠️ `DateTime(y, m, d + 1)` e non `add(Duration(days: 1))`.
     ///
@@ -248,21 +297,29 @@ void main() {
   /// 🚨 Con i dati sul telefono, «cancella il mio account» **deve** arrivare
   /// fin qui: il server non può cancellare ciò che non ha mai avuto.
   test('svuota() non lascia niente dietro', () async {
-    await archivio.scriviLetture([lettura(MetricaSalute.hrv, 48, DateTime(2026, 8, 11, 7))]);
+    await archivio.scriviLetture([
+      lettura(MetricaSalute.hrv, 48, DateTime(2026, 8, 11, 7)),
+    ]);
     await archivio.scriviCampioniSonno([
-      campione(DateTime(2026, 8, 10, 23, 0), DateTime(2026, 8, 11, 6, 0), FaseSonno.leggero),
+      campione(
+        DateTime(2026, 8, 10, 23, 0),
+        DateTime(2026, 8, 11, 6, 0),
+        FaseSonno.leggero,
+      ),
     ]);
 
     await archivio.svuota();
 
-    expect(await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 3650), isEmpty);
+    expect(
+      await archivio.lettureRecenti(MetricaSalute.hrv, giorni: 3650),
+      isEmpty,
+    );
     expect(await archivio.campioniDellaNotte(DateTime(2026, 8, 11)), isEmpty);
   });
 
   group('il corpo — S5.2', () {
-    Future<void> pesa(double kg, DateTime giorno) => archivio.registraMisura(
-      MisuraCorpo(id: 0, giorno: giorno, pesoKg: kg),
-    );
+    Future<void> pesa(double kg, DateTime giorno) =>
+        archivio.registraMisura(MisuraCorpo(id: 0, giorno: giorno, pesoKg: kg));
 
     /// 🚨 Pesarsi due volte lo stesso giorno è una **correzione**, non un
     /// secondo punto sul grafico: la bilancia si guarda spesso due volte di

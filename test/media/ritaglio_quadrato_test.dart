@@ -174,7 +174,11 @@ void main() {
       )!,
     );
 
-    expect(dopo.exif.gpsIfd.isEmpty, isTrue, reason: 'il GPS e\' sopravvissuto');
+    expect(
+      dopo.exif.gpsIfd.isEmpty,
+      isTrue,
+      reason: 'il GPS e\' sopravvissuto',
+    );
     expect(dopo.exif.imageIfd.isEmpty, isTrue);
   });
 

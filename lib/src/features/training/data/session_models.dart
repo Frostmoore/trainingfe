@@ -155,7 +155,12 @@ class PlayerExercise {
 }
 
 class PlayerSet {
-  PlayerSet({required this.setNumber, this.reps, this.weight, this.done = false});
+  PlayerSet({
+    required this.setNumber,
+    this.reps,
+    this.weight,
+    this.done = false,
+  });
 
   final int setNumber;
   int? reps;

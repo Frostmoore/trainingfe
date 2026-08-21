@@ -320,7 +320,9 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
 
   Future<void> _segnaConsensiChiesti() async {
     try {
-      await ref.read(apiClientProvider).post<dynamic>('/account/consents/chiesti');
+      await ref
+          .read(apiClientProvider)
+          .post<dynamic>('/account/consents/chiesti');
       ref.invalidate(consensiProvider);
     } on Object {
       // Vedi il dartdoc: si tace di proposito.

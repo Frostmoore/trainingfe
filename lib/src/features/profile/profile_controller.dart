@@ -9,7 +9,9 @@ import 'data/profile_models.dart';
 
 /// Il profilo dell'iscritto — C8.
 final profileProvider = FutureProvider.autoDispose<UserProfile>((ref) async {
-  final data = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/profile');
+  final data = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>('/profile');
 
   return UserProfile.fromJson(data);
 });
@@ -22,16 +24,20 @@ final profileProvider = FutureProvider.autoDispose<UserProfile>((ref) async {
 ///
 /// ⚠️ La firma non cambia — `List<WeightEntry>` — così nessuna schermata si
 /// accorge del trasloco. È la stessa disciplina usata per `sleepProvider` in S4.
-final weightHistoryProvider = FutureProvider.autoDispose<List<WeightEntry>>((ref) async {
+final weightHistoryProvider = FutureProvider.autoDispose<List<WeightEntry>>((
+  ref,
+) async {
   final misure = await ref.watch(storicoCorpoProvider.future);
 
   return misure
       .where((m) => m.pesoKg != null)
-      .map((m) => WeightEntry(
-            date: m.giorno,
-            weightKg: m.pesoKg!,
-            bodyFatPct: m.massaGrassaPct,
-          ))
+      .map(
+        (m) => WeightEntry(
+          date: m.giorno,
+          weightKg: m.pesoKg!,
+          bodyFatPct: m.massaGrassaPct,
+        ),
+      )
       .toList();
 });
 
@@ -60,7 +66,9 @@ class ProfileActions {
   }) async {
     final corpo = <String, dynamic>{
       'sex': ?sex,
-      'birthdate': ?birthdate == null ? null : DateFormat('yyyy-MM-dd').format(birthdate),
+      'birthdate': ?birthdate == null
+          ? null
+          : DateFormat('yyyy-MM-dd').format(birthdate),
       'height_cm': ?heightCm,
       'activity_level': ?activityLevel,
       'goal': ?goal,
@@ -80,17 +88,19 @@ class ProfileActions {
   /// ⚠️ Il backend fa un UPSERT su `(utente, data)`: pesarsi due volte lo stesso
   /// giorno è una **correzione**, non un secondo punto sul grafico. È il
   /// comportamento giusto — la bilancia si guarda spesso due volte di seguito.
-  Future<void> logWeight({required double kg, DateTime? date, double? bodyFatPct}) async {
+  Future<void> logWeight({
+    required double kg,
+    DateTime? date,
+    double? bodyFatPct,
+  }) async {
     // 🚨 Scrive nell'**archivio locale**, non su `POST /body-metrics` — S5.2.
     // Quell'endpoint non esiste più: i dati del corpo non stanno sul server.
     //
     // ⚠️ La firma resta identica di proposito: `WeightSheet` e le altre
     // schermate non sanno né devono sapere dove finisce il dato.
-    await _ref.read(azioniCorpoProvider).registraPeso(
-          kg: kg,
-          giorno: date,
-          massaGrassaPct: bodyFatPct,
-        );
+    await _ref
+        .read(azioniCorpoProvider)
+        .registraPeso(kg: kg, giorno: date, massaGrassaPct: bodyFatPct);
 
     _invalida();
   }
@@ -99,7 +109,10 @@ class ProfileActions {
   ///
   /// 🚨 Serve la password attuale: cambiare l'email è come cambiare le chiavi,
   /// perché è con quella che si recupera l'accesso.
-  Future<void> cambiaEmail({required String email, required String passwordAttuale}) async {
+  Future<void> cambiaEmail({
+    required String email,
+    required String passwordAttuale,
+  }) async {
     await _api.patch<dynamic>(
       '/account/email',
       body: {'email': email, 'current_password': passwordAttuale},

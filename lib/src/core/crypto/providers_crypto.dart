@@ -17,7 +17,9 @@ import 'servizio_chiavi.dart';
 /// ⚠️ È `SodiumSumoInit` e non `SodiumInit`: **Argon2id (`crypto_pwhash`) esiste
 /// solo nell'API sumo**, ed è la derivazione su cui poggia l'intera password di
 /// recupero.
-final sodiumProvider = FutureProvider<SodiumSumo>((ref) => SodiumSumoInit.init());
+final sodiumProvider = FutureProvider<SodiumSumo>(
+  (ref) => SodiumSumoInit.init(),
+);
 
 final portachiaviProvider = Provider<Portachiavi>((ref) => Portachiavi());
 

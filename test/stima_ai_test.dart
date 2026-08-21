@@ -46,8 +46,22 @@ void main() {
       final s = StimaAi.fromJson(
         risposta(
           voci: [
-            {'name': 'Pasta', 'grams': 80, 'kcal': 280, 'protein': 10, 'carbs': 56, 'fat': 1},
-            {'name': 'Sugo', 'grams': 100, 'kcal': 60, 'protein': 2, 'carbs': 8, 'fat': 3},
+            {
+              'name': 'Pasta',
+              'grams': 80,
+              'kcal': 280,
+              'protein': 10,
+              'carbs': 56,
+              'fat': 1,
+            },
+            {
+              'name': 'Sugo',
+              'grams': 100,
+              'kcal': 60,
+              'protein': 2,
+              'carbs': 8,
+              'fat': 3,
+            },
           ],
         ),
       );
@@ -109,7 +123,14 @@ void main() {
         confidenza: 0.85,
         nota: 'Se cucinate diversamente (fritte, panate) i valori cambiano.',
         voci: [
-          {'name': 'cotolette di pollo', 'grams': 200, 'kcal': 380, 'protein': 52, 'carbs': 0, 'fat': 18},
+          {
+            'name': 'cotolette di pollo',
+            'grams': 200,
+            'kcal': 380,
+            'protein': 52,
+            'carbs': 0,
+            'fat': 18,
+          },
         ],
       ),
     );
@@ -118,7 +139,8 @@ void main() {
     expect(
       cotoletta.daGuardare,
       isTrue,
-      reason: 'una nota del modello basta da sola: la confidenza non è affidabile',
+      reason:
+          'una nota del modello basta da sola: la confidenza non è affidabile',
     );
   });
 
@@ -178,7 +200,12 @@ void main() {
     /// inventa un allarme.
     test('senza grammi non si dice niente', () {
       expect(
-        const VoceStimata(nome: 'x', proteine: 90, carboidrati: 90, grassi: 90).macroImpossibili,
+        const VoceStimata(
+          nome: 'x',
+          proteine: 90,
+          carboidrati: 90,
+          grassi: 90,
+        ).macroImpossibili,
         isFalse,
       );
     });
@@ -187,8 +214,22 @@ void main() {
       final s = StimaAi.fromJson(
         risposta(
           voci: [
-            {'name': 'Focaccia', 'grams': 100, 'kcal': 297, 'protein': 8, 'carbs': 36, 'fat': 14},
-            {'name': 'Coppiette', 'grams': 100, 'kcal': 588, 'protein': 56, 'carbs': 4, 'fat': 40},
+            {
+              'name': 'Focaccia',
+              'grams': 100,
+              'kcal': 297,
+              'protein': 8,
+              'carbs': 36,
+              'fat': 14,
+            },
+            {
+              'name': 'Coppiette',
+              'grams': 100,
+              'kcal': 588,
+              'protein': 56,
+              'carbs': 4,
+              'fat': 40,
+            },
           ],
         ),
       );
@@ -222,9 +263,22 @@ void main() {
     });
 
     test('la quantità si legge come la si scrive', () {
-      expect(const VoceStimata(nome: 'x', qty: 200, unita: 'g', grammi: 200).quantita, '200 g');
       expect(
-        const VoceStimata(nome: 'x', qty: 1, unita: 'cucchiaio', grammi: 14).quantita,
+        const VoceStimata(
+          nome: 'x',
+          qty: 200,
+          unita: 'g',
+          grammi: 200,
+        ).quantita,
+        '200 g',
+      );
+      expect(
+        const VoceStimata(
+          nome: 'x',
+          qty: 1,
+          unita: 'cucchiaio',
+          grammi: 14,
+        ).quantita,
         '1 cucchiaio · 14 g',
       );
       expect(const VoceStimata(nome: 'x', grammi: 80).quantita, '80 g');
@@ -289,7 +343,10 @@ void main() {
     /// riscrivere al carattere successivo sarebbe un campo che si rifiuta di
     /// obbedire.
     test('i valori corretti a mano non si riscalano', () {
-      final r = cotoletta.riscalataA(250, intoccabili: const {'protein', 'kcal'});
+      final r = cotoletta.riscalataA(
+        250,
+        intoccabili: const {'protein', 'kcal'},
+      );
 
       expect(r.proteine, 48, reason: 'toccato: resta com\'è');
       expect(r.kcal, 330, reason: 'toccato: resta com\'è');
@@ -397,7 +454,11 @@ void main() {
         isTrue,
       );
       expect(
-        VoceStimata.fromJson(const {'name': 'x', 'confidence': 0.95, 'state': 'ambiguo'}).daGuardare,
+        VoceStimata.fromJson(const {
+          'name': 'x',
+          'confidence': 0.95,
+          'state': 'ambiguo',
+        }).daGuardare,
         isTrue,
       );
     });
@@ -407,11 +468,17 @@ void main() {
     test('gli avvisi del backend arrivano e contano', () {
       final s = StimaAi.fromJson(const {
         'estimate': {'items': [], 'confidence': 0.9, 'note': null},
-        'warnings': ['«Vino»: 11,8 g di alcol dichiarati, 14,2 imposti. Corretto.'],
+        'warnings': [
+          '«Vino»: 11,8 g di alcol dichiarati, 14,2 imposti. Corretto.',
+        ],
       });
 
       expect(s.avvisi, hasLength(1));
-      expect(s.daGuardare, isTrue, reason: 'un avviso del sistema basta da solo');
+      expect(
+        s.daGuardare,
+        isTrue,
+        reason: 'un avviso del sistema basta da solo',
+      );
     });
 
     /// ⚠️ I campi nuovi devono sopravvivere alla correzione a mano e alla

@@ -14,8 +14,18 @@ void main() {
     test('legge una giornata completa', () {
       final day = DiaryDay.fromJson(const {
         'date': '2026-08-10',
-        'totals': {'kcal': 1850.5, 'protein': 120.0, 'carbs': 180.0, 'fat': 60.0},
-        'targets': {'kcal': 2200.0, 'protein_g': 150, 'carbs_g': 220, 'fat_g': 70},
+        'totals': {
+          'kcal': 1850.5,
+          'protein': 120.0,
+          'carbs': 180.0,
+          'fat': 60.0,
+        },
+        'targets': {
+          'kcal': 2200.0,
+          'protein_g': 150,
+          'carbs_g': 220,
+          'fat_g': 70,
+        },
         'burned': {'kcal': 300, 'source': 'formula'},
         'meals': [
           {

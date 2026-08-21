@@ -227,11 +227,13 @@ abstract final class StoricoUnificato {
       if (a.nascosto) continue;
 
       if (a.staccato) {
-        voci.add(VoceStorico(
-          sedute: const [],
-          dalPolso: [a],
-          scheda: schede[a.schedaAssegnata],
-        ));
+        voci.add(
+          VoceStorico(
+            sedute: const [],
+            dalPolso: [a],
+            scheda: schede[a.schedaAssegnata],
+          ),
+        );
 
         continue;
       }
@@ -241,17 +243,19 @@ abstract final class StoricoUnificato {
 
     // ── 2. Le componenti connesse ───────────────────────────────────────────
     for (final gruppo in _componenti(daRaggruppare)) {
-      final sedute = gruppo
-          .where((r) => r.sessione != null)
-          .map((r) => r.sessione!)
-          .toList()
-        ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+      final sedute =
+          gruppo
+              .where((r) => r.sessione != null)
+              .map((r) => r.sessione!)
+              .toList()
+            ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
-      final polso = gruppo
-          .where((r) => r.allenamento != null)
-          .map((r) => r.allenamento!)
-          .toList()
-        ..sort((a, b) => a.iniziatoIl.compareTo(b.iniziatoIl));
+      final polso =
+          gruppo
+              .where((r) => r.allenamento != null)
+              .map((r) => r.allenamento!)
+              .toList()
+            ..sort((a, b) => a.iniziatoIl.compareTo(b.iniziatoIl));
 
       /*
        * 💡 La prima scheda assegnata del gruppo. ⚠️ Non si mostrano tutte: se
@@ -364,20 +368,20 @@ abstract final class StoricoUnificato {
 /// che tipo è**.
 class _Registrazione {
   _Registrazione.dallApp(WorkoutSession s)
-      : sessione = s,
-        allenamento = null,
-        inizio = s.startedAt,
-        fine = StoricoUnificato.fineDi(s)!,
-        // ⚠️ Il player non sa che tipo di attività stai facendo: sa che scheda
-        // stai usando. Per il raggruppamento è come non avere un tipo.
-        tipo = null;
+    : sessione = s,
+      allenamento = null,
+      inizio = s.startedAt,
+      fine = StoricoUnificato.fineDi(s)!,
+      // ⚠️ Il player non sa che tipo di attività stai facendo: sa che scheda
+      // stai usando. Per il raggruppamento è come non avere un tipo.
+      tipo = null;
 
   _Registrazione.dalPolso(AllenamentoDaOrologio a)
-      : sessione = null,
-        allenamento = a,
-        inizio = a.iniziatoIl,
-        fine = a.finitoIl,
-        tipo = a.tipo;
+    : sessione = null,
+      allenamento = a,
+      inizio = a.iniziatoIl,
+      fine = a.finitoIl,
+      tipo = a.tipo;
 
   final WorkoutSession? sessione;
   final AllenamentoDaOrologio? allenamento;

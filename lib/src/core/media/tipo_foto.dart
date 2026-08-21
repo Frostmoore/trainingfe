@@ -141,9 +141,8 @@ enum TipoFoto {
   /// 🚨 **Elenco di ammessi, non di esclusi.** Un elenco di esclusi lascia
   /// passare il formato a cui nessuno aveva pensato — e nel caso dei video quel
   /// formato pesa cento volte una foto, sul piano dati di qualcun altro.
-  Set<String> get estensioni => accettaDocumenti
-      ? {..._immagini, ..._documenti}
-      : _immagini;
+  Set<String> get estensioni =>
+      accettaDocumenti ? {..._immagini, ..._documenti} : _immagini;
 
   static const _immagini = <String>{'.jpg', '.jpeg', '.png', '.webp', '.heic'};
 

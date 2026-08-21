@@ -120,14 +120,16 @@ class AppConfig {
         '906189065880-am4bafujbh50vun21qu5r288vvfmr0ng.apps.googleusercontent.com',
   );
 
-  static String _defaultBaseUrl(AppEnvironment environment) => switch (environment) {
-    // 10.0.2.2 è l'host visto dall'emulatore Android. Su iOS Simulator
-    // funziona `localhost`, ma questo valore va bene per entrambi solo su
-    // Android: per il simulatore iOS si passa `API_BASE_URL`.
-    AppEnvironment.local => 'http://10.0.2.2:8123/api/v1',
-    AppEnvironment.staging => 'https://training.riccardoronconi.it/api/v1',
-    AppEnvironment.production => 'https://training.riccardoronconi.it/api/v1',
-  };
+  static String _defaultBaseUrl(AppEnvironment environment) =>
+      switch (environment) {
+        // 10.0.2.2 è l'host visto dall'emulatore Android. Su iOS Simulator
+        // funziona `localhost`, ma questo valore va bene per entrambi solo su
+        // Android: per il simulatore iOS si passa `API_BASE_URL`.
+        AppEnvironment.local => 'http://10.0.2.2:8123/api/v1',
+        AppEnvironment.staging => 'https://training.riccardoronconi.it/api/v1',
+        AppEnvironment.production =>
+          'https://training.riccardoronconi.it/api/v1',
+      };
 
   @override
   String toString() => 'AppConfig(${environment.name}, $apiBaseUrl)';

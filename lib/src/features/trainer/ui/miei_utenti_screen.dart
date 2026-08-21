@@ -45,7 +45,8 @@ class _Elenco extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      onRefresh: () => aggiornaTutto(context, ref, () => ref.invalidate(mieiUtentiProvider)),
+      onRefresh: () =>
+          aggiornaTutto(context, ref, () => ref.invalidate(mieiUtentiProvider)),
       child: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
@@ -87,7 +88,9 @@ class _Elenco extends ConsumerWidget {
           FilledButton.icon(
             // 🚨 Spento **prima** che qualcuno lo prema: scoprire il limite dopo
             // aver compilato un modulo fa sembrare rotto un vincolo commerciale.
-            onPressed: dati.posti.puoInvitare ? () => _invita(context, ref) : null,
+            onPressed: dati.posti.puoInvitare
+                ? () => _invita(context, ref)
+                : null,
             icon: const Icon(Icons.person_add_alt_1_rounded),
             label: const Text('Invita una persona'),
           ),
@@ -118,7 +121,9 @@ class _Elenco extends ConsumerWidget {
 
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('Link copiato. Vale una volta sola e scade fra 7 giorni.'),
+          content: Text(
+            'Link copiato. Vale una volta sola e scade fra 7 giorni.',
+          ),
         ),
       );
     } on Object catch (errore) {
@@ -152,7 +157,9 @@ class _Posti extends StatelessWidget {
         // 💡 Gli inviti ancora validi occupano un posto: senza dirlo, un trainer
         // che ha mandato tre inviti e vede zero utenti non capirebbe perché non
         // può invitarne un quarto.
-        subtitle: const Text('Anche gli inviti non ancora accettati occupano un posto.'),
+        subtitle: const Text(
+          'Anche gli inviti non ancora accettati occupano un posto.',
+        ),
       ),
     );
   }
@@ -185,9 +192,13 @@ class _Riga extends ConsumerWidget {
               : TextStyle(color: theme.colorScheme.error),
         ),
         trailing: IconButton(
-          tooltip: utente.attivo ? 'Chiudi la conversazione' : 'Riapri la conversazione',
+          tooltip: utente.attivo
+              ? 'Chiudi la conversazione'
+              : 'Riapri la conversazione',
           icon: Icon(
-            utente.attivo ? Icons.pause_circle_outline : Icons.play_circle_outline,
+            utente.attivo
+                ? Icons.pause_circle_outline
+                : Icons.play_circle_outline,
           ),
           onPressed: () => _cambia(context, ref),
         ),

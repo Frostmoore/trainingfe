@@ -32,7 +32,10 @@ void main() {
   /// ⚠️ Deve fermarsi dentro il corpo del test, non in `addTearDown`: il
   /// controllo «nessun timer pendente» del framework gira **prima** dei
   /// tearDown, e fallirebbe su un timer perfettamente sano.
-  Future<void> conRecupero(int secondi, Future<void> Function(RestTimer) corpo) async {
+  Future<void> conRecupero(
+    int secondi,
+    Future<void> Function(RestTimer) corpo,
+  ) async {
     final timer = RestTimer()..notificheAttive = false;
 
     await timer.avvia(secondi);
@@ -45,7 +48,9 @@ void main() {
     }
   }
 
-  testWidgets('si disegna dentro la colonna del player senza esplodere', (tester) async {
+  testWidgets('si disegna dentro la colonna del player senza esplodere', (
+    tester,
+  ) async {
     await conRecupero(90, (timer) async {
       await tester.pumpWidget(dentroIlPlayer(timer));
       await tester.pump();
@@ -94,7 +99,9 @@ void main() {
     });
   });
 
-  testWidgets('«−15 s» accorcia, e sotto zero il recupero finisce', (tester) async {
+  testWidgets('«−15 s» accorcia, e sotto zero il recupero finisce', (
+    tester,
+  ) async {
     await conRecupero(20, (timer) async {
       await tester.pumpWidget(dentroIlPlayer(timer));
       await tester.pump();

@@ -109,7 +109,7 @@ class TraslocoAllenamenti {
 
         if (giorno == null || kcal == null) continue;
 
-        await _archivio.dichiaraBruciate(giorno, kcal);
+        await _archivio.dichiaraBruciate(giorno, kcal, daServer: true);
       }
     });
 

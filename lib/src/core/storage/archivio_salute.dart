@@ -49,7 +49,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +170,18 @@ class ArchivioSalute extends _$ArchivioSalute {
         await m.createTable(seduteAllenamento);
         await m.createTable(serieDelleSedute);
         await m.createTable(bruciateDichiarate);
+      }
+
+      /*
+       * ⚠️ v11 → v12 (FASE 11.3, poche ore dopo): da dove viene una bruciata.
+       *
+       * 🚨 Senza, `conteggiDelTrasloco()` contava **tutte** le righe locali. Oggi
+       * torna lo stesso perché nessuno scrive in locale, ma dalla 11.4 in poi
+       * una dichiarazione fatta prima del trasloco avrebbe fatto rispondere
+       * `409` al server **per sempre**.
+       */
+      if (da < 12) {
+        await m.addColumn(bruciateDichiarate, bruciateDichiarate.daServer);
       }
     },
   );
@@ -495,18 +507,32 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// `daily_burns`): tradurle qui e non a metà strada evita che i due lati
   /// contino cose diverse chiamandole allo stesso modo.
   Future<Map<String, int>> conteggiDelTrasloco() async {
-    Future<int> quante(TableInfo<Table, Object?> t) async {
+    Future<int> quante(TableInfo<Table, Object?> t, String dove) async {
       final riga = await customSelect(
-        'SELECT COUNT(*) AS n FROM "${t.actualTableName}"',
+        'SELECT COUNT(*) AS n FROM "${t.actualTableName}" $dove',
       ).getSingle();
 
       return riga.read<int>('n');
     }
 
     return {
-      'sessions': await quante(seduteAllenamento),
-      'sets': await quante(serieDelleSedute),
-      'daily_burns': await quante(bruciateDichiarate),
+      'sessions': await quante(
+        seduteAllenamento,
+        'WHERE id_server IS NOT NULL',
+      ),
+
+      /*
+       * 🚨 Le serie **delle sedute venute dal server**, non tutte: dopo la 11.4
+       * ci saranno anche quelle registrate qui, e non appartengono a nessun
+       * conteggio del server.
+       */
+      'sets': await quante(
+        serieDelleSedute,
+        'WHERE seduta_id IN '
+        '(SELECT id FROM sedute_allenamento WHERE id_server IS NOT NULL)',
+      ),
+
+      'daily_burns': await quante(bruciateDichiarate, 'WHERE da_server = 1'),
     };
   }
 
@@ -585,14 +611,18 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ **Una riga per giorno**: è una dichiarazione complessiva, non un
   /// contributo. 🚨 Permetterne due vorrebbe dire sommarle, e chi corregge il
   /// numero si ritroverebbe il doppio.
-  Future<void> dichiaraBruciate(DateTime giorno, int kcal) =>
-      into(bruciateDichiarate).insert(
-        BruciateDichiarateCompanion.insert(
-          giorno: DateTime(giorno.year, giorno.month, giorno.day),
-          kcal: kcal,
-        ),
-        mode: InsertMode.insertOrReplace,
-      );
+  Future<void> dichiaraBruciate(
+    DateTime giorno,
+    int kcal, {
+    bool daServer = false,
+  }) => into(bruciateDichiarate).insert(
+    BruciateDichiarateCompanion.insert(
+      giorno: DateTime(giorno.year, giorno.month, giorno.day),
+      kcal: kcal,
+      daServer: Value(daServer),
+    ),
+    mode: InsertMode.insertOrReplace,
+  );
 
   Future<void> togliBruciateAMano(DateTime giorno) =>
       (delete(bruciateDichiarate)..where(
@@ -1914,5 +1944,19 @@ class BruciateDichiarate extends Table {
 
   IntColumn get kcal => integer()();
 
-  // 💡 Come sopra: `giorno` ha già il suo `.unique()`.
+  /// Se questa riga è **arrivata dal server** col trasloco — FASE 11.3.
+  ///
+  /// ══ 🚨 SERVE A CONTARE LA COSA GIUSTA ═══════════════════════════════════
+  ///
+  /// ⚠️ `conteggiDelTrasloco()` deve dire al server **quante delle sue righe**
+  /// sono arrivate, non quante righe ci sono in tutto sul telefono. 🚨 Dalla
+  /// FASE 11.4 in poi il player scrive in locale: una dichiarazione fatta
+  /// **prima** di aver traslocato farebbe sballare il conteggio, il server
+  /// risponderebbe `409 conteggi_diversi`, e quella persona non riuscirebbe
+  /// **mai più** a confermare — bloccando anche la caduta delle tabelle (11.6).
+  ///
+  /// 💡 Le sedute questo problema non ce l'hanno: hanno già `idServer`.
+  BoolColumn get daServer => boolean().withDefault(const Constant(false))();
+
+  // 💡 `giorno` ha già il suo `.unique()`: niente `uniqueKeys`.
 }

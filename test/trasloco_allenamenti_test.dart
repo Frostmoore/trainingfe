@@ -115,7 +115,7 @@ void main() {
       ),
     );
 
-    await archivio.dichiaraBruciate(DateTime(2026, 8, 20), 700);
+    await archivio.dichiaraBruciate(DateTime(2026, 8, 20), 700, daServer: true);
 
     final conteggi = await archivio.conteggiDelTrasloco();
 
@@ -126,6 +126,49 @@ void main() {
      * capisca perché, perché i numeri sarebbero giusti.
      */
     expect(conteggi, {'sessions': 1, 'sets': 2, 'daily_burns': 1});
+  });
+
+  test('🚨 quello che NON viene dal server non si conta', () async {
+    /*
+     * ══ IL DIFETTO CHE QUESTO TEST CHIUDE ═══════════════════════════════════
+     *
+     * ⚠️ Il conteggio contava **tutte** le righe locali. Finché il player
+     * scrive sul server torna lo stesso — ed è per questo che il trasloco del
+     * 21/08 sera è passato senza far rumore.
+     *
+     * 🚨 Ma dalla FASE 11.4 in poi il player scrive **qui**. Una seduta
+     * registrata prima di aver traslocato avrebbe fatto contare una riga in
+     * più, il server avrebbe risposto `409 conteggi_diversi`, e quella persona
+     * non avrebbe potuto confermare **mai più** — bloccando anche la caduta
+     * delle tabelle di 11.6, cioè tutta la fase, per un utente solo.
+     *
+     * 💡 E nessuno l'avrebbe capito: il messaggio d'errore dice che i numeri
+     * non tornano, non *perché*.
+     */
+    await importa(42);
+    await archivio.dichiaraBruciate(DateTime(2026, 8, 20), 700, daServer: true);
+
+    // Roba nata sul telefono: non appartiene a nessun conteggio del server.
+    final locale = await archivio.apriSeduta(nomeScheda: 'Nata qui');
+    await archivio.registraSerie(
+      SerieDelleSeduteCompanion.insert(
+        sedutaId: locale,
+        esercizioId: 5,
+        nomeEsercizio: 'Stacco',
+        numero: 1,
+      ),
+    );
+    await archivio.dichiaraBruciate(DateTime(2026, 8, 21), 300);
+
+    expect(await archivio.conteggiDelTrasloco(), {
+      'sessions': 1,
+      'sets': 0,
+      'daily_burns': 1,
+    });
+
+    // 💡 E le righe locali ci sono comunque: non si contano, non si perdono.
+    expect(await archivio.sedute(), hasLength(2));
+    expect(await archivio.bruciateAManoDel(DateTime(2026, 8, 21)), 300);
   });
 
   test('un archivio vuoto conta zero, non niente', () async {

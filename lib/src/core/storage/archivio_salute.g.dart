@@ -5197,8 +5197,23 @@ class $BruciateDichiarateTable extends BruciateDichiarate
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _daServerMeta = const VerificationMeta(
+    'daServer',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, giorno, kcal];
+  late final GeneratedColumn<bool> daServer = GeneratedColumn<bool>(
+    'da_server',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("da_server" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, giorno, kcal, daServer];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5230,6 +5245,12 @@ class $BruciateDichiarateTable extends BruciateDichiarate
     } else if (isInserting) {
       context.missing(_kcalMeta);
     }
+    if (data.containsKey('da_server')) {
+      context.handle(
+        _daServerMeta,
+        daServer.isAcceptableOrUnknown(data['da_server']!, _daServerMeta),
+      );
+    }
     return context;
   }
 
@@ -5251,6 +5272,10 @@ class $BruciateDichiarateTable extends BruciateDichiarate
         DriftSqlType.int,
         data['${effectivePrefix}kcal'],
       )!,
+      daServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}da_server'],
+      )!,
     );
   }
 
@@ -5271,10 +5296,25 @@ class BruciatoDichiarato extends DataClass
   /// database è il modo per confrontare una data con un testo e non accorgersene.
   final DateTime giorno;
   final int kcal;
+
+  /// Se questa riga è **arrivata dal server** col trasloco — FASE 11.3.
+  ///
+  /// ══ 🚨 SERVE A CONTARE LA COSA GIUSTA ═══════════════════════════════════
+  ///
+  /// ⚠️ `conteggiDelTrasloco()` deve dire al server **quante delle sue righe**
+  /// sono arrivate, non quante righe ci sono in tutto sul telefono. 🚨 Dalla
+  /// FASE 11.4 in poi il player scrive in locale: una dichiarazione fatta
+  /// **prima** di aver traslocato farebbe sballare il conteggio, il server
+  /// risponderebbe `409 conteggi_diversi`, e quella persona non riuscirebbe
+  /// **mai più** a confermare — bloccando anche la caduta delle tabelle (11.6).
+  ///
+  /// 💡 Le sedute questo problema non ce l'hanno: hanno già `idServer`.
+  final bool daServer;
   const BruciatoDichiarato({
     required this.id,
     required this.giorno,
     required this.kcal,
+    required this.daServer,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5282,6 +5322,7 @@ class BruciatoDichiarato extends DataClass
     map['id'] = Variable<int>(id);
     map['giorno'] = Variable<DateTime>(giorno);
     map['kcal'] = Variable<int>(kcal);
+    map['da_server'] = Variable<bool>(daServer);
     return map;
   }
 
@@ -5290,6 +5331,7 @@ class BruciatoDichiarato extends DataClass
       id: Value(id),
       giorno: Value(giorno),
       kcal: Value(kcal),
+      daServer: Value(daServer),
     );
   }
 
@@ -5302,6 +5344,7 @@ class BruciatoDichiarato extends DataClass
       id: serializer.fromJson<int>(json['id']),
       giorno: serializer.fromJson<DateTime>(json['giorno']),
       kcal: serializer.fromJson<int>(json['kcal']),
+      daServer: serializer.fromJson<bool>(json['daServer']),
     );
   }
   @override
@@ -5311,20 +5354,27 @@ class BruciatoDichiarato extends DataClass
       'id': serializer.toJson<int>(id),
       'giorno': serializer.toJson<DateTime>(giorno),
       'kcal': serializer.toJson<int>(kcal),
+      'daServer': serializer.toJson<bool>(daServer),
     };
   }
 
-  BruciatoDichiarato copyWith({int? id, DateTime? giorno, int? kcal}) =>
-      BruciatoDichiarato(
-        id: id ?? this.id,
-        giorno: giorno ?? this.giorno,
-        kcal: kcal ?? this.kcal,
-      );
+  BruciatoDichiarato copyWith({
+    int? id,
+    DateTime? giorno,
+    int? kcal,
+    bool? daServer,
+  }) => BruciatoDichiarato(
+    id: id ?? this.id,
+    giorno: giorno ?? this.giorno,
+    kcal: kcal ?? this.kcal,
+    daServer: daServer ?? this.daServer,
+  );
   BruciatoDichiarato copyWithCompanion(BruciateDichiarateCompanion data) {
     return BruciatoDichiarato(
       id: data.id.present ? data.id.value : this.id,
       giorno: data.giorno.present ? data.giorno.value : this.giorno,
       kcal: data.kcal.present ? data.kcal.value : this.kcal,
+      daServer: data.daServer.present ? data.daServer.value : this.daServer,
     );
   }
 
@@ -5333,46 +5383,53 @@ class BruciatoDichiarato extends DataClass
     return (StringBuffer('BruciatoDichiarato(')
           ..write('id: $id, ')
           ..write('giorno: $giorno, ')
-          ..write('kcal: $kcal')
+          ..write('kcal: $kcal, ')
+          ..write('daServer: $daServer')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, giorno, kcal);
+  int get hashCode => Object.hash(id, giorno, kcal, daServer);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is BruciatoDichiarato &&
           other.id == this.id &&
           other.giorno == this.giorno &&
-          other.kcal == this.kcal);
+          other.kcal == this.kcal &&
+          other.daServer == this.daServer);
 }
 
 class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
   final Value<int> id;
   final Value<DateTime> giorno;
   final Value<int> kcal;
+  final Value<bool> daServer;
   const BruciateDichiarateCompanion({
     this.id = const Value.absent(),
     this.giorno = const Value.absent(),
     this.kcal = const Value.absent(),
+    this.daServer = const Value.absent(),
   });
   BruciateDichiarateCompanion.insert({
     this.id = const Value.absent(),
     required DateTime giorno,
     required int kcal,
+    this.daServer = const Value.absent(),
   }) : giorno = Value(giorno),
        kcal = Value(kcal);
   static Insertable<BruciatoDichiarato> custom({
     Expression<int>? id,
     Expression<DateTime>? giorno,
     Expression<int>? kcal,
+    Expression<bool>? daServer,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (giorno != null) 'giorno': giorno,
       if (kcal != null) 'kcal': kcal,
+      if (daServer != null) 'da_server': daServer,
     });
   }
 
@@ -5380,11 +5437,13 @@ class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
     Value<int>? id,
     Value<DateTime>? giorno,
     Value<int>? kcal,
+    Value<bool>? daServer,
   }) {
     return BruciateDichiarateCompanion(
       id: id ?? this.id,
       giorno: giorno ?? this.giorno,
       kcal: kcal ?? this.kcal,
+      daServer: daServer ?? this.daServer,
     );
   }
 
@@ -5400,6 +5459,9 @@ class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
     if (kcal.present) {
       map['kcal'] = Variable<int>(kcal.value);
     }
+    if (daServer.present) {
+      map['da_server'] = Variable<bool>(daServer.value);
+    }
     return map;
   }
 
@@ -5408,7 +5470,8 @@ class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
     return (StringBuffer('BruciateDichiarateCompanion(')
           ..write('id: $id, ')
           ..write('giorno: $giorno, ')
-          ..write('kcal: $kcal')
+          ..write('kcal: $kcal, ')
+          ..write('daServer: $daServer')
           ..write(')'))
         .toString();
   }
@@ -8279,12 +8342,14 @@ typedef $$BruciateDichiarateTableCreateCompanionBuilder =
       Value<int> id,
       required DateTime giorno,
       required int kcal,
+      Value<bool> daServer,
     });
 typedef $$BruciateDichiarateTableUpdateCompanionBuilder =
     BruciateDichiarateCompanion Function({
       Value<int> id,
       Value<DateTime> giorno,
       Value<int> kcal,
+      Value<bool> daServer,
     });
 
 class $$BruciateDichiarateTableFilterComposer
@@ -8308,6 +8373,11 @@ class $$BruciateDichiarateTableFilterComposer
 
   ColumnFilters<int> get kcal => $composableBuilder(
     column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get daServer => $composableBuilder(
+    column: $table.daServer,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8335,6 +8405,11 @@ class $$BruciateDichiarateTableOrderingComposer
     column: $table.kcal,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get daServer => $composableBuilder(
+    column: $table.daServer,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$BruciateDichiarateTableAnnotationComposer
@@ -8354,6 +8429,9 @@ class $$BruciateDichiarateTableAnnotationComposer
 
   GeneratedColumn<int> get kcal =>
       $composableBuilder(column: $table.kcal, builder: (column) => column);
+
+  GeneratedColumn<bool> get daServer =>
+      $composableBuilder(column: $table.daServer, builder: (column) => column);
 }
 
 class $$BruciateDichiarateTableTableManager
@@ -8399,20 +8477,24 @@ class $$BruciateDichiarateTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<DateTime> giorno = const Value.absent(),
                 Value<int> kcal = const Value.absent(),
+                Value<bool> daServer = const Value.absent(),
               }) => BruciateDichiarateCompanion(
                 id: id,
                 giorno: giorno,
                 kcal: kcal,
+                daServer: daServer,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required DateTime giorno,
                 required int kcal,
+                Value<bool> daServer = const Value.absent(),
               }) => BruciateDichiarateCompanion.insert(
                 id: id,
                 giorno: giorno,
                 kcal: kcal,
+                daServer: daServer,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

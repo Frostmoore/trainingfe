@@ -10,8 +10,8 @@ import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../dashboard_controller.dart';
 
-/// Le calorie del periodo, **a colonne attorno a una linea di base** —
-/// 3b-O.9, 21/08/2026.
+/// Le calorie del periodo, **due linee attorno a una linea di base** —
+/// 3b-O.9, 21/08/2026, ridisegnato il 22/08.
 ///
 /// ══ 🚨 IL GRAFICO DI PRIMA NON ERA BRUTTO: ERA SBAGLIATO ══════════════════
 ///
@@ -40,23 +40,34 @@ import '../../dashboard_controller.dart';
 /// **sotto** la linea. Costringere il cibo a stare sempre sopra nasconderebbe
 /// esattamente il giorno che si vuole vedere.
 ///
-/// ── 🚨 A COLONNE, DOPO AVERLO PROVATO A ONDA ────────────────────────────
+/// ── 🚨 DUE LINEE CON I PUNTI, TERZO GIRO ────────────────────────────────
 ///
-/// 📌 Prima richiesta: *«non mi piace a colonne, lo preferisco a onda doppia»*.
-/// 📌 Dopo averlo visto sul telefono: *«forse il grafico delle calorie sotto
-/// sarebbe meglio a colonne, così non si capisce nulla»*.
+/// 📌 La storia di questo grafico, per intero: *«non mi piace a colonne, lo
+/// preferisco a onda doppia»* → *«forse sarebbe meglio a colonne, così non si
+/// capisce nulla»* → **22/08/2026**: *«non mi piace come si mostra il grafico.
+/// Facciamo che sono due linee con dei punti»*.
 ///
-/// ⚠️ **E l'onda era davvero peggio, per una ragione che si vede solo a
-/// schermo**: una curva morbida fra due giorni *unisce* punti che non sono
-/// uniti. Il cibo di martedì non «diventa» quello di mercoledì passando per i
-/// valori in mezzo — sono due misure separate. 🚨 Una linea suggerisce una
-/// continuità che nei dati non c'è, e con dieci giorni di scostamenti alterni
-/// diventa un ghirigoro da cui non si estrae nessun giorno.
+/// ⚠️ **Non è un giro a vuoto, e la differenza dalla prima onda conta.** Quello
+/// che non funzionava allora era la curva morbida: `isCurved: true` *inventa* i
+/// valori fra un giorno e l'altro, e con scostamenti che cambiano segno ogni
+/// giorno diventava un ghirigoro da cui non si estraeva nessuna giornata.
 ///
-/// 💡 Le colonne dicono **quanto**, ed è quello che serve qui: ogni giorno è una
-/// domanda a sé («quel giorno come è andata?»). ⛔ Non contraddice `OndaMetrica`
-/// di «Sonno e recupero»: lì conta il **verso** — un HRV che sale — e per il
-/// verso la linea è giusta.
+/// 💡 **I punti sono la correzione di quel difetto.** Segmenti dritti
+/// (`isCurved: false`) più un pallino su ogni misura: la linea dice il **verso**
+/// — sto salendo o scendendo rispetto a ieri — e i pallini dicono **dove sono i
+/// dati veri**, cioè quello che la curva nascondeva.
+///
+/// ⛔ **I pallini spariscono oltre i 31 giorni**: a novanta giorni distano tre
+/// pixel e tornano a essere la macchia che si voleva evitare. Lì resta la linea,
+/// che a quella scala è l'unica cosa leggibile.
+///
+/// ── 🚨 Il buco è un dato, lo zero no ─────────────────────────────────────
+///
+/// ⚠️ Un giorno senza diario **interrompe la linea** (`FlSpot.nullSpot`), non la
+/// porta a zero. 🚨 Con la linea questo pesa più che con le colonne: una colonna
+/// mancante è un vuoto che si nota, ma una linea tirata da un giorno all'altro
+/// **passa comunque per il mezzo**, e disegna un valore che nessuno ha mai
+/// misurato.
 ///
 /// ── ⚠️ Il target del periodo è quello di OGGI ─────────────────────────────
 ///
@@ -268,7 +279,7 @@ class _Corpo extends ConsumerWidget {
         else
           SizedBox(
             height: 190,
-            child: BarChart(
+            child: LineChart(
               _dati(context, serie, daHealth, locali, target!, consumo),
             ),
           ),
@@ -321,7 +332,7 @@ double bruciateDi(
   return (locali[data] ?? 0).toDouble();
 }
 
-BarChartData _dati(
+LineChartData _dati(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
@@ -331,63 +342,37 @@ BarChartData _dati(
 ) {
   final theme = Theme.of(context);
 
-  final gruppi = <BarChartGroupData>[];
+  final cibo = <FlSpot>[];
+  final mosso = <FlSpot>[];
   final valori = <double>[0];
-
-  /*
-   * 💡 Le colonne si assottigliano quando i giorni sono tanti: a trenta giorni
-   * due barre da 6 px per giorno diventano una macchia continua.
-   */
-  final larghezza = s.labels.length <= 10 ? 7.0 : 3.5;
 
   for (var i = 0; i < s.labels.length; i++) {
     final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
     final bruciate = bruciateDi(s, i, daHealth, locali);
+    final x = i.toDouble();
 
     /*
      * ⚠️ **Un giorno senza diario NON è un giorno a digiuno.** Con `assunte = 0`
-     * lo scostamento sarebbe `−target`, cioè la colonna più bassa del grafico:
+     * lo scostamento sarebbe `−target`, cioè il punto più basso del grafico:
      * chi ha saltato il diario per un giorno si vedrebbe un tuffo che non è
-     * successo. 💡 Quel giorno la colonna del cibo semplicemente non c'è.
+     * successo. 💡 Quel giorno la linea del cibo si **interrompe**.
      */
-    final scostamento = assunte > 0 ? assunte - target : null;
+    if (assunte > 0) {
+      final scostamento = assunte - target;
+      valori.add(scostamento);
+      cibo.add(FlSpot(x, scostamento));
+    } else {
+      cibo.add(FlSpot.nullSpot);
+    }
 
-    if (scostamento != null) valori.add(scostamento);
-    valori.add(-bruciate);
-
-    gruppi.add(
-      BarChartGroupData(
-        x: i,
-        barRods: [
-          /*
-           * 🚨 `fromY: 0` su tutte e due: le colonne **partono dalla linea di
-           * base**, non dal fondo del riquadro. È quello che le rende
-           * scostamenti invece che totali — cioè tutta la correzione chiesta.
-           */
-          if (scostamento != null)
-            BarChartRodData(
-              fromY: 0,
-              toY: scostamento,
-              width: larghezza,
-              borderRadius: BorderRadius.zero,
-              // 💡 Rosso sopra, verde sotto: sopra la linea si è mangiato più
-              // del previsto, e il colore lo dice prima del numero.
-              color: scostamento >= 0
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.secondary,
-            ),
-
-          if (bruciate > 0)
-            BarChartRodData(
-              fromY: 0,
-              toY: -bruciate,
-              width: larghezza,
-              borderRadius: BorderRadius.zero,
-              color: theme.colorScheme.tertiary,
-            ),
-        ],
-      ),
-    );
+    // 🚨 Stessa regola per il movimento: zero bruciate quasi mai vuol dire «è
+    // stato fermo», vuol dire «nessuno ce l'ha detto» — né l'orologio né lui.
+    if (bruciate > 0) {
+      valori.add(-bruciate);
+      mosso.add(FlSpot(x, -bruciate));
+    } else {
+      mosso.add(FlSpot.nullSpot);
+    }
   }
 
   final estremo = valori
@@ -395,7 +380,36 @@ BarChartData _dati(
       .reduce((a, b) => a > b ? a : b)
       .clamp(100.0, double.infinity);
 
-  return BarChartData(
+  /*
+   * 💡 I pallini finché si distinguono. A trenta giorni su una scheda da 330 px
+   * ce n'è uno ogni undici pixel e si leggono; a novanta ogni tre, e tornano a
+   * essere la macchia continua che le colonne sottili facevano prima.
+   */
+  final punti = s.labels.length <= 31;
+
+  LineChartBarData linea(List<FlSpot> spots, Color colore) => LineChartBarData(
+    spots: spots,
+    // ⛔ **Mai `isCurved: true` qui**: è il difetto dell'onda del 19/08 — la
+    // curva passa per valori che nessun giorno ha avuto.
+    isCurved: false,
+    color: colore,
+    barWidth: 2,
+    isStrokeCapRound: true,
+    isStrokeJoinRound: true,
+    dotData: FlDotData(
+      show: punti,
+      getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+        radius: 3,
+        color: colore,
+        // 💡 L'anello del colore della scheda: due punti vicini restano due
+        // punti invece di fondersi in una macchia sola.
+        strokeWidth: 1.5,
+        strokeColor: theme.colorScheme.surface,
+      ),
+    ),
+  );
+
+  return LineChartData(
     /*
      * 🚨 **La scala è simmetrica attorno allo zero**, e non è estetica: con
      * limiti calcolati sui dati la linea di base finirebbe a un terzo
@@ -404,11 +418,19 @@ BarChartData _dati(
      */
     minY: -estremo * 1.15,
     maxY: estremo * 1.15,
+    minX: 0,
+    maxX: (s.labels.length - 1).toDouble().clamp(0, double.infinity),
 
     gridData: const FlGridData(show: false),
     borderData: FlBorderData(show: false),
     titlesData: _titoli(s.labels),
-    barGroups: gruppi,
+
+    lineBarsData: [
+      // 🍽️ Il cibo: sopra la linea si è mangiato più del previsto.
+      linea(cibo, theme.colorScheme.primary),
+      // 🔥 Il movimento: sempre sotto, perché è sempre una spesa.
+      linea(mosso, theme.colorScheme.tertiary),
+    ],
 
     // ── 🎯 La linea di base: «la giornata come prevista» ──────────────────
     extraLinesData: ExtraLinesData(
@@ -421,7 +443,7 @@ BarChartData _dati(
       ],
     ),
 
-    barTouchData: _tocco(context, s, daHealth, locali, consumo),
+    lineTouchData: _tocco(context, s, daHealth, locali, consumo),
   );
 }
 
@@ -433,10 +455,7 @@ BarChartData _dati(
 /// ⚠️ **Nota di lessico**: il committente scrive «tdaa» e intende il **TDEE**,
 /// il consumo giornaliero totale. Nel codice si usa il nome vero, e a schermo la
 /// parola che si capisce senza sapere la sigla: «consumo».
-///
-/// 🚨 Il saldo è `(assunte − consumo) − bruciate`: positivo vuol dire surplus —
-/// si è mangiato più di quanto si è speso — negativo deficit.
-BarTouchData _tocco(
+LineTouchData _tocco(
   BuildContext context,
   Series s,
   Map<String, int> daHealth,
@@ -445,36 +464,73 @@ BarTouchData _tocco(
 ) {
   final theme = Theme.of(context);
 
-  return BarTouchData(
-    touchTooltipData: BarTouchTooltipData(
+  return LineTouchData(
+    touchTooltipData: LineTouchTooltipData(
       getTooltipColor: (_) => theme.colorScheme.inverseSurface,
-      getTooltipItem: (gruppo, _, _, _) {
-        final i = gruppo.x;
-        final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-        final bruciate = bruciateDi(s, i, daHealth, locali);
-        final giorno = i < s.labels.length ? s.labels[i] : '';
 
-        if (consumo == null || assunte <= 0) {
-          return BarTooltipItem(
-            '$giorno · nessun dato',
-            theme.textTheme.labelSmall!.copyWith(
-              color: theme.colorScheme.onInverseSurface,
+      /*
+       * ══ 🚨 UN RIQUADRO SOLO, NON UNO PER LINEA ══════════════════════════
+       *
+       * ⚠️ Con due linee il dito ne tocca **due** punti insieme, e la versione
+       * ovvia scriverebbe due righe: una per il cibo e una per il movimento. 🚨
+       * Ma il numero chiesto è **uno** — il saldo, che mette insieme tutte e
+       * due — e stamparlo due volte lo farebbe sembrare un totale doppio.
+       *
+       * 💡 Quindi si risponde per il primo punto toccato e `null` per gli
+       * altri: `fl_chart` salta le voci nulle, e resta un riquadro solo.
+       */
+      getTooltipItems: (toccati) => [
+        for (final (indice, punto) in toccati.indexed)
+          if (indice > 0)
+            null
+          else
+            _vocePerIlDito(
+              theme,
+              s,
+              punto.x.toInt(),
+              daHealth,
+              locali,
+              consumo,
             ),
-          );
-        }
+      ],
+    ),
+  );
+}
 
-        final saldo = (assunte - consumo) - bruciate;
+/// Il testo dentro il riquadro del dito.
+///
+/// 🚨 Il saldo è `(assunte − consumo) − bruciate`: positivo vuol dire surplus —
+/// si è mangiato più di quanto si è speso — negativo deficit.
+LineTooltipItem? _vocePerIlDito(
+  ThemeData theme,
+  Series s,
+  int i,
+  Map<String, int> daHealth,
+  Map<String, int> locali,
+  double? consumo,
+) {
+  final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
+  final bruciate = bruciateDi(s, i, daHealth, locali);
+  final giorno = i < s.labels.length ? s.labels[i] : '';
 
-        return BarTooltipItem(
-          '$giorno\n'
-          '${saldo > 0 ? '+' : ''}${saldo.round()} kcal '
-          '${saldo > 0 ? 'in più' : 'in meno'}',
-          theme.textTheme.labelMedium!.copyWith(
-            color: theme.colorScheme.onInverseSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        );
-      },
+  if (consumo == null || assunte <= 0) {
+    return LineTooltipItem(
+      '$giorno · nessun dato',
+      theme.textTheme.labelSmall!.copyWith(
+        color: theme.colorScheme.onInverseSurface,
+      ),
+    );
+  }
+
+  final saldo = (assunte - consumo) - bruciate;
+
+  return LineTooltipItem(
+    '$giorno\n'
+    '${saldo > 0 ? '+' : ''}${saldo.round()} kcal '
+    '${saldo > 0 ? 'in più' : 'in meno'}',
+    theme.textTheme.labelMedium!.copyWith(
+      color: theme.colorScheme.onInverseSurface,
+      fontWeight: FontWeight.w700,
     ),
   );
 }

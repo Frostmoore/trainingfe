@@ -868,64 +868,265 @@ class _Allenamenti extends ConsumerWidget {
           style: theme.textTheme.bodySmall,
         ),
 
-        for (final v in r.voci.take(3)) _RigaAllenamento(voce: v),
+        if (r.voci.isNotEmpty) ...[
+          const SizedBox(height: Gap.sm),
+          GrigliaAllenamenti(voci: r.voci),
+        ],
       ],
     );
   }
 }
 
-/// Una riga dell'elenco.
+/// Gli allenamenti in quadrati, quattro per riga — 22/08/2026.
+///
+/// 📌 Il committente: *«gli allenamenti li vorrei in dei quadrati, 4 per riga,
+/// massimo 8 con icona, data e kcal bruciate»*.
+///
+/// ── 🚨 Perché un `LayoutBuilder` e non una larghezza scritta a mano ───────
+///
+/// «Quattro per riga» **non è una larghezza**: è una divisione. Su un telefono
+/// stretto il quarto quadrato da 76 px va a capo e ne restano tre, che è
+/// esattamente il difetto corretto lo stesso giorno nel `Wrap` delle voci. ⛔
+/// Un numero fisso è giusto solo sullo schermo su cui è stato provato.
+///
+/// 💡 Quindi la larghezza si **calcola**: `(spazio − 3 spazi vuoti) / 4`. Così
+/// sono quattro su qualunque telefono, e su un tablet sono quattro più larghi
+/// invece di sette stretti.
+///
+/// ⚠️ **Otto è un tetto, non un caso raro**: chi si allena tutti i giorni ne ha
+/// più di otto in una settimana, e la scheda «Oggi» non è lo storico. Se ce ne
+/// sono di più, l'ultimo quadrato lo dice e porta allo storico — ⛔ troncare in
+/// silenzio farebbe sembrare che gli altri non esistano.
+class GrigliaAllenamenti extends StatelessWidget {
+  const GrigliaAllenamenti({required this.voci, super.key});
+
+  final List<VoceStorico> voci;
+
+  /// Quanti quadrati stanno in una riga.
+  static const perRiga = 4;
+
+  /// Quanti se ne mostrano al massimo — due righe piene.
+  static const massimo = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    final mostrate = voci.take(massimo).toList();
+    final altri = voci.length - mostrate.length;
+
+    return LayoutBuilder(
+      builder: (context, vincoli) {
+        const spazio = Gap.sm;
+        final lato = (vincoli.maxWidth - spazio * (perRiga - 1)) / perRiga;
+
+        return Wrap(
+          spacing: spazio,
+          runSpacing: spazio,
+          children: [
+            for (final v in mostrate)
+              SizedBox(
+                width: lato,
+                child: QuadratoAllenamento(voce: v),
+              ),
+            if (altri > 0)
+              SizedBox(
+                width: lato,
+                child: QuadratoAltri(quanti: altri),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Un allenamento in un quadrato.
 ///
 /// ⛔ **Quello che viene solo dall'orologio non si apre**, e non è una
 /// dimenticanza: una pagina di dettaglio esiste per le sedute registrate
 /// nell'app, che hanno gli esercizi dentro. 💡 Chi tocca una corsa finisce sullo
 /// storico, dove quella riga c'è per intero.
-class _RigaAllenamento extends StatelessWidget {
-  const _RigaAllenamento({required this.voce});
+///
+/// ⚠️ **Il nome non ci sta, e non si perde**: in settanta pixel «Spinte
+/// verticali e trazioni» diventa «Spinte…», che non dice niente più
+/// dell'icona. 🚨 Va nel `tooltip` **e** nel `Semantics`: senza il secondo, chi
+/// usa un lettore di schermo sentirebbe solo una data e un numero.
+class QuadratoAllenamento extends StatelessWidget {
+  const QuadratoAllenamento({required this.voce, super.key});
 
   final VoceStorico voce;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final seduta = voce.seduta;
     final kcal = voce.kcalDalPolso ?? voce.kcalDalleSedute;
+    final aperta = seduta != null && seduta.isOpen;
 
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(switch (seduta) {
-        null => Icons.watch_outlined,
-        final s when s.isOpen => Icons.play_circle_outline_rounded,
-        _ => Icons.fitness_center_rounded,
-      }, size: 20),
-      title: Text(
-        // 🚨 Lo stesso titolo dello storico: `seduta.titolo` se c'è, altrimenti
-        // il nome del tipo letto dall'orologio. Due modi di chiamare la stessa
-        // riga in due schermate sono due righe che sembrano due allenamenti.
-        seduta?.titolo ?? TipoAllenamento.da(voce.dalPolso.first.tipo).nome,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        [
-          DateFormat('EEE d/MM', 'it').format(voce.quando),
-          if (seduta != null && seduta.isOpen)
-            'in corso'
-          else
-            '${voce.durata.inMinutes} min',
-          if (kcal != null) '$kcal kcal',
-        ].join(' · '),
-      ),
-      // Conclusa → riepilogo; ancora aperta → player. Riaprire come
-      // «allenamento in corso» una seduta di tre giorni fa non ha senso, e
-      // rischia di sporcarla con dati di oggi.
-      onTap: seduta == null
-          ? () => context.push(AppRoutes.history)
-          : () => context.push(
-              seduta.isOpen
-                  ? AppRoutes.player(seduta.id)
-                  : AppRoutes.riepilogo(seduta.id),
+    // 🚨 Lo stesso titolo dello storico: `seduta.titolo` se c'è, altrimenti il
+    // nome del tipo letto dall'orologio. Due modi di chiamare la stessa riga in
+    // due schermate sono due righe che sembrano due allenamenti.
+    final titolo =
+        seduta?.titolo ?? TipoAllenamento.da(voce.dalPolso.first.tipo).nome;
+
+    final icona = switch (seduta) {
+      null => Icons.watch_outlined,
+      final s when s.isOpen => Icons.play_circle_outline_rounded,
+      _ => Icons.fitness_center_rounded,
+    };
+
+    /*
+     * 💡 Le kcal se ci sono, altrimenti i minuti. ⛔ Non uno spazio vuoto e non
+     * uno zero: lo zero direbbe «non hai bruciato niente», che è falso — vuol
+     * dire solo che nessuno ce l'ha detto. La durata la sappiamo sempre.
+     */
+    final sotto = aperta
+        ? 'in corso'
+        : kcal != null
+        ? '$kcal kcal'
+        : '${voce.durata.inMinutes} min';
+
+    return Tooltip(
+      message: titolo,
+      child: Semantics(
+        label:
+            '$titolo, ${DateFormat('d MMMM', 'it').format(voce.quando)}, '
+            '$sotto',
+        button: true,
+        child: Material(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            // Conclusa → riepilogo; ancora aperta → player. Riaprire come
+            // «allenamento in corso» una seduta di tre giorni fa non ha senso,
+            // e rischia di sporcarla con dati di oggi.
+            onTap: seduta == null
+                ? () => context.push(AppRoutes.history)
+                : () => context.push(
+                    seduta.isOpen
+                        ? AppRoutes.player(seduta.id)
+                        : AppRoutes.riepilogo(seduta.id),
+                  ),
+            child: AspectRatio(
+              // 🚨 Quadrati davvero: senza questo l'altezza la deciderebbe il
+              // testo, e una riga con un titolo corto sarebbe più bassa
+              // dell'altra. Erano «dei quadrati», non «dei rettangoli simili».
+              aspectRatio: 1,
+              child: LayoutBuilder(
+                builder: (context, vincoli) {
+                  final lato = vincoli.maxWidth;
+
+                  /*
+                   * ══ 🚨 IL CONTENUTO SI MISURA SUL QUADRATO ════════════════
+                   *
+                   * ⚠️ **Difetto trovato dal test, non a occhio.** Con misure
+                   * fisse — icona 20, due righe di `labelSmall` — il contenuto
+                   * chiede 60 px; su un telefono da 280 il quadrato ne ha 56, e
+                   * sforava. 🚨 Sul telefono di sviluppo, dove il lato è 76, non
+                   * si sarebbe visto mai.
+                   *
+                   * 💡 Quindi icona e testo si ricavano **dal lato**: tutti i
+                   * quadrati della griglia hanno lo stesso lato, quindi hanno la
+                   * stessa scala — non diventano otto misure diverse.
+                   *
+                   * ⛔ E il `FittedBox` sotto è la rete, non il piano: serve solo
+                   * a chi ingrandisce il carattere di sistema, dove nessun
+                   * calcolo fatto qui può prevedere l'altezza vera.
+                   */
+                  final iconaPx = (lato * 0.30).clamp(14.0, 22.0);
+                  final testoPx = (lato * 0.16).clamp(8.0, 11.0);
+
+                  return Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icona,
+                            size: iconaPx,
+                            color: aperta
+                                ? theme.colorScheme.tertiary
+                                : theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            // 💡 «20 ago» e non «mer 20/08/2026»: in settanta
+                            // pixel il giorno della settimana e l'anno sono i
+                            // due pezzi che servono meno — l'anno perché sono
+                            // gli ultimi sette giorni.
+                            DateFormat('d MMM', 'it').format(voce.quando),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: testoPx,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                          ),
+                          Text(
+                            sotto,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: testoPx,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// L'ultimo quadrato quando ce ne sono più di otto.
+///
+/// ⛔ **Serve a non mentire per omissione.** Otto quadrati senza niente dopo
+/// dicono «questi sono tutti»; chi si allena ogni giorno ne ha nove e crede di
+/// averne perso uno.
+class QuadratoAltri extends StatelessWidget {
+  const QuadratoAltri({required this.quanti, super.key});
+
+  final int quanti;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.history),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Center(
+            // 💡 Stessa rete del quadrato accanto: a carattere ingrandito
+            // «+12» in `titleMedium` non ci sta in 56 px.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Text(
+                  '+$quanti',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -984,18 +1185,34 @@ class _SetteGiorni extends ConsumerWidget {
           const SizedBox(height: Gap.sm),
 
           /*
-           * 🚨 Un `Wrap`, non un `Row` — la lezione di §56.3 n° 1: le voci sono
-           * cinque e possono diventare lunghe. ⛔ E dentro un `Wrap` la
-           * larghezza la dichiara il figlio, perché nessuno distribuisce lo
-           * spazio.
+           * ══ 🚨 UNA RIGA SOLA, E LO SPAZIO SI DIVIDE — 22/08/2026 ═════════
+           *
+           * 📌 Il committente: *«le 4 icone devono stare nella stessa riga, è
+           * brutto che siano tre sopra e una sotto»*.
+           *
+           * ⚠️ Prima era un `Wrap` con i figli larghi 76 px fissi: su 328 px di
+           * scheda ce ne stavano **tre**, e la quarta andava a capo da sola,
+           * spaiata. 🚨 Una larghezza fissa dentro un contenitore che va a capo
+           * decide quante colonne vengono **per caso**, in base allo schermo.
+           *
+           * 💡 Un `Row` con `Expanded` fa il contrario: il numero di colonne lo
+           * decidiamo noi — sono quante sono le voci — e la larghezza la
+           * calcola Flutter dividendo lo spazio. Con cinque voci diventano
+           * cinque colonne più strette, mai due righe.
+           *
+           * ⛔ **`Expanded` qui è legale, dentro il `Wrap` di prima no**: è la
+           * trappola di §56.3 n° 1 (`WrapParentData is not a subtype of
+           * FlexParentData`), che l'analizzatore non vede e che esplode a
+           * schermo. Il `Row` è un `Flex`, quindi va.
+           *
+           * ⚠️ Con cinque voci si scende sotto i 65 px a colonna: per questo
+           * ogni testo ha `ellipsis`, invece di sforare.
            */
-          Wrap(
-            spacing: Gap.md,
-            runSpacing: Gap.sm,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final (icona, valore, etichetta) in voci)
-                SizedBox(
-                  width: 76,
+                Expanded(
                   child: Column(
                     children: [
                       Icon(icona, size: 16, color: theme.colorScheme.primary),
@@ -1004,6 +1221,7 @@ class _SetteGiorni extends ConsumerWidget {
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
+                        textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

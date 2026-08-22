@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -134,6 +135,27 @@ Future<void> main() async {
     unawaited(
       const ArchivioFoto().spazzaGliOrfani().catchError((Object _) => 0),
     );
+
+    /*
+     * ══ 📱 SOLO IN VERTICALE — 22/08/2026 ═══════════════════════════════════
+     *
+     * 📌 Il committente: *«facciamo che l'app deve funzionare solo in portrait
+     * mode, mi rompe troppo il cazzo che si gira»*.
+     *
+     * 🚨 **Due posti, e servono tutti e due.** Il manifest (`screenOrientation`)
+     * impedisce ad Android di ruotare **la finestra**, ed è quello che evita il
+     * lampo di ridisegno; questa riga vale per iOS, dove il manifest non
+     * esiste, e resta l'unica difesa se un domani qualcuno tocca il manifest
+     * senza sapere perché c'era.
+     *
+     * ⚠️ E non è solo fastidio: mezza app è stata disegnata e misurata in
+     * verticale — l'intestazione a due righe, i valori nel `Wrap`, i grafici a
+     * `SizedBox` fissa. In orizzontale nessuno di quei numeri è stato provato.
+     */
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
     runApp(
       UncontrolledProviderScope(

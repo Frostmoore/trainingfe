@@ -254,12 +254,28 @@ class ProfileScreen extends ConsumerWidget {
                  * lasciarlo cambiare a un iscritto vorrebbe dire che può
                  * spegnere il marchio della palestra che lo paga.
                  */
-                if (!(ref
-                        .watch(brandingControllerProvider)
-                        .branding
-                        .name
-                        ?.isNotEmpty ??
-                    false)) ...[
+                /*
+                 * 🚨 **`haPalestra`, e qui era rimasto il controllo sbagliato**
+                 * — difetto O.D.2, secondo giro, 22/08/2026.
+                 *
+                 * ⚠️ Il 21/08 quel controllo era stato corretto in quattro
+                 * punti. **Questo era il quinto**, e non è stato trovato per un
+                 * motivo stupido: era spezzato su sei righe, e il `grep` cercava
+                 * `name?.isNotEmpty ?? false` su una riga sola.
+                 *
+                 * ⛔ Risultato: `GymBranding.neutral` ha `name: 'Training
+                 * Companion'`, quindi «ha una palestra» era **vero** per tutti,
+                 * e il selettore del colore **non lo vedeva nessuno**. Il
+                 * committente: *«non mi hai messo nessuna interfaccia per
+                 * selezionare il colore di accento»*. C'era, ed era invisibile.
+                 *
+                 * 💡 Adesso c'è un test che legge il sorgente e non si fa
+                 * ingannare dagli a capo: `niente_nome_per_la_palestra_test.dart`.
+                 */
+                if (!ref
+                    .watch(brandingControllerProvider)
+                    .branding
+                    .haPalestra) ...[
                   const _ScegliColore(),
                   const Divider(height: 1),
                 ],

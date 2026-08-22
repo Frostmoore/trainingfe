@@ -9,7 +9,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../health/health_controller.dart';
+import '../../profile/target_locale_controller.dart';
+import '../../training/bruciate_locali.dart';
+import '../data/bruciate_del_giorno.dart';
 import '../data/diary_models.dart';
+import '../data/target_del_giorno.dart';
 import '../diary_controller.dart';
 import '../pasti_chiusi.dart';
 import '../preferiti_gia_salvati.dart';
@@ -69,7 +74,7 @@ class DiaryScreen extends ConsumerWidget {
          * numero più piccolo del vero taglia il riassunto senza dire niente.
          */
         sotto: _SottoLIntestazione(giorno: giorno),
-        altezzaSotto: 48 + 62,
+        altezzaSotto: 48 + 66,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddFoodSheet.show(context),
@@ -84,7 +89,10 @@ class DiaryScreen extends ConsumerWidget {
           onRefresh: () =>
               aggiornaTutto(context, ref, () => ref.invalidate(diaryProvider)),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
+            // ⚠️ 120 e non 96: il pulsante «Aggiungi» è **esteso**, quindi
+            // più alto di uno tondo, e copriva la riga «Preferiti» dell'ultimo
+            // pasto — cioè un pulsante vero, non uno spazio vuoto.
+            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 120),
             children: [
               /*
                * 🆕 FASE 9.7 — la stima lasciata a metà.
@@ -169,36 +177,108 @@ class _RiassuntoDelGiorno extends ConsumerWidget {
     final theme = Theme.of(context);
     final day = ref.watch(diaryProvider).valueOrNull;
 
-    if (day == null) return const SizedBox(height: 62);
+    if (day == null) return const SizedBox(height: 66);
 
     final sopra = theme.colorScheme.onPrimaryContainer;
 
+    /*
+     * ══ 🚨 L'OBIETTIVO C'È ANCHE QUI — correzione del 22/08/2026 ═══════════
+     *
+     * 📌 Il committente: *«il riassunto nell'header è tutto sfalsato e mancano
+     * le calorie obbiettivo lì sopra»*.
+     *
+     * ⚠️ Un numero da solo non dice niente: «308» può essere un digiuno o
+     * mezza giornata. 🚨 È lo stesso motivo per cui la scheda sotto scrive
+     * «308 / 2364», e mostrarne uno solo in cima rendeva le due cose diverse.
+     *
+     * 💡 La precedenza è quella di sempre (`TargetDelGiorno`): il piano del
+     * trainer, poi il calcolo locale. Qui si legge solo — la barra e le frasi
+     * stanno nella scheda.
+     */
+    final locale = day.hasTarget
+        ? null
+        : ref.watch(targetLocaleProvider).valueOrNull?.target;
+
+    /*
+     * ══ 🚨 LA STESSA CATENA DELLA SCHEDA, NON UN PEZZO ═════════════════════
+     *
+     * ⚠️ **Difetto visto sul telefono il 22/08**: qui c'erano solo le bruciate
+     * dell'archivio locale, mentre la scheda sotto passa da
+     * `BruciateDelGiorno.scegli` — che mette in fila **manuale → orologio →
+     * stima**. Risultato: l'intestazione diceva «/ 2309» e la scheda «/ 2364»,
+     * a due centimetri di distanza.
+     *
+     * 🚨 **Due numeri diversi per la stessa cosa nella stessa schermata** è il
+     * difetto che questo progetto continua a incontrare (N23, il grafico del
+     * 19/08, la scheda allenamento del 21/08). ⛔ Non si corregge scegliendo
+     * quale dei due è giusto: si corregge facendo passare tutti e due dalla
+     * stessa funzione.
+     */
+    final bruciate = BruciateDelGiorno.scegli(
+      manuale: ref.watch(bruciateAManoDelGiornoProvider(day.date)).valueOrNull,
+      daHealth:
+          ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
+      stimate:
+          ref.watch(bruciateLocaliDelGiornoProvider(day.date)).valueOrNull ?? 0,
+    );
+
+    final target = TargetDelGiorno.scegli(
+      dalServer: day.hasTarget ? day.targetKcal : null,
+      locale: locale?.kcal.toDouble(),
+      bruciate: bruciate.kcal,
+    );
+
     return SizedBox(
-      height: 62,
+      height: 66,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          /*
+           * 🚨 `end` e non `center`: i due lati hanno altezze diverse — a
+           * sinistra un numero grande con l'etichetta sotto, a destra tre
+           * colonnine piccole. Centrandoli, le lettere P/C/G finivano più in
+           * alto dei numeri, ed era lo «sfalsato» che il committente ha visto.
+           */
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  day.kcal.round().toString(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: sopra,
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        day.kcal.round().toString(),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: sopra,
+                        ),
+                      ),
+                      if (target.esiste) ...[
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            '/ ${target.kcal!.round()}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: sopra,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-                Text(
-                  'kcal',
-                  style: theme.textTheme.labelSmall?.copyWith(color: sopra),
-                ),
-              ],
+                  Text(
+                    'kcal',
+                    style: theme.textTheme.labelSmall?.copyWith(color: sopra),
+                  ),
+                ],
+              ),
             ),
-
-            const Spacer(),
 
             /*
              * 🚨 Le iniziali e non i nomi: «Proteine · Carboidrati · Grassi» su
@@ -235,6 +315,9 @@ class _MacroInCima extends StatelessWidget {
       padding: const EdgeInsets.only(left: Gap.md),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        // 💡 Allineati a destra come il numero grande a sinistra: tre colonne
+        // centrate su se stesse davano tre distanze diverse dal bordo.
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
             '${valore.round()}',
@@ -440,13 +523,34 @@ class _Pasto extends ConsumerWidget {
             if (!chiuso)
               Row(
                 children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          AddFoodSheet.show(context, meal: pasto.meal),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
-                    ),
+                  /*
+                   * ⚠️ **Niente `Expanded`, e i due pulsanti stanno a
+                   * sinistra** — 22/08/2026.
+                   *
+                   * 🚨 Con «Aggiungi» espanso, «Preferiti» finiva all'estrema
+                   * destra — **esattamente sotto il pulsante flottante**, che
+                   * lo copriva. ⛔ E non bastava aggiungere spazio in fondo
+                   * alla lista: quando il contenuto è più corto dello schermo
+                   * quel margine non spinge su niente.
+                   *
+                   * 💡 Stringendoli a sinistra, sotto il flottante resta il
+                   * vuoto — che è quello che deve esserci sotto un pulsante
+                   * che galleggia.
+                   */
+                  TextButton.icon(
+                    onPressed: () =>
+                        AddFoodSheet.show(context, meal: pasto.meal),
+                    icon: const Icon(Icons.add, size: 18),
+                    /*
+                     * 💡 **«Aggiungi» e basta** — 22/08/2026.
+                     *
+                     * ⚠️ Diceva «Aggiungi a colazione», e il nome del pasto è
+                     * scritto **due righe sopra**, nell'intestazione che prima
+                     * non c'era (3b-D.3.1). 🚨 Ripeterlo non chiariva niente e
+                     * spingeva «Preferiti» sotto il pulsante flottante, che lo
+                     * copriva.
+                     */
+                    label: const Text('Aggiungi'),
                   ),
                   TextButton.icon(
                     onPressed: () =>
@@ -454,6 +558,7 @@ class _Pasto extends ConsumerWidget {
                     icon: const Icon(Icons.star_outline_rounded, size: 18),
                     label: const Text('Preferiti'),
                   ),
+                  const Spacer(),
                 ],
               ),
           ],
@@ -695,22 +800,45 @@ class _Voce extends ConsumerWidget {
           );
         }
       },
-      child: ListTile(
-        dense: true,
-        // C15 — toccare una voce la apre in modifica. È il gesto che ci si
-        // aspetta, e senza restava l'unico modo per correggere una stima
-        // sbagliata: cancellarla e riscriverla.
-        onTap: () => EditEntrySheet.mostra(context, voce),
-        title: Text(voce.description),
-        subtitle: Text(voce.quantita),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              voce.kcal != null ? '${voce.kcal!.round()} kcal' : '—',
-              style: theme.textTheme.labelMedium,
-            ),
-            /*
+      /*
+       * ══ 🆕 OGNI ALIMENTO IN UN SUO RIQUADRO — 22/08/2026 ═══════════════
+       *
+       * 📌 Il committente: *«Voglio anche che gli alimenti nelle cards siano
+       * più chiaramente separati, così non sembrano tanti elementi uno dopo
+       * l'altro»*.
+       *
+       * ⚠️ Con dei `ListTile` nudi uno sotto l'altro, cinque voci di una
+       * colazione si leggono come **un blocco di testo**: dove finisce una e
+       * comincia l'altra lo si capisce solo contando le righe.
+       *
+       * 💡 Un fondo appena più chiaro e un margine: costa due pixel e ognuna
+       * diventa una cosa a sé. ⛔ Non una `Card` dentro una `Card` — due ombre
+       * annidate fanno sembrare la scheda del pasto un contenitore rotto.
+       */
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(Gap.sm, 0, Gap.sm, Gap.sm),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.5,
+          ),
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+        ),
+        child: ListTile(
+          dense: true,
+          // C15 — toccare una voce la apre in modifica. È il gesto che ci si
+          // aspetta, e senza restava l'unico modo per correggere una stima
+          // sbagliata: cancellarla e riscriverla.
+          onTap: () => EditEntrySheet.mostra(context, voce),
+          title: Text(voce.description),
+          subtitle: Text(voce.quantita),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                voce.kcal != null ? '${voce.kcal!.round()} kcal' : '—',
+                style: theme.textTheme.labelMedium,
+              ),
+              /*
              * ══ ⭐ LA STELLA È UN INTERRUTTORE — 3b-D.5.1, 22/08/2026 ═══════
              *
              * 📌 Il committente: *«Quando clicco sulla stella per rendere un
@@ -725,31 +853,32 @@ class _Voce extends ConsumerWidget {
              * 💡 D2 resta: si parte da una voce esistente, con quantità e macro
              * già dentro, invece che da un modulo vuoto.
              */
-            _Stella(voce: voce),
-            // 🚨 Eliminare deve essere **visibile**. Lo scorrimento a sinistra
-            // resta come scorciatoia, ma un gesto che niente annuncia è una
-            // funzione che per la maggior parte delle persone non esiste — e
-            // senza, il diario è una lista che si può solo far crescere.
-            IconButton(
-              onPressed: () => _elimina(context, ref),
-              icon: const Icon(Icons.close_rounded, size: 18),
-              tooltip: 'Elimina',
-              visualDensity: VisualDensity.compact,
-            ),
-          ],
-        ),
-        // L'icona dice da dove viene la voce: serve a capire, guardando lo
-        // storico, quali stime sono dell'AI quando un totale non torna.
-        leading: Icon(
-          switch (voce.source) {
-            'ai_text' => Icons.auto_awesome_outlined,
-            'ai_photo' => Icons.photo_camera_outlined,
-            'favorite' => Icons.star_outline_rounded,
-            'plan' => Icons.assignment_outlined,
-            _ => Icons.edit_outlined,
-          },
-          size: 18,
-          color: theme.colorScheme.outline,
+              _Stella(voce: voce),
+              // 🚨 Eliminare deve essere **visibile**. Lo scorrimento a sinistra
+              // resta come scorciatoia, ma un gesto che niente annuncia è una
+              // funzione che per la maggior parte delle persone non esiste — e
+              // senza, il diario è una lista che si può solo far crescere.
+              IconButton(
+                onPressed: () => _elimina(context, ref),
+                icon: const Icon(Icons.close_rounded, size: 18),
+                tooltip: 'Elimina',
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          // L'icona dice da dove viene la voce: serve a capire, guardando lo
+          // storico, quali stime sono dell'AI quando un totale non torna.
+          leading: Icon(
+            switch (voce.source) {
+              'ai_text' => Icons.auto_awesome_outlined,
+              'ai_photo' => Icons.photo_camera_outlined,
+              'favorite' => Icons.star_outline_rounded,
+              'plan' => Icons.assignment_outlined,
+              _ => Icons.edit_outlined,
+            },
+            size: 18,
+            color: theme.colorScheme.outline,
+          ),
         ),
       ),
     );

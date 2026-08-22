@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/backup/backup_controller.dart';
+import '../../../core/backup/preferenze_nel_backup.dart';
 import '../../../core/crypto/cassaforte.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
@@ -225,6 +226,12 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
         await ref
             .read(archivioSaluteProvider)
             .ripristinaDaBackup(contenuto.archivio);
+
+        // 🚨 Anche di qua: sono due strade per lo stesso ripristino, e una
+        // sola delle due che riporta le preferenze sarebbe peggio di nessuna.
+        await PreferenzeNelBackup.ripristina(
+          contenuto.archivio[PreferenzeNelBackup.chiave],
+        );
       }
 
       // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,

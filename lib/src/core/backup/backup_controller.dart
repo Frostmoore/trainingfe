@@ -10,6 +10,7 @@ import 'backup_che_gira_da_solo.dart';
 import 'backup_in_background.dart';
 import 'cloud_di_backup.dart';
 import 'drive_di_backup.dart';
+import 'preferenze_nel_backup.dart';
 import 'raccolta_foto.dart';
 import 'sincronizza_foto.dart';
 
@@ -291,7 +292,21 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
 
     final contenuto = await backup.esportaV2(
       chiaveMaestra: maestra,
-      archivio: await ref.read(archivioSaluteProvider).esportaPerBackup(),
+      /*
+       * 🚨 **Le preferenze viaggiano con l'archivio** — 22/08/2026.
+       *
+       * 📌 Il committente: *«TUTTO deve finire nel backup»*. Fino a oggi
+       * `LocalCache` non ci finiva, e il colore d'accento, il consiglio
+       * nascosto e le sezioni ripiegate si perdevano a ogni ripristino.
+       *
+       * 💡 **Dentro** la mappa dell'archivio e non accanto: il formato del file
+       * ha già i suoi campi, e cambiarlo vorrebbe dire che i backup scritti
+       * finora non si aprono più.
+       */
+      archivio: {
+        ...await ref.read(archivioSaluteProvider).esportaPerBackup(),
+        PreferenzeNelBackup.chiave: await PreferenzeNelBackup.esporta(),
+      },
       /*
        * ⚠️ Un codice serve comunque: il formato ne pretende almeno uno, e
        * questo è la seconda porta sullo stesso file. 💡 Non si mostra a nessuno
@@ -471,6 +486,11 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
       await ref
           .read(archivioSaluteProvider)
           .ripristinaDaBackup(contenuto.archivio);
+
+      // 🚨 Dopo l'archivio: se quello fallisce non si tocca niente.
+      await PreferenzeNelBackup.ripristina(
+        contenuto.archivio[PreferenzeNelBackup.chiave],
+      );
     }
 
     /*

@@ -32,8 +32,16 @@ import '../../core/providers.dart';
 /// ── 💡 Vive sul telefono, e va nel backup ─────────────────────────────────
 ///
 /// È una preferenza di **questo** schermo, non un dato del server: due telefoni
-/// della stessa persona possono volerla diversa. Sta in `LocalCache`, che
-/// finisce nella copia di sicurezza come tutto il resto.
+/// della stessa persona possono volerla diversa. Sta in `LocalCache`.
+///
+/// ⚠️ **E finisce nel backup — ma non lo faceva.** Questa riga diceva *«che
+/// finisce nella copia di sicurezza come tutto il resto»*, ed era **falsa**:
+/// fino al 22/08/2026 il backup impaccava l'archivio drift e le foto, e basta.
+/// 🚨 Un commento che mente è peggio di nessun commento — chi lo legge
+/// mettendoci un dato vero lo perde al primo ripristino.
+///
+/// 💡 Adesso è vero: le preferenze viaggiano dentro l'archivio, e ci finiscono
+/// **da sole** perché `PreferenzeNelBackup` le enumera invece di elencarle.
 class ColoreAccento {
   const ColoreAccento._();
 

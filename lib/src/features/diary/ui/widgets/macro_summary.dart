@@ -116,8 +116,25 @@ class MacroSummary extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            /*
+             * ══ 🚨 DUE RIGHE, PERCHÉ UNA NON CI STA — 22/08/2026 ════════════
+             *
+             * 📌 Il committente, guardandola sul telefono: *«Le calorie bruciate
+             * vanno in overflow sulla card […] il TDEE è tutto appiccicato…
+             * puoi anche mandare a capo se vuoi, sai?»*.
+             *
+             * ⚠️ Su una riga sola c'erano **quattro** cose: il numero grande,
+             * «/ 2364 kcal», «TDEE 2271» e la pasticca delle bruciate — che è
+             * la più lunga di tutte perché dice **da dove viene** il numero
+             * («547 · dall'orologio»), e quella parte serve (FASE 1.6).
+             *
+             * 🚨 Quattro cose su 360 px non ci stanno, e il `Row` non va a capo
+             * da solo: sfora e basta. 💡 Due righe — il numero sopra, il
+             * contesto sotto — e ognuna ha lo spazio che le serve.
+             */
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
                   day.kcal.round().toString(),
@@ -129,41 +146,52 @@ class MacroSummary extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: Gap.xs),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
+                Expanded(
                   child: Text(
                     haTarget ? '/ ${targetKcal.round()} kcal' : 'kcal',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+              ],
+            ),
 
+            const SizedBox(height: Gap.xs),
+
+            /*
+             * ⚠️ **`Wrap` e non `Row`** — 22/08/2026, terzo giro su questa riga.
+             *
+             * 🚨 Con il carattere ingrandito «547 · dall'orologio» non ci sta
+             * comunque, e un `Row` non ha un'altra scelta che **troncare**: si
+             * leggeva «547 · dall'or…», cioè spariva proprio la parte che dice
+             * da dove viene il numero (FASE 1.6).
+             *
+             * 💡 Un `Wrap` manda a capo. ⛔ È la stessa lezione di §56.3 n° 1:
+             * una riga che «di solito ci sta» è una riga che su qualche
+             * telefono non ci sta, e l'analizzatore non lo vede.
+             */
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: Gap.md,
+              runSpacing: Gap.xs,
+              children: [
                 /*
-                 * ══ 🆕 IL TDEE ACCANTO AL TARGET — 3b-D.1.3, 22/08/2026 ═════
-                 *
-                 * 📌 Il committente: *«deve avere il TDEE come in Oggi»*.
-                 *
-                 * 💡 Sono due numeri diversi e serve saperlo: il **target** è
-                 * quanto mangiare per arrivare dove si vuole, il **TDEE** è
-                 * quanto si brucia stando come si sta. La distanza fra i due
-                 * **è** la dieta.
-                 *
-                 * 🚨 Si scrive la sigla e non «consumo»: in una riga con
-                 * «1.694 consumate» e «60 bruciate», la parola «consumo» si
-                 * legge come un terzo conteggio (difetto O.D.9).
+                 * 🆕 Il consumo stimato — 3b-D.1.3. Sta **sotto** il target e
+                 * non accanto: sono due numeri della stessa famiglia, e in fila
+                 * sulla stessa riga si leggono come uno solo lungo.
                  */
                 if (consumo != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: Gap.sm, bottom: 6),
-                    child: Text(
-                      'TDEE ${consumo.round()}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  Text(
+                    'TDEE ${consumo.round()}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+
                 // Le bruciate si mostrano perché il target del giorno le
                 // comprende già: senza, l'utente vedrebbe un target più alto
                 // del solito e non capirebbe perché.
@@ -171,28 +199,33 @@ class MacroSummary extends ConsumerWidget {
                 // C15 — ed è toccabile: il totale bruciato si può dichiarare a
                 // mano, per chi porta un orologio che conta meglio della nostra
                 // stima o per chi ha fatto qualcosa che non ha registrato.
-                /*
-                 * 🆕 **Si vede da dove viene il numero** — FASE 1.6.
-                 *
-                 * 💡 Senza, chi vede 310 invece dei 400 che si aspettava non
-                 * ha nessun modo di capire perché — e l'unica spiegazione che
-                 * gli resta è «l'app sbaglia». L'etichetta costa una riga.
-                 */
-                ActionChip(
-                  avatar: const Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 16,
+                InkWell(
+                  onTap: () => _bruciateAMano(context, ref, aMano),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 18,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        bruciate.fonte == FonteBruciate.nessuna
+                            ? '${bruciate.kcal}'
+                            : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  label: Text(
-                    bruciate.fonte == FonteBruciate.nessuna
-                        ? '${bruciate.kcal}'
-                        : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _bruciateAMano(context, ref, aMano),
                 ),
               ],
             ),
+
+            const SizedBox(height: Gap.xs),
 
             if (haTarget) ...[
               const SizedBox(height: Gap.sm),

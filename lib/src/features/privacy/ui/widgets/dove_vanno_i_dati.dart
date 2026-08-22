@@ -98,25 +98,74 @@ class DoveVannoIDati extends ConsumerWidget {
             'Peso e misure che registri',
             'Foto dei progressi',
             'Le preferenze dell\'app',
+            'La chiave che apre i messaggi con il trainer',
           ],
         ),
 
         const SizedBox(height: Gap.md),
 
+        /*
+         * ══ 🚨 «I MESSAGGI CON IL TUO TRAINER» ERA SBAGLIATA ══════════════
+         *
+         * 📌 Il committente, rileggendo la card: *«i messaggi col trainer dici
+         * che restano sul server. Però non dovrebbero: tutto il senso della
+         * chat è che sia e2e»*.
+         *
+         * ✅ **E ha ragione: la chat È cifrata da un capo all'altro**, e la
+         * riga di prima metteva le buste cifrate nello stesso elenco del
+         * diario e del profilo — che il server legge in chiaro. Vero alla
+         * lettera («stanno sui nostri server»), **falso nel significato**: chi
+         * la leggeva capiva che i messaggi li possiamo vedere.
+         *
+         * 💡 Verificato: `busta_messaggio.dart` usa `crypto_box_easy` — X25519
+         * per il segreto condiviso, XSalsa20-Poly1305 per cifrare **e
+         * autenticare**. ⛔ Non `crypto_box_seal`, di proposito: quella non
+         * autentica il mittente, e chiunque possa scrivere sulla tabella
+         * `messages` — cioè il nostro server — potrebbe fabbricare un
+         * messaggio **a nome del trainer**.
+         *
+         * 🚨 E i messaggi in chiaro non esistono nemmeno come residuo: la
+         * migrazione `create_chat_crypto_tables` **li ha cancellati tutti**
+         * prima di aggiungere `nonce` ed `envelope_version`.
+         */
         const _Card(
           icona: Icons.cloud_outlined,
           titolo: 'Stanno sui nostri server',
           sottotitolo:
               'Servono a farli funzionare con il tuo trainer e a ritrovarli se '
               'cambi telefono. La tua palestra vede quello che riguarda il tuo '
-              'percorso — mai i messaggi che scambi con il trainer.',
+              'percorso.',
           voci: [
             'Account, email e accessi',
             'Il profilo: sesso, età, altezza, obiettivo e peso da raggiungere',
             'Il diario alimentare, con quello che scrivi negli alimenti',
             'Le schede e i piani che ti assegna il trainer',
-            'I messaggi con il tuo trainer',
             'Acquisti e gettoni',
+          ],
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        /*
+         * ⚠️ **Una card a parte, e non una riga in quella sopra.** I messaggi
+         * *transitano* dai nostri server e *non* sono leggibili: metterli in
+         * elenco con il diario li fa leggere come la stessa cosa.
+         */
+        const _Card(
+          icona: Icons.lock_outline_rounded,
+          titolo: 'Passano dai server, ma chiusi',
+          sottotitolo:
+              'I messaggi con il trainer sono cifrati sul tuo telefono e si '
+              'aprono solo sul suo. Noi teniamo la busta e non abbiamo la '
+              'chiave: possiamo cancellarla o non consegnarla, non leggerla né '
+              'scriverne una a nome di qualcun altro.',
+          voci: [
+            'Vediamo CHE vi siete scritti, quando, e se hai letto',
+            'Non vediamo una parola di quello che vi dite',
+            'Nemmeno la palestra, e nemmeno sotto impersonazione',
+            'La tua chiave privata sta sul telefono. Sul server ce n\'è una '
+                'copia chiusa con la tua password di recupero, che non ci '
+                'arriva mai: senza quella non la apriamo nemmeno noi',
           ],
         ),
 

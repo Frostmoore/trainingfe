@@ -301,6 +301,60 @@ void main() {
     });
   });
 
+  group('3b-P.10 — i messaggi non stanno con i dati in chiaro', () {
+    /*
+     * ══ 🚨 VERO ALLA LETTERA, FALSO NEL SIGNIFICATO ═══════════════════════
+     *
+     * 📌 Il committente, rileggendo la card: *«i messaggi col trainer dici che
+     * restano sul server. Pero' non dovrebbero: tutto il senso della chat e'
+     * che sia e2e»*.
+     *
+     * ⚠️ La riga *«I messaggi con il tuo trainer»* stava nell'elenco «stanno
+     * sui nostri server», insieme al diario e al profilo. **Alla lettera era
+     * vera** — le buste stanno li' — ma chi la leggeva capiva che i messaggi
+     * li possiamo vedere, e non e' cosi'.
+     *
+     * ⛔ **E' una forma di falso che nessuna verifica sui fatti trova**: ogni
+     * parola era esatta. Sbagliata era la **compagnia**.
+     *
+     * 💡 La guardia: i messaggi non devono stare nell'elenco in chiaro, e la
+     * cifratura va detta.
+     */
+    test('non sono elencati fra i dati che il server legge', () {
+      // ⚠️ `soloCodice`: il commento che spiega la correzione nomina i
+      // messaggi, e un test che leggesse anche i commenti accuserebbe la
+      // propria spiegazione — la trappola gia' incontrata due volte oggi.
+      final s = soloCodice(
+        'lib/src/features/privacy/ui/widgets/dove_vanno_i_dati.dart',
+      );
+
+      final iChiaro = s.indexOf("titolo: 'Stanno sui nostri server'");
+      final iCifrato = s.indexOf("titolo: 'Passano dai server, ma chiusi'");
+
+      expect(iChiaro, greaterThan(-1));
+      expect(iCifrato, greaterThan(-1));
+
+      // 🚨 La riga vecchia non deve tornare nell'elenco in chiaro.
+      final inChiaro = s.substring(iChiaro, iCifrato);
+      expect(inChiaro, isNot(contains('messaggi')));
+    });
+
+    test('e la cifratura viene detta, non sottintesa', () {
+      final s = sorgente(
+        'lib/src/features/privacy/ui/widgets/dove_vanno_i_dati.dart',
+      );
+
+      expect(s, contains('cifrati sul tuo telefono'));
+
+      /*
+       * ⚠️ **E anche cosa il server VEDE lo stesso**: dire solo «e' cifrata»
+       * e tacere che vediamo chi scrive a chi e quando sarebbe la meta'
+       * comoda della verita'.
+       */
+      expect(s, contains('Vediamo CHE vi siete scritti'));
+    });
+  });
+
   group('3b-P.6 — la conferma del ripristino non sottostima', () {
     test('elenca tutto quello che viene sostituito', () {
       /*

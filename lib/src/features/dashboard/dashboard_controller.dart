@@ -138,6 +138,13 @@ class Series {
   final String granularity;
   final String? period;
   final int avgConsumed;
+
+  /// ⛔ **Non usarlo: dopo la FASE 11 vale zero per tutti.**
+  ///
+  /// 🚨 È la media delle bruciate secondo il **server**, che gli allenamenti non
+  /// li ha più. ⚠️ Resta nel modello solo perché il campo arriva ancora nella
+  /// risposta: chi lo legge stampa uno zero credibile. 💡 Le bruciate vere si
+  /// contano con `bruciateDi()` in `grafico_calorie.dart`.
   final int avgBurned;
 
   /// 🚨 Su quanti giorni sono calcolate le medie. Va **mostrato**: «2.200 kcal

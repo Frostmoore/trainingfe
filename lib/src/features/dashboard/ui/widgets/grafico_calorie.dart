@@ -286,17 +286,61 @@ class _Corpo extends ConsumerWidget {
 
         const SizedBox(height: Gap.sm),
 
-        // 🚨 Il contesto della media è parte della media: «2.200 di media» su
-        // due giorni registrati su sette non è lo stesso numero che su sette, e
-        // senza dirlo si legge come se lo fosse.
-        Text(
-          serie.daysWithData == 0
-              ? 'Nessun giorno registrato in questo periodo.'
-              : 'Media ${serie.avgConsumed} kcal assunte e '
-                    '${serie.avgBurned} bruciate, sui ${serie.daysWithData} '
-                    'giorni in cui hai registrato qualcosa.',
-          style: theme.textTheme.bodySmall,
-          textAlign: TextAlign.center,
+        /*
+         * ══ 🚨 «0 BRUCIATE» ERA UNA BUGIA — 22/08/2026 ═══════════════════
+         *
+         * ⚠️ Qui c'era `serie.avgBurned`, che è la media del **server**. ⛔ Dopo
+         * la FASE 11 il server gli allenamenti non ce li ha più: quel campo
+         * vale **zero per tutti**, e la riga diceva «0 bruciate» sotto un
+         * grafico che nella stessa schermata disegnava la linea arancione, e
+         * sopra una scheda che diceva «1227».
+         *
+         * 🚨 **Tre numeri per la stessa cosa, due dei quali falsi.** È la quinta
+         * volta che il server sopravvive in un angolo dopo il trasloco (O.D.6,
+         * O.D.9, la `bruciateDi` qui sopra): 🚨 non dà errore, dà **zero**, e
+         * uno zero credibile non si distingue da un dato.
+         *
+         * 💡 Si conta dalla stessa `bruciateDi` che disegna la linea: una
+         * funzione sola, quindi non possono più discordare.
+         */
+        Builder(
+          builder: (context) {
+            var totale = 0.0;
+            var giorniMossi = 0;
+
+            for (var i = 0; i < serie.labels.length; i++) {
+              final b = bruciateDi(serie, i, daHealth, locali);
+              if (b > 0) {
+                totale += b;
+                giorniMossi++;
+              }
+            }
+
+            // 🚨 Il contesto della media è parte della media: «2.200 di media»
+            // su due giorni registrati su sette non è lo stesso numero che su
+            // sette, e senza dirlo si legge come se lo fosse.
+            final cibo = serie.daysWithData == 0
+                ? 'Nessun giorno registrato in questo periodo.'
+                : 'Media ${serie.avgConsumed} kcal assunte sui '
+                      '${serie.daysWithData} giorni in cui hai registrato '
+                      'qualcosa.';
+
+            /*
+             * ⛔ **Zero giorni mossi si dice, non si stampa come «0 bruciate»**:
+             * la media di niente non è zero, è assente. Sono due frasi diverse
+             * perché sono due notizie diverse.
+             */
+            final mosso = giorniMossi == 0
+                ? ''
+                : ' Media ${(totale / giorniMossi).round()} kcal bruciate sui '
+                      '$giorniMossi giorni in cui ti sei mosso.';
+
+            return Text(
+              '$cibo$mosso',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            );
+          },
         ),
       ],
     );

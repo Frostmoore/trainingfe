@@ -36,9 +36,23 @@ void main() {
    * 💡 Stessa soluzione di `niente_nome_per_la_palestra_test.dart`: si cerca
    * **solo nel codice**.
    */
-  String soloCodice(String percorso) => sorgente(
-    percorso,
-  ).replaceAll(RegExp(r'/\*.*?\*/'), ' ').replaceAll(RegExp('// [^\n]*'), ' ');
+  /// Il sorgente **senza commenti**, per cercare nelle frasi vere.
+  ///
+  /// 🚨 **L'ordine delle due operazioni non e' un dettaglio: e' tutto.** I
+  /// commenti si tolgono **prima** di compattare gli a capo.
+  ///
+  /// ⛔ Facendolo al contrario — com'era scritto al primo tentativo, e come e'
+  /// scritto in `niente_nome_per_la_palestra_test.dart` — dopo il collasso non
+  /// esistono piu' a capo, quindi `// [^\n]*` divora **dal primo commento di
+  /// riga fino alla fine del file**. ⚠️ Il test non fallisce: passa sempre,
+  /// perche' cerca dentro una stringa quasi vuota. E' la peggior specie di
+  /// guardia — una che dice sempre di si'.
+  String soloCodice(String percorso) => File(percorso)
+      .readAsStringSync()
+      .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), ' ')
+      .replaceAll(RegExp(r'^\s*///.*$', multiLine: true), ' ')
+      .replaceAll(RegExp(r'//[^\n]*'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ');
 
   group('3b-P.1 — la card del nome e le tre voci migrate', () {
     test('la card del nome porta a /profilo/tu', () {
@@ -206,6 +220,84 @@ void main() {
           reason: 'la garanzia non nomina l eccezione: $eccezione',
         );
       }
+    });
+  });
+
+  group('3b-P.8 — le frasi sotto l ipnogramma sanno dove sono le cose', () {
+    /*
+     * ══ 🚨 UN «QUI» CHE CAMBIA SIGNIFICATO QUANDO UN WIDGET TRASLOCA ══════
+     *
+     * ⚠️ **Questa e' una classe di difetto nuova, trovata il 22/08.** La frase
+     * *«i dati gia' salvati li cancelli da qui»* era **vera** finche' il
+     * pulsante stava nella stessa schermata. Spostandolo in «Privacy e
+     * consensi» (3b-P.8) e' diventata falsa **senza essere toccata**.
+     *
+     * ⛔ Non e' una frase nata sbagliata: lo e' diventata perche' e' cambiato
+     * *il posto*. Nessun analizzatore vede un avverbio di luogo che ha smesso
+     * di puntare a qualcosa.
+     *
+     * 💡 La guardia e' strutturale, non letterale: se il file NON contiene il
+     * pulsante, allora NON puo' dire «da qui».
+     */
+    test('la pagina che non ha il pulsante non dice di cancellare da li', () {
+      final testo = soloCodice(
+        'lib/src/features/health/ui/widgets/cosa_leggiamo.dart',
+      );
+
+      // Il fatto strutturale: il pulsante vive altrove.
+      expect(
+        testo,
+        isNot(contains('cancellaTutto')),
+        reason: 'se torna qui, la frase «da qui» ridiventa lecita',
+      );
+
+      expect(testo, isNot(contains('li cancelli da qui')));
+      expect(
+        testo,
+        contains('Privacy e consensi'),
+        reason: 'deve dire DOVE si cancella, non lasciarlo cercare',
+      );
+    });
+
+    test('e il pulsante sta davvero dove la frase dice', () {
+      expect(
+        soloCodice(
+          'lib/src/features/health/ui/widgets/connessione_salute.dart',
+        ),
+        contains('cancellaTutto'),
+      );
+      expect(
+        soloCodice('lib/src/features/privacy/ui/schermata_consensi.dart'),
+        contains('ConnessioneSalute('),
+      );
+    });
+
+    test('le bruciate non sono piu date per scontate', () {
+      /*
+       * ⚠️ *«Si sommano al tuo obiettivo del giorno»* era un'affermazione, e da
+       * 3b-P.2.3 e' una **scelta**. 🚨 L'interruttore e' acceso di default,
+       * quindi la frase vecchia resta vera per quasi tutti — ed e' proprio
+       * questo che la rende pericolosa: sarebbe falsa solo per chi l'ha spento,
+       * cioe' per chi ha deciso il contrario.
+       */
+      final testo = soloCodice(
+        'lib/src/features/health/ui/widgets/cosa_leggiamo.dart',
+      );
+
+      expect(testo, contains('I tuoi dati'));
+      expect(testo, isNot(contains('Si sommano al tuo obiettivo')));
+    });
+
+    test('il backup non viene taciuto a chi disinstalla', () {
+      /*
+       * 🚨 *«spariscono con lei»* letta da sola **rassicura chi non ha una
+       * copia**: chi legge «spariscono» pensa che sia inevitabile e non va a
+       * cercare il backup — che e' esattamente la cosa che gli servirebbe.
+       */
+      expect(
+        soloCodice('lib/src/features/health/ui/widgets/cosa_leggiamo.dart'),
+        contains('copia di sicurezza'),
+      );
     });
   });
 

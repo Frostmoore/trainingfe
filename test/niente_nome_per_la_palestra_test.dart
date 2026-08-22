@@ -51,15 +51,33 @@ void main() {
       final percorso = file.path.replaceAll(r'\', '/');
       if (leciti.contains(percorso)) continue;
 
-      // 🚨 Gli a capo spariscono **prima** di cercare: è tutta la differenza
-      // fra questo test e il grep che il 21/08 non ha trovato il quinto punto.
-      final testo = file.readAsStringSync().replaceAll(RegExp(r'\s+'), ' ');
-
-      // ⚠️ I commenti parlano del difetto e lo nominano: si tolgono, o il test
-      // accuserebbe la propria spiegazione.
-      final codice = testo
-          .replaceAll(RegExp(r'/\*.*?\*/'), ' ')
-          .replaceAll(RegExp(r'// [^\n]*'), ' ');
+      /*
+       * ══ 🚨 CORRETTO IL 22/08/2026: L'ORDINE ERA ROVESCIATO ══════════════
+       *
+       * ⛔ **Questa guardia diceva sempre di sì.** Compattava gli a capo
+       * **prima** di togliere i commenti: dopo il collasso non esistono più a
+       * capo, quindi `// [^\n]*` divorava dal primo commento di riga fino alla
+       * **fine del file**. Il test cercava dentro una stringa quasi vuota, e
+       * passava per costruzione.
+       *
+       * ⚠️ Il 21/08 ha funzionato **per fortuna**: nel file colpevole il punto
+       * incriminato veniva prima di qualunque commento `// `. 🚨 Una guardia
+       * che funziona per fortuna è peggio di nessuna guardia, perché ci si
+       * conta sopra.
+       *
+       * 💡 Adesso: prima via i commenti — con `dotAll` per quelli su più righe
+       * e una passata apposta per i `///` — e solo dopo si compatta.
+       *
+       * ⚠️ Gli a capo vanno comunque tolti **prima di cercare**: è la
+       * differenza fra questo test e il grep che il 21/08 non ha trovato il
+       * quinto punto.
+       */
+      final codice = file
+          .readAsStringSync()
+          .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), ' ')
+          .replaceAll(RegExp(r'^\s*///.*$', multiLine: true), ' ')
+          .replaceAll(RegExp('//[^\n]*'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ');
 
       for (final trovato in sospetto.allMatches(codice)) {
         final intorno = codice.substring(

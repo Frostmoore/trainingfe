@@ -121,8 +121,22 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: Gap.sm),
+                /*
+                 * ⚠️ **«spariscono con lei» era incompleto** — 22/08/2026.
+                 *
+                 * 🚨 Da quando esiste il backup automatico la frase, letta da
+                 * sola, spaventa chi ha già una copia e **rassicura chi non ce
+                 * l'ha**: chi legge «spariscono» pensa che sia inevitabile e non
+                 * va a cercare la copia di sicurezza — che è esattamente la cosa
+                 * che gli servirebbe fare.
+                 *
+                 * 💡 `informativa_privacy.md` lo dice già nel modo giusto:
+                 * *«se disinstalla l'app **senza un backup**, questi dati si
+                 * perdono»*. Le due frasi adesso combaciano.
+                 */
                 Text(
-                  'Se disinstalli l\'app, spariscono con lei.',
+                  'Se disinstalli l\'app spariscono con lei, a meno che tu non '
+                  'abbia una copia di sicurezza: quella li rimette a posto.',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -167,9 +181,20 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
         const _Voce(
           icona: Icons.local_fire_department_outlined,
           titolo: 'Calorie bruciate con l\'attività',
+          /*
+           * ⚠️ **Era un'affermazione, adesso è una scelta** — 3b-P.2.3,
+           * 22/08/2026.
+           *
+           * 🚨 Da oggi c'è un interruttore in «I tuoi dati» che decide se le
+           * bruciate si sommano all'obiettivo. È acceso di default, quindi la
+           * frase vecchia resta vera **per quasi tutti** — ⛔ ed è proprio
+           * questo che la rende pericolosa: sarebbe falsa solo per chi l'ha
+           * spento, cioè per chi ha deciso il contrario e non capirebbe perché
+           * l'app gli racconta un'altra cosa.
+           */
           testo:
-              'Si sommano al tuo obiettivo del giorno, così mangi in base a '
-              'quanto ti sei mosso davvero.',
+              'Se lo lasci acceso in «I tuoi dati», si sommano al tuo obiettivo '
+              'del giorno: mangi in base a quanto ti sei mosso davvero.',
         ),
         const _Voce(
           icona: Icons.fitness_center_outlined,
@@ -186,9 +211,26 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
           child: const Padding(
             padding: EdgeInsets.all(Gap.md),
             child: Text(
+              /*
+               * ══ 🚨 «DA QUI» NON ERA PIÙ QUI — 22/08/2026, stesso giorno ══
+               *
+               * ⛔ Diceva *«i dati già salvati li cancelli da qui»*, e fino a
+               * stamattina era vero: il pulsante di cancellazione stava nella
+               * stessa schermata di questo testo.
+               *
+               * 🚨 **L'ho rotta io con 3b-P.8**, spostando il collegamento e la
+               * cancellazione in «Privacy e consensi». La frase è rimasta dov'era
+               * e ha smesso di essere vera nello stesso commit: manda a cercare
+               * un pulsante in una pagina che non ce l'ha.
+               *
+               * ⚠️ **È la forma più insidiosa di frase falsa**: non è nata
+               * sbagliata, lo è diventata perché è cambiato *il posto*. Nessun
+               * analizzatore vede un «qui» che ha cambiato significato.
+               */
               'Non scriviamo niente: chiediamo il permesso di sola lettura. '
               'Puoi revocarlo quando vuoi dalle impostazioni di Health Connect, '
-              'e i dati già salvati li cancelli da qui.',
+              'e i dati già salvati li cancelli dal tuo profilo, in «Privacy e '
+              'consensi».',
             ),
           ),
         ),

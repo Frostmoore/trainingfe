@@ -340,18 +340,32 @@ void main() {
     });
 
     test('e la cifratura viene detta, non sottintesa', () {
-      final s = sorgente(
+      // ⚠️ Terza volta oggi: il commento che spiega la correzione cita la
+      // frase bocciata. Si cerca solo nel codice.
+      final s = soloCodice(
         'lib/src/features/privacy/ui/widgets/dove_vanno_i_dati.dart',
       );
 
       expect(s, contains('cifrati sul tuo telefono'));
 
       /*
-       * ⚠️ **E anche cosa il server VEDE lo stesso**: dire solo «e' cifrata»
-       * e tacere che vediamo chi scrive a chi e quando sarebbe la meta'
-       * comoda della verita'.
+       * ⚠️ **E i metadati vanno detti lo stesso**: dire solo «e' cifrata» e
+       * tacere che della busta resta qualcosa sarebbe la meta' comoda della
+       * verita' — la stessa forma delle frasi false corrette oggi, girata
+       * dalla parte che ci fa comodo.
+       *
+       * 🚨 Ma il **soggetto** conta: «vediamo che vi siete scritti» descrive
+       * qualcuno che osserva, e il committente l'ha bocciata per questo. La
+       * frase giusta parla di **cosa resta della busta**, non di cosa
+       * guardiamo noi. ⛔ Il test verifica il fatto, non la parola: deve
+       * esserci una riga sui metadati, e NON deve dire «vediamo».
        */
-      expect(s, contains('Vediamo CHE vi siete scritti'));
+      expect(s, contains('Della busta restano'));
+      expect(
+        s,
+        isNot(contains('Vediamo CHE')),
+        reason: 'i metadati si dicono, ma non come se andassimo a guardarli',
+      );
     });
   });
 

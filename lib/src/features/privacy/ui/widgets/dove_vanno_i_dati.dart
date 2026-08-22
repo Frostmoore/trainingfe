@@ -151,18 +151,42 @@ class DoveVannoIDati extends ConsumerWidget {
          * *transitano* dai nostri server e *non* sono leggibili: metterli in
          * elenco con il diario li fa leggere come la stessa cosa.
          */
+        /*
+         * ══ ⚠️ IL TONO: «VEDIAMO» SUONAVA COME SORVEGLIANZA ═══════════════
+         *
+         * 📌 Il committente, rileggendo: *«pare che stai dicendo che andiamo a
+         * vedere chi scrive a chi. Non va detta sta cosa, o almeno non così»*.
+         *
+         * 🚨 **Ed è una critica sul tono, non sui fatti.** «Vediamo CHE vi
+         * siete scritti» è vero, ma mette **noi** come soggetto di un verbo di
+         * osservazione: descrive qualcuno che guarda. Quello che succede
+         * davvero è che una busta, per essere consegnata, deve avere sopra un
+         * destinatario e una data.
+         *
+         * ⛔ **Toglierlo del tutto sarebbe stato peggio**, ed è la scelta che
+         * non è stata fatta: sarebbe la «metà comoda della verità» — dire «è
+         * cifrata» e tacere che i metadati esistono. È la stessa forma delle
+         * cinque frasi false corrette oggi, solo girata dalla parte che ci fa
+         * comodo.
+         *
+         * 💡 La correzione è **cambiare soggetto**: non «cosa guardiamo noi»
+         * ma «cosa resta della busta». Il fatto è identico, la frase non
+         * descrive più nessuno che osserva.
+         */
         const _Card(
           icona: Icons.lock_outline_rounded,
           titolo: 'Passano dai server, ma chiusi',
           sottotitolo:
               'I messaggi con il trainer sono cifrati sul tuo telefono e si '
               'aprono solo sul suo. Noi teniamo la busta e non abbiamo la '
-              'chiave: possiamo cancellarla o non consegnarla, non leggerla né '
-              'scriverne una a nome di qualcun altro.',
+              'chiave.',
           voci: [
-            'Vediamo CHE vi siete scritti, quando, e se hai letto',
-            'Non vediamo una parola di quello che vi dite',
-            'Nemmeno la palestra, e nemmeno sotto impersonazione',
+            'Il contenuto non lo legge nessuno: né noi, né la tua palestra, '
+                'nemmeno quando un amministratore entra al posto tuo',
+            'Della busta restano la data e se è stata aperta: servono a '
+                'consegnarla e a metterla in ordine',
+            'Non possiamo nemmeno scriverne una fingendoci il tuo trainer: la '
+                'firma dipende dalla sua chiave, che non abbiamo',
             'La tua chiave privata sta sul telefono. Sul server ce n\'è una '
                 'copia chiusa con la tua password di recupero, che non ci '
                 'arriva mai: senza quella non la apriamo nemmeno noi',

@@ -105,6 +105,7 @@ void main() {
         stimate: 300,
       );
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: null,
         locale: 2000,
         bruciate: b.kcal,

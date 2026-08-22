@@ -90,7 +90,8 @@ void main() {
     expect(
       y,
       hasLength(1),
-      reason: 'quattro quadrati su una riga sola: una sola coordinata verticale',
+      reason:
+          'quattro quadrati su una riga sola: una sola coordinata verticale',
     );
   });
 

@@ -29,6 +29,7 @@ void main() {
     /// target del piano e basta, perché gli allenamenti non li ha più.
     test('le bruciate si sommano al target del piano', () {
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: 2000,
         locale: 1800,
         bruciate: 450,
@@ -42,6 +43,7 @@ void main() {
 
     test('e il calcolo locale non lo tocca nemmeno', () {
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: 2450,
         locale: 9999,
         bruciate: 0,
@@ -55,6 +57,7 @@ void main() {
     /// 🚨 **Il test centrale**: è ciò che il 19/08 non succedeva.
     test('le bruciate si sommano', () {
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: null,
         locale: 2000,
         bruciate: 450,
@@ -66,6 +69,7 @@ void main() {
 
     test('senza bruciate resta il numero calcolato', () {
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: null,
         locale: 2000,
         bruciate: 0,
@@ -84,6 +88,7 @@ void main() {
     /// costruisce una dieta.
     test('resta null anche se ci sono bruciate', () {
       final t = TargetDelGiorno.scegli(
+        sommaLeBruciate: true,
         dalServer: null,
         locale: null,
         bruciate: 600,
@@ -93,10 +98,66 @@ void main() {
       expect(t.esiste, isFalse);
     });
 
+    /*
+     * ══ 🚨 L'INTERRUTTORE DELLE BRUCIATE — 3b-P.2.2, 22/08/2026 ═══════════
+     *
+     * 📌 *«Ci voglio un toggle per decidere se le calorie bruciate si sommano
+     * all'obbiettivo calorico o no (default sì)»*.
+     *
+     * ⚠️ **Va provato su tutti e due i rami**, non solo su uno: il piano del
+     * trainer e il calcolo locale sommano in due punti diversi della stessa
+     * funzione, e correggerne uno solo darebbe un'app che rispetta la scelta
+     * per metà degli utenti — quella metà che non se ne accorgerebbe mai.
+     */
+    test('spento, le bruciate non si sommano al piano del trainer', () {
+      final t = TargetDelGiorno.scegli(
+        dalServer: 2000,
+        locale: null,
+        bruciate: 400,
+        sommaLeBruciate: false,
+      );
+
+      expect(t.kcal, 2000);
+      expect(
+        t.bruciateIncluse,
+        isFalse,
+        reason: 'senza somma non ci sono bruciate da spiegare in etichetta',
+      );
+    });
+
+    test('spento, le bruciate non si sommano nemmeno al calcolo locale', () {
+      final t = TargetDelGiorno.scegli(
+        dalServer: null,
+        locale: 1800,
+        bruciate: 400,
+        sommaLeBruciate: false,
+      );
+
+      expect(t.kcal, 1800);
+      expect(t.bruciateIncluse, isFalse);
+    });
+
+    test('acceso, si sommano — ed è il comportamento predefinito', () {
+      expect(
+        TargetDelGiorno.scegli(
+          dalServer: null,
+          locale: 1800,
+          bruciate: 400,
+          sommaLeBruciate: true,
+        ).kcal,
+        2200,
+      );
+    });
+
     /// 💡 Uno zero dal server o dal calcolo vale «non c'è», non «obiettivo zero».
     test('uno zero non è un obiettivo', () {
       expect(
-        TargetDelGiorno.scegli(dalServer: 0, locale: 0, bruciate: 300).esiste,
+        TargetDelGiorno.scegli(
+          dalServer: 0,
+          locale: 0,
+          bruciate: 300,
+          sommaLeBruciate: true,
+        ).esiste,
         isFalse,
       );
     });

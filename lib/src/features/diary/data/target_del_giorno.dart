@@ -65,11 +65,31 @@ class TargetDelGiorno {
   /// 💡 Il risultato è più semplice di prima: la somma si fa **sempre qui**, e
   /// in nessun altro posto. Il doppio conteggio non è più possibile perché non
   /// c'è più nessun altro che possa sommare.
+  /// [sommaLeBruciate] — 3b-P.2.2, 22/08/2026.
+  ///
+  /// 📌 *«Ci voglio un toggle per decidere se le calorie bruciate si sommano
+  /// all'obbiettivo calorico o no (default sì)»*.
+  ///
+  /// 🚨 **Obbligatorio di proposito, e non con un default a `true`.** Un valore
+  /// di ripiego qui vorrebbe dire che un chiamante nuovo somma le bruciate
+  /// **ignorando la scelta della persona**, e lo farebbe senza errori: un
+  /// obiettivo più alto del dovuto, plausibile, in una sola delle quattro
+  /// schermate che lo mostrano. ⛔ È la stessa famiglia di O.D.15 e O.D.20 —
+  /// due numeri per la stessa cosa — e l'unico modo di renderla impossibile è
+  /// **non far compilare** chi se ne dimentica.
   factory TargetDelGiorno.scegli({
     required double? dalServer,
     required double? locale,
     required int bruciate,
+    required bool sommaLeBruciate,
   }) {
+    /*
+     * 💡 Si azzera **qui**, in un punto solo, invece di chiedere a ogni
+     * chiamante di passare `0`. ⚠️ Chiedere a loro vorrebbe dire quattro posti
+     * che possono sbagliare, e un quinto che nascerà domani.
+     */
+    if (!sommaLeBruciate) bruciate = 0;
+
     if (dalServer != null && dalServer > 0) {
       return TargetDelGiorno._(
         kcal: dalServer + bruciate,

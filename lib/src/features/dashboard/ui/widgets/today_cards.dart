@@ -15,6 +15,7 @@ import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
 import '../../../health/tipo_allenamento.dart';
 import '../../../profile/corpo_controller.dart';
+import '../../../profile/somma_bruciate.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../sleep/sleep_controller.dart';
@@ -126,6 +127,7 @@ class CaloriesCard extends ConsumerWidget {
       dalServer: n.haTarget ? n.targetKcal : null,
       locale: locale?.kcal.toDouble(),
       bruciate: bruciate.kcal,
+      sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
     );
 
     final target = delGiorno.kcal ?? 0;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../health/health_controller.dart';
+import '../../../profile/somma_bruciate.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../training/bruciate_locali.dart';
@@ -92,6 +93,7 @@ class MacroSummary extends ConsumerWidget {
       dalServer: day.hasTarget ? day.targetKcal : null,
       locale: locale?.kcal.toDouble(),
       bruciate: bruciate.kcal,
+      sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
     );
 
     // 💡 `?? 0` e non `!`: il numero si usa solo dentro rami protetti da

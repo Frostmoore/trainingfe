@@ -8,13 +8,9 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../auth/auth_controller.dart';
 import '../../dashboard/consiglio_da_mostrare.dart';
 import '../../onboarding/branding_controller.dart';
-import '../../scoperta/ui/scelta_citta.dart';
-import '../colore_accento.dart';
 import '../profile_controller.dart';
 import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
-import 'widgets/voce_avatar.dart';
-import 'widgets/weight_sheet.dart';
 
 /// Il profilo — A8.
 class ProfileScreen extends ConsumerWidget {
@@ -30,41 +26,74 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
+          /*
+           * ══ 🪪 LA CARD DEL NOME È UNA PORTA — 3b-P.1, 22/08/2026 ═════════
+           *
+           * 📌 Il committente: *«Questa non ha senso se non fa nulla. Ci
+           * mettiamo che se ci clicchi manda a una pagina per mettere
+           * l'avatar, cambiare i colori dell'app e la tua città»*.
+           *
+           * 🚨 **Una card grande e inerte non è un'occasione sprecata: è una
+           * lezione sbagliata.** Chi la tocca e non ottiene niente impara che
+           * qui le cose grandi non si toccano, e smette di provare anche dove
+           * funzionerebbe.
+           *
+           * ⚠️ **La freccia non è decorazione**: è l'unica cosa che distingue
+           * questa card da quella di prima. Senza, il fatto che adesso funzioni
+           * lo scopre solo chi ci riprova — cioè nessuno.
+           */
           Card(
-            child: Padding(
-              padding: const EdgeInsets.all(Gap.md),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: palestra.primary,
-                    child: Text(
-                      utente?.initials ?? '?',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => context.push(AppRoutes.tu),
+              child: Padding(
+                padding: const EdgeInsets.all(Gap.md),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: palestra.primary,
+                      child: Text(
+                        utente?.initials ?? '?',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: Gap.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          utente?.name ?? '—',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          utente?.email ?? '',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                    const SizedBox(width: Gap.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            utente?.name ?? '—',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            utente?.email ?? '',
+                            style: Theme.of(context).textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Foto, città e colore',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
               ),
             ),
           ),
@@ -97,32 +126,14 @@ class ProfileScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const Divider(height: 1),
-                Consumer(
-                  builder: (context, ref, _) {
-                    final peso = ref.watch(weightHistoryProvider);
-
-                    return ListTile(
-                      leading: const Icon(Icons.monitor_weight_outlined),
-                      title: const Text('Registra il peso'),
-                      subtitle: Text(
-                        peso.maybeWhen(
-                          data: (lista) => lista.isEmpty
-                              ? 'Nessuna pesata registrata'
-                              : 'Ultima: ${lista.last.weightKg.toStringAsFixed(1)} kg',
-                          orElse: () => '',
-                        ),
-                      ),
-                      trailing: const Icon(Icons.add_rounded),
-                      onTap: () => WeightSheet.mostra(
-                        context,
-                        iniziale: peso.valueOrNull?.isNotEmpty ?? false
-                            ? peso.value!.last.weightKg
-                            : null,
-                      ),
-                    );
-                  },
-                ),
+                /*
+                 * ⛔ **«Registra il peso» non e' piu' una voce qui** — 3b-P.2.4.
+                 *
+                 * 📌 *«Uniamoci dentro anche la pagina di registrazione del
+                 * peso (non ha senso che sia una pagina a parte)»*. Sta dentro
+                 * «I tuoi dati», accanto ad altezza, eta' e obiettivo, che sono
+                 * la stessa domanda.
+                 */
                 const Divider(height: 1),
 
                 /*
@@ -207,13 +218,13 @@ class ProfileScreen extends ConsumerWidget {
                  *
                  * ⚠️ E non è obbligatoria: si può togliere.
                  */
-                // 📷 M7.2 — la foto sta in cima al gruppo: è la prima cosa che
-                // una persona vede di sé in questa schermata.
-                const VoceAvatar(),
-                const Divider(height: 1),
-
-                const VoceCitta(),
-                const Divider(height: 1),
+                /*
+                 * ⛔ **Foto, città e colore non stanno più qui** — 3b-P.1.
+                 * Sono migrate in `/profilo/tu`, dietro la card del nome:
+                 * erano tre righe sparse fra diciannove, e sono l'unica
+                 * famiglia che non cambia *cosa fa* l'app ma **come ti si
+                 * presenta**.
+                 */
 
                 /*
                  * 💾 M7.3 — la copia di sicurezza.
@@ -225,7 +236,7 @@ class ProfileScreen extends ConsumerWidget {
                  */
                 ListTile(
                   leading: const Icon(Icons.shield_outlined),
-                  title: const Text('Copia di sicurezza'),
+                  title: const Text('Backup e dati'),
                   subtitle: const Text(
                     'Se perdi il telefono, è quello che ti fa rientrare',
                   ),
@@ -272,14 +283,6 @@ class ProfileScreen extends ConsumerWidget {
                  * 💡 Adesso c'è un test che legge il sorgente e non si fa
                  * ingannare dagli a capo: `niente_nome_per_la_palestra_test.dart`.
                  */
-                if (!ref
-                    .watch(brandingControllerProvider)
-                    .branding
-                    .haPalestra) ...[
-                  const _ScegliColore(),
-                  const Divider(height: 1),
-                ],
-
                 if (ref.watch(consiglioNascostoProvider)) ...[
                   ListTile(
                     leading: const Icon(Icons.auto_awesome_outlined),
@@ -477,69 +480,3 @@ String _nomeFornitore(String id) => switch (id) {
 /// dell'intestazione, e sopra ci vanno testo e icone di sistema. 🚨 Con un
 /// colore qualunque quel testo **sparisce**, e non c'è modo di impedirlo a
 /// valle.
-class _ScegliColore extends ConsumerWidget {
-  const _ScegliColore();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scelto = ref.watch(accentoSceltoProvider);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, Gap.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.palette_outlined),
-              const SizedBox(width: Gap.md),
-              Expanded(
-                child: Text(
-                  "Colore dell'app",
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: Gap.sm),
-
-          Wrap(
-            spacing: Gap.sm,
-            runSpacing: Gap.sm,
-            children: [
-              for (final voce in ColoreAccento.tavolozza.entries)
-                GestureDetector(
-                  onTap: () =>
-                      ref.read(accentoSceltoProvider.notifier).scegli(voce.key),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: voce.value,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: scelto == voce.key
-                            ? Theme.of(context).colorScheme.onSurface
-                            : Colors.transparent,
-                        width: 3,
-                      ),
-                    ),
-                    // 💡 Il segno di spunta oltre al bordo: chi non distingue
-                    // bene i colori non vedrebbe quale è selezionato.
-                    child: scelto == voce.key
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -10,9 +10,11 @@ import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
 import '../data/target_scelto.dart';
 import '../profile_controller.dart';
+import '../somma_bruciate.dart';
 import '../target_locale_controller.dart';
 import 'widgets/manca_per_il_target.dart';
 import 'widgets/meal_hours_editor.dart';
+import 'widgets/weight_sheet.dart';
 
 /// Modifica del profilo — C8.
 ///
@@ -207,6 +209,46 @@ class _ModuloState extends ConsumerState<_Modulo> {
             prefixIcon: Icon(Icons.flag_circle_outlined),
           ),
         ),
+
+        /*
+         * ══ ⚖️ LA PESATA STA QUI — 3b-P.2.4, 22/08/2026 ═══════════════════
+         *
+         * 📌 Il committente: *«Uniamoci dentro anche la pagina di
+         * registrazione del peso (non ha senso che sia una pagina a parte)»*.
+         *
+         * 💡 **Ed è la casa giusta**: il peso è l'unico dato del profilo che
+         * cambia da solo, e stava in una riga separata due schede più giù —
+         * lontano da altezza, età e obiettivo, che sono la stessa domanda.
+         *
+         * ⛔ **Si riusa `WeightSheet`, non se ne scrive una copia**: la stessa
+         * modale la aprono la scheda «Oggi» e questa pagina. Due moduli per
+         * salvare la stessa cosa divergono al primo campo aggiunto — ed è
+         * successo già una volta in questo progetto, con le due schede del
+         * peso.
+         */
+        const SizedBox(height: Gap.lg),
+        Text('Il tuo peso', style: theme.textTheme.titleMedium),
+        Text(
+          'Serve al fabbisogno e alla stima dei progressi.',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: Gap.sm),
+
+        const _RegistraPeso(),
+
+        /*
+         * ══ 🔥 L'INTERRUTTORE DELLE BRUCIATE — 3b-P.2.3 ═══════════════════
+         *
+         * 📌 *«Ci voglio un toggle per decidere se le calorie bruciate si
+         * sommano all'obbiettivo calorico o no (default sì)»*.
+         *
+         * ⚠️ **Sta qui e non nelle impostazioni** perché cambia *questo*
+         * numero: l'obiettivo calorico che si vede due dita più su. Un
+         * interruttore che modifica un valore, messo in un'altra pagina, è un
+         * effetto senza causa visibile.
+         */
+        const SizedBox(height: Gap.lg),
+        const _SommaLeBruciate(),
 
         const SizedBox(height: Gap.lg),
         Text('Orari dei pasti', style: theme.textTheme.titleMedium),
@@ -650,4 +692,85 @@ class _CambiaObiettivoState extends State<_CambiaObiettivo> {
       grassiG: int.parse(_gra.text.trim()),
     ),
   );
+}
+
+/// La pesata, dentro «I tuoi dati» — 3b-P.2.4.
+///
+/// 💡 Mostra l'ultimo peso conosciuto e apre la stessa modale di «Oggi». ⛔ Non
+/// e' un campo di testo in piu' nel modulo: il peso **non si salva con
+/// «Salva»**, si registra con una data sua, e mescolarlo agli altri campi
+/// farebbe credere che si perda annullando.
+class _RegistraPeso extends ConsumerWidget {
+  const _RegistraPeso();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    /*
+     * 🚨 **La stessa fonte della riga che sostituisce**: `weightHistoryProvider`,
+     * non il peso dentro il profilo. ⚠️ Sono due numeri che di solito
+     * coincidono e non sempre — il profilo si aggiorna al salvataggio, lo
+     * storico a ogni pesata — e prendere quello sbagliato qui avrebbe mostrato
+     * un peso vecchio accanto al pulsante per cambiarlo.
+     */
+    final storico = ref.watch(weightHistoryProvider).valueOrNull;
+    final peso = (storico == null || storico.isEmpty)
+        ? null
+        : storico.last.weightKg;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(Icons.monitor_weight_outlined),
+        title: Text(
+          peso == null ? 'Nessuna pesata' : '${peso.toStringAsFixed(1)} kg',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          peso == null
+              ? 'Registrane una per avere il fabbisogno'
+              : 'Tocca per registrarne una nuova',
+        ),
+        trailing: const Icon(Icons.add_rounded),
+        onTap: () => WeightSheet.mostra(context, iniziale: peso),
+      ),
+    );
+  }
+}
+
+/// Se le calorie bruciate si sommano all'obiettivo — 3b-P.2.3.
+///
+/// 🚨 **La spiegazione non e' facoltativa.** Un interruttore che dice solo
+/// *«somma le calorie bruciate»* lascia indovinare cosa succede spegnendolo, e
+/// chi indovina male scopre l'effetto giorni dopo, su un numero che nel
+/// frattempo ha usato per decidere cosa mangiare.
+class _SommaLeBruciate extends ConsumerWidget {
+  const _SommaLeBruciate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final somma = ref.watch(sommaLeBruciateProvider);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: SwitchListTile(
+        secondary: const Icon(Icons.local_fire_department_outlined),
+        title: const Text('Somma le calorie bruciate'),
+        subtitle: Text(
+          somma
+              ? 'Ti muovi di piu\', puoi mangiare di piu\': l\'obiettivo '
+                    'cresce con le calorie che bruci.'
+              : 'L\'obiettivo resta fisso: quello che bruci e\' margine in '
+                    'piu\', non permesso di mangiare.',
+          style: theme.textTheme.bodySmall,
+        ),
+        value: somma,
+        onChanged: (v) =>
+            ref.read(sommaLeBruciateProvider.notifier).imposta(somma: v),
+      ),
+    );
+  }
 }

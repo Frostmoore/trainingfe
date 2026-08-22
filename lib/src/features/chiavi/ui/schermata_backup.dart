@@ -50,7 +50,17 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
     final tema = Theme.of(context);
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Copia di sicurezza'),
+      /*
+       * 📌 «Backup e dati» — 3b-P.6.1, 22/08/2026, su richiesta del
+       * committente.
+       *
+       * 💡 ⛔ **La parola nel titolo del file condiviso resta «copia di
+       * sicurezza»** e non e' una svista: quello e' il nome che legge chi
+       * riceve il file, magari fra un anno, magari da un'altra app. «Backup»
+       * dice cos'e' a chi usa questa schermata; «copia di sicurezza» dice
+       * cos'e' a chiunque altro.
+       */
+      appBar: const IntestazioneApp(titolo: 'Backup e dati'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -462,14 +472,32 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
     return 'Ultimo backup: ${_daQuando(quando)}';
   }
 
-  /// 💡 «oggi», «ieri», «3 giorni fa» in un posto solo: la stessa frase serve
-  /// all'ultimo riuscito **e** all'ultimo tentativo, e due copie divergono.
+  /// 💡 «oggi alle 03:14», «ieri alle 22:40», «3 giorni fa» in un posto solo: la
+  /// stessa frase serve all'ultimo riuscito **e** all'ultimo tentativo, e due
+  /// copie divergono.
+  ///
+  /// ══ 🕒 PERCHE' ANCHE L'ORA — 3b-P.6.2, 22/08/2026 ═══════════════════════
+  ///
+  /// 📌 Il committente: *«deve dire anche l'ora dell'ultimo backup oltre al
+  /// giorno»*.
+  ///
+  /// ⚠️ **«Oggi» su un backup notturno non risponde alla domanda che si sta
+  /// facendo.** Chi guarda questa riga sta per fare qualcosa di rischioso —
+  /// cambiare telefono, ripristinare, disinstallare — e vuole sapere **se
+  /// quello che ha fatto stamattina c'e' dentro**. «Oggi» puo' voler dire le
+  /// tre di notte, cioe' prima di tutto il resto.
+  ///
+  /// ⛔ **L'ora solo per oggi e ieri**: su «3 giorni fa» non aggiunge niente
+  /// che serva, e allunga una riga che sta gia' stretta.
   static String _daQuando(DateTime quando) {
     final giorni = DateTime.now().difference(quando).inDays;
+    final ora =
+        '${quando.hour.toString().padLeft(2, '0')}:'
+        '${quando.minute.toString().padLeft(2, '0')}';
 
     return switch (giorni) {
-      0 => 'oggi',
-      1 => 'ieri',
+      0 => 'oggi alle $ora',
+      1 => 'ieri alle $ora',
       _ => '$giorni giorni fa',
     };
   }
@@ -702,20 +730,48 @@ class _RipristinoDalCloudState extends ConsumerState<_RipristinoDalCloud> {
       final conferma = await showDialog<bool>(
         context: context,
         builder: (dialogo) => AlertDialog(
-          title: const Text('Riprendere la copia di sicurezza?'),
+          /*
+           * ══ 🚨 DICE TUTTO QUELLO CHE SOSTITUISCE — 3b-P.6.3 ═════════════
+           *
+           * 📌 Il committente: *«deve apparire una modale che mi dice che i
+           * dati su questo telefono verranno SOSTITUITI con quelli dell'ultimo
+           * backup»*.
+           *
+           * ⚠️ **La modale c'era gia', e diceva una cosa incompleta**: «peso,
+           * misure e sonno». 🚨 Da allora nel backup sono entrati **gli
+           * allenamenti** (FASE 11), **le preferenze** (O.D.12) e le foto.
+           *
+           * ⛔ Elencare tre voci su sei e' peggio di non elencarne nessuna:
+           * chi legge conclude che le altre si salvano, e conferma. Una
+           * conferma che sottostima quello che cancella **non e' un consenso
+           * informato**, e questa e' l'unica azione dell'app da cui non si
+           * torna indietro.
+           */
+          title: const Text('Sostituire i dati di questo telefono?'),
           content: Text(
             'Trovata una copia del ${_giorno(quando)}.\n\n'
-            'Peso, misure e sonno che hai su questo telefono verranno '
-            'sostituiti con quelli della copia.',
+            // ⛔ Niente asterischi: questo e' un `Text`, non markdown — li
+            // stamperebbe. Il peso della parola lo porta il titolo.
+            'Tutto quello che hai su questo telefono viene sostituito con '
+            'quello che c\'e\' nella copia: peso e misure, diario e pasti, '
+            'allenamenti e serie, sonno, foto e preferenze.'
+            '\n\n'
+            'Quello che hai fatto dopo il ${_giorno(quando)} andra\' perso, e '
+            'non si puo\' annullare.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogo).pop(),
               child: const Text('Annulla'),
             ),
+            /*
+             * ⚠️ **Il verbo del pulsante e' quello dell'azione**, non
+             * «Riprendi»: chi legge di fretta legge **solo** il pulsante, e
+             * «riprendi» suona come «continua», cioe' innocuo.
+             */
             FilledButton(
               onPressed: () => Navigator.of(dialogo).pop(true),
-              child: const Text('Riprendi'),
+              child: const Text('Sostituisci'),
             ),
           ],
         ),

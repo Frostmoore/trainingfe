@@ -10,6 +10,7 @@ import '../../../forma/forma_controller.dart';
 import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
 import '../../../health/recupero_controller.dart';
+import '../../../profile/somma_bruciate.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../data/dashboard_models.dart';
@@ -97,6 +98,7 @@ class TodayHeader extends ConsumerWidget {
           ?.kcal
           .toDouble(),
       bruciate: bruciate.kcal,
+      sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
     );
 
     /*

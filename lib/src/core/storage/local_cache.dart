@@ -148,5 +148,18 @@ class LocalCache {
   Future<void> setString(String key, String value) =>
       _prefs.setString(key, value);
 
+  /// 🚨 **Torna `null` quando la chiave non c'e', e non `false`** — 22/08/2026.
+  ///
+  /// ⚠️ Un interruttore assente e un interruttore spento sono **due cose
+  /// diverse**, e schiacciarle su `false` qui vorrebbe dire che nessuna
+  /// preferenza puo' avere il default acceso: chi non l'ha mai toccata se la
+  /// ritroverebbe spenta, con un numero piu' basso e nessun errore da nessuna
+  /// parte. ⛔ Il valore di ripiego lo decide chi chiama, che sa cosa
+  /// significa.
+  bool? getBool(String key) => _prefs.getBool(key);
+
+  Future<void> setBool(String key, {required bool value}) =>
+      _prefs.setBool(key, value);
+
   Future<void> remove(String key) => _prefs.remove(key);
 }

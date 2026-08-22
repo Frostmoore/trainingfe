@@ -28,6 +28,7 @@ import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
 import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
+import '../../features/profile/ui/schermata_tu.dart';
 import '../../features/progress/ui/progress_screen.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
@@ -128,6 +129,11 @@ class AppRoutes {
   static const mieSchede = '/profilo/le-mie-schede';
 
   static const compositoreScheda = '/profilo/le-mie-schede/nuova';
+
+  /// 🪪 Come ti vedi e come vedi l'app — 3b-P.1: foto, città, colore.
+  ///
+  /// 💡 Dietro la card del nome, che fino al 22/08/2026 non faceva niente.
+  static const tu = '/profilo/tu';
 
   static const profileEdit = '/profilo/dati';
   static const deleteAccount = '/profilo/elimina';
@@ -448,6 +454,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Fase C ────────────────────────────────────────────────────────
+      GoRoute(path: AppRoutes.tu, builder: (_, _) => const SchermataTu()),
       GoRoute(
         path: AppRoutes.profileEdit,
         builder: (_, _) => const EditProfileScreen(),

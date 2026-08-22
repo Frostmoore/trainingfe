@@ -97,13 +97,32 @@ class CalendarScreen extends ConsumerWidget {
                     _Cella(giorno: p.days[i], target: p.targetKcal),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(Gap.sm),
-              child: Text(
-                'La barra è la percentuale sul tuo fabbisogno. '
-                'Tocca un giorno per il dettaglio.',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
+            /*
+             * ══ 🚨 IL `SafeArea` IN FONDO NON È FACOLTATIVO — 3b-D.6.1 ══════
+             *
+             * 📌 Il committente, 22/08/2026: *«Nella view mensile, il testo "La
+             * barra è la percentuale sul tuo fabbisogno..." finisce sotto ai
+             * tasti di android»*.
+             *
+             * ⚠️ **E su metà dei telefoni non si vede.** Chi ha la barra a
+             * gesti ha `MediaQuery.padding.bottom` quasi a zero e legge tutto;
+             * chi ha i tre tasti se ne mangia una quarantina di pixel. 🚨 È il
+             * motivo per cui difetti così arrivano in produzione: dipendono da
+             * un'impostazione del telefono, non dal codice.
+             *
+             * 💡 `SafeArea(top: false)`: qui sopra c'è già l'intestazione, e
+             * riservare spazio anche in cima lascerebbe un buco.
+             */
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(Gap.sm),
+                child: Text(
+                  'La barra è la percentuale sul tuo fabbisogno. '
+                  'Tocca un giorno per il dettaglio.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ],

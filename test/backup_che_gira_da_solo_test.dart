@@ -53,14 +53,14 @@ void main() {
     test('con l interruttore spento', () async {
       finto.stato = const StatoBackup(acceso: false, disponibile: true);
 
-      expect(await daSolo(conta()).forse(), isFalse);
+      expect(await daSolo(conta()).forse(), EsitoBackup.spento);
       expect(finto.quanti, 0);
     });
 
     test('senza nessun cloud configurato', () async {
       finto.stato = const StatoBackup(acceso: true, disponibile: false);
 
-      expect(await daSolo(conta()).forse(), isFalse);
+      expect(await daSolo(conta()).forse(), EsitoBackup.spento);
       expect(finto.quanti, 0);
     });
 
@@ -70,7 +70,15 @@ void main() {
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
       await segnaFattoIl(adesso.subtract(const Duration(hours: 2)));
 
-      expect(await daSolo(conta()).forse(), isFalse);
+      /*
+       * 🚨 **`nonEraOra`, non un `false` qualunque** — difetto del 22/08/2026.
+       *
+       * ⚠️ Prima erano tutti `false`, e chi stampava scriveva «non era ora» per
+       * tutti e tre i casi. Il committente ha tenuto il telefono in carica una
+       * notte per capire se il backup partiva, e ha letto «non era ora» mentre
+       * la verità era che Google Drive non è collegato.
+       */
+      expect(await daSolo(conta()).forse(), EsitoBackup.nonEraOra);
       expect(finto.quanti, 0);
     });
   });
@@ -81,7 +89,7 @@ void main() {
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
       await segnaFattoIl(adesso.subtract(const Duration(hours: 25)));
 
-      expect(await daSolo(conta()).forse(), isTrue);
+      expect((await daSolo(conta()).forse()).eRiuscito, isTrue);
       expect(finto.quanti, 1);
     });
 
@@ -91,7 +99,7 @@ void main() {
     test('e se non ne ha mai fatto uno', () async {
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
 
-      expect(await daSolo(conta()).forse(), isTrue);
+      expect((await daSolo(conta()).forse()).eRiuscito, isTrue);
       expect(finto.quanti, 1);
     });
 
@@ -199,7 +207,12 @@ void main() {
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
 
-      await expectLater(daSolo(conta()).forse(), completion(isFalse));
+      // ⛔ `fallito`: ci ha provato e non ce l'ha fatta. È l'unico esito che
+      // merita di comparire a schermo.
+      await expectLater(
+        daSolo(conta()).forse(),
+        completion(EsitoBackup.fallito),
+      );
     });
 
     /// ══ 🚨 IL TEST CHE CONTA DI PIÙ ═══════════════════════════════════════
@@ -235,7 +248,7 @@ void main() {
       await daSolo(c).forse();
       finto.esplode = false;
 
-      expect(await daSolo(c).forse(), isTrue);
+      expect((await daSolo(c).forse()).eRiuscito, isTrue);
       expect(finto.quanti, 1);
     });
   });

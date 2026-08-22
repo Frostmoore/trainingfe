@@ -123,9 +123,15 @@ void puntoDIngresso() {
     );
 
     try {
-      final fatto = await contenitore.read(backupCheGiraDaSoloProvider).forse();
+      final esito = await contenitore.read(backupCheGiraDaSoloProvider).forse();
 
-      debugPrint('[BACKUP-BG] $compito: ${fatto ? 'fatto' : 'non era ora'}');
+      /*
+       * 🚨 **La frase dell'esito, non «fatto/non era ora»** — difetto del
+       * 22/08/2026. Il committente ha tenuto il telefono in carica tutta la
+       * notte per vedere se il backup partiva, e ha letto «non era ora»: la
+       * verità era che Google Drive non è collegato.
+       */
+      debugPrint('[BACKUP-BG] $compito: ${esito.frase}');
 
       return true;
     } on Object catch (errore, stack) {

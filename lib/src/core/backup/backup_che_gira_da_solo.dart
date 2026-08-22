@@ -6,6 +6,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backup_controller.dart';
 
+/// Com'è andato un tentativo di backup automatico — difetto del 22/08/2026.
+///
+/// ══ 🚨 «NON ERA ORA» E «NON CE L'HA FATTA» NON SONO LA STESSA COSA ════════
+///
+/// ⚠️ `forse()` restituiva un `bool`, e chi lo stampava scriveva *«non era
+/// ora»* per qualunque `false`. 🚨 Il committente ha tenuto il telefono in
+/// carica tutta la notte apposta, e nel log ha trovato scritto che **non era
+/// ora** — mentre la verità era *«Non sei collegato a Google Drive»*, due righe
+/// sopra e in mezzo a uno stack.
+///
+/// ⛔ È la specie di difetto che fa perdere una giornata: il messaggio dice che
+/// va tutto bene, e il backup non si fa da giorni.
+///
+/// 💡 Quattro esiti, quattro frasi diverse. E [fallito] è l'unico che merita di
+/// comparire a schermo.
+enum EsitoBackup {
+  /// Il backup automatico è spento, o non c'è un posto dove metterlo.
+  spento('backup automatico spento'),
+
+  /// L'ultimo è recente: si riprova domani.
+  nonEraOra('non era ora'),
+
+  fatto('fatto'),
+
+  /// 🚨 Ci ha provato e non ce l'ha fatta. La data finisce in
+  /// `chiaveUltimoErrore`, e la schermata «Copia di sicurezza» la mostra.
+  fallito('NON RIUSCITO — guarda le righe sopra');
+
+  const EsitoBackup(this.frase);
+
+  final String frase;
+
+  bool get eRiuscito => this == EsitoBackup.fatto;
+}
+
 /// Il backup che gira **da solo** — FASE 2.1 (`N4.1`), 20/08/2026.
 ///
 /// ══ 🚨 IL DIFETTO CHE CHIUDE, ED È IL PIÙ GRAVE DEL PIANO ═══════════════════
@@ -99,12 +134,12 @@ class BackupCheGiraDaSolo {
   /// buona ragione per non far partire l'app**. 💡 L'errore si scrive nel log e
   /// la schermata «Copia di sicurezza» continua a raccontare la verità: è lì che
   /// una persona va a guardare se le cose funzionano.
-  Future<bool> forse() async {
+  Future<EsitoBackup> forse() async {
     try {
       final stato = await _ref.read(backupAutomaticoProvider.future);
 
       // 🚨 Spento vuol dire spento: non si fa un backup a chi non l'ha chiesto.
-      if (!stato.acceso || !stato.disponibile) return false;
+      if (!stato.acceso || !stato.disponibile) return EsitoBackup.spento;
 
       final prefs = await SharedPreferences.getInstance();
       final quando = prefs.getInt(chiaveUltimo);
@@ -112,7 +147,9 @@ class BackupCheGiraDaSolo {
       if (quando != null) {
         final ultimo = DateTime.fromMillisecondsSinceEpoch(quando);
 
-        if (_adesso().difference(ultimo) < ogniQuanto) return false;
+        if (_adesso().difference(ultimo) < ogniQuanto) {
+          return EsitoBackup.nonEraOra;
+        }
       }
 
       await _ref.read(backupAutomaticoProvider.notifier).adesso();
@@ -135,7 +172,7 @@ class BackupCheGiraDaSolo {
        */
       await prefs.remove(chiaveUltimoErrore);
 
-      return true;
+      return EsitoBackup.fatto;
     } on Object catch (errore, stack) {
       debugPrintStack(label: 'BackupCheGiraDaSolo: $errore', stackTrace: stack);
 
@@ -160,7 +197,7 @@ class BackupCheGiraDaSolo {
         // non e' il backup: si lascia perdere in silenzio.
       }
 
-      return false;
+      return EsitoBackup.fallito;
     }
   }
 }

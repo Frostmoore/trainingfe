@@ -64,7 +64,10 @@ void main() {
     final inizio = DateTime(2026, 8, 20, 18);
     final id = await archivio.apriSeduta(quando: inizio);
     await serie(id, met: 6);
-    await archivio.chiudiSeduta(id, quando: inizio.add(const Duration(hours: 1)));
+    await archivio.chiudiSeduta(
+      id,
+      quando: inizio.add(const Duration(hours: 1)),
+    );
 
     // 💡 Qui `chiudiSeduta` non ha scritto kcal: il calcolo lo fa la lettura.
     // MET 6.0 × 80 kg × 1 h = 480.
@@ -79,7 +82,10 @@ void main() {
     final inizio = DateTime(2026, 8, 20, 18);
     final id = await archivio.apriSeduta(quando: inizio);
     await serie(id);
-    await archivio.chiudiSeduta(id, quando: inizio.add(const Duration(hours: 1)));
+    await archivio.chiudiSeduta(
+      id,
+      quando: inizio.add(const Duration(hours: 1)),
+    );
 
     // ⚠️ È il caso degli esercizi scritti a mano dalle palestre: MET 5.0
     // (ripiego) × 80 × 1 = 400.
@@ -91,7 +97,10 @@ void main() {
     final id = await archivio.apriSeduta(quando: inizio);
     await serie(id, met: 6);
     await archivio.correggiKcalSeduta(id, 800);
-    await archivio.chiudiSeduta(id, quando: inizio.add(const Duration(hours: 1)));
+    await archivio.chiudiSeduta(
+      id,
+      quando: inizio.add(const Duration(hours: 1)),
+    );
 
     final s = await leggi(id);
 

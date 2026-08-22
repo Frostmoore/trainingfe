@@ -11,6 +11,8 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
+import '../pasti_chiusi.dart';
+import '../preferiti_gia_salvati.dart';
 import 'widgets/add_food_sheet.dart';
 import 'widgets/edit_entry_sheet.dart';
 import 'widgets/favorites_sheet.dart';
@@ -50,10 +52,24 @@ class DiaryScreen extends ConsumerWidget {
            * nella stessa barra, a due centimetri di distanza.
            */
         ],
-        // 🗓️ La barra del giorno era `AppBar.bottom`: qui si chiama `sotto`, e
-        // l'altezza va dichiarata perche' `Scaffold` sappia quanto riservarle.
-        sotto: _BarraGiorno(giorno: giorno, ref: ref),
-        altezzaSotto: 48,
+        /*
+         * ══ 🆕 IL RIASSUNTO NELL'INTESTAZIONE — 3b-D.2.1, 22/08/2026 ════════
+         *
+         * 📌 Il committente: *«nell'header ci deve essere un riassunto delle
+         * calorie e dei macro (come in oggi, più o meno, ma con i macro)»*.
+         *
+         * 💡 **Sta dentro `sotto`, non in una fascia in più.** `IntestazioneApp`
+         * ha già quel posto per la parte specifica di una pagina (3b-O.1a.6):
+         * aggiungere una seconda intestazione sotto la prima sarebbe la stessa
+         * informazione detta due volte, e mangerebbe mezza schermata.
+         *
+         * ⚠️ **`altezzaSotto` va tenuta allineata a mano**: `Scaffold` chiede
+         * quanto spazio riservare **prima** di disegnare, e `preferredSize` non
+         * ha un `BuildContext` per misurarlo (§57.4 n° 1 dell'atlante). 🚨 Un
+         * numero più piccolo del vero taglia il riassunto senza dire niente.
+         */
+        sotto: _SottoLIntestazione(giorno: giorno),
+        altezzaSotto: 48 + 62,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddFoodSheet.show(context),
@@ -109,6 +125,131 @@ class DiaryScreen extends ConsumerWidget {
     if (scelta != null) {
       ref.read(selectedDateProvider.notifier).state = scelta;
     }
+  }
+}
+
+/// La barra del giorno **e** il riassunto della giornata — 3b-D.2.1.
+class _SottoLIntestazione extends ConsumerWidget {
+  const _SottoLIntestazione({required this.giorno});
+
+  final DateTime giorno;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _BarraGiorno(giorno: giorno, ref: ref),
+        const _RiassuntoDelGiorno(),
+      ],
+    );
+  }
+}
+
+/// Calorie e macro in cima, sopra il gradiente della palestra — 3b-D.2.1.
+///
+/// ══ 🚨 QUATTRO NUMERI, E NON DI PIÙ ═══════════════════════════════════════
+///
+/// ⚠️ Qui sotto c'è già la scheda delle calorie, con la barra, il TDEE e i tre
+/// quadrati. 🚨 Ripetere **tutto** vorrebbe dire due volte la stessa cosa a due
+/// centimetri di distanza — e la seconda copia si legge come un errore.
+///
+/// 💡 Quello che serve in cima è **quello che resta visibile quando si scorre
+/// fino alla cena**: quante calorie sono entrate, e come stanno i tre macro. Il
+/// resto sta un pollice più giù.
+///
+/// ⛔ **Non aspetta niente.** `valueOrNull` e non un caricamento bloccante: una
+/// rotellina in cima all'intestazione a ogni apertura è peggio di quattro
+/// numeri che compaiono mezzo secondo dopo.
+class _RiassuntoDelGiorno extends ConsumerWidget {
+  const _RiassuntoDelGiorno();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final day = ref.watch(diaryProvider).valueOrNull;
+
+    if (day == null) return const SizedBox(height: 62);
+
+    final sopra = theme.colorScheme.onPrimaryContainer;
+
+    return SizedBox(
+      height: 62,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  day.kcal.round().toString(),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: sopra,
+                  ),
+                ),
+                Text(
+                  'kcal',
+                  style: theme.textTheme.labelSmall?.copyWith(color: sopra),
+                ),
+              ],
+            ),
+
+            const Spacer(),
+
+            /*
+             * 🚨 Le iniziali e non i nomi: «Proteine · Carboidrati · Grassi» su
+             * una riga sola a 280 px non ci sta, e accorciarli a «Prot · Carb ·
+             * Gras» è peggio di una lettera — sembra un errore di battitura.
+             * 💡 I nomi per intero stanno nei quadrati, un pollice più giù.
+             */
+            _MacroInCima(lettera: 'P', valore: day.protein, colore: sopra),
+            _MacroInCima(lettera: 'C', valore: day.carbs, colore: sopra),
+            _MacroInCima(lettera: 'G', valore: day.fat, colore: sopra),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MacroInCima extends StatelessWidget {
+  const _MacroInCima({
+    required this.lettera,
+    required this.valore,
+    required this.colore,
+  });
+
+  final String lettera;
+  final double valore;
+  final Color colore;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: Gap.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${valore.round()}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colore,
+            ),
+          ),
+          Text(
+            lettera,
+            style: theme.textTheme.labelSmall?.copyWith(color: colore),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -183,6 +324,8 @@ class _Pasto extends ConsumerWidget {
      * dalla lista da solo, e nasconderlo con `Visibility` lascerebbe comunque
      * l'elemento nell'albero — cioè esattamente ciò di cui Flutter si lamenta.
      */
+    final chiuso = ref.watch(pastiChiusiProvider).contains(pasto.meal);
+
     final inUscita = ref.watch(vociInUscitaProvider);
     final visibili = pasto.entries
         .where((v) => !inUscita.contains(v.id))
@@ -194,44 +337,94 @@ class _Pasto extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Gap.md,
-                Gap.md,
-                Gap.md,
-                Gap.sm,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      pasto.label,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+            /*
+             * ══ 🆕 UNA PICCOLA INTESTAZIONE PER PASTO — 3b-D.3, 22/08/2026 ══
+             *
+             * 📌 Il committente: *«tutte le cards sotto devono avere una specie
+             * di piccolo header dove sta il nome del pasto con le calorie, e
+             * ogni card deve avere un'icona a sinistra»*. E: *«Le sezioni dei
+             * pasti devono essere collassabili»*.
+             *
+             * 💡 **Toccare l'intestazione apre e chiude.** Sei pasti aperti su
+             * un telefono sono uno scorrimento lungo per arrivare alla cena, e
+             * chi guarda il diario a metà giornata ha tre sezioni vuote in
+             * mezzo.
+             *
+             * ⚠️ **Le calorie restano visibili da chiuso**, ed è il punto: una
+             * sezione chiusa deve dire quanto pesa, o chiuderla vorrebbe dire
+             * perdere l'informazione invece che lo spazio.
+             */
+            InkWell(
+              onTap: () =>
+                  ref.read(pastiChiusiProvider.notifier).cambia(pasto.meal),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Gap.md,
+                  Gap.md,
+                  Gap.md,
+                  Gap.sm,
+                ),
+                child: Row(
+                  children: [
+                    // 🍽️ L'icona del pasto: si riconosce prima del nome.
+                    Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(Gap.radiusSm),
+                      ),
+                      child: Icon(
+                        _iconaDelPasto(pasto.meal),
+                        size: 18,
+                        color: theme.colorScheme.onPrimaryContainer,
                       ),
                     ),
-                  ),
-                  Text(
-                    '${pasto.kcal.round()} kcal',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    const SizedBox(width: Gap.sm),
+
+                    Expanded(
+                      child: Text(
+                        pasto.label,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                  // D2 — «salva questo pasto fra i preferiti». È la funzione
-                  // che fa risparmiare davvero: una colazione si ripete uguale
-                  // per mesi, e riscriverne cinque voci ogni mattina è ciò che
-                  // fa smettere di registrare.
-                  if (pasto.entries.isNotEmpty)
-                    IconButton(
-                      onPressed: () => _salvaPasto(context, ref),
-                      icon: const Icon(Icons.bookmark_add_outlined, size: 20),
-                      tooltip: 'Salva questo pasto fra i preferiti',
+                    Text(
+                      '${pasto.kcal.round()} kcal',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                ],
+                    // D2 — «salva questo pasto fra i preferiti». È la funzione
+                    // che fa risparmiare davvero: una colazione si ripete uguale
+                    // per mesi, e riscriverne cinque voci ogni mattina è ciò che
+                    // fa smettere di registrare.
+                    //
+                    // 🔖 Da 3b-D.5.2 è un **interruttore**, come la stella.
+                    if (pasto.entries.isNotEmpty) _Segnalibro(pasto: pasto),
+
+                    // ⌄ La freccia gira: è l'unica cosa che dice che si può
+                    // toccare.
+                    AnimatedRotation(
+                      turns: chiuso ? -0.25 : 0,
+                      duration: const Duration(milliseconds: 150),
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            if (visibili.isEmpty)
+            if (chiuso)
+              // ⛔ Chiuso vuol dire chiuso: niente elenco, niente pulsanti.
+              const SizedBox.shrink()
+            else if (visibili.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
                 child: Text(
@@ -244,24 +437,25 @@ class _Pasto extends ConsumerWidget {
             else
               for (final voce in visibili) _Voce(voce: voce),
 
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () =>
-                        AddFoodSheet.show(context, meal: pasto.meal),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
+            if (!chiuso)
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () =>
+                          AddFoodSheet.show(context, meal: pasto.meal),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text('Aggiungi a ${pasto.label.toLowerCase()}'),
+                    ),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: () =>
-                      FavoritesSheet.mostra(context, meal: pasto.meal),
-                  icon: const Icon(Icons.star_outline_rounded, size: 18),
-                  label: const Text('Preferiti'),
-                ),
-              ],
-            ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        FavoritesSheet.mostra(context, meal: pasto.meal),
+                    icon: const Icon(Icons.star_outline_rounded, size: 18),
+                    label: const Text('Preferiti'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -269,59 +463,199 @@ class _Pasto extends ConsumerWidget {
   }
 }
 
-extension on _Pasto {
-  /// Salva l'intero pasto del giorno che si sta guardando.
-  ///
-  /// Il nome si propone («Colazione 10/08») ma si può cambiare: «la mia
-  /// colazione» dice molto di più di una data, e un preferito che non si
-  /// riconosce dal nome non viene riusato.
-  Future<void> _salvaPasto(BuildContext context, WidgetRef ref) async {
-    final giorno = ref.read(selectedDateProvider);
-    final controller = TextEditingController(
-      text: '${pasto.label} ${DateFormat('d/MM', 'it').format(giorno)}',
-    );
+/// L'icona di un pasto — 3b-D.3.2.
+///
+/// 💡 Si riconosce **prima** del nome, ed è tutto il suo mestiere: chi scorre
+/// cerca «la cena», non legge sei etichette.
+IconData _iconaDelPasto(String pasto) => switch (pasto) {
+  'breakfast' => Icons.free_breakfast_outlined,
+  'morning_snack' || 'afternoon_snack' => Icons.apple_rounded,
+  'lunch' => Icons.restaurant_rounded,
+  'dinner' => Icons.dinner_dining_rounded,
+  'evening_snack' => Icons.nightlight_outlined,
+  _ => Icons.restaurant_menu_rounded,
+};
 
-    final nome = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Salva il pasto fra i preferiti'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Nome del preferito'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Salva'),
-          ),
-        ],
+/// Salva l'intero pasto del giorno che si sta guardando.
+///
+/// Il nome si propone («Colazione 10/08») ma si può cambiare: «la mia
+/// colazione» dice molto di più di una data, e un preferito che non si
+/// riconosce dal nome non viene riusato.
+///
+/// ⚠️ **È una funzione libera e non un metodo di `_Pasto`**: da 3b-D.5.2 la
+/// chiama `_Segnalibro`, che è un widget a sé perché deve **guardare** i
+/// preferiti per sapere come disegnarsi.
+Future<void> _salvaPasto(
+  BuildContext context,
+  WidgetRef ref,
+  DiaryMeal pasto,
+) async {
+  final giorno = ref.read(selectedDateProvider);
+  final controller = TextEditingController(
+    text: '${pasto.label} ${DateFormat('d/MM', 'it').format(giorno)}',
+  );
+
+  final nome = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Salva il pasto fra i preferiti'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(labelText: 'Nome del preferito'),
       ),
-    );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: const Text('Salva'),
+        ),
+      ],
+    ),
+  );
 
-    if (nome == null || nome.isEmpty || !context.mounted) return;
+  if (nome == null || nome.isEmpty || !context.mounted) return;
+
+  try {
+    await ref
+        .read(favoriteActionsProvider)
+        .saveMeal(meal: pasto.meal, description: nome);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('«$nome» salvato fra i preferiti')),
+      );
+    }
+  } on Object catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+      );
+    }
+  }
+}
+
+/// La stella di un alimento: piena se è già fra i preferiti — 3b-D.5.1.
+///
+/// ⛔ **Toglierlo non chiede conferma.** Un preferito non è un dato: è una
+/// scorciatoia, e rimetterlo costa un tocco. 🚨 Una finestra di conferma su un
+/// gesto reversibile e senza conseguenze è attrito e basta.
+class _Stella extends ConsumerWidget {
+  const _Stella({required this.voce});
+
+  final FoodEntry voce;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final gia = ref
+        .watch(preferitiGiaSalvatiProvider)
+        .perAlimento(voce.description);
+
+    return IconButton(
+      onPressed: () => _tocca(context, ref, gia),
+      icon: Icon(
+        gia == null ? Icons.star_outline_rounded : Icons.star_rounded,
+        size: 18,
+        // 💡 Pieno **e** colorato: la differenza fra i due contorni si perde a
+        // 18 px, il colore no.
+        color: gia == null ? null : theme.colorScheme.tertiary,
+      ),
+      tooltip: gia == null ? 'Salva fra i preferiti' : 'Togli dai preferiti',
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Future<void> _tocca(
+    BuildContext context,
+    WidgetRef ref,
+    FoodFavorite? gia,
+  ) async {
+    final messaggi = ScaffoldMessenger.of(context);
 
     try {
-      await ref
-          .read(favoriteActionsProvider)
-          .saveMeal(meal: pasto.meal, description: nome);
+      if (gia == null) {
+        await ref.read(diaryActionsProvider).favorite(voce.id);
+        ref.invalidate(favoritesProvider);
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('«$nome» salvato fra i preferiti')),
+        messaggi.showSnackBar(
+          SnackBar(
+            content: Text('«${voce.description}» salvato fra i preferiti'),
+          ),
+        );
+      } else {
+        await ref.read(favoriteActionsProvider).remove(gia.id);
+
+        messaggi.showSnackBar(
+          SnackBar(content: Text('«${gia.description}» tolto dai preferiti')),
         );
       }
     } on Object catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
-        );
-      }
+      messaggi.showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+      );
+    }
+  }
+}
+
+/// Il segnalibro di un pasto intero — 3b-D.5.2.
+///
+/// 🚨 **Si riconosce dal contenuto, non dal nome**: il nome lo sceglie chi
+/// salva, e un pasto salvato come «la mia colazione» resterebbe senza
+/// segnalibro per sempre. Vedi `PreferitiGiaSalvati.perPasto`.
+class _Segnalibro extends ConsumerWidget {
+  const _Segnalibro({required this.pasto});
+
+  final DiaryMeal pasto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final gia = ref
+        .watch(preferitiGiaSalvatiProvider)
+        .perPasto(voci: pasto.entries.length, kcal: pasto.kcal);
+
+    return IconButton(
+      onPressed: () => _tocca(context, ref, gia),
+      icon: Icon(
+        gia == null ? Icons.bookmark_add_outlined : Icons.bookmark_rounded,
+        size: 20,
+        color: gia == null ? null : theme.colorScheme.tertiary,
+      ),
+      tooltip: gia == null
+          ? 'Salva questo pasto fra i preferiti'
+          : 'Togli questo pasto dai preferiti',
+    );
+  }
+
+  Future<void> _tocca(
+    BuildContext context,
+    WidgetRef ref,
+    FoodFavorite? gia,
+  ) async {
+    if (gia == null) {
+      await _salvaPasto(context, ref, pasto);
+
+      return;
+    }
+
+    final messaggi = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(favoriteActionsProvider).remove(gia.id);
+
+      messaggi.showSnackBar(
+        SnackBar(content: Text('«${gia.description}» tolto dai preferiti')),
+      );
+    } on Object catch (error) {
+      messaggi.showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(error).message)),
+      );
     }
   }
 }
@@ -376,16 +710,22 @@ class _Voce extends ConsumerWidget {
               voce.kcal != null ? '${voce.kcal!.round()} kcal' : '—',
               style: theme.textTheme.labelMedium,
             ),
-            // D2 — la stella salva **questo alimento** fra i preferiti, con
-            // quantità e macro già dentro. Si parte da una voce esistente e non
-            // da un modulo vuoto: chi ha appena registrato qualcosa di buono
-            // vuole salvarlo con un tocco, non riscriverlo.
-            IconButton(
-              onPressed: () => _salvaPreferito(context, ref),
-              icon: const Icon(Icons.star_outline_rounded, size: 18),
-              tooltip: 'Salva fra i preferiti',
-              visualDensity: VisualDensity.compact,
-            ),
+            /*
+             * ══ ⭐ LA STELLA È UN INTERRUTTORE — 3b-D.5.1, 22/08/2026 ═══════
+             *
+             * 📌 Il committente: *«Quando clicco sulla stella per rendere un
+             * cibo preferito, la stella si deve riempire, e se ci clicco di
+             * nuovo, si deve togliere dai preferiti»*.
+             *
+             * ⚠️ Prima era **a senso unico**: si poteva aggiungere e non
+             * togliere, e non c'era modo di sapere se un cibo era già salvato
+             * senza aprire l'altro elenco. 🚨 Un'icona che non cambia stato non
+             * è un interruttore: è un pulsante travestito.
+             *
+             * 💡 D2 resta: si parte da una voce esistente, con quantità e macro
+             * già dentro, invece che da un modulo vuoto.
+             */
+            _Stella(voce: voce),
             // 🚨 Eliminare deve essere **visibile**. Lo scorrimento a sinistra
             // resta come scorciatoia, ma un gesto che niente annuncia è una
             // funzione che per la maggior parte delle persone non esiste — e
@@ -438,27 +778,6 @@ class _Voce extends ConsumerWidget {
 
     if (conferma == true) {
       await ref.read(diaryActionsProvider).delete(voce.id);
-    }
-  }
-
-  Future<void> _salvaPreferito(BuildContext context, WidgetRef ref) async {
-    try {
-      await ref.read(diaryActionsProvider).favorite(voce.id);
-      ref.invalidate(favoritesProvider);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('«${voce.description}» salvato fra i preferiti'),
-          ),
-        );
-      }
-    } on Object catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
-        );
-      }
     }
   }
 }

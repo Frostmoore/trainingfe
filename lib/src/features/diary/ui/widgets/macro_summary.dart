@@ -97,6 +97,9 @@ class MacroSummary extends ConsumerWidget {
     // 💡 `?? 0` e non `!`: il numero si usa solo dentro rami protetti da
     // `haTarget`, e uno zero non fa esplodere niente se un giorno uno di quei
     // rami cambia. Un `!` invece diventerebbe un guasto a schermo.
+    // 🆕 3b-D.1.3 — lo stesso numero che «Oggi» mostra accanto al target.
+    final consumo = ref.watch(targetLocaleProvider).valueOrNull?.target?.tdee;
+
     final targetKcal = target.kcal ?? 0;
     final haTarget = target.esiste;
     final sforato = haTarget && day.kcal > targetKcal;
@@ -136,6 +139,31 @@ class MacroSummary extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
+
+                /*
+                 * ══ 🆕 IL TDEE ACCANTO AL TARGET — 3b-D.1.3, 22/08/2026 ═════
+                 *
+                 * 📌 Il committente: *«deve avere il TDEE come in Oggi»*.
+                 *
+                 * 💡 Sono due numeri diversi e serve saperlo: il **target** è
+                 * quanto mangiare per arrivare dove si vuole, il **TDEE** è
+                 * quanto si brucia stando come si sta. La distanza fra i due
+                 * **è** la dieta.
+                 *
+                 * 🚨 Si scrive la sigla e non «consumo»: in una riga con
+                 * «1.694 consumate» e «60 bruciate», la parola «consumo» si
+                 * legge come un terzo conteggio (difetto O.D.9).
+                 */
+                if (consumo != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: Gap.sm, bottom: 6),
+                    child: Text(
+                      'TDEE ${consumo.round()}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 // Le bruciate si mostrano perché il target del giorno le
                 // comprende già: senza, l'utente vedrebbe un target più alto
                 // del solito e non capirebbe perché.
@@ -255,18 +283,21 @@ class MacroSummary extends ConsumerWidget {
                 _Macro(
                   nome: 'Proteine',
                   valore: day.protein,
+                  colore: theme.colorScheme.primary,
                   target:
                       day.targetProtein ?? locale?.macro.proteineG.toDouble(),
                 ),
                 _Macro(
                   nome: 'Carboidrati',
                   valore: day.carbs,
+                  colore: theme.colorScheme.tertiary,
                   target:
                       day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
                 ),
                 _Macro(
                   nome: 'Grassi',
                   valore: day.fat,
+                  colore: theme.colorScheme.secondary,
                   target: day.targetFat ?? locale?.macro.grassiG.toDouble(),
                 ),
               ],
@@ -331,34 +362,84 @@ Future<void> _bruciateAMano(
 }
 
 class _Macro extends StatelessWidget {
-  const _Macro({required this.nome, required this.valore, this.target});
+  const _Macro({
+    required this.nome,
+    required this.valore,
+    required this.colore,
+    this.target,
+  });
 
   final String nome;
   final double valore;
   final double? target;
+  final Color colore;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    /*
+     * ══ 🆕 DENTRO UN QUADRATO — 3b-D.1.4, 22/08/2026 ═══════════════════════
+     *
+     * 📌 Il committente: *«i macro devono essere dentro dei quadrati»*.
+     *
+     * 💡 E non è solo estetica: tre numeri in fila senza cornice si leggono
+     * come una frase sola. Il riquadro dice che sono **tre cose separate**, e
+     * a colpo d'occhio si trova quello che si cerca.
+     *
+     * ⚠️ **Il colore lo dà il macro, non il caso**: gli stessi tre di «Oggi»
+     * (`P`, `C`, `G` nella scheda calorie). Due tavolozze per la stessa cosa
+     * in due schermate sono due cose diverse per chi guarda.
+     */
+    final pieno = target != null && valore >= target!;
+
     return Expanded(
-      child: Column(
-        children: [
-          Text(
-            target != null
-                ? '${valore.round()} / ${target!.round()} g'
-                : '${valore.round()} g',
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: Gap.xs / 2),
+        padding: const EdgeInsets.symmetric(vertical: Gap.sm),
+        decoration: BoxDecoration(
+          color: colore.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+          /*
+           * 🚨 Il bordo compare **solo** a obiettivo raggiunto: un contorno
+           * sempre acceso non direbbe niente, e a quel punto tanto varrebbe
+           * non averlo.
+           */
+          border: pieno
+              ? Border.all(color: colore.withValues(alpha: 0.55), width: 1.5)
+              : null,
+        ),
+        child: Column(
+          children: [
+            Text(
+              nome,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colore,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          Text(
-            nome,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: 2),
+            Text(
+              '${valore.round()}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+              maxLines: 1,
             ),
-          ),
-        ],
+            Text(
+              // ⛔ Senza obiettivo si scrive «g» e non «/ 0 g»: uno zero
+              // inventato è peggio di un'assenza dichiarata.
+              target == null ? 'g' : 'di ${target!.round()} g',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

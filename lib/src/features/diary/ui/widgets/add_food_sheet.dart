@@ -457,6 +457,38 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
           TabBar(
             controller: _tabs,
             tabs: [
+              /*
+               * ══ 🔀 L'ORDINE: PRIMA LE GRATIS — 3b-D.4.1, 22/08/2026 ═══════
+               *
+               * 📌 Il committente: *«le tab devono essere in un ordine diverso:
+               * prima A mano, poi Dal Piano, poi Scrivi e per ultimo Foto»*.
+               *
+               * 💡 **Non è gusto, è il costo.** Le prime due non costano
+               * niente, «Scrivi» vale un gettone e «Foto» ne vale dieci. 🚨
+               * Mettere per prima la più cara invita a spendere senza volerlo —
+               * e la linguetta aperta di serie è quella che la maggior parte
+               * delle persone usa senza guardarne altre.
+               *
+               * ⚠️ **L'ordine qui e quello di `TabBarView` devono coincidere**,
+               * e `TabController` non se ne accorge se divergono: mostrerebbe
+               * la fotocamera sotto l'etichetta «A mano».
+               */
+              const Tab(
+                icon: Icon(Icons.edit_outlined),
+                child: _EtichettaGratis(testo: 'A mano'),
+              ),
+              /*
+               * 💡 **Anche le gratuite dicono che sono gratuite.** Se solo due
+               * linguette su quattro portano un prezzo, le altre sembrano non
+               * ancora tariffate — e chi vuole risparmiare non sa dove andare.
+               *
+               * 🎯 Ed è il punto: qui c'è la via per registrare un pasto senza
+               * spendere niente, e va vista.
+               */
+              const Tab(
+                icon: Icon(Icons.restaurant_menu_outlined),
+                child: _EtichettaGratis(testo: 'Dal piano'),
+              ),
               Tab(
                 icon: Icon(
                   aiOk
@@ -521,22 +553,6 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                   ],
                 ),
               ),
-              /*
-               * 💡 **Anche le gratuite dicono che sono gratuite.** Se solo due
-               * linguette su quattro portano un prezzo, le altre sembrano non
-               * ancora tariffate — e chi vuole risparmiare non sa dove andare.
-               *
-               * 🎯 Ed è il punto: qui c'è la via per registrare un pasto senza
-               * spendere niente, e va vista.
-               */
-              const Tab(
-                icon: Icon(Icons.restaurant_menu_outlined),
-                child: _EtichettaGratis(testo: 'Dal piano'),
-              ),
-              const Tab(
-                icon: Icon(Icons.edit_outlined),
-                child: _EtichettaGratis(testo: 'A mano'),
-              ),
             ],
           ),
 
@@ -555,54 +571,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
             child: TabBarView(
               controller: _tabs,
               children: [
-                if (consensi.isLoading)
-                  _StoPensando(attesa: _attesa)
-                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
-                // non è compresa, chiedere il consenso non serve a niente.
-                else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(3))
-                else if (!consensoOk)
-                  const _SenzaConsensoAi()
-                else
-                  _Testo(
-                    controller: _testo,
-                    inCorso: _inCorso,
-                    onInvia: () => _stimaEConferma(
-                      () => azioni.stimaDaTesto(
-                        _testo.text,
-                        widget.meal,
-                        avanzamento: _segnaAttesa,
-                      ),
-                      daFoto: false,
-                    ),
-                  ),
-
-                if (consensi.isLoading)
-                  _StoPensando(attesa: _attesa)
-                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
-                // non è compresa, chiedere il consenso non serve a niente.
-                else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(3))
-                else if (!consensoOk)
-                  const _SenzaConsensoAi()
-                else
-                  _Foto(
-                    inCorso: _inCorso,
-                    onScelta: (relativo) => _stimaEConferma(
-                      () async => azioni.stimaDaFoto(
-                        (await const ArchivioFoto().fileDi(relativo)).path,
-                        widget.meal,
-                        avanzamento: _segnaAttesa,
-                      ),
-                      fotoDaButtare: relativo,
-                      daFoto: true,
-                    ),
-                  ),
-                DalPianoTab(
-                  onScelti: (alimenti) =>
-                      _esegui(() => _registra(azioni, alimenti)),
-                ),
-
+                // 🔀 Stesso ordine delle linguette — 3b-D.4.1.
                 _Manuale(
                   descrizione: _descrizione,
                   quantita: _quantita,
@@ -630,6 +599,54 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                     ),
                   ),
                 ),
+                DalPianoTab(
+                  onScelti: (alimenti) =>
+                      _esegui(() => _registra(azioni, alimenti)),
+                ),
+
+                if (consensi.isLoading)
+                  _StoPensando(attesa: _attesa)
+                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
+                // non è compresa, chiedere il consenso non serve a niente.
+                else if (!pianoOk)
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(0))
+                else if (!consensoOk)
+                  const _SenzaConsensoAi()
+                else
+                  _Testo(
+                    controller: _testo,
+                    inCorso: _inCorso,
+                    onInvia: () => _stimaEConferma(
+                      () => azioni.stimaDaTesto(
+                        _testo.text,
+                        widget.meal,
+                        avanzamento: _segnaAttesa,
+                      ),
+                      daFoto: false,
+                    ),
+                  ),
+
+                if (consensi.isLoading)
+                  _StoPensando(attesa: _attesa)
+                // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
+                // non è compresa, chiedere il consenso non serve a niente.
+                else if (!pianoOk)
+                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(0))
+                else if (!consensoOk)
+                  const _SenzaConsensoAi()
+                else
+                  _Foto(
+                    inCorso: _inCorso,
+                    onScelta: (relativo) => _stimaEConferma(
+                      () async => azioni.stimaDaFoto(
+                        (await const ArchivioFoto().fileDi(relativo)).path,
+                        widget.meal,
+                        avanzamento: _segnaAttesa,
+                      ),
+                      fotoDaButtare: relativo,
+                      daFoto: true,
+                    ),
+                  ),
               ],
             ),
           ),

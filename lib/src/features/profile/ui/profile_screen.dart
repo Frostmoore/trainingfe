@@ -296,35 +296,25 @@ class ProfileScreen extends ConsumerWidget {
                   const Divider(height: 1),
                 ],
 
-                ListTile(
-                  leading: const Icon(Icons.monitor_heart_outlined),
-                  title: const Text('Sonno e recupero'),
-                  subtitle: const Text(
-                    'Collega Health Connect · i dati restano sul telefono',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.salute),
-                ),
-                const Divider(height: 1),
+                /*
+                 * ⛔ **«Sonno e recupero» non e' piu' una voce qui** — 3b-P.8.5.
+                 *
+                 * 📌 *«non ha molto senso tenerla qui nelle impostazioni»*. La
+                 * spiegazione sta sotto l'ipnogramma di `/sonno`, il
+                 * collegamento sta in «Privacy e consensi» qui sotto.
+                 */
                 // La galleria ha lasciato la prima scheda alla dashboard: si
                 // guarda ogni tanto, non ogni volta che si apre l'app.
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Foto dei progressi'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.progress),
-                ),
-
-                // 🚨 **Solo per chi ha una password che conosce** — G8.
-                //
-                // Chi entra con Google o Apple ne ha una, ma casuale e mai
-                // vista: il modulo gli chiederebbe «quella attuale» e non
-                // potrebbe compilarlo. Al suo posto, la riga qui sotto dice
-                // con che cosa accede.
-                // 🚨 S9.1 — i consensi devono essere **raggiungibili quanto
-                // sono stati facili da dare**: sepolti in un sottomenù non
-                // sarebbero «revocabili con la stessa facilità» (art. 7(3)).
-                const Divider(height: 1),
+                /*
+                 * ⛔ **«Foto dei progressi» non sta piu' qui** — 3b-P.9.3.
+                 *
+                 * 📌 *«Non ha senso che sia qui, mettila in una nuova tab
+                 * nella sezione allenamento»*. E' il terzo segmento di
+                 * «Allenamento», accanto a Storico e Schede.
+                 *
+                 * 💡 La rotta `/progressi` **resta**: ci puntano le notifiche
+                 * e la scheda di «Oggi».
+                 */
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('Privacy e consensi'),

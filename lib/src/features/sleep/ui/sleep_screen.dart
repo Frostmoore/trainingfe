@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../health/sessioni_di_sonno.dart';
+import '../../health/ui/widgets/cosa_leggiamo.dart';
 import '../sleep_controller.dart';
 
 /// Il sonno — C14.
@@ -332,6 +333,24 @@ class _Notte extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+
+        /*
+         * ══ 🌙 QUI FINISCE «SONNO E RECUPERO» — 3b-P.8.1, 22/08/2026 ═══════
+         *
+         * 📌 Il committente: *«questa pagina dovrebbe apparire sotto
+         * all'ipnogramma della pagina sonno, quindi non ha molto senso tenerla
+         * qui nelle impostazioni»*.
+         *
+         * 💡 **Chi guarda il proprio sonno e' esattamente chi si chiede da
+         * dove arrivino quei dati.** Nelle impostazioni quella spiegazione la
+         * leggeva solo chi la cercava.
+         *
+         * ⛔ **Il collegamento a Health Connect non e' qui**: sta in «Privacy e
+         * consensi», perche' collegare e' un consenso, non un'impostazione.
+         */
+        const SizedBox(height: Gap.xl),
+        const CosaLeggiamoDaSalute(),
+
         const SizedBox(height: Gap.xl),
       ],
     );
@@ -532,24 +551,45 @@ class _Fase extends StatelessWidget {
   Widget build(BuildContext context) {
     final allarme = _Notte._coloreGiudizio(context, giudizio);
 
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          color: colore,
-          borderRadius: BorderRadius.circular(3),
-        ),
-      ),
-      title: Text(nome),
-      trailing: Text(
-        [
-          '${minuti ~/ 60}h ${(minuti % 60).toString().padLeft(2, '0')}',
-          if (percentuale != null) '${percentuale!.toStringAsFixed(0)}%',
-        ].join('  ·  '),
-        style: TextStyle(fontWeight: FontWeight.w600, color: allarme),
+    final theme = Theme.of(context);
+
+    /*
+     * 📌 **La leggenda piu' piccola** — 3b-P.8.2, richiesta del committente.
+     *
+     * ⚠️ Quattro `ListTile` a densita' normale sono quattro righe da 48 px:
+     * novantasei pixel di elenco sotto un grafico che ne occupa sessanta. 🚨
+     * La leggenda **spiegava** l'ipnogramma e finiva per pesare piu' di lui.
+     *
+     * 💡 Righe da 32 px e testo `bodySmall`: si legge lo stesso, e il grafico
+     * torna a essere la cosa piu' grande della sezione. ⛔ Il pallino del
+     * colore resta 12 px — rimpicciolirlo lo renderebbe indistinguibile fra
+     * profondo e leggero, che sono due blu vicini.
+     */
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: colore,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: Gap.sm),
+          Expanded(child: Text(nome, style: theme.textTheme.bodySmall)),
+          Text(
+            [
+              '${minuti ~/ 60}h ${(minuti % 60).toString().padLeft(2, '0')}',
+              if (percentuale != null) '${percentuale!.toStringAsFixed(0)}%',
+            ].join('  ·  '),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: allarme,
+            ),
+          ),
+        ],
       ),
     );
   }

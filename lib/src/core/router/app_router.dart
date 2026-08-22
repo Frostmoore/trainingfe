@@ -16,7 +16,6 @@ import '../../features/chiavi/ui/schermata_backup.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/forma/ui/schermata_forma.dart';
-import '../../features/health/ui/schermata_salute.dart';
 import '../../features/home/ui/home_shell.dart';
 import '../../features/nutrition/ui/compositore_consigli.dart';
 import '../../features/nutrition/ui/importa_piano_screen.dart';
@@ -472,10 +471,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const SchermataConsensi(),
       ),
       GoRoute(path: AppRoutes.sleep, builder: (_, _) => const SleepScreen()),
-      GoRoute(
-        path: AppRoutes.salute,
-        builder: (_, _) => const SchermataSalute(),
-      ),
+      /*
+       * ══ 🚨 `/salute` NON SI CANCELLA, RIMANDA — 3b-P.8.4, 22/08/2026 ═════
+       *
+       * ⛔ **La schermata non esiste piu'**: i suoi contenuti sono sotto
+       * l'ipnogramma di `/sonno` (la spiegazione) e in `/profilo/privacy` (il
+       * collegamento). Ma **la rotta deve restare viva**.
+       *
+       * 🚨 Il manifest la aggancia a `ACTION_SHOW_PERMISSIONS_RATIONALE`: e'
+       * quello che Android apre quando chiede all'app di spiegare perche' vuole
+       * i dati di salute, ed e' un requisito di **pubblicazione**. Cancellarla
+       * vorrebbe dire un intent che cade nel vuoto — nessun errore visibile
+       * nell'app, e il rifiuto arriva mesi dopo dal negozio.
+       *
+       * 💡 Rimanda a `/sonno` e non a `/profilo/privacy` perche' e' li' che sta
+       * il testo che Google vuole leggere: cosa leggiamo, perche', e dove
+       * finisce.
+       */
+      GoRoute(path: AppRoutes.salute, redirect: (_, _) => AppRoutes.sleep),
       GoRoute(path: AppRoutes.forma, builder: (_, _) => const SchermataForma()),
       GoRoute(
         path: AppRoutes.acquisti,

@@ -22,50 +22,67 @@ class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) => const Scaffold(
+    appBar: IntestazioneApp(titolo: 'Foto dei progressi'),
+    floatingActionButton: AggiungiFoto(),
+    body: CorpoFotoProgressi(),
+  );
+}
+
+/// La griglia delle foto, **senza scheletro attorno** — 3b-P.9.1, 22/08/2026.
+///
+/// ══ 🚨 PERCHE' E' STATA STACCATA DALLA SCHERMATA ══════════════════════════
+///
+/// 📌 Il committente: *«Non ha senso che sia qui [nelle impostazioni], mettila
+/// in una nuova tab nella sezione allenamento»*.
+///
+/// ⚠️ **La stessa griglia deve stare in due posti**: dentro un segmento della
+/// pagina «Allenamento» e dentro `/progressi`, che resta raggiungibile perche'
+/// ci puntano le notifiche e la scheda «Oggi». ⛔ Copiarla vorrebbe dire due
+/// griglie che divergono al primo cambiamento — ed e' successo gia' due volte
+/// in questo progetto (le due schede del peso, i due form del profilo).
+///
+/// 💡 Quello che resta in `ProgressScreen` e' solo il vestito: intestazione,
+/// pulsante, `Scaffold`.
+class CorpoFotoProgressi extends ConsumerWidget {
+  const CorpoFotoProgressi({super.key});
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final foto = ref.watch(progressPhotosProvider);
 
-    return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Foto dei progressi'),
-      floatingActionButton: const _Aggiungi(),
-      body: foto.when(
-        loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(
-          error: ApiClient.unwrapError(e),
-          onRetry: () => ref.invalidate(progressPhotosProvider),
-        ),
-        data: (elenco) => elenco.isEmpty
-            ? const EmptyState(
-                icon: Icons.photo_camera_outlined,
-                title: 'Nessuna foto',
-                message:
-                    'Una foto ogni tanto, sempre nella stessa posizione e con la '
-                    'stessa luce, racconta i progressi meglio della bilancia.',
-              )
-            : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(
-                  context,
-                  ref,
-                  () => ref.invalidate(progressPhotosProvider),
-                ),
-                child: GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    Gap.sm,
-                    Gap.sm,
-                    Gap.sm,
-                    96,
-                  ),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.78,
-                    mainAxisSpacing: Gap.sm,
-                    crossAxisSpacing: Gap.sm,
-                  ),
-                  itemCount: elenco.length,
-                  itemBuilder: (context, i) => _Cella(foto: elenco[i]),
-                ),
-              ),
+    return foto.when(
+      loading: () => const LoadingState(),
+      error: (e, _) => ErrorState(
+        error: ApiClient.unwrapError(e),
+        onRetry: () => ref.invalidate(progressPhotosProvider),
       ),
+      data: (elenco) => elenco.isEmpty
+          ? const EmptyState(
+              icon: Icons.photo_camera_outlined,
+              title: 'Nessuna foto',
+              message:
+                  'Una foto ogni tanto, sempre nella stessa posizione e con la '
+                  'stessa luce, racconta i progressi meglio della bilancia.',
+            )
+          : RefreshIndicator(
+              onRefresh: () => aggiornaTutto(
+                context,
+                ref,
+                () => ref.invalidate(progressPhotosProvider),
+              ),
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.78,
+                  mainAxisSpacing: Gap.sm,
+                  crossAxisSpacing: Gap.sm,
+                ),
+                itemCount: elenco.length,
+                itemBuilder: (context, i) => _Cella(foto: elenco[i]),
+              ),
+            ),
     );
   }
 }
@@ -189,8 +206,13 @@ class _Cella extends ConsumerWidget {
   }
 }
 
-class _Aggiungi extends ConsumerWidget {
-  const _Aggiungi();
+/// Il pulsante che aggiunge una foto.
+///
+/// 🚨 **Pubblico dal 22/08**: lo usa anche il segmento «Foto» della pagina
+/// «Allenamento». ⚠️ E li' compare **solo su quel segmento** — un pulsante
+/// «aggiungi foto» mentre si guardano le schede e' un tasto che mente.
+class AggiungiFoto extends ConsumerWidget {
+  const AggiungiFoto({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>

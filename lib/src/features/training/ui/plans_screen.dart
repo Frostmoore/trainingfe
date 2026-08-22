@@ -9,6 +9,7 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../progress/ui/progress_screen.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -63,6 +64,23 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                   label: Text('Schede'),
                   icon: Icon(Icons.assignment_outlined),
                 ),
+                /*
+                 * 📷 **Le foto dei progressi** — 3b-P.9.1, 22/08/2026.
+                 *
+                 * 📌 Il committente: *«Non ha senso che sia qui [nelle
+                 * impostazioni], mettila in una nuova tab nella sezione
+                 * allenamento»*.
+                 *
+                 * 💡 **Una tab, non una barra nuova**: il selettore esisteva
+                 * gia' con «Storico» e «Schede». ⚠️ Aggiungere una `TabBar`
+                 * accanto a un `SegmentedButton` avrebbe dato due comandi
+                 * diversi per la stessa cosa nella stessa schermata.
+                 */
+                ButtonSegment(
+                  value: 2,
+                  label: Text('Foto'),
+                  icon: Icon(Icons.photo_camera_outlined),
+                ),
               ],
               selected: {_vista},
               onSelectionChanged: (s) => setState(() => _vista = s.first),
@@ -71,9 +89,20 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           ),
         ),
       ),
-      // C9: si comincia da qui. Il pulsante è grande e sempre visibile perché
-      // «inizia l'allenamento» è l'unica cosa che si fa entrando in palestra.
-      floatingActionButton: const _AvviaAllenamento(),
+      /*
+       * ══ 🚨 IL PULSANTE CAMBIA CON LA VISTA — 3b-P.9.2 ═══════════════════
+       *
+       * C9: si comincia da qui. Il pulsante e' grande e sempre visibile perche'
+       * «inizia l'allenamento» e' l'unica cosa che si fa entrando in palestra.
+       *
+       * ⚠️ **Ma sul segmento «Foto» quella non e' piu' l'azione della
+       * schermata.** Un flottante che avvia un allenamento mentre si guardano
+       * le foto e' un tasto che mente: e' il posto dove il pollice va per
+       * fare *la cosa di questa vista*, e ci troverebbe un'altra.
+       */
+      floatingActionButton: _vista == 2
+          ? const AggiungiFoto()
+          : const _AvviaAllenamento(),
       body: Column(
         children: [
           // 🚨 L'allenamento lasciato a metà si vede **prima di tutto il
@@ -87,9 +116,11 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           // è l'unica cosa che lo rende evidente.
           const _SessioneAperta(),
           Expanded(
-            child: _vista == 0
-                ? const StoricoAllenamenti()
-                : _corpo(context, ref, schede),
+            child: switch (_vista) {
+              0 => const StoricoAllenamenti(),
+              2 => const CorpoFotoProgressi(),
+              _ => _corpo(context, ref, schede),
+            },
           ),
         ],
       ),

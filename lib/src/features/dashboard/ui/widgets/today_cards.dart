@@ -757,7 +757,15 @@ class _InvitoACollegare extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right_rounded),
       isThreeLine: true,
-      onTap: () => context.push(AppRoutes.salute),
+      /*
+       * ⚠️ **Porta dove si collega davvero** — 3b-P.8.3, 22/08/2026.
+       *
+       * Il pulsante dice «collega Health Connect»: da oggi il collegamento sta
+       * in «Privacy e consensi», e mandare a `/sonno` — dove c'e' solo la
+       * spiegazione — vorrebbe dire un invito che non porta all'azione che
+       * promette.
+       */
+      onTap: () => context.push(AppRoutes.consensi),
     ),
   );
 }

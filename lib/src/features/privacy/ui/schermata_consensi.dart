@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../health/ui/widgets/connessione_salute.dart';
 import '../consensi_controller.dart';
+import 'widgets/dove_vanno_i_dati.dart';
 
 /// I consensi facoltativi — S9.1.
 ///
@@ -39,6 +41,34 @@ class SchermataConsensi extends ConsumerWidget {
         data: (dati) => ListView(
           padding: const EdgeInsets.all(Gap.md),
           children: [
+            /*
+           * ══ 🔗 IL COLLEGAMENTO A HEALTH CONNECT — 3b-P.8.3/P.10.2 ════════
+           *
+           * 📌 Il committente: *«la parte di connessione a Google Health
+           * Connect deve andare in privacy e consensi»* · *«Deve includere
+           * anche tutto quello che c'e' nella pagina di connessione»*.
+           *
+           * 💡 **Sta in cima**, prima degli altri consensi: e' l'unico che
+           * apre una porta verso un'altra app, ed e' quello da cui dipendono
+           * meta' dei dati che le card qui sotto elencano.
+           */
+            const ConnessioneSalute(),
+            const SizedBox(height: Gap.lg),
+
+            /*
+             * ══ 📋 DOVE VANNO I DATI — 3b-P.10.1 ═══════════════════════════
+             *
+             * 📌 *«Deve avere una serie di cards che dettagliano esattamente
+             * quali dati prendiamo, quali salviamo sul server e quali inviamo
+             * all'AI (se l'AI è attiva)»*.
+             *
+             * 💡 **Prima degli interruttori, non dopo.** Un consenso si dà
+             * sapendo a cosa: mettere la spiegazione sotto i pulsanti vorrebbe
+             * dire che la legge solo chi ha già deciso.
+             */
+            const DoveVannoIDati(),
+            const SizedBox(height: Gap.lg),
+
             Text(
               'Quello che decidi qui puoi cambiarlo quando vuoi, e togliere '
               'costa quanto mettere.',
@@ -48,10 +78,28 @@ class SchermataConsensi extends ConsumerWidget {
 
             _Interruttore(
               titolo: 'Dati su sonno e recupero',
+              /*
+               * ══ 🚨 «NON LI MANDIAMO A NESSUNO» SI CONTRADDICEVA ══════════
+               *
+               * ⛔ Diceva *«Restano sul tuo telefono: non li mandiamo a
+               * nessuno, nemmeno a noi»* — e **due interruttori più giù** ce
+               * n'è uno che serve proprio a mandarli ad Anthropic.
+               *
+               * 🚨 Due frasi che si smentiscono a quindici centimetri di
+               * distanza non sono un doppione: chi legge la prima e si ferma
+               * ha capito il contrario di quello che succede se accende il
+               * terzo. ⚠️ Ed è la stessa frase, sbagliata allo stesso modo,
+               * che stava nella spiegazione sotto l'ipnogramma.
+               *
+               * 💡 Adesso il «di base» è esplicito, e rimanda al consenso che
+               * fa l'eccezione invece di negarne l'esistenza.
+               */
               spiegazione:
                   'Permette all\'app di leggere sonno, battito e variabilità '
-                  'da Health Connect. Restano sul tuo telefono: non li mandiamo '
-                  'a nessuno, nemmeno a noi.',
+                  'da Health Connect. Restano sul tuo telefono: non li vede la '
+                  'palestra, non li vede il trainer, e non arrivano ai nostri '
+                  'server — l\'unica eccezione è il terzo consenso qui sotto, '
+                  'se lo dai.',
               concessoIl: dati.salute,
               chiave: 'health',
             ),

@@ -199,28 +199,51 @@ class MacroSummary extends ConsumerWidget {
                 // C15 — ed è toccabile: il totale bruciato si può dichiarare a
                 // mano, per chi porta un orologio che conta meglio della nostra
                 // stima o per chi ha fatto qualcosa che non ha registrato.
-                InkWell(
-                  onTap: () => _bruciateAMano(context, ref, aMano),
-                  borderRadius: BorderRadius.circular(999),
-                  child: Row(
+                /*
+                 * ══ 🚨 UNA PASTICCA, PERCHÉ SI DEVE CAPIRE CHE SI TOCCA ═════
+                 *
+                 * 📌 Il committente, 22/08/2026: *«le calorie bruciate nella
+                 * card delle calorie deve essere una pasticca perché si deve
+                 * capire che ci posso cliccare»*.
+                 *
+                 * ⚠️ Per un giro era diventata una riga di testo, per far
+                 * stare «547 · dall'orologio» senza troncarlo. 🚨 Ma un testo
+                 * che si tocca **non si distingue da uno che non si tocca**, e
+                 * qui dietro c'è una funzione vera: dichiarare a mano le
+                 * calorie bruciate. Un'azione che nessuno trova è un'azione che
+                 * non esiste.
+                 *
+                 * 💡 **La soluzione non era togliere il vestito, era accorciare
+                 * il contenuto**: la fonte diventa un'icona — un orologio, una
+                 * matita, una calcolatrice — e il testo per esteso resta nel
+                 * `tooltip`, per chi non la riconosce e per i lettori di
+                 * schermo.
+                 */
+                ActionChip(
+                  avatar: Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 16,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 18,
-                        color: theme.colorScheme.tertiary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        bruciate.fonte == FonteBruciate.nessuna
-                            ? '${bruciate.kcal}'
-                            : '${bruciate.kcal} · ${bruciate.fonte.etichetta}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                      Text('${bruciate.kcal}'),
+                      if (bruciate.fonte.icona != null) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          bruciate.fonte.icona,
+                          size: 14,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
-                      ),
+                      ],
                     ],
                   ),
+                  tooltip: bruciate.fonte == FonteBruciate.nessuna
+                      ? 'Dichiara le calorie bruciate'
+                      : 'Calorie bruciate ${bruciate.fonte.etichetta}',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _bruciateAMano(context, ref, aMano),
                 ),
               ],
             ),

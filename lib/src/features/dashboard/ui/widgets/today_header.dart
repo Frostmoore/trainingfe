@@ -84,7 +84,6 @@ class TodayHeader extends ConsumerWidget {
     final recupero = ref.watch(recuperoProvider).valueOrNull;
     final forma = ref.watch(formaProvider).valueOrNull;
 
-    final attive = ref.watch(kcalAttiveDelGiornoProvider(giorno)).valueOrNull;
     final hrv = recupero?.parametri[MetricaSalute.hrv];
     final battito = recupero?.parametri[MetricaSalute.battitoARiposo];
     final sonno = recupero?.notte?.durata;
@@ -166,26 +165,28 @@ class TodayHeader extends ConsumerWidget {
                 ),
 
                 /*
-                     * 🔥 Le calorie **attive**: quelle vere dell'orologio.
-                     *
-                     * 🚨 **Zero sparisce come `null`** — difetto visto il
-                     * 21/08/2026. ⚠️ Quando l'orologio non ha ancora inviato
-                     * niente la somma del giorno non e' assente: e' `0`, e la
-                     * regola «se manca sparisce» non scattava. In cima alla
-                     * schermata compariva «0 attive», che si legge come «oggi
-                     * non ti sei mosso» — cioe' una **misura sbagliata**, non
-                     * un dato mancante.
-                     *
-                     * 💡 Zero calorie attive in una giornata intera non esiste:
-                     * si e' comunque camminato. Quindi qui `0` significa «non
-                     * lo so», ed e' la stessa lettura che fa `Recupero`.
-                     */
-                if (attive != null && attive > 0)
-                  _Valore(
-                    valore: attive.toString(),
-                    etichetta: 'attive',
-                    icona: Icons.bolt_rounded,
-                  ),
+                 * ══ ⛔ «ATTIVE» NON C'È PIÙ, ED ERA UN DOPPIONE ═════════════
+                 *
+                 * 📌 Il committente, 22/08/2026: *«che differenza c'è tra
+                 * attive e bruciate?»*.
+                 *
+                 * 🚨 **Nessuna, quasi sempre — ed è la risposta che rende la
+                 * domanda un difetto.** `attive` era la lettura grezza
+                 * dell'orologio; `bruciate` è la **catena** che sceglie fra
+                 * dichiarazione a mano, orologio e stima. Quando l'orologio ha
+                 * misurato qualcosa — cioè quasi sempre — la catena sceglie
+                 * proprio lui, e i due numeri sono **identici**. Nella
+                 * schermata del 22/08: 547 e 547.
+                 *
+                 * ⚠️ Due etichette diverse sullo stesso numero non sono
+                 * ridondanza innocua: fanno cercare una differenza che non
+                 * c'è, e chi non la trova conclude che uno dei due sia
+                 * sbagliato.
+                 *
+                 * 💡 Resta `bruciate`, che è quello che **entra
+                 * nell'obiettivo**. Da dove viene lo dice la pasticca nella
+                 * scheda del diario, con la sua icona.
+                 */
 
                 /*
                      * ⛔ **Il peso non sta piu' qui** — 21/08/2026: *«togliamo

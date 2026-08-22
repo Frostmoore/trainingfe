@@ -9,12 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
-import '../../health/health_controller.dart';
-import '../../profile/target_locale_controller.dart';
-import '../../training/bruciate_locali.dart';
-import '../data/bruciate_del_giorno.dart';
 import '../data/diary_models.dart';
-import '../data/target_del_giorno.dart';
 import '../diary_controller.dart';
 import '../pasti_chiusi.dart';
 import '../preferiti_gia_salvati.dart';
@@ -58,23 +53,21 @@ class DiaryScreen extends ConsumerWidget {
            */
         ],
         /*
-         * ══ 🆕 IL RIASSUNTO NELL'INTESTAZIONE — 3b-D.2.1, 22/08/2026 ════════
+         * ⛔ **Niente riassunto qui** — 22/08/2026, dopo averlo visto.
          *
-         * 📌 Il committente: *«nell'header ci deve essere un riassunto delle
-         * calorie e dei macro (come in oggi, più o meno, ma con i macro)»*.
+         * 📌 Era stato chiesto (3b-D.2.1) e poi tolto: *«non mi piace sto
+         * header della sezione cibo, togli il riassunto delle calorie e dei
+         * macro da lì»*.
          *
-         * 💡 **Sta dentro `sotto`, non in una fascia in più.** `IntestazioneApp`
-         * ha già quel posto per la parte specifica di una pagina (3b-O.1a.6):
-         * aggiungere una seconda intestazione sotto la prima sarebbe la stessa
-         * informazione detta due volte, e mangerebbe mezza schermata.
+         * 💡 E aveva ragione: la scheda subito sotto dice **le stesse quattro
+         * cose**, con la barra e i riquadri. In cima era una copia più piccola
+         * e peggiore, che rubava sessantasei pixel a ogni schermata.
          *
-         * ⚠️ **`altezzaSotto` va tenuta allineata a mano**: `Scaffold` chiede
-         * quanto spazio riservare **prima** di disegnare, e `preferredSize` non
-         * ha un `BuildContext` per misurarlo (§57.4 n° 1 dell'atlante). 🚨 Un
-         * numero più piccolo del vero taglia il riassunto senza dire niente.
+         * ⚠️ Su «Oggi» quel riassunto ha senso perché lì sotto **non** c'è la
+         * stessa scheda: è la differenza fra le due pagine, non un'incoerenza.
          */
-        sotto: _SottoLIntestazione(giorno: giorno),
-        altezzaSotto: 48 + 66,
+        sotto: _BarraGiorno(giorno: giorno, ref: ref),
+        altezzaSotto: 48,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddFoodSheet.show(context),
@@ -133,206 +126,6 @@ class DiaryScreen extends ConsumerWidget {
     if (scelta != null) {
       ref.read(selectedDateProvider.notifier).state = scelta;
     }
-  }
-}
-
-/// La barra del giorno **e** il riassunto della giornata — 3b-D.2.1.
-class _SottoLIntestazione extends ConsumerWidget {
-  const _SottoLIntestazione({required this.giorno});
-
-  final DateTime giorno;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _BarraGiorno(giorno: giorno, ref: ref),
-        const _RiassuntoDelGiorno(),
-      ],
-    );
-  }
-}
-
-/// Calorie e macro in cima, sopra il gradiente della palestra — 3b-D.2.1.
-///
-/// ══ 🚨 QUATTRO NUMERI, E NON DI PIÙ ═══════════════════════════════════════
-///
-/// ⚠️ Qui sotto c'è già la scheda delle calorie, con la barra, il TDEE e i tre
-/// quadrati. 🚨 Ripetere **tutto** vorrebbe dire due volte la stessa cosa a due
-/// centimetri di distanza — e la seconda copia si legge come un errore.
-///
-/// 💡 Quello che serve in cima è **quello che resta visibile quando si scorre
-/// fino alla cena**: quante calorie sono entrate, e come stanno i tre macro. Il
-/// resto sta un pollice più giù.
-///
-/// ⛔ **Non aspetta niente.** `valueOrNull` e non un caricamento bloccante: una
-/// rotellina in cima all'intestazione a ogni apertura è peggio di quattro
-/// numeri che compaiono mezzo secondo dopo.
-class _RiassuntoDelGiorno extends ConsumerWidget {
-  const _RiassuntoDelGiorno();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final day = ref.watch(diaryProvider).valueOrNull;
-
-    if (day == null) return const SizedBox(height: 66);
-
-    final sopra = theme.colorScheme.onPrimaryContainer;
-
-    /*
-     * ══ 🚨 L'OBIETTIVO C'È ANCHE QUI — correzione del 22/08/2026 ═══════════
-     *
-     * 📌 Il committente: *«il riassunto nell'header è tutto sfalsato e mancano
-     * le calorie obbiettivo lì sopra»*.
-     *
-     * ⚠️ Un numero da solo non dice niente: «308» può essere un digiuno o
-     * mezza giornata. 🚨 È lo stesso motivo per cui la scheda sotto scrive
-     * «308 / 2364», e mostrarne uno solo in cima rendeva le due cose diverse.
-     *
-     * 💡 La precedenza è quella di sempre (`TargetDelGiorno`): il piano del
-     * trainer, poi il calcolo locale. Qui si legge solo — la barra e le frasi
-     * stanno nella scheda.
-     */
-    final locale = day.hasTarget
-        ? null
-        : ref.watch(targetLocaleProvider).valueOrNull?.target;
-
-    /*
-     * ══ 🚨 LA STESSA CATENA DELLA SCHEDA, NON UN PEZZO ═════════════════════
-     *
-     * ⚠️ **Difetto visto sul telefono il 22/08**: qui c'erano solo le bruciate
-     * dell'archivio locale, mentre la scheda sotto passa da
-     * `BruciateDelGiorno.scegli` — che mette in fila **manuale → orologio →
-     * stima**. Risultato: l'intestazione diceva «/ 2309» e la scheda «/ 2364»,
-     * a due centimetri di distanza.
-     *
-     * 🚨 **Due numeri diversi per la stessa cosa nella stessa schermata** è il
-     * difetto che questo progetto continua a incontrare (N23, il grafico del
-     * 19/08, la scheda allenamento del 21/08). ⛔ Non si corregge scegliendo
-     * quale dei due è giusto: si corregge facendo passare tutti e due dalla
-     * stessa funzione.
-     */
-    final bruciate = BruciateDelGiorno.scegli(
-      manuale: ref.watch(bruciateAManoDelGiornoProvider(day.date)).valueOrNull,
-      daHealth:
-          ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
-      stimate:
-          ref.watch(bruciateLocaliDelGiornoProvider(day.date)).valueOrNull ?? 0,
-    );
-
-    final target = TargetDelGiorno.scegli(
-      dalServer: day.hasTarget ? day.targetKcal : null,
-      locale: locale?.kcal.toDouble(),
-      bruciate: bruciate.kcal,
-    );
-
-    return SizedBox(
-      height: 66,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
-        child: Row(
-          /*
-           * 🚨 `end` e non `center`: i due lati hanno altezze diverse — a
-           * sinistra un numero grande con l'etichetta sotto, a destra tre
-           * colonnine piccole. Centrandoli, le lettere P/C/G finivano più in
-           * alto dei numeri, ed era lo «sfalsato» che il committente ha visto.
-           */
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        day.kcal.round().toString(),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: sopra,
-                        ),
-                      ),
-                      if (target.esiste) ...[
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            '/ ${target.kcal!.round()}',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: sopra,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    'kcal',
-                    style: theme.textTheme.labelSmall?.copyWith(color: sopra),
-                  ),
-                ],
-              ),
-            ),
-
-            /*
-             * 🚨 Le iniziali e non i nomi: «Proteine · Carboidrati · Grassi» su
-             * una riga sola a 280 px non ci sta, e accorciarli a «Prot · Carb ·
-             * Gras» è peggio di una lettera — sembra un errore di battitura.
-             * 💡 I nomi per intero stanno nei quadrati, un pollice più giù.
-             */
-            _MacroInCima(lettera: 'P', valore: day.protein, colore: sopra),
-            _MacroInCima(lettera: 'C', valore: day.carbs, colore: sopra),
-            _MacroInCima(lettera: 'G', valore: day.fat, colore: sopra),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MacroInCima extends StatelessWidget {
-  const _MacroInCima({
-    required this.lettera,
-    required this.valore,
-    required this.colore,
-  });
-
-  final String lettera;
-  final double valore;
-  final Color colore;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(left: Gap.md),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        // 💡 Allineati a destra come il numero grande a sinistra: tre colonne
-        // centrate su se stesse davano tre distanze diverse dal bordo.
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            '${valore.round()}',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colore,
-            ),
-          ),
-          Text(
-            lettera,
-            style: theme.textTheme.labelSmall?.copyWith(color: colore),
-          ),
-        ],
-      ),
-    );
   }
 }
 

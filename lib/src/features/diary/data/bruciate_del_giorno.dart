@@ -1,25 +1,44 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 /// Da dove arrivano le calorie bruciate di oggi — FASE 1.
 enum FonteBruciate {
   /// Scritte a mano nella scheda cibo. 🚨 Vincono su tutto.
-  manuale('a mano'),
+  manuale('a mano', Icons.edit_outlined),
 
   /// Misurate dall'orologio e lette da Google Health.
-  orologio('dall\'orologio'),
+  orologio('dall\'orologio', Icons.watch_outlined),
 
   /// Stimate dalla nostra formula sulle sedute registrate (MET × kg × ore).
-  stima('stimate'),
+  stima('stimate', Icons.calculate_outlined),
 
   /// Non ce ne sono.
-  nessuna('');
+  nessuna('', null);
 
-  const FonteBruciate(this.etichetta);
+  const FonteBruciate(this.etichetta, this.icona);
 
   /// 💡 Si mostra accanto al numero. Senza, chi vede 310 invece di 400 non ha
   /// nessun modo di capire perché — e l'unica spiegazione che gli resta è
   /// «l'app sbaglia».
   final String etichetta;
+
+  /// La stessa cosa, **in un'icona** — 22/08/2026.
+  ///
+  /// 📌 Il committente: *«anziché la scritta "dall'orologio" mettici l'icona di
+  /// un orologio, altrimenti l'icona di una mano che scrive se le ho scritte a
+  /// mano»*.
+  ///
+  /// 💡 **Perché il testo non ci stava.** «547 · dall'orologio» dentro una
+  /// pasticca sfora su uno schermo stretto o a carattere ingrandito, e la parte
+  /// che si tronca è proprio quella che spiega il numero. Un'icona occupa
+  /// diciotto pixel e dice la stessa cosa.
+  ///
+  /// ⚠️ **L'etichetta resta**, e non è un doppione: finisce nel `tooltip`. Chi
+  /// non riconosce l'icona la scopre tenendo premuto, e chi usa un lettore di
+  /// schermo la sente — un'icona da sola sarebbe muta per lui.
+  ///
+  /// ⛔ `null` per [nessuna]: non c'è niente da spiegare, e un'icona
+  /// «generica» direbbe che una fonte c'è.
+  final IconData? icona;
 }
 
 /// Le calorie bruciate del giorno, con la loro provenienza — FASE 1.

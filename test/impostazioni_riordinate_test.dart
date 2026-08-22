@@ -14,17 +14,38 @@ import 'package:flutter_test/flutter_test.dart';
 /// 💡 E' la stessa forma di `niente_nome_per_la_palestra_test.dart`, che il
 /// 21/08 ha trovato il quinto punto che un grep aveva mancato.
 void main() {
-  String sorgente(String percorso) => File(percorso)
-      .readAsStringSync()
+  String sorgente(String percorso) =>
+      File(percorso).readAsStringSync()
       // 🚨 Gli a capo spariscono prima di cercare: una frase spezzata su due
       // righe e' invisibile a una ricerca ingenua, ed e' il modo in cui questo
       // progetto si e' gia' ingannato una volta.
       .replaceAll(RegExp(r'\s+'), ' ');
 
+  /*
+   * ══ 🚨 SENZA COMMENTI, O IL TEST ACCUSA LA PROPRIA SPIEGAZIONE ══════════
+   *
+   * ⚠️ **Trovato subito, al primo giro.** I commenti che spiegano una frase
+   * falsa la **citano**: `cosa_leggiamo.dart` scrive «Diceva: "non vengono
+   * mandati a nessun servizio…"» proprio per raccontare la correzione.
+   *
+   * ⛔ Un test che cerca quella stringa nel file intero diventa rosso per il
+   * commento che documenta la correzione — e la reazione naturale sarebbe
+   * cancellare il commento, cioe' perdere la memoria del difetto per far
+   * contento il test.
+   *
+   * 💡 Stessa soluzione di `niente_nome_per_la_palestra_test.dart`: si cerca
+   * **solo nel codice**.
+   */
+  String soloCodice(String percorso) => sorgente(
+    percorso,
+  ).replaceAll(RegExp(r'/\*.*?\*/'), ' ').replaceAll(RegExp('// [^\n]*'), ' ');
+
   group('3b-P.1 — la card del nome e le tre voci migrate', () {
     test('la card del nome porta a /profilo/tu', () {
-      expect(sorgente('lib/src/features/profile/ui/profile_screen.dart'),
-          contains('AppRoutes.tu'));
+      expect(
+        sorgente('lib/src/features/profile/ui/profile_screen.dart'),
+        contains('AppRoutes.tu'),
+      );
     });
 
     test('foto, citta e colore non sono piu nelle impostazioni', () {
@@ -109,7 +130,9 @@ void main() {
         final s = sorgente(percorso);
         if (!s.contains('TargetDelGiorno.scegli(')) continue;
 
-        if (!s.contains('sommaLeBruciate: ref.watch(sommaLeBruciateProvider)')) {
+        if (!s.contains(
+          'sommaLeBruciate: ref.watch(sommaLeBruciateProvider)',
+        )) {
           colpevoli.add(percorso);
         }
       }
@@ -121,6 +144,68 @@ void main() {
             'chi calcola l\'obiettivo deve LEGGERE la preferenza, non '
             'passare un valore fisso',
       );
+    });
+  });
+
+  group('3b-P.10 — la pagina dei dati non promette piu di quello che fa', () {
+    /*
+     * ══ 🚨 IL DIFETTO E' NEL TESTO, E NESSUNO STRUMENTO LO VEDE ═══════════
+     *
+     * ⚠️ Il 22/08 sono state trovate **tre** frasi false — nell'app, nei
+     * consensi e nell'informativa — tutte della stessa forma: una promessa
+     * **senza condizioni** su un fatto **condizionato**.
+     *
+     * ⛔ Nessun analizzatore legge le frasi, e nessun test guardava i testi.
+     * Questo gruppo lo fa: non verifica che siano belle, verifica che le due
+     * parole che le rendevano false non tornino.
+     */
+    test('nessuna promessa assoluta sull intelligenza artificiale', () {
+      for (final percorso in [
+        'lib/src/features/health/ui/widgets/cosa_leggiamo.dart',
+        'lib/src/features/privacy/ui/schermata_consensi.dart',
+      ]) {
+        final s = soloCodice(percorso);
+
+        expect(
+          s,
+          isNot(contains('non vengono mandati a nessun servizio')),
+          reason:
+              '$percorso: era falsa — la settimana di sonno e allenamenti '
+              'parte con il consenso al recupero',
+        );
+        expect(
+          s,
+          isNot(
+            contains(
+              'non li mandiamo a '
+              'nessuno, nemmeno a noi',
+            ),
+          ),
+          reason: '$percorso: si contraddiceva due interruttori piu giu',
+        );
+      }
+    });
+
+    test('la garanzia sull anonimato c e, e nomina cosa NON alleghiamo', () {
+      final s = sorgente(
+        'lib/src/features/privacy/ui/widgets/dove_vanno_i_dati.dart',
+      );
+
+      // ✅ Vera e verificata in `AnthropicProvider::rawCall`.
+      expect(s, contains('Chi sei non parte mai'));
+
+      /*
+       * 🚨 **E deve dire anche le eccezioni.** Una garanzia che tace su testo,
+       * foto e PDF sarebbe la quarta frase falsa della giornata: quelle tre
+       * cose le manda la persona, e possono contenere quello che ci mette.
+       */
+      for (final eccezione in ['scrivi', 'foto', 'PDF']) {
+        expect(
+          s,
+          contains(eccezione),
+          reason: 'la garanzia non nomina l eccezione: $eccezione',
+        );
+      }
     });
   });
 

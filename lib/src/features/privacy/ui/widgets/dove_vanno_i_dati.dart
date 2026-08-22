@@ -66,6 +66,24 @@ class DoveVannoIDati extends ConsumerWidget {
         ),
         const SizedBox(height: Gap.sm),
 
+        /*
+         * ══ ✅ VERIFICATO SUL CODICE, NON SCRITTO A MEMORIA — 22/08/2026 ═══
+         *
+         * 📌 Il committente: *«vedi veramente quali dati restano sul server,
+         * quali restano sul telefono e quali inviamo ad Anthropic»*.
+         *
+         * ⚠️ **Il primo giro era scritto a occhio, e conteneva un errore**: il
+         * peso figurava fra i dati del server. 🚨 `storicoCorpoProvider` legge
+         * da `archivioSalute.storicoMisure()` — è **locale** dalla fase S5. Sul
+         * server resta solo il peso *obiettivo*, che è un campo del profilo.
+         *
+         * 💡 Le fonti, per chi deve riverificare:
+         * · `corpo_controller.dart` → misure locali
+         * · `AiController::contestoConsiglio()` → cosa entra nel consiglio
+         * · `AiController::RECUPERO` / `SETTIMANA` → le liste bianche
+         * · `AnthropicProvider::rawCall()` → cosa parte davvero nella richiesta
+         * · `DashboardService::corpo()` → `body` è **solo** il peso obiettivo
+         */
         const _Card(
           icona: Icons.phone_android_rounded,
           titolo: 'Restano su questo telefono',
@@ -73,13 +91,13 @@ class DoveVannoIDati extends ConsumerWidget {
               'Non partono mai da soli. Se disinstalli l\'app spariscono con '
               'lei: l\'unica copia è quella di sicurezza che fai tu.',
           voci: [
-            'Sonno, fasi e risvegli',
+            'Sonno: ore, fasi e risvegli',
             'Variabilità cardiaca e battito a riposo',
             'Calorie bruciate con l\'attività',
-            'Allenamenti, sedute e serie',
-            'Peso e misure del corpo',
+            'Allenamenti, sedute, serie e ripetizioni',
+            'Peso e misure che registri',
             'Foto dei progressi',
-            'Le tue preferenze dell\'app',
+            'Le preferenze dell\'app',
           ],
         ),
 
@@ -89,15 +107,16 @@ class DoveVannoIDati extends ConsumerWidget {
           icona: Icons.cloud_outlined,
           titolo: 'Stanno sui nostri server',
           sottotitolo:
-              'Servono a farli funzionare fra più dispositivi e con il tuo '
-              'trainer. La tua palestra vede quello che riguarda il tuo '
+              'Servono a farli funzionare con il tuo trainer e a ritrovarli se '
+              'cambi telefono. La tua palestra vede quello che riguarda il tuo '
               'percorso — mai i messaggi che scambi con il trainer.',
           voci: [
             'Account, email e accessi',
-            'Il tuo profilo: sesso, età, altezza, obiettivo',
-            'Il diario alimentare e i pasti',
+            'Il profilo: sesso, età, altezza, obiettivo e peso da raggiungere',
+            'Il diario alimentare, con quello che scrivi negli alimenti',
             'Le schede e i piani che ti assegna il trainer',
             'I messaggi con il tuo trainer',
+            'Acquisti e gettoni',
           ],
         ),
 
@@ -118,21 +137,125 @@ class DoveVannoIDati extends ConsumerWidget {
               : 'Andrebbero all\'intelligenza artificiale',
           sottotitolo: aiAttiva
               ? 'Solo quando serve una risposta, e solo quello che serve a '
-                    'quella risposta. Niente nome, niente email, niente foto '
-                    'del profilo.'
+                    'quella risposta.'
               : 'L\'AI è spenta: adesso non parte niente. Se la accendi qui '
                     'sotto, partirebbe questo — e solo quando serve una '
                     'risposta.',
           voci: [
-            'Quello che scrivi per farti stimare un alimento',
-            'Le foto dei pasti, se le usi per la stima',
-            'Il diario del giorno e il tuo obiettivo, per il consiglio',
+            'Il consiglio del giorno: solo numeri — calorie, macro, obiettivo, '
+                'minuti di allenamento, peso da raggiungere. Nessun alimento '
+                'per nome',
             if (saluteAllAi)
-              'Sonno, HRV, battito e allenamenti della settimana'
+              'Con il tuo consenso, anche la settimana di sonno, battito e '
+                  'allenamenti: ore, minuti e numeri'
             else
               'Sonno e recupero NO: è un consenso a parte, e non l\'hai dato',
+            'Quello che scrivi per farti stimare un alimento, come l\'hai '
+                'scritto',
+            'Le foto dei pasti, se le usi per la stima',
+            'Il PDF di una scheda o di un piano, se lo importi',
           ],
           spento: !aiAttiva,
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        /*
+         * ══ 🚨 LA PARTE PIÙ IMPORTANTE, E LA PIÙ FACILE DA SCRIVERE FALSA ══
+         *
+         * 📌 Il committente: *«indica chiaramente che i dati che mandiamo ad
+         * Anthropic non sono associabili a lui, sono solo numeri senza nessun
+         * identificativo»*.
+         *
+         * ✅ **Sulla prima metà è vero, ed è verificato**: `rawCall()` manda
+         * modello, messaggi e prompt di sistema. Niente nome, niente email,
+         * niente id dell'account, niente palestra. Non c'è nemmeno il campo
+         * `metadata.user_id` che l'API permetterebbe.
+         *
+         * ⛔ **Sulla seconda metà "solo numeri" non lo è per tutto**, e dirlo
+         * senza distinguere sarebbe la terza dichiarazione falsa di oggi:
+         *
+         * | Cosa parte | È solo numeri? |
+         * |---|---|
+         * | Consiglio del giorno | ✅ sì — vedi `contestoConsiglio()` |
+         * | Settimana di sonno e allenamenti | ✅ sì — liste bianche `SETTIMANA` e `RECUPERO` |
+         * | Testo che scrivi tu | ⛔ no: parte come l'hai scritto |
+         * | Foto di un pasto | ⛔ no, ma **ricodificata**: posizione e dati della fotocamera restano fuori |
+         * | PDF di una scheda | ⛔ no: se la palestra ci ha stampato il nome, parte |
+         *
+         * 💡 Quindi la card dice **tutte e due le cose**. La prima è una
+         * garanzia che diamo noi; la seconda dipende da cosa manda la persona,
+         * ed è l'unica su cui può decidere lei — ma solo se gliela diciamo.
+         */
+        Card(
+          margin: EdgeInsets.zero,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Padding(
+            padding: const EdgeInsets.all(Gap.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.no_accounts_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: Text(
+                        'Chi sei non parte mai',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Gap.sm),
+
+                Text(
+                  'Alle richieste verso l\'intelligenza artificiale non '
+                  'alleghiamo il tuo nome, la tua email, il tuo account né la '
+                  'tua palestra. Dall\'altra parte arrivano numeri — calorie, '
+                  'macro, minuti, battiti — senza niente che dica di chi sono.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+
+                const SizedBox(height: Gap.sm),
+
+                Text(
+                  'Le uniche cose che possono contenere qualcosa di tuo sono '
+                  'quelle che mandi tu: il testo che scrivi per una stima, una '
+                  'foto o il PDF di una scheda. Le foto le ricodifichiamo, '
+                  'quindi la posizione dove le hai scattate resta fuori — ma '
+                  'se scrivi il tuo nome in un testo, o se la palestra l\'ha '
+                  'stampato sulla scheda, quello parte con il resto.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+
+                const SizedBox(height: Gap.sm),
+
+                /*
+                 * ⚠️ **I trenta giorni non si arrotondano a «non conservano
+                 * niente»**: non abbiamo un accordo di conservazione zero, e
+                 * `memory/informativa_privacy.md` §4 è scritta su questa
+                 * verità. 🚨 Se un domani lo si ottiene, cambia questa frase
+                 * **e** quella dell'informativa, insieme.
+                 */
+                Text(
+                  'Anthropic non usa quello che le arriva per addestrare i '
+                  'suoi modelli, e lo tiene al massimo trenta giorni.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

@@ -107,12 +107,31 @@ class SchermataConsensi extends ConsumerWidget {
 
             _Interruttore(
               titolo: 'Consiglio del giorno e riconoscimento dei pasti',
+              /*
+               * ⚠️ **«quello che hai scritto nel diario» era impreciso**, e in
+               * due direzioni opposte — 22/08/2026, dopo aver verificato.
+               *
+               * 🚨 Il **consiglio del giorno** il diario non lo manda affatto:
+               * manda i **totali** (`contestoConsiglio()` prende
+               * `$giornata['totals']`, non `['meals']`). ⛔ Il
+               * **riconoscimento** invece manda esattamente quello che scrivi,
+               * parola per parola — che è di più, non di meno.
+               *
+               * 💡 Dirlo separato: sono due cose diverse dietro lo stesso
+               * consenso, e chi decide deve sapere quale fa cosa.
+               */
               spiegazione:
-                  'Per funzionare, queste due cose mandano quello che hai '
-                  'scritto nel diario ad Anthropic, negli Stati Uniti. '
-                  'È un\'azienda diversa dalla nostra, e da quello che mangi si '
-                  'possono dedurre cose sulla tua salute: per questo te lo '
-                  'chiediamo a parte.',
+                  'Il riconoscimento manda ad Anthropic, negli Stati Uniti, '
+                  'quello che scrivi o fotografi per farti stimare un '
+                  'alimento. Il consiglio del giorno manda solo numeri: '
+                  'calorie, macro e obiettivo, senza il nome di quello che hai '
+                  'mangiato.\n\n'
+                  'In nessuno dei due casi alleghiamo il tuo nome, la tua '
+                  'email o il tuo account: dall\'altra parte non c\'è niente '
+                  'che dica chi sei.\n\n'
+                  'Resta un\'azienda diversa dalla nostra, e da quello che '
+                  'mangi si possono dedurre cose sulla tua salute: per questo '
+                  'te lo chiediamo a parte.',
               concessoIl: dati.ai,
               chiave: 'ai',
             ),
@@ -139,10 +158,12 @@ class SchermataConsensi extends ConsumerWidget {
               spiegazione:
                   'Il consiglio tiene conto anche di come hai dormito: ore, '
                   'risvegli, sonno profondo, variabilità cardiaca e battito a '
-                  'riposo. Questi dati partono verso Anthropic insieme al resto, '
-                  'e sono più intimi di quello che mangi: per questo te lo '
-                  'chiediamo a parte. Senza, il consiglio funziona lo stesso — '
-                  'solo, non sa se stanotte hai dormito male.',
+                  'riposo. Questi dati partono verso Anthropic insieme al '
+                  'resto — come numeri, e senza niente che dica che sono i '
+                  'tuoi.\n\n'
+                  'Sono comunque più intimi di quello che mangi: per questo te '
+                  'lo chiediamo a parte. Senza, il consiglio funziona lo '
+                  'stesso — solo, non sa se stanotte hai dormito male.',
               concessoIl: dati.recupero,
               chiave: 'sleep_ai',
               abilitato: dati.aiDato,

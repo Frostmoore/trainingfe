@@ -109,6 +109,18 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
                   'consiglio. Se non lo dai, non parte.',
                 ),
                 const SizedBox(height: Gap.sm),
+                /*
+                 * 💡 **Anche qui, e non solo in Privacy.** Chi legge questa
+                 * pagina sta decidendo se dare un permesso: la garanzia che
+                 * serve a decidere deve stare accanto alla frase che descrive
+                 * il rischio, non tre schermate più in là.
+                 */
+                Text(
+                  'E anche quando parte, parte come numeri: ore, minuti e '
+                  'battiti, senza il tuo nome, la tua email o il tuo account.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: Gap.sm),
                 Text(
                   'Se disinstalli l\'app, spariscono con lei.',
                   style: theme.textTheme.bodySmall,

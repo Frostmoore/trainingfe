@@ -52,19 +52,33 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           height: 52,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
-            child: SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(
-                  value: 0,
-                  label: Text('Storico'),
-                  icon: Icon(Icons.history_rounded),
-                ),
-                ButtonSegment(
-                  value: 1,
-                  label: Text('Schede'),
-                  icon: Icon(Icons.assignment_outlined),
-                ),
-                /*
+            /*
+             * 🎯 **Centrato** — 3b-A.1.1, 23/08/2026, su richiesta del
+             * committente: *«Le pasticche con storico, schede e foto devono
+             * essere centrate, non allineate a sinistra»*.
+             *
+             * ⚠️ **Il `Center` non basta da solo**: `SegmentedButton` dentro un
+             * `Padding` si prende tutta la larghezza e distribuisce i segmenti,
+             * quindi *sembra* centrato ma è **stirato**. Con tre segmenti su un
+             * telefono largo le pasticche diventano enormi.
+             *
+             * 💡 `Center` + `mainAxisSize` implicito: il gruppo prende la
+             * larghezza che gli serve e sta in mezzo.
+             */
+            child: Center(
+              child: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(
+                    value: 0,
+                    label: Text('Storico'),
+                    icon: Icon(Icons.history_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 1,
+                    label: Text('Schede'),
+                    icon: Icon(Icons.assignment_outlined),
+                  ),
+                  /*
                  * 📷 **Le foto dei progressi** — 3b-P.9.1, 22/08/2026.
                  *
                  * 📌 Il committente: *«Non ha senso che sia qui [nelle
@@ -76,15 +90,16 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                  * accanto a un `SegmentedButton` avrebbe dato due comandi
                  * diversi per la stessa cosa nella stessa schermata.
                  */
-                ButtonSegment(
-                  value: 2,
-                  label: Text('Foto'),
-                  icon: Icon(Icons.photo_camera_outlined),
-                ),
-              ],
-              selected: {_vista},
-              onSelectionChanged: (s) => setState(() => _vista = s.first),
-              showSelectedIcon: false,
+                  ButtonSegment(
+                    value: 2,
+                    label: Text('Foto'),
+                    icon: Icon(Icons.photo_camera_outlined),
+                  ),
+                ],
+                selected: {_vista},
+                onSelectionChanged: (s) => setState(() => _vista = s.first),
+                showSelectedIcon: false,
+              ),
             ),
           ),
         ),

@@ -21,7 +21,7 @@ class VoceStorico {
   const VoceStorico({
     required this.sedute,
     required this.dalPolso,
-    this.scheda,
+    this.nomeScheda,
   });
 
   /// Le sedute registrate **nell'app**, in ordine di tempo.
@@ -32,9 +32,18 @@ class VoceStorico {
   /// Gli allenamenti registrati **dall'orologio**, in ordine di tempo.
   final List<AllenamentoDaOrologio> dalPolso;
 
-  /// La scheda che la persona ha detto di aver fatto, se l'ha assegnata a uno
-  /// degli allenamenti del gruppo.
-  final SchedaRicevuta? scheda;
+  /// Il nome della scheda che la persona ha detto di aver fatto.
+  ///
+  /// ══ 🚨 IL NOME E NON IL MODELLO — 3b-A.2, 23/08/2026 ═══════════════════
+  ///
+  /// ⛔ Prima era una `SchedaRicevuta`, cioè **solo** una scheda arrivata in
+  /// chat. Le schede assegnate dal trainer stanno sul server, e non c'era modo
+  /// di rappresentarle: chi ha solo quelle non poteva assegnarne nessuna.
+  ///
+  /// 💡 Di quel modello si usava **una cosa sola, il nome** — lo si vede in
+  /// `history_screen`. Tenerlo come stringa toglie l'accoppiamento e fa entrare
+  /// tutte e due le provenienze senza inventare un tipo comune.
+  final String? nomeScheda;
 
   /// La seduta principale: la **prima**, quando c'è.
   ///
@@ -206,7 +215,13 @@ abstract final class StoricoUnificato {
   static List<VoceStorico> fondi({
     required List<WorkoutSession> sessioni,
     required List<AllenamentoDaOrologio> dallOrologio,
-    Map<int, SchedaRicevuta> schede = const {},
+
+    /// I nomi delle schede, per **id firmato**.
+    ///
+    /// 🚨 **Negativo = arrivata in chat, positivo = dal server.** È la stessa
+    /// convenzione di `schedeUniteProvider`, e riusarla è quello che permette a
+    /// una sola mappa di contenere tutte e due le provenienze.
+    Map<int, String> nomiDelleSchede = const {},
   }) {
     final voci = <VoceStorico>[];
 
@@ -231,7 +246,7 @@ abstract final class StoricoUnificato {
           VoceStorico(
             sedute: const [],
             dalPolso: [a],
-            scheda: schede[a.schedaAssegnata],
+            nomeScheda: nomiDelleSchede[a.schedaAssegnata],
           ),
         );
 
@@ -263,13 +278,15 @@ abstract final class StoricoUnificato {
        * due direbbe che sono due allenamenti — cioè il contrario di quello che
        * il raggruppamento ha appena stabilito.
        */
-      SchedaRicevuta? scheda;
+      String? nomeScheda;
 
       for (final a in polso) {
-        scheda ??= schede[a.schedaAssegnata];
+        nomeScheda ??= nomiDelleSchede[a.schedaAssegnata];
       }
 
-      voci.add(VoceStorico(sedute: sedute, dalPolso: polso, scheda: scheda));
+      voci.add(
+        VoceStorico(sedute: sedute, dalPolso: polso, nomeScheda: nomeScheda),
+      );
     }
 
     voci.sort((a, b) => b.quando.compareTo(a.quando));

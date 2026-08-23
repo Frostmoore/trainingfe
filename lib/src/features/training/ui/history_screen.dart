@@ -13,9 +13,9 @@ import '../../../core/ui/states.dart';
 import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
 import '../data/storico_unificato.dart';
-import '../schede_ricevute_controller.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
+import '../training_controller.dart';
 
 /// Lo storico degli allenamenti — C10.
 ///
@@ -215,7 +215,7 @@ class _CardAllenamento extends ConsumerWidget {
                 ),
               ),
 
-            if (voce.scheda != null)
+            if (voce.nomeScheda != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Row(
@@ -228,7 +228,7 @@ class _CardAllenamento extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        voce.scheda!.nome,
+                        voce.nomeScheda!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: tema.textTheme.bodySmall?.copyWith(
@@ -549,7 +549,14 @@ class _Azioni extends ConsumerWidget {
   /// e qui è facilissimo toccare la riga sbagliata: le corse di due giorni
   /// diversi si somigliano molto.
   Future<void> _scegliScheda(BuildContext context, WidgetRef ref) async {
-    final schede = await ref.read(schedeRicevuteProvider.future);
+    /*
+     * 🚨 **Tutte le schede, non solo quelle della chat** — 3b-A.2.
+     *
+     * ⛔ Leggeva `schedeRicevuteProvider`, cioè l'archivio locale: chi riceve
+     * le schede dal trainer **dal server** si sentiva rispondere che non ne
+     * aveva nessuna. Era il caso normale, non un caso limite.
+     */
+    final schede = await ref.read(schedeUniteProvider.future);
 
     if (!context.mounted) return;
 
@@ -587,7 +594,7 @@ class _Azioni extends ConsumerWidget {
             for (final s in schede)
               ListTile(
                 leading: const Icon(Icons.assignment_outlined),
-                title: Text(s.nome),
+                title: Text(s.name),
                 selected: s.id == bersaglio.schedaAssegnata,
                 onTap: () => Navigator.of(context).pop(_Scelta(s.id)),
               ),

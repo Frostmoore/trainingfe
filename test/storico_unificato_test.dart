@@ -54,6 +54,7 @@ void main() {
     int? kcal = 400,
     bool nascosto = false,
     bool staccato = false,
+    int? schedaAssegnata,
   }) => AllenamentoDaOrologio(
     id: id,
     fonte: 'com.huami.watch.hmwatchmanager',
@@ -63,7 +64,72 @@ void main() {
     kcal: kcal,
     nascosto: nascosto,
     staccato: staccato,
+    schedaAssegnata: schedaAssegnata,
   );
+
+  group('3b-A.2 — la scheda assegnata, da qualunque parte venga', () {
+    /*
+     * ══ 🚨 IL DIFETTO CHE QUESTO GRUPPO CHIUDE — 23/08/2026 ═══════════════
+     *
+     * 📌 Il committente: *«Non funziona l'opzione di aggiungere una scheda a un
+     * allenamento dall'orologio, mi dice sempre che non ho schede
+     * disponibili»*.
+     *
+     * ⛔ Il selettore leggeva **solo** l'archivio locale — le schede arrivate
+     * in chat. Quelle assegnate dal trainer stanno sul server, e per chi ha
+     * solo quelle l'elenco era **sempre vuoto**: il caso normale, non un caso
+     * limite.
+     *
+     * 💡 La convenzione dei segni e' quella di `schedeUniteProvider`:
+     * **negativo** = arrivata in chat, **positivo** = dal server. Una mappa
+     * sola le contiene tutte e due.
+     */
+    test('una scheda del SERVER si risolve, ed e il caso che era rotto', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18), schedaAssegnata: 42)],
+        nomiDelleSchede: const {42: 'Full body del trainer'},
+      );
+
+      expect(voci.single.nomeScheda, 'Full body del trainer');
+    });
+
+    test('e una arrivata in chat pure, con l id negativo', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18), schedaAssegnata: -7)],
+        nomiDelleSchede: const {-7: 'Scheda ricevuta'},
+      );
+
+      expect(voci.single.nomeScheda, 'Scheda ricevuta');
+    });
+
+    test('senza assegnazione non si inventa un nome', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18))],
+        nomiDelleSchede: const {42: 'Full body'},
+      );
+
+      expect(voci.single.nomeScheda, isNull);
+    });
+
+    test('una scheda cancellata non lascia un nome fantasma', () {
+      /*
+       * ⚠️ L'id resta nell'archivio anche se la scheda non c'e' piu': il
+       * trainer puo' averla cancellata. ⛔ In quel caso non si mostra niente —
+       * e non si mostra «scheda #42», che sarebbe un numero senza significato
+       * per chi legge.
+       */
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(18), schedaAssegnata: 99)],
+        nomiDelleSchede: const {42: 'Full body'},
+      );
+
+      expect(voci.single.nomeScheda, isNull);
+    });
+  });
 
   group('D-1bis/A — basta la sovrapposizione', () {
     /// 📌 Lo scenario testuale del committente: parto dall'app, faccio partire

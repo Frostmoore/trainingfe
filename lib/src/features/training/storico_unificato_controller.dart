@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import 'data/storico_unificato.dart';
-import 'schede_ricevute_controller.dart';
 import 'session_controller.dart';
+import 'training_controller.dart';
 
 /// Gli allenamenti registrati dall'orologio, dal telefono — FASE 1.9.
 ///
@@ -53,19 +53,31 @@ final storicoUnificatoProvider = FutureProvider.autoDispose<List<VoceStorico>>((
         return const <AllenamentoDaOrologio>[];
       });
 
-  final schede = await ref
-      .watch(schedeRicevuteProvider.future)
-      .then((v) => {for (final s in v) s.id: s})
+  /*
+   * ══ 🚨 TUTTE E DUE LE PROVENIENZE — 3b-A.2, 23/08/2026 ═══════════════════
+   *
+   * ⛔ Qui c'era `schedeRicevuteProvider`, che contiene **solo** le schede
+   * arrivate in chat. Le schede assegnate dal trainer stanno sul server, e per
+   * chi ha solo quelle — cioè il caso normale — l'elenco era **sempre vuoto**:
+   * *«mi dice sempre che non ho schede disponibili»*.
+   *
+   * 💡 `schedeUniteProvider` le tiene già insieme, e firma gli id: **negativo**
+   * per quelle locali, **positivo** per quelle del server. La stessa
+   * convenzione vale per `schedaAssegnata`, quindi una mappa sola basta.
+   */
+  final nomi = await ref
+      .watch(schedeUniteProvider.future)
+      .then((v) => {for (final s in v) s.id: s.name})
       .catchError((Object e) {
         debugPrint('storicoUnificato: le schede non si leggono — $e');
 
-        return const <int, SchedaRicevuta>{};
+        return const <int, String>{};
       });
 
   return StoricoUnificato.fondi(
     sessioni: sessioni,
     dallOrologio: dalPolso,
-    schede: schede,
+    nomiDelleSchede: nomi,
   );
 });
 

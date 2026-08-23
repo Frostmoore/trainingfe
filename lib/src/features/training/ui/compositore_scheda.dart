@@ -7,6 +7,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
+import 'widgets/scelta_muscoli.dart';
 
 /// Comporre una scheda dal telefono — G7.2 (D11).
 ///
@@ -448,6 +449,15 @@ class _Esercizio extends StatelessWidget {
                   tooltip: 'Togli',
                 ),
               ],
+            ),
+
+            RigaMuscoli(
+              nome: esercizio.nome,
+              muscoli: esercizio.muscoli,
+              onScelti: (scelti) {
+                esercizio.muscoli = scelti;
+                onCambio();
+              },
             ),
 
             const SizedBox(height: Gap.sm),

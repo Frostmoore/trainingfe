@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../data/gruppo_muscolare.dart';
 import '../training_controller.dart';
+import 'widgets/scelta_muscoli.dart';
 
 /// L'editor delle schede — C11.
 ///
@@ -197,6 +199,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                     _righe.removeAt(i).dispose();
                     if (_righe.isEmpty) _righe.add(_RigaEditor());
                   }),
+                  onCambio: () => setState(() {}),
                 ),
             ],
           ),
@@ -250,6 +253,15 @@ class _RigaEditor {
        note = TextEditingController(text: note ?? '');
 
   final TextEditingController nome;
+
+  /// Che muscoli allena, se qualcuno l'ha detto — 3b-A.3.4, 23/08/2026.
+  ///
+  /// 🚨 `null` vuol dire **«nessuno l'ha deciso»** e non si manda niente;
+  /// un elenco vuoto vuol dire **«questo esercizio isola»** e si manda. ⛔ Le
+  /// due cose confuse riempirebbero la libreria di esercizi che *dichiarano*
+  /// di non avere secondari — la stessa nota sta su `EsercizioDellaScheda`.
+  MuscoliScelti? muscoli;
+
   final TextEditingController serie;
   final TextEditingController reps;
   final TextEditingController riposo;
@@ -263,6 +275,14 @@ class _RigaEditor {
     'rest_sec': int.tryParse(riposo.text.trim()),
     'target_weight': double.tryParse(peso.text.trim().replaceAll(',', '.')),
     'notes': note.text.trim().isEmpty ? null : note.text.trim(),
+
+    // 🚨 Solo se qualcuno ha risposto: vedi la nota su `muscoli`.
+    if (muscoli != null) ...{
+      if (muscoli!.primario != null) 'muscle_group': muscoli!.primario!.valore,
+      'secondary_muscles': muscoli!.secondari
+          .map((m) => m.valore)
+          .toList(growable: false),
+    },
   };
 
   void dispose() {
@@ -280,12 +300,14 @@ class _CardRiga extends StatelessWidget {
     required this.indice,
     required this.riga,
     required this.onRimuovi,
+    required this.onCambio,
     super.key,
   });
 
   final int indice;
   final _RigaEditor riga;
   final VoidCallback onRimuovi;
+  final VoidCallback onCambio;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -319,6 +341,30 @@ class _CardRiga extends StatelessWidget {
                 icon: const Icon(Icons.close_rounded),
               ),
             ],
+          ),
+
+          /*
+           * 🆕 I muscoli — 3b-A.3.4.
+           *
+           * ⚠️ **Si legge dal controller, non da uno stato copiato**: il nome
+           * cambia mentre si scrive, e la riga deve accorgersi quando smette di
+           * corrispondere a un esercizio del catalogo. 💡 `AnimatedBuilder` sul
+           * controller e' il modo piu' economico per ricostruire solo questa
+           * riga a ogni tasto, invece di tutta la scheda.
+           */
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AnimatedBuilder(
+              animation: riga.nome,
+              builder: (context, _) => RigaMuscoli(
+                nome: riga.nome.text,
+                muscoli: riga.muscoli,
+                onScelti: (scelti) {
+                  riga.muscoli = scelti;
+                  onCambio();
+                },
+              ),
+            ),
           ),
           Row(
             children: [

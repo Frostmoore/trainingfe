@@ -19,6 +19,8 @@
 /// numero, e nessuna delle due può diventare l'altra.
 library;
 
+import 'gruppo_muscolare.dart';
+
 /// Un esercizio, o **l'alternativa a un esercizio** — D10.
 ///
 /// 🚨 Sono la stessa classe **di proposito**, come `AlimentoDelPiano`: chi
@@ -35,6 +37,7 @@ class EsercizioDellaScheda {
     this.durataSec,
     this.pesoTarget,
     this.note,
+    this.muscoli,
     List<EsercizioDellaScheda>? alternative,
   }) : alternative = alternative ?? [];
 
@@ -55,6 +58,7 @@ class EsercizioDellaScheda {
     durataSec: (json['duration_sec'] as num?)?.toInt(),
     pesoTarget: (json['target_weight'] as num?)?.toDouble(),
     note: json['notes']?.toString(),
+    muscoli: _muscoliDa(json),
     alternative: ((json['alternatives'] as List?) ?? const [])
         .map(
           (e) =>
@@ -87,6 +91,22 @@ class EsercizioDellaScheda {
   /// dire che si leggono quando l'esercizio è già finito.
   String? note;
 
+  /// Che muscoli allena, quando qualcuno l'ha detto — 3b-A.3.4, 23/08/2026.
+  ///
+  /// ══ 🚨 TRE STATI, NON DUE ══════════════════════════════════════════════
+  ///
+  /// - `null` → **nessuno l'ha deciso**. Non si manda niente al server, e
+  ///   l'esercizio resta da completare.
+  /// - `secondari` vuoto → **«questo esercizio isola davvero»**. È una
+  ///   risposta, e va mandata.
+  /// - `secondari` pieno → i muscoli che aiutano.
+  ///
+  /// ⛔ Ridurli a due stati mandando sempre un elenco vuoto sarebbe il difetto
+  /// peggiore possibile qui: la libreria si riempirebbe di esercizi che
+  /// *dichiarano* di non avere secondari, e la guardia che cerca i buchi non ne
+  /// troverebbe più nessuno. Il catalogo marcirebbe **in silenzio**.
+  MuscoliScelti? muscoli;
+
   /// Al massimo tre — D2. Il limite lo applica anche il server.
   final List<EsercizioDellaScheda> alternative;
 
@@ -116,6 +136,14 @@ class EsercizioDellaScheda {
     if (durataSec != null) 'duration_sec': durataSec,
     if (pesoTarget != null) 'target_weight': pesoTarget,
     if (note != null && note!.trim().isNotEmpty) 'notes': note!.trim(),
+
+    // 🚨 Solo se qualcuno ha risposto: vedi i tre stati su `muscoli`.
+    if (muscoli != null) ...{
+      if (muscoli!.primario != null) 'muscle_group': muscoli!.primario!.valore,
+      'secondary_muscles': muscoli!.secondari
+          .map((m) => m.valore)
+          .toList(growable: false),
+    },
     // ⚠️ Le alternative senza nome si scartano qui: l'editor ne tiene volentieri
     // una vuota, e il server la rifiuterebbe (`name` è `required`).
     if (alternative.any((a) => !a.vuoto))
@@ -124,6 +152,34 @@ class EsercizioDellaScheda {
           .map((a) => a.toJson())
           .toList(),
   };
+}
+
+/// I muscoli letti da una riga del server, se ci sono.
+///
+/// ⚠️ Si guarda **prima** la riga e poi l'esercizio del catalogo: in scrittura
+/// il server rimanda quello che ha scritto lui, in lettura di una scheda la
+/// riga annidata `exercise` porta il dato della libreria. È la stessa forma di
+/// ripiego che usa `name` qui sopra, e per lo stesso motivo.
+MuscoliScelti? _muscoliDa(Map<String, dynamic> json) {
+  final esercizio = (json['exercise'] as Map?)?.cast<String, dynamic>();
+
+  final primario = GruppoMuscolare.da(
+    json['muscle_group'] ?? esercizio?['muscle_group'],
+  );
+
+  final secondari =
+      json['secondary_muscles'] ?? esercizio?['secondary_muscles'];
+
+  // 💡 Niente di niente resta `null`: «non lo so» non è «non ne ha».
+  if (primario == null && secondari == null) return null;
+
+  return (
+    primario: primario,
+    secondari: ((secondari as List?) ?? const [])
+        .map(GruppoMuscolare.da)
+        .nonNulls
+        .toList(growable: false),
+  );
 }
 
 /// Un giorno, o **l'alternativa a un giorno** — D2.

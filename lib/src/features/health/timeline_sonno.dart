@@ -32,40 +32,37 @@ class SegmentoSonno {
 /// aveva **una sola** sessione — `03:02 → 11:51`, scritta da Zepp, 529 minuti —
 /// e l'app ne sommava 728.
 ///
-/// ── 🚨 Da dove venivano i minuti in più ──────────────────────────────────
+/// ── 🚨 Da dove venivano i minuti in più — VERIFICATO SUI DATI ───────────
 ///
-/// `PonteSalute` chiede a Health Connect **sia** le fasi dettagliate
-/// (`SLEEP_DEEP`, `SLEEP_REM`, `SLEEP_LIGHT`, `SLEEP_AWAKE`) **sia** quella
-/// generica `SLEEP_ASLEEP` — «dorme, ma non sappiamo come» — e la mappa su
-/// *leggero*.
+/// ⛔ **Le prime due spiegazioni erano sbagliate**, e sono scritte qui perché
+/// sbagliare due volte di seguito sullo stesso difetto è la cosa da ricordare.
 ///
-/// ⛔ **Ma `SLEEP_ASLEEP` non è una fase in più: è la stessa notte descritta a
-/// grana grossa.** Si sovrappone alle altre, e sommarla è contare due volte lo
-/// stesso tempo.
+/// 1. *«È `SLEEP_ASLEEP`, la fase generica, che si somma alle dettagliate»* —
+///    plausibile, e falsa. `PonteSalute` la chiede davvero, ma su questa notte
+///    non c'era nemmeno un campione generico.
+/// 2. *«I 199 minuti stanno tutti sul leggero, perché
+///    `191 + 127 + 172 + 39 = 529` torna al minuto»* — una somma che torna non
+///    è una prova: di scomposizioni compatibili ce n'erano molte.
 ///
-/// ── ⛔ La ricostruzione fatta a tavolino era SBAGLIATA ──────────────────
+/// 💡 **La causa vera, letta dai campioni grezzi del 23/08/2026**: l'orologio
+/// scrive la stessa notte **due volte**, con i confini spostati di un minuto o
+/// due. Una sola fonte — `com.huami.watch.hmwatchmanager` — e coppie come
+/// queste:
 ///
-/// 🚨 Prima di scrivere questa classe avevo dedotto che i 199 minuti di troppo
-/// stessero **tutti sul leggero**, perché `191 + 127 + 172 + 39 = 529` torna al
-/// minuto — e l'avevo chiamata *«l'unica scomposizione che torna»*.
+/// ```
+/// Profondo 03:19 → 04:09 = 50      Profondo 03:25 → 04:09 = 44
+/// Profondo 04:30 → 04:57 = 27      Profondo 04:31 → 04:57 = 26
+/// REM      05:05 → 05:17 = 12      REM      05:07 → 05:17 = 10
+/// Leggero  07:48 → 08:41 = 53      Leggero  07:49 → 08:41 = 52
+/// Sveglio  09:52 → 10:01 =  9      Sveglio  09:53 → 10:01 =  8
+/// ```
 ///
-/// ⛔ **Non lo era.** Con la correzione accesa, i numeri veri sono
-/// `107 + 107 + 285 + 30 = 529`: la sovrapposizione era sparsa su **tutte e
-/// quattro** le fasi — profondo −84, REM −20, leggero −86, sveglio −9 — non
-/// concentrata su una. Anche i campioni della **stessa** fase si accavallavano
-/// fra loro.
+/// 🚨 **Nove coppie, su tutte e quattro le fasi.** 48 campioni grezzi per 728
+/// minuti, in una finestra di 529: i 199 di troppo sono i doppioni.
 ///
-/// ⚠️ **Vale la pena tenerlo scritto**: una somma che torna non è una prova.
-/// C'erano molte scomposizioni compatibili con «728 in 529», e ne avevo presa
-/// una sola scambiandola per l'unica. 💡 La diagnosi — *tempo contato due
-/// volte* — era giusta; la storia su **dove** fosse, no. È la stessa distanza
-/// che passa fra un numero plausibile e un numero vero.
-///
-/// 🚨 Il commento accanto alla mappatura si chiedeva *quale fase* chiamarla
-/// («leggero e non profondo, che sarebbe la lettura più generosa») e ragionava
-/// bene. ⛔ Non si chiedeva mai **se quel tempo fosse già contato altrove**:
-/// nessun errore, nessun avviso, un numero plausibile — la stessa famiglia di
-/// O.D.20.
+/// ⛔ **E `insertOrIgnore` non poteva vederli**: la chiave unica dell'archivio è
+/// `(fonte, iniziatoIl)`, e questi hanno inizi **diversi**. Due righe legittime
+/// per lo scrittore, lo stesso minuto di sonno per chi legge.
 ///
 /// ── 💡 Perché si corregge QUI e non all'ingresso ─────────────────────────
 ///
@@ -76,10 +73,12 @@ class SegmentoSonno {
 ///    i dati salvati, e quei numeri sono finiti nel giudizio sul recupero e nel
 ///    consiglio del giorno. Correggere il calcolo li rimette a posto **tutti**,
 ///    senza risincronizzare niente.
-/// 2. ⚠️ **La sovrapposizione non è solo colpa di `SLEEP_ASLEEP`.** Due app che
-///    scrivono la stessa notte, o un orologio che ricarica una notte corretta
-///    con inizi spostati di qualche secondo, producono lo stesso difetto.
-///    Appiattire la linea del tempo li chiude tutti insieme.
+/// 2. ⚠️ **La causa non era quella che sembrava, e la correzione ha retto lo
+///    stesso.** È l'argomento più forte per questo approccio: appiattire la
+///    linea del tempo chiude **qualunque** sovrapposizione — il generico, il
+///    doppione dell'orologio, due app che scrivono la stessa notte — senza
+///    dover indovinare quale sia. Una correzione mirata alla causa immaginata
+///    avrebbe sistemato un terzo del problema.
 ///
 /// 💡 L'archivio resta la **registrazione fedele** di quello che Health Connect
 /// ha detto, sovrapposizioni comprese. È il posto giusto per la verità grezza;

@@ -116,23 +116,59 @@ void main() {
       expect(totale, 210, reason: '03:00 → 06:30, la notte dura quanto dura');
     });
 
-    test('anche due campioni della STESSA fase si accavallano', () {
+    test('la stessa notte scritta due volte con i confini spostati', () {
       /*
-       * 🚨 **Il caso che la ricostruzione a tavolino aveva mancato.** Non e'
-       * solo il generico contro le fasi dettagliate: sul telefono anche il
-       * profondo si sovrapponeva al profondo, e il sveglio al sveglio.
+       * ══ 🚨 QUESTA E' LA CAUSA VERA, LETTA DAI CAMPIONI GREZZI ═══════════
+       *
+       * ⛔ Non era `SLEEP_ASLEEP`, e non erano due app. E' **l'orologio che
+       * scrive la stessa notte due volte**, con i confini spostati di un
+       * minuto o due. Una fonte sola, nove coppie su tutte e quattro le fasi.
+       *
+       * 💡 Le quattro righe qui sotto sono **copiate dal log del telefono**.
+       *
+       * 🚨 `insertOrIgnore` non poteva vederli: la chiave unica e'
+       * `(fonte, iniziatoIl)`, e questi hanno inizi diversi.
        */
       final segmenti = TimelineSonno.appiattisci([
-        c(1, 0, 3, 0, FaseSonno.profondo),
-        c(2, 0, 4, 0, FaseSonno.profondo),
+        c(3, 19, 4, 9, FaseSonno.profondo), // 50 min
+        c(3, 25, 4, 9, FaseSonno.profondo), // 44 min, stesso sonno
+        c(5, 5, 5, 17, FaseSonno.rem), //      12 min
+        c(5, 7, 5, 17, FaseSonno.rem), //      10 min, stesso sonno
       ]);
 
-      expect(segmenti, hasLength(1));
       expect(
         minutiDi(segmenti, FaseSonno.profondo),
-        180,
-        reason: 'dalle 1 alle 4 sono tre ore, non quattro',
+        50,
+        reason: '50 e 44 sono lo stesso blocco, non 94 minuti',
       );
+      expect(minutiDi(segmenti, FaseSonno.rem), 12);
+    });
+
+    test('la notte del 23/08 in piccolo: 728 grezzi diventano 529', () {
+      /*
+       * 💡 Il conto vero, in scala: sui 48 campioni grezzi di quella notte la
+       * somma faceva **728** minuti in una finestra di **529**. Dopo
+       * l'appiattimento: 285 leggero + 107 profondo + 107 REM + 30 sveglio =
+       * **529**, cioe' `03:02 → 11:51` al minuto.
+       */
+      final segmenti = TimelineSonno.appiattisci([
+        c(3, 6, 3, 25, FaseSonno.leggero), // 19
+        c(3, 19, 4, 9, FaseSonno.profondo), // 50
+        c(3, 25, 4, 9, FaseSonno.profondo), // 44 — doppione
+        c(4, 9, 4, 31, FaseSonno.leggero), // 22
+        c(4, 30, 4, 57, FaseSonno.profondo), // 27
+        c(4, 31, 4, 57, FaseSonno.profondo), // 26 — doppione
+      ]);
+
+      final totale = segmenti.fold(0, (tot, s) => tot + s.minuti);
+
+      expect(
+        totale,
+        111,
+        reason: '03:06 → 04:57 sono 111 minuti; i grezzi ne sommavano 188',
+      );
+      expect(minutiDi(segmenti, FaseSonno.profondo), 77);
+      expect(minutiDi(segmenti, FaseSonno.leggero), 34);
     });
   });
 

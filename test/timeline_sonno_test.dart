@@ -69,42 +69,70 @@ void main() {
     });
   });
 
-  group('la notte del 23/08/2026, con i numeri veri', () {
+  group('la notte del 23/08/2026', () {
     /*
-     * ══ 💡 I NUMERI SONO QUELLI DELLO SCHERMO, NON INVENTATI ══════════════
+     * ══ ⛔ ATTENZIONE: LA RICOSTRUZIONE A TAVOLINO ERA SBAGLIATA ══════════
      *
-     * Health Connect aveva **una sola** sessione, da Zepp: `03:02 → 11:51`,
-     * cioè **529 minuti**. L'app mostrava `3h11 + 2h07 + 6h11 = 689` di sonno,
-     * più `0h39` di sveglio: **728 minuti in 529**.
+     * Prima della correzione lo schermo diceva `3h11 + 2h07 + 6h11` di sonno
+     * piu' `0h39` di sveglio: **728 minuti** in una finestra di **529**
+     * (`03:02 → 11:51`, una sola sessione di Zepp).
      *
-     * 🚨 La scomposizione che torna al minuto è una sola: togliendo 199 minuti
-     * di generico dal leggero, `191 + 127 + 172 + 39 = 529`. Questo test la
-     * ricostruisce e pretende quel risultato.
+     * 🚨 Avevo dedotto che i 199 di troppo stessero tutti sul leggero, perche'
+     * `191 + 127 + 172 + 39 = 529` torna al minuto. ⛔ **Falso**: con la
+     * correzione accesa i numeri veri sono `107 + 107 + 285 + 30 = 529`. La
+     * sovrapposizione era su **tutte e quattro** le fasi, e anche fra campioni
+     * della stessa fase.
+     *
+     * ⚠️ **Una somma che torna non e' una prova.** Le scomposizioni compatibili
+     * con «728 in 529» erano molte, e ne avevo presa una scambiandola per
+     * l'unica.
+     *
+     * 💡 Questo test resta perche' descrive **la forma** del difetto — generico
+     * sovrapposto a fasi dettagliate — non i numeri di quella notte. I numeri
+     * qui dentro sono inventati apposta per essere leggibili.
      */
     test('la fase generica non si somma a quelle dettagliate', () {
       final segmenti = TimelineSonno.appiattisci([
-        // La notte, descritta a grana grossa: 199 minuti di «dorme».
-        c(3, 2, 6, 21, FaseSonno.leggero),
+        // La notte, descritta a grana grossa: tre ore di «dorme».
+        c(3, 0, 6, 0, FaseSonno.leggero),
 
         // E la stessa notte, con le fasi vere.
-        c(3, 2, 6, 13, FaseSonno.profondo),
-        c(6, 13, 8, 20, FaseSonno.rem),
-        c(8, 20, 11, 12, FaseSonno.leggero),
-        c(11, 12, 11, 51, FaseSonno.sveglio),
+        c(3, 0, 4, 0, FaseSonno.profondo),
+        c(4, 0, 5, 0, FaseSonno.rem),
+        c(6, 0, 6, 30, FaseSonno.sveglio),
       ]);
 
-      expect(minutiDi(segmenti, FaseSonno.profondo), 191);
-      expect(minutiDi(segmenti, FaseSonno.rem), 127);
+      expect(minutiDi(segmenti, FaseSonno.profondo), 60);
+      expect(minutiDi(segmenti, FaseSonno.rem), 60);
       expect(
         minutiDi(segmenti, FaseSonno.leggero),
-        172,
-        reason: 'il generico è sparito dentro le fasi che lo coprivano',
+        60,
+        reason: 'del generico resta solo l ora che nessuno copriva',
       );
-      expect(minutiDi(segmenti, FaseSonno.sveglio), 39);
+      expect(minutiDi(segmenti, FaseSonno.sveglio), 30);
 
       final totale = segmenti.fold(0, (tot, s) => tot + s.minuti);
 
-      expect(totale, 529, reason: '03:02 → 11:51: la notte dura quanto dura');
+      expect(totale, 210, reason: '03:00 → 06:30, la notte dura quanto dura');
+    });
+
+    test('anche due campioni della STESSA fase si accavallano', () {
+      /*
+       * 🚨 **Il caso che la ricostruzione a tavolino aveva mancato.** Non e'
+       * solo il generico contro le fasi dettagliate: sul telefono anche il
+       * profondo si sovrapponeva al profondo, e il sveglio al sveglio.
+       */
+      final segmenti = TimelineSonno.appiattisci([
+        c(1, 0, 3, 0, FaseSonno.profondo),
+        c(2, 0, 4, 0, FaseSonno.profondo),
+      ]);
+
+      expect(segmenti, hasLength(1));
+      expect(
+        minutiDi(segmenti, FaseSonno.profondo),
+        180,
+        reason: 'dalle 1 alle 4 sono tre ore, non quattro',
+      );
     });
   });
 

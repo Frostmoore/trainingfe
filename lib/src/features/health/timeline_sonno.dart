@@ -43,9 +43,23 @@ class SegmentoSonno {
 /// grana grossa.** Si sovrappone alle altre, e sommarla è contare due volte lo
 /// stesso tempo.
 ///
-/// 💡 La prova che chiude il conto: togliendo i 199 minuti di generico dal
-/// leggero, `191 + 127 + 172 + 39 = 529` — **esattamente** la durata della
-/// sessione, al minuto.
+/// ── ⛔ La ricostruzione fatta a tavolino era SBAGLIATA ──────────────────
+///
+/// 🚨 Prima di scrivere questa classe avevo dedotto che i 199 minuti di troppo
+/// stessero **tutti sul leggero**, perché `191 + 127 + 172 + 39 = 529` torna al
+/// minuto — e l'avevo chiamata *«l'unica scomposizione che torna»*.
+///
+/// ⛔ **Non lo era.** Con la correzione accesa, i numeri veri sono
+/// `107 + 107 + 285 + 30 = 529`: la sovrapposizione era sparsa su **tutte e
+/// quattro** le fasi — profondo −84, REM −20, leggero −86, sveglio −9 — non
+/// concentrata su una. Anche i campioni della **stessa** fase si accavallavano
+/// fra loro.
+///
+/// ⚠️ **Vale la pena tenerlo scritto**: una somma che torna non è una prova.
+/// C'erano molte scomposizioni compatibili con «728 in 529», e ne avevo presa
+/// una sola scambiandola per l'unica. 💡 La diagnosi — *tempo contato due
+/// volte* — era giusta; la storia su **dove** fosse, no. È la stessa distanza
+/// che passa fra un numero plausibile e un numero vero.
 ///
 /// 🚨 Il commento accanto alla mappatura si chiedeva *quale fase* chiamarla
 /// («leggero e non profondo, che sarebbe la lettura più generosa») e ragionava

@@ -368,6 +368,8 @@ class ProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.storefront_outlined),
                 title: const Text('La tua palestra'),
                 subtitle: Text(palestra.name!),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(AppRoutes.palestra),
               ),
             )
           else

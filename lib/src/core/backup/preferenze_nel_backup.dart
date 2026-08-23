@@ -46,7 +46,7 @@ class PreferenzeNelBackup {
   /// |---|---|
   /// | `sessione.ultima_persona` | ⛔ È l'id di chi ha usato **questo** telefono. Ripristinandolo da un altro, il controllo «è entrato qualcun altro?» crederebbe di sì e **svuoterebbe l'archivio appena ripristinato** |
   /// | `sessione.accoglienza_fatta` | Chi entra su un telefono nuovo deve rivedere consensi e ripristino |
-  /// | `trasloco.allenamenti.fatto` | 🚨 Ripristinarlo su un'installazione pulita salterebbe il trasloco: gli allenamenti resterebbero sul server e il telefono non li avrebbe |
+  /// | `trasloco.allenamenti.fatto` | ⛔ **Reliquia**: il trasloco non esiste più (FASE 11.6.3, 23/08/2026) e questa chiave non si scrive più. Resta nell'elenco perché sui telefoni vecchi c'è ancora, e riportarla in giro non serve a niente |
   /// | `gym.branding` | Una cache di rete, si rifà da sola in un secondo |
   /// | `backup_automatico_*` | Quando è stato fatto l'ultimo backup **di questo telefono**: ripristinarlo comprerebbe ventiquattro ore di silenzio a un telefono che non ne ha mai fatto uno |
   static const restanoQui = {

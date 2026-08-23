@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'src/app.dart';
+import 'src/core/backup/backup_che_gira_da_solo.dart';
 import 'src/core/backup/backup_in_background.dart';
 import 'src/core/config/app_config.dart';
 import 'src/core/media/archivio_foto.dart';
@@ -16,7 +17,6 @@ import 'src/core/storage/local_cache.dart';
 import 'src/features/aggiornamento/aggiornamento_controller.dart';
 import 'src/features/auth/auth_controller.dart';
 import 'src/features/onboarding/branding_controller.dart';
-import 'src/features/training/trasloco_allenamenti.dart';
 
 /// L'avvio — A1.1.
 ///
@@ -96,20 +96,30 @@ Future<void> main() async {
     unawaited(
       container.read(authControllerProvider.notifier).restore().then((_) {
         /*
-         * ══ 🏋️ IL TRASLOCO DEGLI ALLENAMENTI — FASE 11.3 ═══════════════════
+         * ══ 💾 IL BACKUP AUTOMATICO PARTE QUI — 2q.4, 23/08/2026 ═══════════
          *
-         * 📌 Il committente: *«Nessun allenamento deve risiedere sul server,
-         * devono stare tutti nell'app»*.
+         * 📌 Il committente: *«Non parte, l'avevamo controllato. Facciamo che
+         * parte comunque quando apri l'app»*.
          *
-         * 🚨 **Dopo `restore()`, non prima**: senza una sessione il server
-         * risponde 401, il trasloco fallisce e — peggio — il primo avvio dopo
-         * l'aggiornamento sarebbe anche l'unico tentativo che qualcuno guarda.
+         * 🚨 **`avvioBackupProvider` esisteva già, e non lo guardava nessuno.**
+         * Un provider dichiarato e mai letto in Riverpod non nasce: il codice
+         * c'era, il commento spiegava perché non è `autoDispose`, e non è mai
+         * stato eseguito una volta. ⛔ È la forma più silenziosa di codice
+         * morto — sembra funzionante a chiunque lo legga.
          *
-         * 💡 `unawaited` e senza bloccare niente: se non riesce si riprova al
-         * prossimo avvio, e finché non riesce i dati sono ancora **tutti** sul
-         * server. ⛔ Nessuno cancella niente prima che questo abbia confermato.
+         * ⚠️ **Dopo `restore()`, non prima**: senza una sessione non si sa
+         * nemmeno di chi sarebbe il backup, e `BackupAutomatico` leggerebbe le
+         * preferenze di nessuno.
+         *
+         * 💡 `unawaited`, come tutto quello che sta qui: un backup può metterci
+         * secondi, e nessuna schermata deve aspettarlo. Se fallisce lo dice la
+         * pagina «Backup e dati», che è dove uno va a guardare.
+         *
+         * ⛔ **Non sostituisce il lavoro notturno di WorkManager**: quello
+         * copre chi l'app non la apre più, che è precisamente la persona a cui
+         * il backup serve di più. Questo copre chi la apre.
          */
-        unawaited(container.read(traslocoAllenamentiProvider).seServe());
+        unawaited(container.read(avvioBackupProvider.future));
       }),
     );
 

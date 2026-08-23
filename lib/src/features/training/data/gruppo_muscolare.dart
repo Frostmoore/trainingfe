@@ -21,6 +21,32 @@ typedef MuscoliScelti = ({
   List<GruppoMuscolare> secondari,
 });
 
+/// Come i muscoli entrano in un JSON diretto al server — 3b-A.3.4/A.3.5.
+///
+/// ══ 🚨 TRE STATI, NON DUE, E SCRITTI IN UN POSTO SOLO ══════════════════════
+///
+/// - `null` → **nessuno l'ha deciso**: non si manda niente, e il server dira'
+///   di no se sta creando (`muscoli_non_decisi`, 422).
+/// - `secondari` vuoto → **«questo esercizio isola davvero»**: si manda `[]`,
+///   perche' e' una risposta.
+/// - `secondari` pieno → i muscoli che aiutano.
+///
+/// ⛔ Questa regola stava scritta in **tre posti** — il modello della scheda,
+/// l'editor della scheda propria e il player — e tre copie della stessa regola
+/// diventano tre regole diverse alla prima modifica. 🚨 Il modo di sbagliare
+/// non e' teorico: basta che una delle tre mandi sempre `[]`, e la libreria si
+/// riempie di esercizi che *dichiarano* di non avere secondari.
+Map<String, dynamic> muscoliInJson(MuscoliScelti? muscoli) {
+  if (muscoli == null) return const {};
+
+  return {
+    if (muscoli.primario != null) 'muscle_group': muscoli.primario!.valore,
+    'secondary_muscles': muscoli.secondari
+        .map((m) => m.valore)
+        .toList(growable: false),
+  };
+}
+
 enum GruppoMuscolare {
   petto('chest', 'Petto'),
   schiena('back', 'Schiena'),

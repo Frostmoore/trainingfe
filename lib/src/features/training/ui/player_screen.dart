@@ -11,11 +11,13 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
+import '../data/catalogo_esercizi.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'widgets/rest_bar.dart';
+import 'widgets/scelta_muscoli.dart';
 
 /// Il player di allenamento — C9.
 ///
@@ -220,6 +222,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       return;
     }
 
+    /*
+     * ══ 🚨 I MUSCOLI PRIMA DELLA PRIMA SERIE — 3b-A.3.5, 24/08/2026 ═══════
+     *
+     * ⛔ Da A.3.5 il server **rifiuta** di creare un esercizio senza muscoli.
+     * Senza questa guardia la prima serie di un movimento inventato prenderebbe
+     * un 422 rosso a metà allenamento — e la spunta tornerebbe indietro senza
+     * che si capisca perché.
+     *
+     * 💡 Chiedere **prima** costa un tocco e succede una volta sola: solo per
+     * un nome che il catalogo non conosce, e solo la prima volta che si scrive.
+     * ⚠️ Se il catalogo non è ancora arrivato si chiede lo stesso — meglio una
+     * domanda in più di una serie che non si registra.
+     */
+    if (!await _muscoliSeServono(esercizio)) return;
+
     final eraFatta = riga.done;
 
     setState(() => riga.done = true);
@@ -232,6 +249,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             setNumber: riga.setNumber,
             exerciseId: esercizio.exerciseId,
             exerciseName: esercizio.name.trim(),
+            muscoli: esercizio.muscoli,
             reps: riga.reps,
             weight: riga.weight,
             restSec: esercizio.restSec,
@@ -260,6 +278,38 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
       _avvisa(ApiClient.unwrapError(error).message);
     }
+  }
+
+  /// Chiede i muscoli se l'esercizio non è in catalogo. `false` = si annulla.
+  Future<bool> _muscoliSeServono(PlayerExercise esercizio) async {
+    // 💡 Un esercizio che viene dalla scheda ha già il suo id: esiste, e il
+    // server i suoi muscoli li sa.
+    if (esercizio.exerciseId != null || esercizio.muscoli != null) return true;
+
+    final catalogo =
+        ref.read(catalogoEserciziProvider).valueOrNull ??
+        CatalogoEsercizi.vuoto;
+
+    if (catalogo.perNome(esercizio.name) != null) return true;
+
+    if (!mounted) return false;
+
+    final scelti = await chiediIMuscoli(
+      context,
+      nomeEsercizio: esercizio.name.trim(),
+    );
+
+    if (scelti == null) {
+      _avvisa(
+        'Senza i muscoli l\'esercizio non si può aggiungere in libreria.',
+      );
+
+      return false;
+    }
+
+    esercizio.muscoli = scelti;
+
+    return true;
   }
 
   void _avvisa(String messaggio) {
@@ -585,6 +635,12 @@ class _CardEsercizioState extends State<_CardEsercizio> {
                       // azzerare l'id costringe il server a riconciliare il
                       // nome nuovo, invece di scrivere sotto quello vecchio.
                       e.exerciseId = null;
+
+                      // 🚨 E i muscoli decadono con lui — 3b-A.3.5: sono la
+                      // risposta su **quel** nome, non su questo.
+                      e.muscoli = null;
+
+                      setState(() {});
                       widget.onCambiato();
                     },
                   ),

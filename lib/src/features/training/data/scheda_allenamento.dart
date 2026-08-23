@@ -137,13 +137,9 @@ class EsercizioDellaScheda {
     if (pesoTarget != null) 'target_weight': pesoTarget,
     if (note != null && note!.trim().isNotEmpty) 'notes': note!.trim(),
 
-    // 🚨 Solo se qualcuno ha risposto: vedi i tre stati su `muscoli`.
-    if (muscoli != null) ...{
-      if (muscoli!.primario != null) 'muscle_group': muscoli!.primario!.valore,
-      'secondary_muscles': muscoli!.secondari
-          .map((m) => m.valore)
-          .toList(growable: false),
-    },
+    // 🚨 Solo se qualcuno ha risposto: la regola dei tre stati sta in
+    // `muscoliInJson`, in un posto solo.
+    ...muscoliInJson(muscoli),
     // ⚠️ Le alternative senza nome si scartano qui: l'editor ne tiene volentieri
     // una vuota, e il server la rifiuterebbe (`name` è `required`).
     if (alternative.any((a) => !a.vuoto))

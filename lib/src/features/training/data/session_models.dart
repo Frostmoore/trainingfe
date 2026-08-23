@@ -3,6 +3,7 @@ library;
 
 import '../../../core/storage/archivio_salute.dart';
 import 'calorie_allenamento.dart';
+import 'gruppo_muscolare.dart';
 
 class WorkoutSession {
   const WorkoutSession({
@@ -207,10 +208,21 @@ class PlayerExercise {
     this.targetWeight,
     this.notes,
     this.imageUrl,
+    this.muscoli,
   });
 
   int? exerciseId;
   String name;
+
+  /// Che muscoli allena, quando l'ha detto qualcuno — 3b-A.3.5, 24/08/2026.
+  ///
+  /// 🚨 Serve **solo** per gli esercizi scritti al volo che il catalogo non
+  /// conosce: da A.3.5 il server rifiuta di crearne uno senza muscoli, e senza
+  /// questo campo la serie prenderebbe un 422 **a metà allenamento** — cioè nel
+  /// momento peggiore possibile per scoprire che manca un dato.
+  ///
+  /// ⚠️ `null` non vuol dire «nessuno»: vuol dire che nessuno ha risposto.
+  MuscoliScelti? muscoli;
 
   /// Le ripetizioni **prescritte**, come stringa: «8-12», «cedimento», «max».
   String? reps;

@@ -276,13 +276,8 @@ class _RigaEditor {
     'target_weight': double.tryParse(peso.text.trim().replaceAll(',', '.')),
     'notes': note.text.trim().isEmpty ? null : note.text.trim(),
 
-    // 🚨 Solo se qualcuno ha risposto: vedi la nota su `muscoli`.
-    if (muscoli != null) ...{
-      if (muscoli!.primario != null) 'muscle_group': muscoli!.primario!.valore,
-      'secondary_muscles': muscoli!.secondari
-          .map((m) => m.valore)
-          .toList(growable: false),
-    },
+    // 🚨 Solo se qualcuno ha risposto: vedi `muscoliInJson`.
+    ...muscoliInJson(muscoli),
   };
 
   void dispose() {

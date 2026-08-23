@@ -148,6 +148,67 @@ void main() {
     });
   });
 
+  // ─────────────── la regola in un posto solo ───────────────
+
+  group('muscoliInJson', () {
+    /*
+     * 🚨 **È la stessa regola per tutti e tre i mittenti**: il modello della
+     * scheda, l'editor della scheda propria e il player.
+     *
+     * ⛔ Stava scritta in tre posti, e tre copie della stessa regola diventano
+     * tre regole diverse alla prima modifica: basta che una mandi sempre `[]`
+     * e la libreria si riempie di esercizi che *dichiarano* di isolare.
+     */
+    test('senza risposta non mette niente nel JSON', () {
+      expect(muscoliInJson(null), isEmpty);
+    });
+
+    test('un elenco vuoto ci finisce, perché è una risposta', () {
+      final j = muscoliInJson((
+        primario: GruppoMuscolare.quadricipiti,
+        secondari: const [],
+      ));
+
+      expect(j['muscle_group'], 'quads');
+      expect(j['secondary_muscles'], isEmpty);
+      expect(j.containsKey('secondary_muscles'), isTrue);
+    });
+
+    test('e i muscoli scelti viaggiano con i valori del server', () {
+      final j = muscoliInJson((
+        primario: GruppoMuscolare.petto,
+        secondari: const [GruppoMuscolare.tricipiti],
+      ));
+
+      expect(j, {
+        'muscle_group': 'chest',
+        'secondary_muscles': ['triceps'],
+      });
+    });
+
+    test('e il player manda esattamente quello', () {
+      /*
+       * ⚠️ **Il corpo di `POST /exercises` dal player è lo stesso oggetto.**
+       * Da 3b-A.3.5 il server rifiuta di creare un esercizio senza muscoli:
+       * se questo corpo perdesse i campi, la prima serie di un movimento
+       * inventato prenderebbe un 422 **a metà allenamento**.
+       */
+      final corpo = <String, dynamic>{
+        'name': 'Spinte strane',
+        ...muscoliInJson((
+          primario: GruppoMuscolare.petto,
+          secondari: const [GruppoMuscolare.tricipiti],
+        )),
+      };
+
+      expect(corpo, {
+        'name': 'Spinte strane',
+        'muscle_group': 'chest',
+        'secondary_muscles': ['triceps'],
+      });
+    });
+  });
+
   // ───────────────────────── la domanda ─────────────────────────
 
   group('la riga nel compositore', () {

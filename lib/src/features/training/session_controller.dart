@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import 'data/calorie_allenamento.dart';
+import 'data/gruppo_muscolare.dart';
 import 'data/session_models.dart';
 
 /// Gli allenamenti, **dall'archivio locale** — FASE 11.4, 21/08/2026.
@@ -164,6 +165,13 @@ class SessionActions {
     required int setNumber,
     int? exerciseId,
     String? exerciseName,
+
+    /// I muscoli, per l'esercizio che il catalogo non conosce — 3b-A.3.5.
+    ///
+    /// ⛔ Da A.3.5 il server **rifiuta** di creare un esercizio senza: senza
+    /// questo, la prima serie di un movimento inventato prenderebbe un 422.
+    MuscoliScelti? muscoli,
+
     int? reps,
     double? weight,
     int? restSec,
@@ -188,7 +196,7 @@ class SessionActions {
         id = noto.$1;
         met = noto.$2;
       } else {
-        final creato = await _catalogo(exerciseName);
+        final creato = await _catalogo(exerciseName, muscoli);
 
         id = (creato['id'] as num?)?.toInt() ?? exerciseId;
         met = (creato['met'] as num?)?.toDouble();
@@ -298,8 +306,19 @@ class SessionActions {
   /// riconosce i nomi. 💡 Ed è il motivo per cui questa chiamata non si può
   /// togliere: due iscritti che scrivono «Panca piana» devono finire
   /// sullo **stesso** esercizio, o lo storico non è confrontabile.
-  Future<Map<String, dynamic>> _catalogo(String nome) =>
-      _api.post<Map<String, dynamic>>('/exercises', body: {'name': nome});
+  Future<Map<String, dynamic>> _catalogo(String nome, MuscoliScelti? muscoli) =>
+      _api.post<Map<String, dynamic>>(
+        '/exercises',
+        body: {
+          'name': nome,
+
+          // 🚨 Solo se qualcuno ha risposto: mandare un elenco vuoto senza che
+          // nessuno l'abbia detto scriverebbe in libreria «questo esercizio
+          // isola», che è una dichiarazione diversa da «non lo so». La regola
+          // sta in `muscoliInJson`, in un posto solo.
+          ...muscoliInJson(muscoli),
+        },
+      );
 }
 
 final sessionActionsProvider = Provider<SessionActions>(SessionActions.new);

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
-import '../../../../core/storage/archivio_salute.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
@@ -13,6 +12,7 @@ import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
 import '../../../health/media_di_riferimento.dart';
 import '../../../health/recupero_controller.dart';
+import '../../../health/timeline_sonno.dart';
 import '../../../health/tipo_allenamento.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../../profile/somma_bruciate.dart';
@@ -630,7 +630,7 @@ class RecoveryCard extends ConsumerWidget {
 class _StrisciaSonno extends StatelessWidget {
   const _StrisciaSonno({required this.fasi});
 
-  final List<CampioneSonno> fasi;
+  final List<SegmentoSonno> fasi;
 
   @override
   Widget build(BuildContext context) {
@@ -643,7 +643,7 @@ class _StrisciaSonno extends StatelessWidget {
      */
     final totale = fasi.fold<int>(
       0,
-      (a, c) => a + c.finitoIl.difference(c.iniziatoIl).inSeconds,
+      (tot, s) => tot + s.a.difference(s.da).inSeconds,
     );
 
     if (totale <= 0) return const SizedBox.shrink();
@@ -654,14 +654,11 @@ class _StrisciaSonno extends StatelessWidget {
         height: 26,
         child: Row(
           children: [
-            for (final c in fasi)
+            for (final s in fasi)
               Expanded(
-                flex: c.finitoIl
-                    .difference(c.iniziatoIl)
-                    .inSeconds
-                    .clamp(1, 1 << 30),
+                flex: s.a.difference(s.da).inSeconds.clamp(1, 1 << 30),
                 child: ColoredBox(
-                  color: _coloreFase(context, c.fase),
+                  color: _coloreFase(context, s.fase.codice),
                   child: const SizedBox.expand(),
                 ),
               ),

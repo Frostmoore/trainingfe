@@ -1,6 +1,7 @@
 import '../../core/storage/archivio_salute.dart';
 import 'dati_salute.dart';
 import 'sessioni_di_sonno.dart';
+import 'timeline_sonno.dart';
 
 /// Il giudizio di una notte.
 class GiudizioNotte {
@@ -39,7 +40,7 @@ class GiudizioNotte {
   /// 🚨 **Il peggiore dei quattro, non la media.** Vedi `AnalizzatoreSonno`.
   final Giudizio complessivo;
 
-  final List<CampioneSonno> ipnogramma;
+  final List<SegmentoSonno> ipnogramma;
 
   /// ⚠️ **Non è una valutazione medica**, e l'interfaccia deve dirlo. Era il
   /// campo `disclaimer` che il backend mandava con ogni risposta: qui è una
@@ -165,21 +166,45 @@ class AnalizzatoreSonno {
 
     if (campioni.isEmpty) return null;
 
+    /*
+     * ══ 🚨 SI SOMMA LA LINEA DEL TEMPO, NON I CAMPIONI — 23/08/2026 ════════
+     *
+     * ⛔ **Qui si sommavano i minuti di ogni campione, uno per uno.** Funziona
+     * solo se i campioni non si sovrappongono — e si sovrappongono: chiediamo a
+     * Health Connect sia le fasi dettagliate sia la generica `SLEEP_ASLEEP`,
+     * che è la **stessa notte a grana grossa**.
+     *
+     * 🚨 Il risultato era **11h 29 di sonno dentro una finestra di 8h 49**: 728
+     * minuti contati in 529 disponibili. Nessun errore, nessun avviso, un
+     * numero plausibile — e finiva nel giudizio sul recupero e nel consiglio.
+     *
+     * 💡 `TimelineSonno.appiattisci` risolve le sovrapposizioni prima di
+     * contare: dopo, la somma **non può** superare la durata della notte.
+     */
+    final segmenti = TimelineSonno.appiattisci(
+      campioni.map(
+        (c) =>
+            (da: c.iniziatoIl, a: c.finitoIl, fase: FaseSonno.daCodice(c.fase)),
+      ),
+    );
+
+    if (segmenti.isEmpty) return null;
+
     var leggero = 0;
     var profondo = 0;
     var rem = 0;
     var sveglio = 0;
 
-    for (final c in campioni) {
-      switch (FaseSonno.daCodice(c.fase)) {
+    for (final s in segmenti) {
+      switch (s.fase) {
         case FaseSonno.leggero:
-          leggero += c.minuti;
+          leggero += s.minuti;
         case FaseSonno.profondo:
-          profondo += c.minuti;
+          profondo += s.minuti;
         case FaseSonno.rem:
-          rem += c.minuti;
+          rem += s.minuti;
         case FaseSonno.sveglio:
-          sveglio += c.minuti;
+          sveglio += s.minuti;
       }
     }
 
@@ -217,8 +242,11 @@ class AnalizzatoreSonno {
 
     return GiudizioNotte(
       notte: quale,
-      da: campioni.first.iniziatoIl,
-      a: campioni.last.finitoIl,
+      // 💡 Dai segmenti, non dai campioni: `campioni.last` è quello che
+      // **comincia** per ultimo, e con le sovrapposizioni non è detto che sia
+      // anche quello che finisce per ultimo.
+      da: segmenti.first.da,
+      a: segmenti.last.a,
       minutiDormiti: dormito,
       minutiSvegli: sveglio,
       minutiLeggero: leggero,
@@ -228,7 +256,12 @@ class AnalizzatoreSonno {
       remPct: remPct,
       valutazioni: valutazioni,
       complessivo: _peggiore(valutazioni.values),
-      ipnogramma: campioni,
+      /*
+       * 🚨 **Anche il grafico era sbagliato, e si vedeva.** Disegnando i
+       * campioni grezzi, profondo e leggero comparivano **nello stesso
+       * istante** — cioè una persona in due fasi insieme.
+       */
+      ipnogramma: segmenti,
     );
   }
 

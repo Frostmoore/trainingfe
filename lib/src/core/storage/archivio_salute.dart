@@ -754,7 +754,16 @@ class ArchivioSalute extends _$ArchivioSalute {
     MetricaSalute metrica, {
     int giorni = 30,
   }) async {
-    final da = _soloGiorno(DateTime.now().subtract(Duration(days: giorni)));
+    /*
+     * ══ ⚠️ «31 GIORNI CON DATI NEGLI ULTIMI 30» — corretto il 23/08/2026 ═══
+     *
+     * ⛔ Era `subtract(giorni)` con il confronto `>=`: da *oggi meno trenta* a
+     * *oggi* ci sono **trentuno** giorni, estremi compresi. La schermata lo
+     * diceva a chiare lettere, e faceva sembrare che l'app non sappia contare.
+     *
+     * 💡 `giorni - 1`: oggi è il primo dei trenta, non il trentunesimo.
+     */
+    final da = _soloGiorno(DateTime.now().subtract(Duration(days: giorni - 1)));
 
     final righe = await customSelect(
       'SELECT giorno, AVG(valore) AS media, MIN(valore) AS minimo, '

@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/storage/archivio_salute.dart';
 import '../health/analizzatore_sonno.dart';
-import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
 import '../health/sessioni_di_sonno.dart';
 
@@ -57,17 +55,17 @@ class SleepNight {
     ratings: g.valutazioni.map((k, v) => MapEntry(k, v.nome)),
     overall: g.complessivo.nome,
     disclaimer: GiudizioNotte.avvertenza,
-    hypnogram: g.ipnogramma.map((c) {
-      final fase = FaseSonno.daCodice(c.fase);
-
-      return SleepBlock(
-        from: c.iniziatoIl,
-        to: c.finitoIl,
-        stage: fase.codice,
-        label: fase.etichetta,
-        minutes: c.minuti,
-      );
-    }).toList(),
+    hypnogram: g.ipnogramma
+        .map(
+          (s) => SleepBlock(
+            from: s.da,
+            to: s.a,
+            stage: s.fase.codice,
+            label: s.fase.etichetta,
+            minutes: s.minuti,
+          ),
+        )
+        .toList(),
   );
 
   factory SleepNight.fromJson(Map<String, dynamic> j) => SleepNight(

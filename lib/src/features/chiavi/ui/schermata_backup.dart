@@ -441,6 +441,24 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
     }
 
     /*
+     * ══ ⛔ «FERMO» VIENE PRIMA ANCHE DELL'ERRORE — 24/08/2026 ══════════════
+     *
+     * 🚨 **Non sta riprovando, e va detto.** Quando l'autorizzazione a Drive
+     * sparisce, il backup automatico si ferma da solo: riprovare vorrebbe dire
+     * far comparire il foglio di Google a ogni apertura dell'app, e per rifare
+     * l'autorizzazione serve comunque una persona.
+     *
+     * ⚠️ Senza questa riga, la fermata sarebbe **silenziosa** — cioè la cosa
+     * peggiore che possa fare un backup: chi lo ha acceso continuerebbe a
+     * credersi coperto. È lo stesso difetto di «non era ora» del 22/08, con la
+     * differenza che qui l'app ha smesso di provarci **apposta**.
+     */
+    if (s.daRicollegare) {
+      return 'FERMO · Google Drive va ricollegato. Riaccendi l\'interruttore '
+          'per rifare il collegamento.';
+    }
+
+    /*
      * ══ 🚨 L'ERRORE VIENE PRIMA DI TUTTO IL RESTO — 20/08/2026 ═════════════
      *
      * ⚠️ Fino a FASE 2.1 questo stato non serviva: il backup partiva solo

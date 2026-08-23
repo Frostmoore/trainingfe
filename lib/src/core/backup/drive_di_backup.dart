@@ -84,6 +84,20 @@ class DriveDiBackup implements CloudDiBackup {
   @override
   String get nome => 'Google Drive';
 
+  /// 🚨 **`attemptLightweightAuthentication()` PUÒ DISEGNARE, per contratto.**
+  ///
+  /// ⚠️ La documentazione del plugin lo dice a chiare lettere: *«The amount of
+  /// allowable UI is up to the platform to determine… Possible examples include
+  /// FedCM on the web, and **One Tap on Android**»*.
+  ///
+  /// ⛔ Quindi **non è una chiamata silenziosa**, e chiamarla da un percorso
+  /// automatico vuol dire far comparire il foglio di Google senza che nessuno
+  /// l'abbia chiesto. Il 24/08/2026 è successo: all'apertura dell'app il foglio
+  /// «Accesso» saliva **sopra la schermata di blocco** e rubava il fuoco al
+  /// prompt dell'impronta — che rispondeva «Non è andata. Riprova».
+  ///
+  /// 💡 Chi la chiama da un percorso automatico deve essere pronto a fermarsi:
+  /// vedi `serveRicollegare` su [CloudNonRaggiungibile].
   Future<void> _avvia() async {
     if (_avviato) return;
 
@@ -379,7 +393,10 @@ class DriveDiBackup implements CloudDiBackup {
         .attemptLightweightAuthentication();
 
     if (conto == null) {
-      throw const CloudNonRaggiungibile('Non sei collegato a Google Drive.');
+      throw const CloudNonRaggiungibile(
+        'Non sei collegato a Google Drive.',
+        serveRicollegare: true,
+      );
     }
 
     final autorizzazione = await conto.authorizationClient
@@ -388,6 +405,7 @@ class DriveDiBackup implements CloudDiBackup {
     if (autorizzazione == null) {
       throw const CloudNonRaggiungibile(
         'Manca il permesso di scrivere nella cartella dell\'app.',
+        serveRicollegare: true,
       );
     }
 

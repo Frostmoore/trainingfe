@@ -92,9 +92,25 @@ abstract class CloudDiBackup {
 /// 💡 Distinta da «la persona ha rifiutato»: quella non è un errore e torna
 /// `false` da [CloudDiBackup.collega].
 class CloudNonRaggiungibile implements Exception {
-  const CloudNonRaggiungibile(this.motivo);
+  const CloudNonRaggiungibile(this.motivo, {this.serveRicollegare = false});
 
   final String motivo;
+
+  /// L'autorizzazione non c'è più: **rifarla richiede la persona** — 24/08/2026.
+  ///
+  /// ══ 🚨 «NON VA LA RETE» E «DEVI RICOLLEGARTI» NON SONO LA STESSA COSA ═══
+  ///
+  /// ⚠️ Sembrano lo stesso fallimento e vanno trattati **all'opposto**:
+  ///
+  /// - rete che non va → si riprova alla prossima apertura, e va bene così;
+  /// - autorizzazione mancante → riprovare vuol dire **far comparire il
+  ///   riquadro di Google**, e riprovare a ogni apertura vuol dire farlo
+  ///   comparire per sempre.
+  ///
+  /// 💡 Con questo campo il backup automatico può fermarsi da solo dopo il
+  /// primo tentativo e lasciare che sia la schermata «Copia di sicurezza» a
+  /// dire cosa fare — invece di chiederlo di sua iniziativa ogni volta.
+  final bool serveRicollegare;
 
   @override
   String toString() => motivo;

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backup_controller.dart';
+import 'cloud_di_backup.dart';
 
 /// Com'è andato un tentativo di backup automatico — difetto del 22/08/2026.
 ///
@@ -32,7 +33,15 @@ enum EsitoBackup {
 
   /// 🚨 Ci ha provato e non ce l'ha fatta. La data finisce in
   /// `chiaveUltimoErrore`, e la schermata «Copia di sicurezza» la mostra.
-  fallito('NON RIUSCITO — guarda le righe sopra');
+  fallito('NON RIUSCITO — guarda le righe sopra'),
+
+  /// ⛔ L'autorizzazione a Drive non c'è più: **si ferma e non riprova**.
+  ///
+  /// 🚨 È l'esito nato dal difetto del 24/08/2026: riprovare vorrebbe dire far
+  /// comparire il foglio di Google a **ogni** apertura dell'app, perché per
+  /// rifare l'autorizzazione serve la persona. 💡 Da qui in poi tace, e lo dice
+  /// la schermata «Copia di sicurezza».
+  daRicollegare('Google Drive va ricollegato: l\'automatico si ferma qui');
 
   const EsitoBackup(this.frase);
 
@@ -99,6 +108,20 @@ class BackupCheGiraDaSolo {
   /// fatto» — cioè rifarlo ogni volta.
   static const chiaveUltimo = 'backup_automatico_ultimo_riuscito';
 
+  /// 🚨 L'automatico è **fermo** perché Drive va ricollegato — 24/08/2026.
+  ///
+  /// ══ ⛔ UNA VOLTA SOLA, POI SI TACE ═════════════════════════════════════
+  ///
+  /// ⚠️ `attemptLightweightAuthentication()` **può disegnare**, per contratto
+  /// del plugin: quando l'autorizzazione non c'è più, chiederla di nuovo fa
+  /// salire il foglio «Accesso» di Google. Senza questa chiave succederebbe a
+  /// **ogni apertura dell'app**, per sempre.
+  ///
+  /// 💡 La scrive il primo tentativo che scopre il problema; la cancella
+  /// `accendi()`, cioè il momento in cui la persona ricollega davvero. È
+  /// l'unica cosa che può rimetterla a posto, ed è giusto che sia lei.
+  static const chiaveDaRicollegare = 'backup_automatico_da_ricollegare';
+
   /// Quando l'ultimo tentativo è andato storto.
   ///
   /// 🚨 **Serve perché adesso il backup gira da solo.** Un fallimento alle tre
@@ -112,6 +135,17 @@ class BackupCheGiraDaSolo {
   /// adesso»: prima lo scriveva solo il backup automatico, e provando a mano si
   /// vedeva «Ultimo backup: oggi» **subito dopo un fallimento**. ⚠️ Un
   /// tentativo è un tentativo, che a farlo sia un cron o un dito.
+  /// Scrive una preferenza booleana senza che un guasto qui rovini il resto.
+  static Future<void> _segna(String chiave) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(chiave, true);
+    } on Object {
+      // 💡 Se non si riesce a scrivere una preferenza, il problema non è il
+      // backup: si lascia perdere in silenzio.
+    }
+  }
+
   static Future<void> segnaFallito() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -136,12 +170,43 @@ class BackupCheGiraDaSolo {
   /// una persona va a guardare se le cose funzionano.
   Future<EsitoBackup> forse() async {
     try {
-      final stato = await _ref.read(backupAutomaticoProvider.future);
+      /*
+       * ══ 🚨 PRIMA SI DECIDE IN LOCALE, POI SI TOCCA IL CLOUD ══════════════
+       *
+       * Difetto del 24/08/2026, trovato guardando venti schermate dell'avvio.
+       *
+       * ⛔ Qui c'era `_ref.read(backupAutomaticoProvider.future)` **come prima
+       * riga**, e quel provider per costruirsi chiede a Drive quand'è stato
+       * l'ultimo backup. Cioè: per decidere *se fosse ora*, l'app parlava con
+       * Google **a ogni apertura** — e `attemptLightweightAuthentication()`,
+       * per contratto del plugin, **può disegnare**.
+       *
+       * 🚨 Il risultato a schermo: il foglio «Accesso» di Google che sale
+       * **sopra la schermata di blocco**, ruba il fuoco al prompt dell'impronta
+       * e lo fa fallire — *«Non è andata. Riprova»*. Il backup non solo era
+       * brutto da vedere: **impediva di entrare nell'app**.
+       *
+       * 💡 Le tre domande che decidono si rispondono tutte dalle preferenze,
+       * che sono sul telefono e non costano niente. Il cloud si tocca solo
+       * quando si è già deciso di fare il backup davvero.
+       */
+      final prefs = await SharedPreferences.getInstance();
 
       // 🚨 Spento vuol dire spento: non si fa un backup a chi non l'ha chiesto.
-      if (!stato.acceso || !stato.disponibile) return EsitoBackup.spento;
+      if (!(prefs.getBool(BackupAutomatico.chiaveAcceso) ?? false)) {
+        return EsitoBackup.spento;
+      }
 
-      final prefs = await SharedPreferences.getInstance();
+      /*
+       * ⛔ **Fermo perché Drive va ricollegato.** Riprovare significherebbe
+       * rifare comparire il foglio di Google, e per rifare l'autorizzazione
+       * serve comunque la persona: chiederlo da soli non la avvicina alla
+       * soluzione, la infastidisce e basta.
+       */
+      if (prefs.getBool(chiaveDaRicollegare) ?? false) {
+        return EsitoBackup.daRicollegare;
+      }
+
       final quando = prefs.getInt(chiaveUltimo);
 
       if (quando != null) {
@@ -151,6 +216,19 @@ class BackupCheGiraDaSolo {
           return EsitoBackup.nonEraOra;
         }
       }
+
+      /*
+       * ⚠️ **Che un cloud ci sia si chiede al contenitore, non al cloud.**
+       *
+       * ⛔ Qui c'era `backupAutomaticoProvider.future`, che per costruirsi
+       * chiede a Drive **quand'è stato l'ultimo backup**. Non serviva a
+       * decidere niente: serviva a sapere se un cloud esiste, che è una
+       * domanda a cui `cloudDiBackupProvider` risponde da solo e senza rete.
+       *
+       * 🚨 È l'ultima delle tre chiamate a Google che l'apertura dell'app
+       * faceva senza motivo.
+       */
+      if (_ref.read(cloudDiBackupProvider) == null) return EsitoBackup.spento;
 
       await _ref.read(backupAutomaticoProvider.notifier).adesso();
 
@@ -173,6 +251,27 @@ class BackupCheGiraDaSolo {
       await prefs.remove(chiaveUltimoErrore);
 
       return EsitoBackup.fatto;
+    } on CloudNonRaggiungibile catch (errore, stack) {
+      debugPrintStack(label: 'BackupCheGiraDaSolo: $errore', stackTrace: stack);
+
+      /*
+       * ⛔ **Se manca l'autorizzazione, l'automatico si ferma qui.**
+       *
+       * ⚠️ Non è la rete che va e viene: è un permesso che solo la persona può
+       * ridare. 🚨 Riprovare alla prossima apertura vorrebbe dire rifare
+       * comparire il foglio di Google **ogni volta**, che è esattamente il
+       * difetto del 24/08/2026.
+       */
+      if (errore.serveRicollegare) {
+        await _segna(chiaveDaRicollegare);
+        await segnaFallito();
+
+        return EsitoBackup.daRicollegare;
+      }
+
+      await segnaFallito();
+
+      return EsitoBackup.fallito;
     } on Object catch (errore, stack) {
       debugPrintStack(label: 'BackupCheGiraDaSolo: $errore', stackTrace: stack);
 

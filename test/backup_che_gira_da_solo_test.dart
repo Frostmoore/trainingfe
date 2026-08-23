@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:training_companion/src/core/backup/backup_che_gira_da_solo.dart';
 import 'package:training_companion/src/core/backup/backup_controller.dart';
+import 'package:training_companion/src/core/backup/cloud_di_backup.dart';
 
 /// Il backup che gira da solo — FASE 2.1 (`N4.1`), 20/08/2026.
 ///
@@ -25,9 +26,20 @@ void main() {
     adesso = DateTime(2026, 8, 20, 12);
   });
 
-  ProviderContainer conta() {
+  /// 🚨 **Il cloud si sovrascrive, e non è un dettaglio del test.**
+  ///
+  /// ⚠️ `cloudDiBackupProvider` guarda `appConfigProvider`, che in un test
+  /// **lancia apposta** finché `bootstrap()` non lo sovrascrive. Senza questo
+  /// override `forse()` prenderebbe quell'eccezione e tornerebbe `fallito`:
+  /// verde o rosso a caso, per una ragione che non c'entra niente col backup.
+  ProviderContainer conta({bool conCloud = true}) {
     final c = ProviderContainer(
-      overrides: [backupAutomaticoProvider.overrideWith(() => finto)],
+      overrides: [
+        backupAutomaticoProvider.overrideWith(() => finto),
+        cloudDiBackupProvider.overrideWithValue(
+          conCloud ? _CloudFinto() : null,
+        ),
+      ],
     );
 
     addTearDown(c.dispose);
@@ -37,6 +49,24 @@ void main() {
 
   BackupCheGiraDaSolo daSolo(ProviderContainer c) =>
       BackupCheGiraDaSolo(c.read(_refProvider), adesso: () => adesso);
+
+  /// Accende l'interruttore **nelle preferenze**.
+  ///
+  /// ══ 🚨 DAL 24/08/2026 È LÌ CHE `forse()` GUARDA ═══════════════════════
+  ///
+  /// ⛔ Prima leggeva `backupAutomaticoProvider`, e per costruirsi quel
+  /// provider chiede a Drive quand'è stato l'ultimo backup: cioè l'app parlava
+  /// con Google **solo per decidere se fosse ora**. Su Android quella chiamata
+  /// può disegnare, e infatti disegnava — il foglio «Accesso» sopra la
+  /// schermata di blocco.
+  ///
+  /// 💡 Adesso le tre domande che decidono si rispondono dalle preferenze, e i
+  /// test devono scrivere lì quello che prima mettevano nel finto.
+  Future<void> accendiDavvero() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(BackupAutomatico.chiaveAcceso, true);
+  }
 
   Future<void> segnaFattoIl(DateTime quando) async {
     final prefs = await SharedPreferences.getInstance();
@@ -58,15 +88,20 @@ void main() {
     });
 
     test('senza nessun cloud configurato', () async {
+      await accendiDavvero();
       finto.stato = const StatoBackup(acceso: true, disponibile: false);
 
-      expect(await daSolo(conta()).forse(), EsitoBackup.spento);
+      // ⚠️ **Senza cloud vuol dire `cloudDiBackupProvider` nullo**, non uno
+      // stato che dice di no: dal 24/08 è lì che `forse()` guarda, e chiederlo
+      // allo stato vorrebbe dire passare da Drive per saperlo.
+      expect(await daSolo(conta(conCloud: false)).forse(), EsitoBackup.spento);
       expect(finto.quanti, 0);
     });
 
     /// 💡 Un giorno, come chiede `plan_backup.md` §N4.1. Rifarlo a ogni
     /// apertura vorrebbe dire caricare su Drive dieci volte al giorno.
     test('se ne ha già fatto uno due ore fa', () async {
+      await accendiDavvero();
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
       await segnaFattoIl(adesso.subtract(const Duration(hours: 2)));
 
@@ -86,6 +121,7 @@ void main() {
   group('Quando lo fa', () {
     /// 🚨 Il caso vero: l'app si apre il giorno dopo.
     test('se l ultimo è di venticinque ore fa', () async {
+      await accendiDavvero();
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
       await segnaFattoIl(adesso.subtract(const Duration(hours: 25)));
 
@@ -97,6 +133,7 @@ void main() {
     /// ha acceso l'interruttore prima che questo meccanismo esistesse deve
     /// esserne coperto **subito**, non fra un giorno.
     test('e se non ne ha mai fatto uno', () async {
+      await accendiDavvero();
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
 
       expect((await daSolo(conta()).forse()).eRiuscito, isTrue);
@@ -104,6 +141,7 @@ void main() {
     });
 
     test('e poi si ricorda quando', () async {
+      await accendiDavvero();
       finto.stato = const StatoBackup(acceso: true, disponibile: true);
 
       await daSolo(conta()).forse();
@@ -125,6 +163,7 @@ void main() {
     /// 🚨 E la schermata continuava a dire «Ultimo backup: 3 giorni fa» — vero
     /// e fuorviante insieme.
     test('un fallimento si scrive, non solo si tace', () async {
+      await accendiDavvero();
       finto
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
@@ -139,6 +178,7 @@ void main() {
     /// 💡 Un successo cancella l'errore: una preferenza che non serve più è una
     /// cosa che qualcuno un giorno legge senza sapere che è scaduta.
     test('e un successo lo cancella', () async {
+      await accendiDavvero();
       finto
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
@@ -199,10 +239,141 @@ void main() {
     });
   });
 
+  group('⛔ Il foglio di Google all avvio — difetto del 24/08/2026', () {
+    /*
+     * ══ 🚨 COSA È SUCCESSO ═══════════════════════════════════════════════
+     *
+     * Aprendo l'app, il foglio «Accesso» di Google saliva **sopra la schermata
+     * di blocco**, rubava il fuoco al prompt dell'impronta e lo faceva fallire:
+     * la schermata diceva *«Non è andata. Riprova»*. Misurato con venti
+     * schermate a 0,2 s l'una.
+     *
+     * ⛔ La causa non era il backup: era che per **decidere se fosse ora** si
+     * leggeva `backupAutomaticoProvider`, e quel provider per costruirsi chiede
+     * a Drive quand'è stato l'ultimo backup. Su Android
+     * `attemptLightweightAuthentication()` **può disegnare** — la
+     * documentazione del plugin lo dice: *«Possible examples include … One Tap
+     * on Android»*.
+     *
+     * 💡 Quindi: l'app parlava con Google a **ogni apertura**, solo per
+     * scoprire che non era ora di fare niente.
+     */
+    test('spento: non si legge nemmeno lo stato', () async {
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+
+      expect(await daSolo(conta()).forse(), EsitoBackup.spento);
+      expect(
+        finto.quanteLetture,
+        0,
+        reason: 'Ha chiesto a Drive per scoprire che il backup è spento.',
+      );
+    });
+
+    /// 🚨 **È il caso di tutti i giorni**: l'app si apre dieci volte, e nove
+    /// non è ora. Nessuna di quelle nove deve toccare Google.
+    test('non è ora: non si legge nemmeno lo stato', () async {
+      await accendiDavvero();
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+      await segnaFattoIl(adesso.subtract(const Duration(hours: 2)));
+
+      expect(await daSolo(conta()).forse(), EsitoBackup.nonEraOra);
+      expect(
+        finto.quanteLetture,
+        0,
+        reason: 'Ha chiesto a Drive solo per scoprire che non era ora.',
+      );
+    });
+
+    /// 💡 E quando invece **è** ora, allora sì: lì una chiamata a Google è
+    /// legittima, perché si sta facendo il backup davvero.
+    test('quando è ora, allora lo stato si legge', () async {
+      await accendiDavvero();
+      finto.stato = const StatoBackup(acceso: true, disponibile: true);
+
+      expect((await daSolo(conta()).forse()).eRiuscito, isTrue);
+      expect(finto.quanteLetture, 1);
+    });
+  });
+
+  group('⛔ Quando Drive va ricollegato, l automatico si ferma', () {
+    /*
+     * 🚨 **Non è «la rete non va».** L'autorizzazione a Drive è sparita, e
+     * rifarla richiede la persona: riprovare a ogni apertura vorrebbe dire far
+     * ricomparire il foglio di Google **per sempre**.
+     *
+     * ⚠️ Ed è diverso anche da «fallito»: quello riprova domani, e va bene.
+     */
+    test('la prima volta lo scopre e lo segna', () async {
+      await accendiDavvero();
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..serveRicollegare = true;
+
+      expect(await daSolo(conta()).forse(), EsitoBackup.daRicollegare);
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(prefs.getBool(BackupCheGiraDaSolo.chiaveDaRicollegare), isTrue);
+    });
+
+    /// ⛔ **E dalla seconda in poi non ci prova nemmeno.** È la riga che
+    /// impedisce al foglio di Google di ricomparire a ogni apertura.
+    test('e dalla volta dopo non tocca più niente', () async {
+      await accendiDavvero();
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..serveRicollegare = true;
+
+      final c = conta();
+      await daSolo(c).forse();
+
+      final lettureDopoIlPrimo = finto.quanteLetture;
+
+      expect(await daSolo(c).forse(), EsitoBackup.daRicollegare);
+      expect(
+        finto.quanteLetture,
+        lettureDopoIlPrimo,
+        reason: 'Ci ha riprovato, e il foglio di Google ricomparirebbe.',
+      );
+    });
+
+    /// 🚨 **Fermarsi in silenzio sarebbe la cosa peggiore**: chi ha acceso
+    /// l'interruttore continuerebbe a credersi coperto.
+    test('e la schermata lo dice', () {
+      const s = StatoBackup(
+        acceso: true,
+        disponibile: true,
+        daRicollegare: true,
+      );
+
+      expect(s.daRicollegare, isTrue);
+    });
+
+    /// 💡 Solo ricollegarsi lo rimette in moto, ed è giusto che sia così: è
+    /// l'unico momento in cui una persona ha davvero ridato il permesso.
+    test('e un fallimento normale NON lo ferma', () async {
+      await accendiDavvero();
+      finto
+        ..stato = const StatoBackup(acceso: true, disponibile: true)
+        ..esplode = true;
+
+      expect(await daSolo(conta()).forse(), EsitoBackup.fallito);
+
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(
+        prefs.getBool(BackupCheGiraDaSolo.chiaveDaRicollegare),
+        isNull,
+        reason: 'Una rete che non va non è un permesso da ridare.',
+      );
+    });
+  });
+
   group('Quando va storto', () {
     /// ⚠️ Lo chiama la sequenza di accesso: un backup che fallisce **non è una
     /// buona ragione** per far crollare l'apertura dell'app.
     test('non lancia mai', () async {
+      await accendiDavvero();
       finto
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
@@ -222,6 +393,7 @@ void main() {
     /// riproverebbe domani invece che alla prossima apertura, e chi ha la rete
     /// che va e viene resterebbe scoperto proprio nei giorni storti.
     test('un fallimento NON consuma la giornata', () async {
+      await accendiDavvero();
       finto
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
@@ -239,6 +411,7 @@ void main() {
 
     /// 💡 E infatti ci riprova subito dopo, senza aspettare domani.
     test('e alla riapertura ci riprova', () async {
+      await accendiDavvero();
       finto
         ..stato = const StatoBackup(acceso: true, disponibile: true)
         ..esplode = true;
@@ -258,16 +431,51 @@ void main() {
 /// vuole uno, e in un test non c'è nessuna schermata che glielo passi.
 final _refProvider = Provider<Ref>((ref) => ref);
 
+/// Un cloud che esiste e basta.
+///
+/// 💡 `forse()` non lo usa mai: gli serve solo sapere se **ce n'è uno**. Il
+/// lavoro vero lo fa `BackupAutomatico.adesso()`, che qui è finto.
+class _CloudFinto implements CloudDiBackup {
+  @override
+  String get nome => 'Finto';
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('Il cloud finto non deve essere usato.');
+}
+
 class _BackupFinto extends BackupAutomatico {
   StatoBackup stato = const StatoBackup(acceso: false, disponibile: false);
   bool esplode = false;
   int quanti = 0;
 
+  /// Quante volte qualcuno ha **letto lo stato** — 24/08/2026.
+  ///
+  /// 🚨 Non è una curiosità: costruire questo provider, nell'app vera, vuol
+  /// dire **chiedere a Google Drive** quand'è stato l'ultimo backup. Contare le
+  /// costruzioni è l'unico modo, in un test, di dimostrare che l'avvio non
+  /// parla con Google quando non serve.
+  int quanteLetture = 0;
+
+  /// L'errore che l'oggetto vero solleva quando l'autorizzazione non c'è più.
+  bool serveRicollegare = false;
+
   @override
-  Future<StatoBackup> build() async => stato;
+  Future<StatoBackup> build() async {
+    quanteLetture++;
+
+    return stato;
+  }
 
   @override
   Future<void> adesso() async {
+    if (serveRicollegare) {
+      throw const CloudNonRaggiungibile(
+        'Non sei collegato a Google Drive.',
+        serveRicollegare: true,
+      );
+    }
+
     if (esplode) throw StateError('Drive non risponde');
 
     quanti++;

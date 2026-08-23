@@ -53,6 +53,7 @@ class StatoBackup {
   const StatoBackup({
     required this.acceso,
     required this.disponibile,
+    this.daRicollegare = false,
     this.fotoIncluse = false,
     this.ultimo,
     this.nomeDelCloud,
@@ -63,6 +64,14 @@ class StatoBackup {
 
   /// Se il cloud è configurato: senza, l'interruttore non si mostra.
   final bool disponibile;
+
+  /// ⛔ L'automatico è **fermo**: Google Drive va ricollegato — 24/08/2026.
+  ///
+  /// 🚨 È diverso da [fallitoIl], che vuol dire «ci ha provato e non ce l'ha
+  /// fatta, riproverà». Qui non riproverà: per rifare l'autorizzazione serve la
+  /// persona, e insistere da soli farebbe solo ricomparire il foglio di Google
+  /// a ogni apertura dell'app.
+  final bool daRicollegare;
 
   /// Se anche le foto vanno nel cloud — N5.1.
   ///
@@ -140,14 +149,29 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
     final prefs = await SharedPreferences.getInstance();
     final acceso = prefs.getBool(chiaveAcceso) ?? false;
 
+    /*
+     * ⛔ **Se Drive va ricollegato, non gli si chiede niente** — 24/08/2026.
+     *
+     * 🚨 Chiedergli l'ultima data quando l'autorizzazione non c'è più fa salire
+     * il foglio «Accesso» di Google, e non serve a niente: la risposta la
+     * sappiamo già, ed è «devi ricollegarti». ⚠️ Succedeva **aprendo la pagina
+     * "Backup e dati"** — cioè proprio la pagina che dovrebbe spiegare il
+     * problema, non riproporlo.
+     */
+    final daRicollegare =
+        acceso &&
+        (prefs.getBool(BackupCheGiraDaSolo.chiaveDaRicollegare) ?? false);
+
     return StatoBackup(
       acceso: acceso,
       disponibile: true,
       fotoIncluse: prefs.getBool(_chiaveFoto) ?? false,
       nomeDelCloud: cloud.nome,
-      // ⚠️ La data si chiede al cloud solo se è acceso: interrogarlo da spento
-      // vorrebbe dire chiedere un accesso a chi non l'ha concesso.
-      ultimo: acceso ? await _quandoLUltimo(cloud) : null,
+      // ⚠️ La data si chiede al cloud solo se è acceso **e non è da
+      // ricollegare**: interrogarlo da spento vorrebbe dire chiedere un accesso
+      // a chi non l'ha concesso, e interrogarlo da scollegato vuol dire farlo
+      // comparire per sentirsi dire quello che già sappiamo.
+      ultimo: acceso && !daRicollegare ? await _quandoLUltimo(cloud) : null,
 
       /*
        * 💡 L'errore invece si legge **dalle preferenze**, non dal cloud: e' un
@@ -155,6 +179,7 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
        * proprio quando la rete e' il problema.
        */
       fallitoIl: acceso ? _quandoEFallito(prefs) : null,
+      daRicollegare: daRicollegare,
     );
   }
 
@@ -191,6 +216,19 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(chiaveAcceso, true);
+
+    /*
+     * 🚨 **Ricollegarsi rimette in moto l'automatico** — 24/08/2026.
+     *
+     * ⛔ Quando l'autorizzazione a Drive sparisce, `BackupCheGiraDaSolo` si
+     * ferma e alza `chiaveDaRicollegare`: senza, riproverebbe a ogni apertura
+     * e farebbe comparire il foglio di Google ogni volta.
+     *
+     * ⚠️ **Solo questo punto può abbassarla**, ed è giusto così: è l'unico in
+     * cui una persona ha davvero ridato il permesso. Cancellarla altrove
+     * vorrebbe dire far ripartire i tentativi senza che sia cambiato niente.
+     */
+    await prefs.remove(BackupCheGiraDaSolo.chiaveDaRicollegare);
 
     await adesso();
 

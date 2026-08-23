@@ -93,35 +93,47 @@ Future<void> main() async {
        */
     container.read(aggiornamentoProvider);
 
-    unawaited(
-      container.read(authControllerProvider.notifier).restore().then((_) {
-        /*
-         * ══ 💾 IL BACKUP AUTOMATICO PARTE QUI — 2q.4, 23/08/2026 ═══════════
-         *
-         * 📌 Il committente: *«Non parte, l'avevamo controllato. Facciamo che
-         * parte comunque quando apri l'app»*.
-         *
-         * 🚨 **`avvioBackupProvider` esisteva già, e non lo guardava nessuno.**
-         * Un provider dichiarato e mai letto in Riverpod non nasce: il codice
-         * c'era, il commento spiegava perché non è `autoDispose`, e non è mai
-         * stato eseguito una volta. ⛔ È la forma più silenziosa di codice
-         * morto — sembra funzionante a chiunque lo legga.
-         *
-         * ⚠️ **Dopo `restore()`, non prima**: senza una sessione non si sa
-         * nemmeno di chi sarebbe il backup, e `BackupAutomatico` leggerebbe le
-         * preferenze di nessuno.
-         *
-         * 💡 `unawaited`, come tutto quello che sta qui: un backup può metterci
-         * secondi, e nessuna schermata deve aspettarlo. Se fallisce lo dice la
-         * pagina «Backup e dati», che è dove uno va a guardare.
-         *
-         * ⛔ **Non sostituisce il lavoro notturno di WorkManager**: quello
-         * copre chi l'app non la apre più, che è precisamente la persona a cui
-         * il backup serve di più. Questo copre chi la apre.
-         */
-        unawaited(container.read(avvioBackupProvider.future));
-      }),
-    );
+    /*
+     * ══ 💾 IL BACKUP AUTOMATICO PARTE A SESSIONE APERTA — 24/08/2026 ═══════
+     *
+     * 📌 Il committente: *«Non parte, l'avevamo controllato. Facciamo che parte
+     * comunque quando apri l'app»* (2q.4, 23/08).
+     *
+     * 🚨 **Ma non "quando l'app si apre": quando la sessione è aperta.** Il
+     * 23/08 partiva subito dopo `restore()`, e con il blocco biometrico acceso
+     * quello è **prima** che la persona sia entrata. Risultato, misurato con
+     * venti schermate a 0,2 s l'una:
+     *
+     * ⛔ il foglio «Accesso» di Google saliva **sopra la schermata di blocco**,
+     * rubava il fuoco al prompt dell'impronta e lo faceva fallire — la
+     * schermata diceva *«Non è andata. Riprova»*. Il backup non era solo brutto
+     * da vedere: **impediva di entrare nell'app**.
+     *
+     * 💡 Ora si aspetta lo stato `loggedIn`, che copre tutte e tre le
+     * strade — sessione ripristinata senza blocco, sblocco con l'impronta,
+     * accesso con la password — senza che nessuna di loro debba saperlo.
+     *
+     * ⚠️ **Una volta per avvio.** `loggedIn` si ripresenta a ogni
+     * `_loadMe()`, e senza la guardia il backup ripartirebbe a ogni rientro
+     * dalla schermata di blocco.
+     *
+     * ⛔ **Non sostituisce il lavoro notturno di WorkManager**: quello copre
+     * chi l'app non la apre più, che è precisamente la persona a cui il backup
+     * serve di più. Questo copre chi la apre.
+     */
+    var backupPartito = false;
+
+    container.listen<AuthState>(authControllerProvider, (_, stato) {
+      if (backupPartito || stato.status != AuthStatus.loggedIn) return;
+
+      backupPartito = true;
+
+      // 💡 `unawaited`: un backup può metterci secondi, e nessuna schermata
+      // deve aspettarlo. Se fallisce lo dice la pagina «Backup e dati».
+      unawaited(container.read(avvioBackupProvider.future));
+    }, fireImmediately: true);
+
+    unawaited(container.read(authControllerProvider.notifier).restore());
 
     // Il branding si riallinea in sottofondo: se fallisce, resta quello in
     // cache. I colori sbagliati sono un problema estetico, un'app che non

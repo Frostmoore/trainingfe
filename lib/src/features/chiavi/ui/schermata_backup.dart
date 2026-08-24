@@ -475,11 +475,11 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
      * riusciti, non è una cosa da mostrare.
      */
     if (s.inErrore) {
-      final tentativo = _daQuando(s.fallitoIl!);
+      final tentativo = daQuando(s.fallitoIl!);
 
       return s.ultimo == null
           ? 'Non è mai riuscito · ultimo tentativo $tentativo'
-          : 'Non riesce da $tentativo · l\'ultimo riuscito è ${_daQuando(s.ultimo!)}';
+          : 'Non riesce da $tentativo · l\'ultimo riuscito è ${daQuando(s.ultimo!)}';
     }
 
     final quando = s.ultimo;
@@ -487,7 +487,7 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
     if (quando == null)
       return 'Acceso · non so ancora quando è stato l\'ultimo';
 
-    return 'Ultimo backup: ${_daQuando(quando)}';
+    return 'Ultimo backup: ${daQuando(quando)}';
   }
 
   /// 💡 «oggi alle 03:14», «ieri alle 22:40», «3 giorni fa» in un posto solo: la
@@ -507,19 +507,6 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
   ///
   /// ⛔ **L'ora solo per oggi e ieri**: su «3 giorni fa» non aggiunge niente
   /// che serva, e allunga una riga che sta gia' stretta.
-  static String _daQuando(DateTime quando) {
-    final giorni = DateTime.now().difference(quando).inDays;
-    final ora =
-        '${quando.hour.toString().padLeft(2, '0')}:'
-        '${quando.minute.toString().padLeft(2, '0')}';
-
-    return switch (giorni) {
-      0 => 'oggi alle $ora',
-      1 => 'ieri alle $ora',
-      _ => '$giorni giorni fa',
-    };
-  }
-
   Future<void> _cambia(StatoBackup s) async {
     if (s.acceso) {
       await _spegni();
@@ -823,4 +810,40 @@ class _RipristinoDalCloudState extends ConsumerState<_RipristinoDalCloud> {
   String _giorno(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+/// ══ 🕒 E NELL'ORA DI CHI LEGGE — 25/08/2026 ════════════════════════════
+///
+/// 📌 *«il backup mi mette l'orario in UTC non nell'orario del mio fuso»*.
+///
+/// ⛔ La data dell'ultimo backup arriva da Drive ed è **UTC**: leggere `.hour`
+/// da lì dava due ore indietro. 💡 `toLocal()` qui è una **seconda rete**: la
+/// conversione vera si fa al confine, in `DriveDiBackup.quandoLUltimo()`, ma
+/// questa funzione riceve date da due sorgenti diverse e non deve dipendere
+/// da quale.
+///
+/// ⚠️ E i giorni si contano per **data di calendario**, non a blocchi di
+/// ventiquattr'ore: `difference().inDays` su un backup delle 23:00 di ieri
+/// risponde `0` fino alle 23:00 di oggi, cioè scrive **«oggi»** per una cosa
+/// di ieri. In una riga che serve a decidere se ripristinare, è la parola
+/// sbagliata nel momento peggiore.
+String daQuando(DateTime quando) {
+  final locale = quando.toLocal();
+  final adesso = DateTime.now();
+
+  final giorni = DateTime(
+    adesso.year,
+    adesso.month,
+    adesso.day,
+  ).difference(DateTime(locale.year, locale.month, locale.day)).inDays;
+
+  final ora =
+      '${locale.hour.toString().padLeft(2, '0')}:'
+      '${locale.minute.toString().padLeft(2, '0')}';
+
+  return switch (giorni) {
+    0 => 'oggi alle $ora',
+    1 => 'ieri alle $ora',
+    _ => '$giorni giorni fa',
+  };
 }

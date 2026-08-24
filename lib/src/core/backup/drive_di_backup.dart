@@ -154,18 +154,24 @@ class DriveDiBackup implements CloudDiBackup {
     await GoogleSignIn.instance.disconnect();
   }
 
+  /// C'è già tutto quello che serve per scrivere su Drive?
+  ///
+  /// ⛔ **Anche questa era una domanda che disegnava** — 25/08/2026. Chiedeva
+  /// prima *chi sei* con `attemptLightweightAuthentication()`, che su Android
+  /// apre il One Tap, e **poi** se il permesso c'era. Il risultato, su un
+  /// telefono con due conti Google: due fogli di fila, perché chi la chiama, se
+  /// la risposta è «no», passa comunque da `collega()`.
+  ///
+  /// 💡 Qui l'identità non serviva a niente: la domanda vera è *«ho un gettone
+  /// per gli ambiti?»*, e `authorizationForScopes()` la risponde da sola, in
+  /// silenzio e per contratto. ⚠️ Essere identificati non basta e non è
+  /// nemmeno il punto: identità e autorizzazione si revocano separatamente, ed
+  /// è la seconda quella che permette di scrivere.
   @override
   Future<bool> eCollegato() async {
     await _avvia();
 
-    final conto = await GoogleSignIn.instance
-        .attemptLightweightAuthentication();
-
-    if (conto == null) return false;
-
-    // ⚠️ Essere identificati non basta: serve **anche** l'autorizzazione agli
-    // ambiti, e le due cose si revocano separatamente.
-    final autorizzazione = await conto.authorizationClient
+    final autorizzazione = await GoogleSignIn.instance.authorizationClient
         .authorizationForScopes(_ambiti);
 
     return autorizzazione != null;
@@ -240,12 +246,33 @@ class DriveDiBackup implements CloudDiBackup {
     return null;
   }
 
+  /// Quando è stato caricato l'ultimo backup, **nell'ora di chi guarda**.
+  ///
+  /// ══ 🚨 `.toLocal()` NON È DECORAZIONE — 25/08/2026 ═══════════════════════
+  ///
+  /// 📌 *«il backup mi mette l'orario in UTC non nell'orario del mio fuso»*.
+  ///
+  /// ⛔ Drive manda `modifiedTime` in **UTC**, e `googleapis` lo consegna come
+  /// un `DateTime` con `isUtc = true`. La schermata leggeva `.hour` e `.minute`
+  /// da quello: in agosto, in Italia, **due ore indietro**. Un backup delle
+  /// 23:50 si leggeva «21:50» — e il giorno prima, per dieci minuti al giorno,
+  /// si leggeva pure il giorno sbagliato.
+  ///
+  /// 🚨 **La conversione si fa qui, al confine, e non a schermo.** L'altra data
+  /// che quella riga mostra — l'ultimo tentativo fallito — nasce da
+  /// `DateTime.fromMillisecondsSinceEpoch()`, che è **locale**. Due date con
+  /// due fusi diversi nella stessa frase è la condizione perfetta perché
+  /// qualcuno converta quella già giusta.
+  ///
+  /// ⚠️ È la stessa famiglia del difetto del 24/08 (`DateTime ==` guarda anche
+  /// `isUtc`): in Dart il fuso viaggia **dentro** il valore, e due `DateTime`
+  /// che indicano lo stesso istante non si comportano allo stesso modo.
   @override
   Future<DateTime?> quandoLUltimo() async {
     final api = await _api();
     final file = await _trova(api, _nomeAttuale);
 
-    return file?.modifiedTime;
+    return file?.modifiedTime?.toLocal();
   }
 
   @override
@@ -372,6 +399,52 @@ class DriveDiBackup implements CloudDiBackup {
   }
 
   /// Il client di Drive, con il token in testa a ogni richiesta.
+  /// Il client Drive, **senza mai disegnare niente**.
+  ///
+  /// ══ 🚨 IL FOGLIO DI GOOGLE, LA SECONDA VOLTA — 25/08/2026 ════════════════
+  ///
+  /// 📌 *«È ritornato il foglio google all'apertura dell'app! L'avevamo
+  /// tolto!»*.
+  ///
+  /// ⛔ **Ed era vero: la correzione del 24/08 era incompleta.** Quel giorno si
+  /// era tolto il foglio dai percorsi che chiamavano Google **senza motivo** —
+  /// per decidere *se fosse ora* di fare un backup. Restava però il percorso
+  /// buono: quando un backup è **davvero** dovuto, si tocca Drive, e toccare
+  /// Drive passava di qui.
+  ///
+  /// ── 🚨 Cosa fa davvero `attemptLightweightAuthentication()` su Android ──
+  ///
+  /// Guardando il sorgente del plugin (`google_sign_in_android` 7.2.16) fa
+  /// **due** tentativi, non uno:
+  ///
+  /// | # | Opzioni | Disegna? |
+  /// |---|---|---|
+  /// | 1 | `filterToAuthorized: true`, `autoSelectEnabled: true` | no, se c'è **un solo** conto già autorizzato |
+  /// | 2 | 🚨 `filterToAuthorized: false`, `autoSelectEnabled: false` | **sì**: è il One Tap con **tutti** i conti del telefono |
+  ///
+  /// ⛔ Il secondo parte **da solo** quando il primo torna a mani vuote — e
+  /// torna a mani vuote appena i conti Google sul telefono sono più d'uno.
+  /// Cioè: «leggera» non vuol dire silenziosa, vuol dire *poca* interfaccia. Il
+  /// nome inganna, e ci ha ingannati due volte.
+  ///
+  /// 💡 **Qui non serve sapere chi sei: serve un permesso.**
+  /// `GoogleSignIn.instance.authorizationClient` esiste apposta — dà i gettoni
+  /// di autorizzazione **senza** l'identità — e `authorizationForScopes()` è
+  /// silenziosa **per contratto**: *«Requests client authorization tokens if
+  /// they can be returned without user interaction. If authorization would
+  /// require user interaction, this returns null»*. Torna `null`, **non
+  /// disegna**. Lato Android è `promptIfUnauthorized: false`, che sul fallimento
+  /// `unauthorized` restituisce `null` senza aprire niente.
+  ///
+  /// ⚠️ **Il prezzo, dichiarato**: senza l'identità non si specifica *quale*
+  /// conto, e la scelta la fa Google — in pratica quello che il permesso l'ha
+  /// dato. Con due conti che hanno entrambi autorizzato l'app, il backup
+  /// potrebbe finire nel Drive dell'altro. ⛔ Resta comunque meglio di un foglio
+  /// al giorno: quello è certo, questo è raro e riguarda solo chi ha collegato
+  /// l'app a due Drive.
+  ///
+  /// 💡 Il foglio resta dove **deve** stare: `_collega()`, cioè il dito di chi
+  /// tocca «Attiva il backup».
   Future<drive.DriveApi> _api() async {
     /*
      * 🚨 Se ce l'abbiamo gia', si riusa: e' l'unica riga che toglie di mezzo
@@ -389,22 +462,19 @@ class DriveDiBackup implements CloudDiBackup {
 
     await _avvia();
 
-    final conto = await GoogleSignIn.instance
-        .attemptLightweightAuthentication();
-
-    if (conto == null) {
-      throw const CloudNonRaggiungibile(
-        'Non sei collegato a Google Drive.',
-        serveRicollegare: true,
-      );
-    }
-
-    final autorizzazione = await conto.authorizationClient
+    final autorizzazione = await GoogleSignIn.instance.authorizationClient
         .authorizationForScopes(_ambiti);
 
     if (autorizzazione == null) {
+      /*
+       * ⚠️ **Un messaggio solo per due cause**, ed è giusto così: `null` qui
+       * vuol dire «non posso averlo senza chiedertelo», e non distingue fra
+       * «non sei collegato» e «il permesso è scaduto». 💡 Per chi legge la
+       * differenza non esiste comunque: il gesto da fare è lo stesso, e la
+       * schermata glielo dice.
+       */
       throw const CloudNonRaggiungibile(
-        'Manca il permesso di scrivere nella cartella dell\'app.',
+        'Google Drive va ricollegato.',
         serveRicollegare: true,
       );
     }

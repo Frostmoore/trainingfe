@@ -294,6 +294,17 @@ class _SettimanaVuota extends ConsumerWidget {
 /// A.6 prende anche le tre del carosello.
 const chiaveCardAllenamento = Key('card-allenamento');
 
+/// 🥇 L'oro degli allenamenti intensi — 3b-B.20.6.
+///
+/// ⚠️ **Scritto a mano, e non c'era alternativa.** `ColorScheme` non ha uno slot
+/// per l'oro, e riusarne uno vicino — `tertiary` — vorrebbe dire dare due
+/// significati allo stesso colore: `tertiary` in questa app dice già
+/// «calorie bruciate».
+///
+/// 💡 Non è giallo pieno ma un ambra scuro: un giallo acceso sopra una foto in
+/// una griglia fitta grida, e questo deve **premiare**, non allarmare.
+const oroDellIntenso = Color(0xFFC9A227);
+
 class _CardAllenamento extends ConsumerWidget {
   const _CardAllenamento({required this.voce});
 
@@ -346,6 +357,30 @@ class _CardAllenamento extends ConsumerWidget {
       key: chiaveCardAllenamento,
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
+
+      /*
+       * ══ 🥇 L'ORO SOPRA LE 500 KCAL — 3b-B.20.6, 25/08/2026 ═══════════════
+       *
+       * 📌 *«Tutti gli allenamenti superiori alle 500kcal devono essere
+       * circondati d'oro»*.
+       *
+       * 💡 **La soglia non è scritta qui**: sta in `VoceStorico.kcalIntenso`,
+       * insieme al `intenso` che le medaglie leggeranno. ⚠️ Copiarla qui
+       * vorrebbe dire che un giorno lo stesso allenamento è d'oro nello storico
+       * e non abbastanza intenso per la medaglia.
+       *
+       * ⛔ **Un bordo e non uno sfondo**: la foto occupa quasi tutta la card, e
+       * un fondo dorato non si vedrebbe. 🚨 E non è nemmeno un colore del tema —
+       * l'oro non ha uno slot in `ColorScheme`, e prenderne uno vicino
+       * (`tertiary`) vorrebbe dire cambiare significato al colore che già dice
+       * «bruciate».
+       */
+      shape: voce.intenso
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Gap.radius),
+              side: const BorderSide(color: oroDellIntenso, width: 2),
+            )
+          : null,
       child: InkWell(
         onTap: () => _apri(context),
         child: Column(

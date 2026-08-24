@@ -162,6 +162,30 @@ class VoceStorico {
   int? get kcal =>
       kcalCorrettaAMano ? kcalDalleSedute : (kcalDalPolso ?? kcalDalleSedute);
 
+  /// 🥇 La soglia oltre la quale un allenamento è **intenso** — 3b-B.20.6.
+  ///
+  /// 📌 *«Tutti gli allenamenti superiori alle 500kcal devono essere circondati
+  /// d'oro e ci deve essere un flag per poter dire che sono allenamenti intensi
+  /// (ci servirà per gli achievements in futuro)»*.
+  ///
+  /// 🚨 **Scritta una volta sola, qui.** È lo stesso motivo per cui `kcal` sta
+  /// qui e non nei due posti che la usano: una soglia copiata nel widget che
+  /// disegna il bordo e poi di nuovo dentro le medaglie divergerebbe alla prima
+  /// modifica — e lo stesso allenamento sarebbe d'oro nello storico e non
+  /// abbastanza intenso per la medaglia.
+  static const kcalIntenso = 500;
+
+  /// Se questo allenamento conta come **intenso**.
+  ///
+  /// ⚠️ **Deriva dalle calorie, non è una colonna.** Un dato salvato che si può
+  /// ricavare è un dato che prima o poi non torna con ciò da cui deriva: basta
+  /// correggere le calorie a mano dopo averlo scritto. 💡 Quando FASE 12 avrà
+  /// bisogno di contarli, li conta da qui.
+  ///
+  /// 🚨 `false` quando le calorie non si sanno: *«non lo so»* non è *«non è
+  /// stato intenso»*, ma una medaglia non si dà a un forse.
+  bool get intenso => (kcal ?? 0) >= kcalIntenso;
+
   int? get distanzaMetri {
     var somma = 0;
     var trovato = false;

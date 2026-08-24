@@ -11,6 +11,7 @@ import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
+import 'widgets/esercizi_fatti.dart';
 
 /// Il riepilogo di fine allenamento — G7.
 ///
@@ -142,34 +143,18 @@ class _Corpo extends ConsumerWidget {
             ),
           ),
 
-        for (final voce in gruppi.entries)
-          Card(
-            margin: const EdgeInsets.only(bottom: Gap.sm),
-            child: Padding(
-              padding: const EdgeInsets.all(Gap.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    voce.key,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: Gap.xs),
-                  Text(
-                    voce.value
-                        .map(
-                          (s) =>
-                              '${s.reps ?? '—'}${s.weight == null ? '' : ' × ${_kg(s.weight!)} kg'}',
-                        )
-                        .join('   ·   '),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-          ),
+        /*
+         * ⛔ **Qui le serie stavano tutte su una riga sola**, separate da un
+         * puntino. Con quattro si leggeva a fatica, con sette non si leggeva
+         * più — e il numero della serie, che è quello che si cerca per sapere
+         * dove si è calati, non c'era proprio.
+         *
+         * 💡 La card sta in `widgets/esercizi_fatti.dart` e non qui: la stessa
+         * deve comparire sulla pagina di un allenamento del polso con una
+         * scheda attaccata (B.20.4), e due copie divergono sempre.
+         */
+        for (final esercizio in raggruppaPerEsercizio(sessione.sets))
+          CardEsercizioFatto(esercizio: esercizio),
 
         const SizedBox(height: Gap.lg),
         FilledButton(
@@ -182,8 +167,8 @@ class _Corpo extends ConsumerWidget {
     );
   }
 
-  static String _kg(double v) =>
-      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+  // 💡 `_kg` se n'è andato con le righe che lo usavano: adesso i chili li
+  // formatta `CardEsercizioFatto.kg`, dove stanno anche le serie.
 }
 
 /// Le calorie: la stima, e come sostituirla.

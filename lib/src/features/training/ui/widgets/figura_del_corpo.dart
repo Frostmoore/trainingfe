@@ -1,103 +1,167 @@
-/// La figura del corpo colorata per zone — 3b-A.6.1, 24/08/2026.
+/// La figura del corpo colorata per zone — 3b-A.6.1 / 3b-B.1, 24/08/2026.
 ///
-/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+/// ══ 📌 LA RICHIESTA, E COME È CAMBIATA ════════════════════════════════════
 ///
-/// *«una con un uomo vitruviano visto davanti e indietro (non proprio un uomo
-/// vitruviano, ovviamente, ma un'immagine di un uomo) in cui i muscoli e i
-/// gruppi muscolari più allenati hanno un colore rosso più intenso. Questa
-/// creala come **servizio riutilizzabile**, perché dovrà andare anche in ogni
-/// pagina dell'allenamento specifico»*.
+/// *«una con un uomo vitruviano visto davanti e indietro [...] in cui i muscoli
+/// e i gruppi muscolari più allenati hanno un colore rosso più intenso. Questa
+/// creala come **servizio riutilizzabile**»*.
 ///
-/// ── 🚨 Disegnata, non un'immagine ─────────────────────────────────────────
+/// ⛔ **Al primo giro era disegnata a mano**, con dei rettangoli arrotondati, e
+/// il committente l'ha bocciata: *«L'uomo è orribile, credo che sia meglio se ti
+/// passo il png di un uomo e tu ci colori sopra»*. Aveva ragione: un corpo fatto
+/// di rettangoli sembra un manichino smontato, e nessun raccordo lo salvava.
 ///
-/// ⛔ **Niente SVG e niente PNG**, ed è una scelta con tre ragioni:
+/// 💡 Adesso la sagoma è un'**immagine anatomica** che ci ha dato lui, e il
+/// colore ci va **dentro**.
 ///
-/// 1. un'immagine di un corpo va **licenziata**, e una figura anatomica
-///    trovata in giro è il tipo di cosa che si scopre di non poter usare il
-///    giorno della pubblicazione;
-/// 2. per colorare zona per zona servirebbe comunque un SVG con un `id` per
-///    muscolo, cioè un file che qualcuno deve disegnare **e mantenere allineato
-///    all'enum**: il giorno che si aggiunge un gruppo, l'immagine tace;
-/// 3. `flutter_svg` sarebbe una dipendenza in più per disegnare quindici forme.
+/// ── 🚨 Come il colore resta dentro il corpo ───────────────────────────────
 ///
-/// 💡 Qui ogni zona è un `Path` **nostro**, in coordinate 0..1, e la mappa
-/// `gruppo → zona` è nel codice: se un gruppo non ha una zona, l'analizzatore
-/// non se ne accorge — ma il test sì (`figura_del_corpo_test.dart`).
+/// ⛔ Disegnare le macchie sopra l'immagine le farebbe debordare sul fondo: una
+/// zona è un rettangolo, un braccio è obliquo. ⚠️ E ritagliarle a mano vorrebbe
+/// dire ridisegnare la sagoma — cioè tornare al punto di partenza.
 ///
-/// ⚠️ **È stilizzata, non anatomica**, e va bene così: deve rispondere a «quali
-/// zone ho allenato», non insegnare miologia.
+/// 💡 Si usa l'immagine **come maschera**: dentro un `saveLayer` si dipingono le
+/// macchie, poi si applica la sagoma con `BlendMode.dstIn`. Quello che resta è
+/// il colore **solo dove c'è corpo** — e siccome i solchi fra i muscoli sono
+/// trasparenti nel PNG, il rosso segue le fibre invece di essere una macchia
+/// piatta.
+///
+/// ── ⚠️ Uomo o donna ───────────────────────────────────────────────────────
+///
+/// 📌 *«Ovviamente un uomo deve vedere quella da uomo e una donna quella da
+/// donna»*. Il sesso viene dal profilo (`UserProfile.sex`), e **chi non l'ha
+/// dichiarato vede la figura maschile**: una delle due va scelta comunque, e
+/// non c'è una terza immagine da mostrare.
 library;
 
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../profile/profile_controller.dart';
 import '../../data/gruppo_muscolare.dart';
 
-/// Il servizio riutilizzabile: dalle intensità al disegno.
+/// Quale corpo si disegna.
+enum CorpoDa {
+  uomo('uomo'),
+  donna('donna');
+
+  const CorpoDa(this.cartella);
+
+  final String cartella;
+
+  /// 💡 `null`, una stringa vuota o un valore che non conosciamo → uomo.
+  static CorpoDa dalSesso(String? sesso) =>
+      sesso?.toLowerCase() == 'female' ? CorpoDa.donna : CorpoDa.uomo;
+}
+
+/// Le sagome, caricate una volta per vita dell'app.
 ///
-/// 🚨 **Un widget e non una funzione che torna un'immagine**: va in una card
-/// del carosello, nella pagina di un allenamento e — un domani — dove serve. Un
-/// widget si mette dove si vuole; un'immagine generata andrebbe misurata,
-/// messa in cache e invalidata a mano.
-class FiguraDelCorpo extends StatelessWidget {
+/// 🚨 **Non `autoDispose`**: sono quattro PNG da ottanta kilobyte, e la figura
+/// compare nel carosello **e** in ogni pagina di allenamento. Ricaricarli a ogni
+/// cambio di schermata vorrebbe dire decodificarli decine di volte.
+final sagomaDelCorpoProvider = FutureProvider.family<ui.Image, String>((
+  ref,
+  nome,
+) async {
+  final dati = await rootBundle.load('assets/corpo/$nome.png');
+
+  final codificatore = await ui.instantiateImageCodec(
+    dati.buffer.asUint8List(),
+  );
+
+  return (await codificatore.getNextFrame()).image;
+});
+
+/// Il servizio riutilizzabile: dalle intensità al disegno.
+class FiguraDelCorpo extends ConsumerWidget {
   const FiguraDelCorpo({
     required this.intensita,
     this.mostraDietro = true,
+    this.corpo,
     super.key,
   });
 
-  /// `gruppo → 0..1`. Quello che manca è **grigio**, non zero rosso.
+  /// `gruppo → 0..1`. Quello che manca resta **spento**, non zero rosso.
   final Map<GruppoMuscolare, double> intensita;
 
   /// Se disegnare anche la schiena accanto al davanti.
-  ///
-  /// 💡 In una card stretta si può volere solo il davanti: metà delle zone
-  /// stanno lì, e due figure in 150 px non si leggono.
   final bool mostraDietro;
 
+  /// Forzare uomo o donna. `null` = lo decide il profilo.
+  final CorpoDa? corpo;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
 
-    return LayoutBuilder(
-      builder: (context, vincoli) {
-        /*
-         * ⚠️ **Il rapporto lo decide la figura, non il contenitore.** Un corpo
-         * disegnato in un riquadro qualunque si deforma: qui si calcola il
-         * quadrato più grande che ci sta e si disegna dentro quello.
-         */
-        final quante = mostraDietro ? 2 : 1;
-        final larghezzaPerFigura = vincoli.maxWidth / quante;
-        final lato = larghezzaPerFigura < vincoli.maxHeight / _rapporto
-            ? larghezzaPerFigura
-            : vincoli.maxHeight / _rapporto;
+    /*
+     * ⚠️ `valueOrNull`: se il profilo non è ancora arrivato — o non arriva
+     * affatto, perché la rete non va — si disegna comunque. ⛔ Aspettarlo
+     * vorrebbe dire una card vuota per una figura che il profilo lo usa solo
+     * per scegliere fra due immagini.
+     */
+    final quale =
+        corpo ?? CorpoDa.dalSesso(ref.watch(profileProvider).valueOrNull?.sex);
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final davanti in [true, if (mostraDietro) false])
-              SizedBox(
-                width: lato,
-                height: lato * _rapporto,
-                child: CustomPaint(
-                  painter: _PittoreDelCorpo(
-                    intensita: intensita,
-                    davanti: davanti,
-                    spento: tema.colorScheme.surfaceContainerHighest,
-                    contorno: tema.colorScheme.outlineVariant,
-                    acceso: tema.colorScheme.error,
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final davanti in [true, if (mostraDietro) false])
+          Expanded(
+            child: _UnaFigura(
+              nome: '${quale.cartella}_${davanti ? 'davanti' : 'dietro'}',
+              intensita: intensita,
+              davanti: davanti,
+              spento: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
+              acceso: tema.colorScheme.error,
+            ),
+          ),
+      ],
     );
   }
+}
 
-  /// Quanto è alta la figura rispetto alla sua larghezza.
-  static const _rapporto = 2.3;
+class _UnaFigura extends ConsumerWidget {
+  const _UnaFigura({
+    required this.nome,
+    required this.intensita,
+    required this.davanti,
+    required this.spento,
+    required this.acceso,
+  });
+
+  final String nome;
+  final Map<GruppoMuscolare, double> intensita;
+  final bool davanti;
+  final Color spento;
+  final Color acceso;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sagoma = ref.watch(sagomaDelCorpoProvider(nome)).valueOrNull;
+
+    /*
+     * ⚠️ Mentre carica non si disegna **niente**, nemmeno un giro di
+     * caricamento: sono asset locali, ci mettono un fotogramma, e una rotellina
+     * che lampeggia a ogni apertura darebbe l'idea di una cosa lenta.
+     */
+    if (sagoma == null) return const SizedBox.shrink();
+
+    return CustomPaint(
+      painter: _PittoreDelCorpo(
+        sagoma: sagoma,
+        intensita: intensita,
+        davanti: davanti,
+        spento: spento,
+        acceso: acceso,
+      ),
+      child: const SizedBox.expand(),
+    );
+  }
 }
 
 /// Da che parte si vede una zona.
@@ -108,215 +172,175 @@ class _Zona {
 
   final _Lato lato;
 
-  /// Le forme in coordinate **0..1**, così la figura scala con il riquadro.
+  /// Le forme in coordinate **0..1 sulla figura**, non sul riquadro.
   final List<Rect> forme;
 }
 
 /// Dove sta ogni gruppo sul corpo.
 ///
-/// 🚨 **Rettangoli arrotondati e non sagome**: una sagoma anatomica sarebbe
-/// centinaia di punti da mantenere, e a 150 px di altezza non si distinguerebbe
-/// da questa. ⚠️ Quello che deve funzionare è **riconoscere la zona**, e per
-/// quello la posizione conta più della forma.
+/// 🚨 **Le coordinate sono rifatte sull'immagine vera**: quelle del disegno a
+/// rettangoli non c'entravano più niente. ⚠️ Sono generose di proposito — tanto
+/// la maschera taglia via quello che esce dal corpo, quindi è meglio abbondare
+/// che lasciare un bordo di muscolo spento.
 ///
-/// ⛔ `cardio` e `full_body` non compaiono, e non è una dimenticanza: non sono
-/// zone del corpo (`GruppoMuscolare.eUnMuscolo`).
+/// ⛔ `cardio` e `full_body` non compaiono: non sono zone del corpo.
 const _zone = <GruppoMuscolare, _Zona>{
   GruppoMuscolare.spalle: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.195, 0.168, 0.320, 0.240),
-    Rect.fromLTRB(0.680, 0.168, 0.805, 0.240),
+    Rect.fromLTRB(0.18, 0.130, 0.40, 0.235),
+    Rect.fromLTRB(0.60, 0.130, 0.82, 0.235),
   ]),
   GruppoMuscolare.petto: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.320, 0.200, 0.680, 0.290),
+    Rect.fromLTRB(0.34, 0.150, 0.66, 0.265),
   ]),
   GruppoMuscolare.schiena: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.310, 0.195, 0.690, 0.360),
+    Rect.fromLTRB(0.31, 0.140, 0.69, 0.390),
   ]),
   GruppoMuscolare.addome: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.355, 0.300, 0.645, 0.420),
+    Rect.fromLTRB(0.38, 0.265, 0.62, 0.430),
   ]),
   GruppoMuscolare.bicipiti: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.155, 0.250, 0.280, 0.340),
-    Rect.fromLTRB(0.720, 0.250, 0.845, 0.340),
+    Rect.fromLTRB(0.15, 0.200, 0.34, 0.320),
+    Rect.fromLTRB(0.66, 0.200, 0.85, 0.320),
   ]),
   GruppoMuscolare.tricipiti: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.155, 0.250, 0.280, 0.340),
-    Rect.fromLTRB(0.720, 0.250, 0.845, 0.340),
+    Rect.fromLTRB(0.15, 0.200, 0.34, 0.320),
+    Rect.fromLTRB(0.66, 0.200, 0.85, 0.320),
   ]),
   GruppoMuscolare.avambracci: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.155, 0.352, 0.280, 0.440),
-    Rect.fromLTRB(0.720, 0.352, 0.845, 0.440),
+    Rect.fromLTRB(0.02, 0.300, 0.24, 0.440),
+    Rect.fromLTRB(0.76, 0.300, 0.98, 0.440),
   ]),
   GruppoMuscolare.glutei: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.330, 0.400, 0.670, 0.495),
+    Rect.fromLTRB(0.33, 0.385, 0.67, 0.505),
   ]),
   GruppoMuscolare.quadricipiti: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.330, 0.470, 0.470, 0.650),
-    Rect.fromLTRB(0.530, 0.470, 0.670, 0.650),
+    Rect.fromLTRB(0.32, 0.440, 0.50, 0.680),
+    Rect.fromLTRB(0.50, 0.440, 0.68, 0.680),
   ]),
   GruppoMuscolare.femorali: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.330, 0.505, 0.470, 0.665),
-    Rect.fromLTRB(0.530, 0.505, 0.670, 0.665),
+    Rect.fromLTRB(0.32, 0.480, 0.50, 0.690),
+    Rect.fromLTRB(0.50, 0.480, 0.68, 0.690),
   ]),
   GruppoMuscolare.polpacci: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.335, 0.700, 0.465, 0.865),
-    Rect.fromLTRB(0.535, 0.700, 0.665, 0.865),
+    Rect.fromLTRB(0.33, 0.700, 0.50, 0.885),
+    Rect.fromLTRB(0.50, 0.700, 0.67, 0.885),
   ]),
 };
 
 class _PittoreDelCorpo extends CustomPainter {
   const _PittoreDelCorpo({
+    required this.sagoma,
     required this.intensita,
     required this.davanti,
     required this.spento,
-    required this.contorno,
     required this.acceso,
   });
 
+  final ui.Image sagoma;
   final Map<GruppoMuscolare, double> intensita;
   final bool davanti;
   final Color spento;
-  final Color contorno;
   final Color acceso;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sagoma = Paint()
-      ..color = spento
-      ..style = PaintingStyle.fill;
-
     /*
-     * ══ 🚨 LE PARTI SI SOVRAPPONGONO, O È UN LEGO ═════════════════════════
-     *
-     * ⛔ Al primo giro testa, braccia, tronco e gambe erano quattro rettangoli
-     * **staccati**, con dei buchi in mezzo. Visto a schermo il 24/08: sembrava
-     * un manichino smontato, non un corpo.
-     *
-     * 💡 Adesso ogni pezzo entra dentro il vicino di qualche punto — il collo
-     * nel tronco, le braccia nelle spalle, le gambe nel bacino — e i raggi sono
-     * grandi. ⚠️ Resta **stilizzata**, e va bene: deve rispondere a «quali zone
-     * ho allenato», non insegnare anatomia.
+     * ⚠️ **Il rapporto lo decide l'immagine.** Deformare un corpo per riempire
+     * un riquadro qualunque è la cosa che si nota per prima, e non si smette
+     * più di vederla.
      */
-    // Il collo, che è quello che teneva staccata la testa.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        _r(const Rect.fromLTRB(0.455, 0.100, 0.545, 0.185), size),
-        const Radius.circular(6),
-      ),
-      sagoma,
+    final scala = (size.width / sagoma.width) < (size.height / sagoma.height)
+        ? size.width / sagoma.width
+        : size.height / sagoma.height;
+
+    final larghezza = sagoma.width * scala;
+    final altezza = sagoma.height * scala;
+
+    final dove = Rect.fromLTWH(
+      (size.width - larghezza) / 2,
+      (size.height - altezza) / 2,
+      larghezza,
+      altezza,
     );
 
-    canvas.drawOval(
-      _r(const Rect.fromLTRB(0.415, 0.015, 0.585, 0.125), size),
-      sagoma,
+    final sorgente = Rect.fromLTWH(
+      0,
+      0,
+      sagoma.width.toDouble(),
+      sagoma.height.toDouble(),
     );
 
-    for (final (r, raggio) in const [
-      // Le spalle: più larghe del tronco, e sono loro a raccordare le braccia.
-      (Rect.fromLTRB(0.185, 0.155, 0.815, 0.245), 26.0),
-      (Rect.fromLTRB(0.285, 0.165, 0.715, 0.430), 20.0), // torace
-      (Rect.fromLTRB(0.315, 0.380, 0.685, 0.510), 18.0), // bacino
-      (Rect.fromLTRB(0.145, 0.180, 0.290, 0.450), 20.0), // braccio sinistro
-      (Rect.fromLTRB(0.710, 0.180, 0.855, 0.450), 20.0), // braccio destro
-      (Rect.fromLTRB(0.320, 0.450, 0.480, 0.890), 22.0), // gamba sinistra
-      (Rect.fromLTRB(0.520, 0.450, 0.680, 0.890), 22.0), // gamba destra
-    ]) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(_r(r, size), Radius.circular(raggio)),
-        sagoma,
-      );
-    }
+    // ── 1. La sagoma spenta ──────────────────────────────────────────────
+    canvas.drawImageRect(
+      sagoma,
+      sorgente,
+      dove,
+      Paint()..colorFilter = ColorFilter.mode(spento, BlendMode.srcIn),
+    );
 
-    // ── Le zone accese ───────────────────────────────────────────────────
-    _zone.forEach((gruppo, zona) {
-      final siVede =
-          zona.lato == _Lato.entrambi ||
-          (davanti ? zona.lato == _Lato.davanti : zona.lato == _Lato.dietro);
-
-      if (!siVede) return;
-
-      final quanto = intensita[gruppo] ?? 0;
+    // ── 2. Le zone accese, ritagliate dentro il corpo ────────────────────
+    final accese = _zone.entries.where((e) {
+      final visibile =
+          e.value.lato == _Lato.entrambi ||
+          (davanti
+              ? e.value.lato == _Lato.davanti
+              : e.value.lato == _Lato.dietro);
 
       /*
        * ⛔ **Zero non si disegna.** Un rosso appena accennato su un muscolo mai
        * allenato direbbe che qualcosa hai fatto, e la figura serve proprio a
        * distinguere il niente dal poco.
        */
-      if (quanto <= 0) return;
+      return visibile && (intensita[e.key] ?? 0) > 0;
+    }).toList();
+
+    if (accese.isEmpty) return;
+
+    /*
+     * 🚨 **`saveLayer` e poi `dstIn`**: si dipinge su un foglio a parte, e alla
+     * fine la sagoma fa da stampo. ⚠️ Senza il layer, `dstIn` cancellerebbe
+     * tutto quello che c'è sotto nel canvas — compresa la figura spenta.
+     */
+    canvas.saveLayer(dove, Paint());
+
+    for (final e in accese) {
+      final quanto = intensita[e.key]!;
 
       /*
-       * 💡 L'opacità parte da 0,25 e non da 0: un'intensità dello 0,02 con
-       * opacità 0,02 sarebbe invisibile, e il muscolo sembrerebbe non allenato.
-       * ⚠️ Sotto una certa soglia il colore deve **esserci**, anche pallido.
+       * 💡 L'opacità parte da 0,3: un'intensità dello 0,02 con opacità 0,02
+       * sarebbe invisibile, e il muscolo sembrerebbe non allenato. ⚠️ Sotto una
+       * certa soglia il colore deve **esserci**, anche pallido.
        */
-      final tinta = acceso.withValues(alpha: 0.25 + 0.75 * quanto);
+      final tinta = acceso.withValues(alpha: 0.30 + 0.70 * quanto);
 
-      for (final forma in zona.forme) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(_r(forma, size), const Radius.circular(8)),
+      for (final forma in e.value.forme) {
+        canvas.drawRect(
+          Rect.fromLTRB(
+            dove.left + forma.left * dove.width,
+            dove.top + forma.top * dove.height,
+            dove.left + forma.right * dove.width,
+            dove.top + forma.bottom * dove.height,
+          ),
           Paint()..color = tinta,
         );
       }
-    });
-
-    // ── Il contorno, che tiene insieme la figura ─────────────────────────
-    final bordo = Paint()
-      ..color = contorno
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    /*
-     * ⚠️ **Il contorno si disegna solo sul perimetro esterno**, cioè testa,
-     * braccia e gambe. ⛔ Ripassarlo su tronco e bacino disegnerebbe le linee
-     * **dentro** la figura, e le sovrapposizioni che tengono insieme il corpo
-     * tornerebbero a vedersi come cuciture.
-     */
-    canvas.drawOval(
-      _r(const Rect.fromLTRB(0.415, 0.015, 0.585, 0.125), size),
-      bordo,
-    );
-
-    for (final (r, raggio) in const [
-      (Rect.fromLTRB(0.145, 0.180, 0.290, 0.450), 20.0),
-      (Rect.fromLTRB(0.710, 0.180, 0.855, 0.450), 20.0),
-      (Rect.fromLTRB(0.320, 0.450, 0.480, 0.890), 22.0),
-      (Rect.fromLTRB(0.520, 0.450, 0.680, 0.890), 22.0),
-    ]) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(_r(r, size), Radius.circular(raggio)),
-        bordo,
-      );
     }
 
-    // ── «davanti» / «dietro», o non si sa cosa si sta guardando ──────────
-    final testo =
-        ui.ParagraphBuilder(
-            ui.ParagraphStyle(
-              textAlign: TextAlign.center,
-              fontSize: size.width * 0.09,
-              fontWeight: FontWeight.w600,
-            ),
-          )
-          ..pushStyle(ui.TextStyle(color: contorno))
-          ..addText(davanti ? 'davanti' : 'dietro');
+    canvas.drawImageRect(
+      sagoma,
+      sorgente,
+      dove,
+      Paint()..blendMode = BlendMode.dstIn,
+    );
 
-    final p = testo.build()..layout(ui.ParagraphConstraints(width: size.width));
-
-    canvas.drawParagraph(p, Offset(0, size.height - p.height));
+    canvas.restore();
   }
-
-  /// Da coordinate 0..1 a pixel.
-  static Rect _r(Rect q, Size s) => Rect.fromLTRB(
-    q.left * s.width,
-    q.top * s.height,
-    q.right * s.width,
-    q.bottom * s.height,
-  );
 
   @override
   bool shouldRepaint(_PittoreDelCorpo vecchio) =>
       vecchio.davanti != davanti ||
       vecchio.acceso != acceso ||
+      vecchio.sagoma != sagoma ||
       !_stesseIntensita(vecchio.intensita, intensita);
 
   static bool _stesseIntensita(
@@ -340,3 +364,25 @@ class _PittoreDelCorpo extends CustomPainter {
 /// una parte del corpo che non si accende mai — e nessuno se ne accorgerebbe,
 /// perché non è un errore: è un silenzio.
 Set<GruppoMuscolare> get gruppiDisegnati => _zone.keys.toSet();
+
+/// Una sagoma bianca finta, per i test.
+///
+/// ⚠️ Serve perché un test di widget **non può leggere gli asset veri** senza
+/// impacchettarli: `rootBundle` in un test non ha i PNG. 💡 Un quadrato opaco fa
+/// la stessa cosa per quello che il pittore deve dimostrare — che disegna, che
+/// non sfora e che a zero tace.
+@visibleForTesting
+Future<ui.Image> sagomaFinta({int lato = 64}) async {
+  final dati = Uint8List(lato * lato * 4)..fillRange(0, lato * lato * 4, 255);
+
+  final buffer = await ui.ImmutableBuffer.fromUint8List(dati);
+
+  final descrittore = ui.ImageDescriptor.raw(
+    buffer,
+    width: lato,
+    height: lato,
+    pixelFormat: ui.PixelFormat.rgba8888,
+  );
+
+  return (await (await descrittore.instantiateCodec()).getNextFrame()).image;
+}

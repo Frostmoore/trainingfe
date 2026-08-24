@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/achievements/achievement.dart';
 import 'package:training_companion/src/features/achievements/ui/carosello_achievements.dart';
+import 'package:training_companion/src/features/profile/data/profile_models.dart';
+import 'package:training_companion/src/features/profile/profile_controller.dart';
 import 'package:training_companion/src/features/training/data/catalogo_esercizi.dart';
 import 'package:training_companion/src/features/training/data/gruppo_muscolare.dart';
 import 'package:training_companion/src/features/training/data/storico_unificato.dart';
@@ -25,8 +29,23 @@ import 'package:training_companion/src/features/training/ui/widgets/stella_dei_m
 /// ⚠️ I difetti qui non sono di calcolo: sono **numeri falsi** («0 km» a chi
 /// solleva pesi), **spazi vuoti che promettono** (una sezione medaglie senza
 /// medaglie) e **una figura tutta grigia** a chi si è allenato davvero.
+/// Un profilo qualunque: alla figura serve **solo** il sesso.
+const _profiloFinto = UserProfile(
+  mealHours: <String, String>{},
+  missing: <String>[],
+  activityLevels: <String, String>{},
+  goals: <String, String>{},
+  sex: 'male',
+);
+
+/// La sagoma finta, costruita una volta sola.
+ui.Image? _sagoma;
+
 void main() {
-  setUpAll(() => initializeDateFormatting('it'));
+  setUpAll(() async {
+    initializeDateFormatting('it');
+    _sagoma = await sagomaFinta();
+  });
 
   final lunedi = lunediDi(DateTime.now());
 
@@ -220,15 +239,37 @@ void main() {
       expect(gruppiDisegnati.every((g) => g.eUnMuscolo), isTrue);
     });
 
+    /// ⚠️ **La sagoma è finta.** Un test di widget non legge gli asset veri —
+    /// `rootBundle` non ha i PNG — e un quadrato opaco dimostra la stessa cosa:
+    /// che il pittore disegna, che non sfora e che a zero tace.
     testWidgets('si disegna senza sforare, anche stretta', (tester) async {
+      /*
+       * ⚠️ **La sagoma si costruisce in `setUpAll`, non qui.**
+       *
+       * ⛔ Dentro `testWidgets` il tempo è finto, e decodificare un'immagine è
+       * una cosa vera: `await sagomaFinta()` non si completa **mai**, e il test
+       * resta appeso finché non scade dopo dieci minuti — senza dire perché.
+       *
+       * 💡 In `setUpAll` invece si sta fuori dall'orologio finto.
+       */
+      final sagoma = _sagoma!;
+
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: SizedBox(
-                width: 120,
-                height: 160,
-                child: FiguraDelCorpo(intensita: {GruppoMuscolare.petto: 1}),
+        ProviderScope(
+          overrides: [
+            sagomaDelCorpoProvider.overrideWith((ref, nome) async => sagoma),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 120,
+                  height: 160,
+                  child: FiguraDelCorpo(
+                    intensita: {GruppoMuscolare.petto: 1},
+                    corpo: CorpoDa.uomo,
+                  ),
+                ),
               ),
             ),
           ),
@@ -237,6 +278,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+
+    /// 📌 *«Ovviamente un uomo deve vedere quella da uomo e una donna quella da
+    /// donna»*.
+    ///
+    /// ⚠️ E chi il sesso non l'ha dichiarato vede quella maschile: una delle
+    /// due va scelta comunque, e non c'è una terza immagine da mostrare.
+    test('il sesso sceglie la figura, e senza sesso è quella da uomo', () {
+      expect(CorpoDa.dalSesso('female'), CorpoDa.donna);
+      expect(CorpoDa.dalSesso('FEMALE'), CorpoDa.donna);
+      expect(CorpoDa.dalSesso('male'), CorpoDa.uomo);
+      expect(CorpoDa.dalSesso(null), CorpoDa.uomo);
+      expect(CorpoDa.dalSesso(''), CorpoDa.uomo);
+      expect(CorpoDa.dalSesso('boh'), CorpoDa.uomo);
     });
   });
 
@@ -304,6 +359,20 @@ void main() {
           catalogoEserciziProvider.overrideWith(
             (ref) async => CatalogoEsercizi.vuoto,
           ),
+
+          /*
+           * 🚨 **Il profilo va sovrascritto o il test resta appeso.**
+           *
+           * ⛔ Da 3b-B.1 la figura chiede il sesso al profilo, e quello fa una
+           * chiamata di rete. In un test la chiamata non risponde mai e lascia
+           * un **timer pendente**: `pumpAndSettle` aspetta anche quelli, e va
+           * in timeout dopo dieci minuti senza dire perché.
+           *
+           * ⚠️ Non è un difetto dell'app: è che un widget che parla con la rete
+           * va isolato, e questo prima non lo faceva.
+           */
+          profileProvider.overrideWith((ref) async => _profiloFinto),
+          sagomaDelCorpoProvider.overrideWith((ref, nome) async => _sagoma!),
         ],
         child: MaterialApp(
           home: Scaffold(

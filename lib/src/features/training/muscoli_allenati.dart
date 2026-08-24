@@ -123,12 +123,34 @@ class MuscoliDelTipo {
     GruppoMuscolare.spalle,
   ];
 
+  /// ══ 🚨 «TUTTO IL CORPO» VUOL DIRE TUTTO — difetto del 24/08/2026 ═══════
+  ///
+  /// 📌 Il committente: *«Non mi ha segnato i bicipiti, quando effettivamente
+  /// ne ho fatti un bel po'»*.
+  ///
+  /// ⛔ **Aveva ragione, e la causa era qui.** Questo elenco conteneva cinque
+  /// gruppi — petto, schiena, spalle, quadricipiti, addome — e **le braccia
+  /// no**. Un allenamento di pesi letto dall'orologio si chiama
+  /// `STRENGTH_TRAINING` e basta: l'app coloriva quei cinque e taceva su
+  /// bicipiti e tricipiti, **sempre**, qualunque cosa avessi fatto.
+  ///
+  /// 🚨 Il danno era peggiore di una zona spenta: era una figura che sembrava
+  /// informata. Chi la guardava concludeva «le braccia non le alleno», che è
+  /// una cosa **falsa** detta con l'aria di saperla.
+  ///
+  /// 💡 Adesso ci sono tutte le zone, con lo stesso peso. ⚠️ Non è precisione —
+  /// l'orologio non sa cosa hai fatto — ma è **onesto**: «pesi» vuol dire tutto
+  /// il corpo, e nessuna zona viene esclusa da una scelta che nessuno ha preso.
   static const _tuttoIlCorpo = [
     GruppoMuscolare.petto,
     GruppoMuscolare.schiena,
     GruppoMuscolare.spalle,
-    GruppoMuscolare.quadricipiti,
+    GruppoMuscolare.bicipiti,
+    GruppoMuscolare.tricipiti,
     GruppoMuscolare.addome,
+    GruppoMuscolare.quadricipiti,
+    GruppoMuscolare.femorali,
+    GruppoMuscolare.glutei,
   ];
 
   static List<GruppoMuscolare> di(String codice) =>
@@ -195,6 +217,22 @@ Map<GruppoMuscolare, double> intensitaDeiMuscoli({
         );
       }
     }
+
+    /*
+     * ══ 🚨 SE L'APP SA GLI ESERCIZI, L'OROLOGIO NON INDOVINA ══════════════
+     *
+     * ⛔ Prima i due contributi si **sommavano**: una seduta registrata
+     * esercizio per esercizio prendeva anche la spalmata generica del suo
+     * gemello dall'orologio. Risultato, il dato preciso veniva annacquato da
+     * quello approssimato — e chi si prende la briga di registrare le serie
+     * otteneva una figura **peggiore** di quella che meritava.
+     *
+     * 💡 Il gruppo che ha delle serie dice gia' tutto: l'orologio, li', serve
+     * per le calorie e la durata, non per i muscoli.
+     */
+    final conSerie = v.sedute.any((s) => s.sets.isNotEmpty);
+
+    if (conSerie) continue;
 
     // ── Quello che ha visto l'orologio ───────────────────────────────────
     for (final a in v.dalPolso) {

@@ -182,3 +182,17 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # ── 🧍 Le figure del corpo — 3b-B.1, 24/08/2026 ──────────────────────────
+  #
+  # 🚨 Quattro file e non due: **davanti e dietro sono immagini separate**. Nel
+  #    sorgente stavano affiancate, ma una card ne mostra una alla volta e
+  #    ritagliare a runtime vorrebbe dire caricare il doppio dei pixel ogni
+  #    volta.
+  #
+  # ⚠️ Sono **bianche con il fondo trasparente**: la tinta la mette l'app, o su
+  #    tema scuro sparirebbero e su tema chiaro sembrerebbero sporche. I
+  #    sorgenti stanno in `memory/immagini-sorgente/`, e lo script che li
+  #    prepara e' documentato in §72 dell'atlante.
+  assets:
+    - assets/corpo/

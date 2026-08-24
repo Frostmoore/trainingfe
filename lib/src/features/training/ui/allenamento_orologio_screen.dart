@@ -100,7 +100,18 @@ class _Dettaglio extends ConsumerWidget {
         ref.watch(catalogoEserciziProvider).valueOrNull ??
         CatalogoEsercizi.vuoto;
 
-    final intensita = intensitaDeiMuscoli(voci: [voce], catalogo: catalogo);
+    /*
+     * ⚠️ **Anche qui i muscoli passano dalla scheda associata** — B.9. ⛔ Senza
+     * questa riga la pagina di un allenamento del polso sarebbe l'unico posto in
+     * cui la scheda associata non colora niente: la stessa domanda, due risposte
+     * diverse a seconda di dove la guardi.
+     */
+    final intensita = intensitaDeiMuscoli(
+      voci: [voce],
+      catalogo: catalogo,
+      pesiDelleSchede:
+          ref.watch(muscoliDelleSchedeProvider).valueOrNull ?? const {},
+    );
 
     var passi = 0;
     for (final a in voce.dalPolso) {

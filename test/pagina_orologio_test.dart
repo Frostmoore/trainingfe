@@ -5,7 +5,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/diary/data/stima_ai.dart';
 import 'package:training_companion/src/features/training/data/catalogo_esercizi.dart';
+import 'package:training_companion/src/features/training/data/gruppo_muscolare.dart';
 import 'package:training_companion/src/features/training/data/storico_unificato.dart';
+import 'package:training_companion/src/features/training/muscoli_allenati.dart';
 import 'package:training_companion/src/features/training/storico_unificato_controller.dart';
 import 'package:training_companion/src/features/training/ui/allenamento_orologio_screen.dart';
 
@@ -111,17 +113,55 @@ void main() {
       expect(find.textContaining('al chilometro'), findsNothing);
     });
 
-    /// 💡 La figura del corpo è il servizio di A.6.1, riusato qui — che è il
-    /// motivo per cui doveva essere riutilizzabile.
-    testWidgets('una corsa colora la figura del corpo', (tester) async {
+    /// ══ ⛔ SENZA SCHEDA NON SI COLORA NIENTE — B.9, 24/08/2026 ═════════════
+    ///
+    /// 📌 Il committente: *«I gruppi muscolari **NON** arrivano dall'orologio»*.
+    ///
+    /// 🚨 Qui prima c'era il test opposto — *«una corsa colora la figura del
+    /// corpo»* — e passava. ⚠️ Provava bene una cosa sbagliata: l'orologio sa
+    /// che hai corso un'ora, **non sa cosa hai allenato**, e una figura colorata
+    /// su quella base è informazione inventata.
+    testWidgets('una corsa senza scheda non mostra la figura', (tester) async {
       await apri(tester, orologio(id: 4, tipo: 'RUNNING', metri: 5000));
+
+      expect(find.text('Cosa hai mosso'), findsNothing);
+    });
+
+    /// 💡 E con la scheda associata **sì**: quella non è una deduzione, è una
+    /// risposta della persona. ⚠️ È anche il motivo per cui la figura di A.6.1
+    /// doveva essere un servizio riutilizzabile.
+    testWidgets('ma con la scheda associata sì', (tester) async {
+      final a = orologio(id: 8, tipo: 'RUNNING', metri: 5000);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...base,
+            storicoUnificatoProvider.overrideWith(
+              (ref) async => [
+                VoceStorico(sedute: const [], dalPolso: [a], schedaId: 42),
+              ],
+            ),
+            catalogoEserciziProvider.overrideWith(
+              (ref) async => CatalogoEsercizi.vuoto,
+            ),
+            muscoliDelleSchedeProvider.overrideWith(
+              (ref) async => const {
+                42: {GruppoMuscolare.quadricipiti: 1.0},
+              },
+            ),
+          ],
+          child: MaterialApp(home: AllenamentoOrologioScreen(id: a.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
 
       expect(find.text('Cosa hai mosso'), findsOneWidget);
     });
 
-    /// ⛔ E uno sport che la tabella non conosce **non** mostra una figura
-    /// grigia: sarebbe un riquadro che dice «non hai allenato niente» a chi si
-    /// è appena allenato.
+    /// ⛔ E uno sport senza niente da colorare **non** mostra una figura grigia:
+    /// sarebbe un riquadro che dice «non hai allenato niente» a chi si è appena
+    /// allenato.
     testWidgets('ma uno sport sconosciuto non mostra una figura vuota', (
       tester,
     ) async {

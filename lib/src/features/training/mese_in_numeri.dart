@@ -87,13 +87,11 @@ MeseInNumeri numeriDelMese(Iterable<VoceStorico> voci) {
     }
 
     /*
-     * 🚨 La stessa catena dello storico: la correzione a mano vince
-     * sull'orologio, che vince sulla stima. ⛔ Sommare due fonti darebbe il
-     * doppio delle calorie di una seduta registrata due volte.
+     * 🚨 La catena di priorità sta in `VoceStorico.kcal`, in un posto solo: la
+     * usa anche il conto di quanto sei allenato, e due copie divergerebbero
+     * alla prima modifica.
      */
-    final k = v.kcalCorrettaAMano
-        ? v.kcalDalleSedute
-        : (v.kcalDalPolso ?? v.kcalDalleSedute);
+    final k = v.kcal;
 
     if (k != null && k > 0) {
       kcal += k;

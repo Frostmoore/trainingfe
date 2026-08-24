@@ -30,6 +30,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../data/gruppo_muscolare.dart';
 import '../../mese_in_numeri.dart';
 import '../../muscoli_allenati.dart';
 import '../../settimana_scelta.dart';
@@ -38,10 +39,14 @@ import 'stella_dei_muscoli.dart';
 
 /// L'altezza di tutte e tre le card.
 ///
-/// 🚨 **Un numero solo**, ed è quello che rende vero «altezza identica». ⚠️ Non
-/// si scala con il carattere: dentro non ci sono blocchi di testo che crescono,
-/// e i pochi numeri hanno spazio di sovrappiù.
-const double altezzaCarosello = 232;
+/// 🚨 **Un numero solo**, ed è quello che rende vero «altezza identica».
+///
+/// ⚠️ **Cresciuto in B.11 da 232 a 300**: la card della stella adesso ha sotto
+/// una riga di spiegazione, e quella dei numeri una fila di pasticche. ⛔ Tenere
+/// il numero vecchio avrebbe schiacciato il quadrato della stella fino a
+/// renderlo inutile — e l'altezza è **una sola**, quindi la card più esigente
+/// decide per tutte.
+const double altezzaCarosello = 300;
 
 /// L'aria fra l'intestazione e la prima card — 3b-B.7.
 ///
@@ -120,7 +125,7 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
       _Card(
         titolo: 'I gruppi muscolari',
         sottotitolo: titolo,
-        child: StellaDeiMuscoli(intensita: intensita),
+        child: _Stella(intensita: intensita),
       ),
       _Card(
         titolo: 'Il mese in numeri',
@@ -219,10 +224,12 @@ class _Card extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(Gap.sm),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 📌 *«Nelle cards i titoli devono essere centrati»* — B.11.
             Text(
               titolo,
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: tema.textTheme.labelLarge?.copyWith(
@@ -231,6 +238,7 @@ class _Card extends StatelessWidget {
             ),
             Text(
               sottotitolo,
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: tema.textTheme.labelSmall?.copyWith(
@@ -249,6 +257,75 @@ class _Card extends StatelessWidget {
   }
 }
 
+/// La stella dentro un quadrato bianco, con sotto la spiegazione — B.11.
+///
+/// 📌 *«quella della stella deve avere il grafico dentro a un quadrato bianco e
+/// sotto ci deve essere una breve spiegazione di cosa ho allenato, quanto e
+/// come»*.
+class _Stella extends StatelessWidget {
+  const _Stella({required this.intensita});
+
+  final Map<GruppoMuscolare, double> intensita;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      children: [
+        /*
+         * 🚨 **`Expanded` + `AspectRatio(1)`, e non un quadrato di lato fisso.**
+         * ⛔ Un numero scelto a mano sarebbe giusto su un telefono solo: troppo
+         * grande su uno stretto — e il quadrato uscirebbe dai bordi — troppo
+         * piccolo su uno largo. Qui il lato è **quello che l'altezza concede**,
+         * e la larghezza si adegua.
+         */
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                /*
+                 * ⚠️ **Bianco vero, non `surface`.** Il committente ha chiesto
+                 * un quadrato **bianco**, e su questa card il fondo è già chiaro:
+                 * un bianco «di tema» sarebbe invisibile in chiaro e nero in
+                 * scuro, cioè in nessuno dei due casi quello che ha chiesto.
+                 */
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(Gap.radiusSm),
+                border: Border.all(
+                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(Gap.xs),
+                child: StellaDeiMuscoli(intensita: intensita),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: Gap.xs),
+
+        Text(
+          spiegazioneDeiMuscoli(intensita),
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: tema.textTheme.bodySmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// I numeri del mese: tutto centrato, le sessioni in grande, il resto in
+/// pasticche — B.11.
+///
+/// 📌 *«la terza card deve avere tutto centrato, con in grande il numero di
+/// sessioni di allenamento e sotto, tipo pasticche, gli altri dati»*.
 class _Numeri extends StatelessWidget {
   const _Numeri({required this.numeri});
 
@@ -258,63 +335,73 @@ class _Numeri extends StatelessWidget {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
 
-    final righe = <(IconData, String, String)>[
-      (
-        Icons.fitness_center_rounded,
-        '${numeri.sessioni}',
-        numeri.sessioni == 1 ? 'sessione' : 'sessioni',
-      ),
-
-      /*
-       * ⛔ **Quello che non c'è non si mostra.** Chi fa solo pesi non ha km, e
-       * «0 km» sarebbe un numero falso travestito da informazione — la stessa
-       * lezione del «0 bruciate» del 23/08.
-       */
+    /*
+     * ⛔ **Quello che non c'è non si mostra.** Chi fa solo pesi non ha km, e
+     * «0 km» sarebbe un numero falso travestito da informazione — la stessa
+     * lezione del «0 bruciate» del 23/08.
+     */
+    final pasticche = <(IconData, String)>[
       if (numeri.kgSollevati != null)
         (
           Icons.monitor_weight_outlined,
-          _migliaia(numeri.kgSollevati!.round()),
-          'kg sollevati',
+          '${_migliaia(numeri.kgSollevati!.round())} kg',
         ),
       if (numeri.metri != null)
-        (Icons.route_outlined, _distanza(numeri.metri!), 'percorsi'),
+        (Icons.route_outlined, _distanza(numeri.metri!)),
       if (numeri.kcal != null)
         (
           Icons.local_fire_department_outlined,
-          _migliaia(numeri.kcal!),
-          'kcal bruciate',
+          '${_migliaia(numeri.kcal!)} kcal',
         ),
     ];
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final (icona, valore, etichetta) in righe)
-          Row(
-            children: [
-              Icon(icona, size: 18, color: tema.colorScheme.primary),
-              const SizedBox(width: Gap.sm),
-              Text(
-                valore,
-                style: tema.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  etichetta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tema.textTheme.bodySmall?.copyWith(
-                    color: tema.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${numeri.sessioni}',
+
+            /*
+             * 💡 `displayMedium` e non un `fontSize` scritto a mano: così cresce
+             * con il carattere di sistema come tutto il resto. ⚠️ `height: 1`
+             * toglie l'interlinea che a questa dimensione lascerebbe un buco
+             * visibile fra il numero e la sua parola.
+             */
+            style: tema.textTheme.displayMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: tema.colorScheme.primary,
+              height: 1,
+            ),
           ),
-      ],
+          Text(
+            numeri.sessioni == 1 ? 'sessione' : 'sessioni',
+            style: tema.textTheme.titleSmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+          ),
+
+          if (pasticche.isNotEmpty) ...[
+            const SizedBox(height: Gap.sm),
+
+            /*
+             * 🚨 **`Wrap` e non `Row`**: tre pasticche con numeri a quattro
+             * cifre non ci stanno in riga su un telefono stretto, e una `Row`
+             * non lo direbbe con un errore — lo direbbe con la striscia gialla
+             * di overflow addosso al committente.
+             */
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: Gap.xs,
+              runSpacing: Gap.xs,
+              children: [
+                for (final (icona, testo) in pasticche)
+                  _Pasticca(icona: icona, testo: testo),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -325,4 +412,47 @@ class _Numeri extends StatelessWidget {
       : '${(metri / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
 
   static String _migliaia(int n) => NumberFormat.decimalPattern('it').format(n);
+}
+
+/// Una pasticca: icona e numero, dentro un contenitore tondo — B.11.
+///
+/// 💡 L'etichetta lunga di prima («kg sollevati») è diventata **l'unità
+/// attaccata al numero**: in una pasticca lo spazio è quello che è, e «1.240 kg»
+/// dice la stessa cosa in metà larghezza.
+class _Pasticca extends StatelessWidget {
+  const _Pasticca({required this.icona, required this.testo});
+
+  final IconData icona;
+  final String testo;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tema.colorScheme.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Gap.sm,
+          vertical: Gap.xs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icona, size: 14, color: tema.colorScheme.primary),
+            const SizedBox(width: 4),
+            Text(
+              testo,
+              style: tema.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

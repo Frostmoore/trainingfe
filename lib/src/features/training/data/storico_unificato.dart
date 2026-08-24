@@ -22,6 +22,7 @@ class VoceStorico {
     required this.sedute,
     required this.dalPolso,
     this.nomeScheda,
+    this.schedaId,
   });
 
   /// Le sedute registrate **nell'app**, in ordine di tempo.
@@ -44,6 +45,24 @@ class VoceStorico {
   /// `history_screen`. Tenerlo come stringa toglie l'accoppiamento e fa entrare
   /// tutte e due le provenienze senza inventare un tipo comune.
   final String? nomeScheda;
+
+  /// L'**id firmato** della stessa scheda — negativo se arrivata in chat,
+  /// positivo se dal server.
+  ///
+  /// ══ 🚨 IL NOME NON BASTA PIÙ — B.9, 24/08/2026 ═════════════════════════
+  ///
+  /// 📌 *«I gruppi muscolari NON arrivano dall'orologio. Al massimo possono
+  /// arrivare dalla scheda che ho associato»*.
+  ///
+  /// ⛔ Per **mostrare** una scheda basta il nome, e per questo `nomeScheda`
+  /// esisteva da solo. Per **sapere che muscoli allena** serve andarsela a
+  /// prendere, e per andarsela a prendere serve l'id.
+  ///
+  /// ⚠️ Cercarla per nome sarebbe stato l'errore facile: due schede possono
+  /// chiamarsi uguale — «Giorno 1» è il nome più probabile del mondo — e una
+  /// omonimia colorerebbe i muscoli **di un'altra scheda** senza dare nessun
+  /// errore. È lo stesso difetto del «Rematore corda» sul server, visto da qui.
+  final int? schedaId;
 
   /// La seduta principale: la **prima**, quando c'è.
   ///
@@ -129,6 +148,19 @@ class VoceStorico {
   /// non lo sconfessa. ⚠️ Guardare solo la prima vorrebbe dire che una
   /// correzione fatta sul secondo tratto viene ignorata senza dirlo.
   bool get kcalCorrettaAMano => sedute.any((s) => s.kcalSource == 'manual');
+
+  /// Le calorie **che valgono** per questa riga, con la catena di priorità.
+  ///
+  /// 🚨 **La correzione a mano vince sull'orologio, che vince sulla stima**, e
+  /// le fonti **non si sommano**: due sorgenti darebbero il doppio su una seduta
+  /// registrata due volte.
+  ///
+  /// ⚠️ Sta qui e non nei due posti che la usano — la card dei numeri e il conto
+  /// di quanto sei allenato — perché due copie di una catena di priorità
+  /// divergono alla prima modifica, e a quel punto la stessa seduta varrebbe
+  /// due numeri diversi nella stessa schermata.
+  int? get kcal =>
+      kcalCorrettaAMano ? kcalDalleSedute : (kcalDalPolso ?? kcalDalleSedute);
 
   int? get distanzaMetri {
     var somma = 0;
@@ -247,6 +279,13 @@ abstract final class StoricoUnificato {
             sedute: const [],
             dalPolso: [a],
             nomeScheda: nomiDelleSchede[a.schedaAssegnata],
+
+            // ⚠️ Solo se la scheda **la conosciamo**: un id che non sta fra le
+            // schede è un riferimento a qualcosa che non c'è più, e portarselo
+            // dietro vorrebbe dire cercarlo invano a ogni ridisegno.
+            schedaId: nomiDelleSchede.containsKey(a.schedaAssegnata)
+                ? a.schedaAssegnata
+                : null,
           ),
         );
 
@@ -279,13 +318,24 @@ abstract final class StoricoUnificato {
        * il raggruppamento ha appena stabilito.
        */
       String? nomeScheda;
+      int? schedaId;
 
       for (final a in polso) {
-        nomeScheda ??= nomiDelleSchede[a.schedaAssegnata];
+        final nome = nomiDelleSchede[a.schedaAssegnata];
+
+        if (nome == null || nomeScheda != null) continue;
+
+        nomeScheda = nome;
+        schedaId = a.schedaAssegnata;
       }
 
       voci.add(
-        VoceStorico(sedute: sedute, dalPolso: polso, nomeScheda: nomeScheda),
+        VoceStorico(
+          sedute: sedute,
+          dalPolso: polso,
+          nomeScheda: nomeScheda,
+          schedaId: schedaId,
+        ),
       );
     }
 

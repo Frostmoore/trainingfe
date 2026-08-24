@@ -10,6 +10,7 @@ import 'package:training_companion/src/features/achievements/achievement.dart';
 import 'package:training_companion/src/features/achievements/ui/carosello_achievements.dart';
 import 'package:training_companion/src/features/profile/data/profile_models.dart';
 import 'package:training_companion/src/features/profile/profile_controller.dart';
+import 'package:training_companion/src/features/training/costanza.dart';
 import 'package:training_companion/src/features/training/data/catalogo_esercizi.dart';
 import 'package:training_companion/src/features/training/data/gruppo_muscolare.dart';
 import 'package:training_companion/src/features/training/data/storico_unificato.dart';
@@ -72,7 +73,17 @@ void main() {
   // ═════════════════════ le intensità ═════════════════════
 
   group('Quali muscoli hai allenato', () {
-    test('una corsa colora le gambe, non «cardio»', () {
+    /// ══ ⛔ L'OROLOGIO NON DICE MAI CHE MUSCOLI HAI ALLENATO — B.9 ══════════
+    ///
+    /// 📌 Il committente, correggendo una scelta che era nostra: *«I gruppi
+    /// muscolari **NON** arrivano dall'orologio»*.
+    ///
+    /// 🚨 Qui prima c'erano tre test che provavano il contrario — che una corsa
+    /// colorasse le gambe, che «pesi» colorasse tutto il corpo. ⚠️ **Provavano
+    /// bene una cosa sbagliata**: l'orologio sa che ti sei mosso per un'ora, non
+    /// sa cosa hai fatto, e un `STRENGTH_TRAINING` può essere un giorno di sole
+    /// braccia.
+    test('un allenamento del polso senza scheda non colora niente', () {
       final i = intensitaDeiMuscoli(
         voci: [
           VoceStorico(
@@ -83,92 +94,103 @@ void main() {
         catalogo: CatalogoEsercizi.vuoto,
       );
 
-      /*
-       * 🚨 **È il difetto che questo pezzo esiste per evitare.** Chi corre e
-       * basta — tantissima gente — avrebbe visto una figura tutta grigia, cioè
-       * l'app che gli dice che non ha allenato niente.
-       */
-      expect(i[GruppoMuscolare.quadricipiti], greaterThan(0));
-      expect(i[GruppoMuscolare.polpacci], greaterThan(0));
-      expect(i.containsKey(GruppoMuscolare.cardio), isFalse);
-      expect(i.containsKey(GruppoMuscolare.totale), isFalse);
+      expect(i, isEmpty);
     });
 
-    /// ⚠️ **I minuti si dividono fra i muscoli, non si moltiplicano.** Un'ora di
-    /// corsa è un'ora, che i muscoli siano due o quattro.
-    test('un tipo con quattro muscoli non vale il doppio di uno con due', () {
-      final corsa = intensitaDeiMuscoli(
-        voci: [
-          VoceStorico(
-            sedute: const [],
-            dalPolso: [
-              orologio(id: 1, tipo: 'RUNNING', quando: lunedi),
-              // Stessa durata, due soli muscoli.
-              orologio(
-                id: 2,
-                tipo: 'CORE_TRAINING',
-                quando: lunedi.add(const Duration(days: 1)),
-              ),
-            ],
-          ),
-        ],
-        catalogo: CatalogoEsercizi.vuoto,
-      );
-
-      /*
-       * 💡 L'addome prende **tutti** i sessanta minuti (un muscolo solo), le
-       * gambe quindici a testa (quattro muscoli). Quindi l'addome è il massimo,
-       * e vale 1.
-       */
-      expect(corsa[GruppoMuscolare.addome], 1.0);
-      expect(corsa[GruppoMuscolare.quadricipiti], lessThan(1.0));
-    });
-
-    /// ══ 🚨 IL TEST CHE IMPEDISCE AL DIFETTO DI TORNARE UNA TERZA VOLTA ═════
-    ///
-    /// ⛔ Due volte in un giorno, lo stesso errore: prima *«non mi ha segnato i
-    /// bicipiti»* (l'elenco ne aveva cinque), poi i **polpacci** (l'elenco
-    /// corretto ne aveva nove, e mancavano polpacci e avambracci).
-    ///
-    /// 🚨 **Il difetto non era la riga mancante: era che fosse un elenco.** Una
-    /// lista scritta a mano che deve contenere *tutto* si sbaglia la prima
-    /// volta, si sbaglia correggendola, e si sbaglierà al prossimo gruppo che
-    /// entra nell'enum — **senza dare nessun errore**: quella zona semplicemente
-    /// non si accende mai.
-    test('«pesi» colora tutto il corpo, e tutto vuol dire tutto', () {
-      final tutti = GruppoMuscolare.values.where((g) => g.eUnMuscolo).toSet();
-
-      expect(
-        MuscoliDelTipo.tuttoIlCorpo.toSet(),
-        tutti,
-        reason: 'Un allenamento di pesi lascia fuori una zona del corpo.',
-      );
-
-      /// ⚠️ E il contrario: `cardio` e `full_body` non sono zone, e colorarle
-      /// vorrebbe dire una parte del corpo accesa da una cosa che non è un
-      /// muscolo.
-      expect(MuscoliDelTipo.tuttoIlCorpo.every((g) => g.eUnMuscolo), isTrue);
-    });
-
-    /// 💡 E la prova dal lato di chi guarda: un allenamento di pesi visto
-    /// dall'orologio deve accendere **anche** i polpacci, che sono la zona su
-    /// cui il difetto si è visto.
-    test('un allenamento di pesi dall orologio accende anche i polpacci', () {
+    /// 💡 E con la scheda associata sì: quella non è una deduzione, è una
+    /// **risposta** della persona.
+    test('ma con la scheda associata prende i muscoli della scheda', () {
       final i = intensitaDeiMuscoli(
         voci: [
           VoceStorico(
             sedute: const [],
-            dalPolso: [
-              orologio(id: 1, tipo: 'STRENGTH_TRAINING', quando: lunedi),
-            ],
+            dalPolso: [orologio(id: 1, tipo: 'RUNNING', quando: lunedi)],
+            schedaId: 42,
+            nomeScheda: 'Giorno 2',
           ),
         ],
         catalogo: CatalogoEsercizi.vuoto,
+        pesiDelleSchede: const {
+          42: {GruppoMuscolare.schiena: 1, GruppoMuscolare.bicipiti: 0.5},
+        },
       );
 
-      expect(i[GruppoMuscolare.polpacci], greaterThan(0));
-      expect(i[GruppoMuscolare.avambracci], greaterThan(0));
-      expect(i[GruppoMuscolare.bicipiti], greaterThan(0));
+      expect(i[GruppoMuscolare.schiena], 1.0);
+      expect(i[GruppoMuscolare.bicipiti], closeTo(0.5, 0.001));
+      expect(i.containsKey(GruppoMuscolare.quadricipiti), isFalse);
+    });
+
+    /// ⛔ **La scheda di un'altra riga non colora questa.** Sembra ovvio, e non
+    /// lo è: basta cercare la scheda per nome invece che per id — e «Giorno 1»
+    /// è il nome più probabile del mondo — perché due allenamenti diversi si
+    /// prendano i muscoli l'uno dell'altro senza dare nessun errore.
+    test('e una scheda che non è la sua non lo colora', () {
+      final i = intensitaDeiMuscoli(
+        voci: [
+          VoceStorico(
+            sedute: const [],
+            dalPolso: [orologio(id: 1, tipo: 'RUNNING', quando: lunedi)],
+            schedaId: 7,
+          ),
+        ],
+        catalogo: CatalogoEsercizi.vuoto,
+        pesiDelleSchede: const {
+          42: {GruppoMuscolare.schiena: 1},
+        },
+      );
+
+      expect(i, isEmpty);
+    });
+
+    /// ⚠️ **I minuti si dividono fra i muscoli, non si moltiplicano.** Un'ora è
+    /// un'ora, che i muscoli della scheda siano due o dieci: darne una intera a
+    /// ognuno farebbe valere un allenamento di corpo intero il triplo di uno di
+    /// braccia, e la figura direbbe che ti alleni di più quando ti alleni più
+    /// vario.
+    test('una scheda con dieci muscoli non vale più di una con due', () {
+      Map<GruppoMuscolare, double> conPesi(
+        Map<GruppoMuscolare, double> pesi,
+        int giorno,
+      ) => intensitaDeiMuscoli(
+        voci: [
+          VoceStorico(
+            sedute: const [],
+            dalPolso: [
+              orologio(
+                id: giorno,
+                tipo: 'STRENGTH_TRAINING',
+                quando: lunedi.add(Duration(days: giorno)),
+              ),
+            ],
+            schedaId: giorno,
+          ),
+        ],
+        catalogo: CatalogoEsercizi.vuoto,
+        pesiDelleSchede: {giorno: pesi},
+      );
+
+      final larga = conPesi(const {
+        GruppoMuscolare.petto: 1,
+        GruppoMuscolare.schiena: 1,
+        GruppoMuscolare.spalle: 1,
+        GruppoMuscolare.quadricipiti: 1,
+      }, 1);
+
+      final stretta = conPesi(const {
+        GruppoMuscolare.petto: 1,
+        GruppoMuscolare.schiena: 1,
+      }, 2);
+
+      /*
+       * 💡 Il totale del lavoro è lo stesso — un'ora — ma spalmato su quattro
+       * muscoli invece che su due. Dopo la normalizzazione il massimo è 1 in
+       * tutti e due i casi, quindi la prova sta **nel numero di gruppi accesi**,
+       * non nell'intensità.
+       */
+      expect(larga.length, 4);
+      expect(stretta.length, 2);
+      expect(larga.values.reduce((a, b) => a > b ? a : b), 1.0);
+      expect(stretta.values.reduce((a, b) => a > b ? a : b), 1.0);
     });
 
     test('senza niente non colora niente', () {
@@ -188,12 +210,43 @@ void main() {
             dalPolso: [
               orologio(id: 1, tipo: 'RUNNING', quando: lunedi, minuti: 300),
             ],
+            schedaId: 1,
           ),
         ],
         catalogo: CatalogoEsercizi.vuoto,
+        pesiDelleSchede: const {
+          1: {GruppoMuscolare.quadricipiti: 1, GruppoMuscolare.polpacci: 0.5},
+        },
       );
 
       expect(i.values.reduce((a, b) => a > b ? a : b), 1.0);
+    });
+  });
+
+  // ═════════════════════ la spiegazione ═════════════════════
+
+  group('La spiegazione sotto la stella', () {
+    /// ⛔ **Con la mappa vuota non si scrive una frase incoraggiante.** Una
+    /// spiegazione allegra sopra una stella spenta è la cosa peggiore che quella
+    /// card possa fare: dice che è andata bene mentre il disegno accanto dice
+    /// che non c'è niente.
+    test('quando non c è niente lo dice', () {
+      expect(spiegazioneDeiMuscoli(const {}), contains('Nessun allenamento'));
+    });
+
+    /// 💡 Le tre cose chieste — *«cosa ho allenato, quanto e come»* — devono
+    /// esserci tutte e tre nella stessa riga.
+    test('dice cosa, quanto e come', () {
+      final frase = spiegazioneDeiMuscoli(const {
+        GruppoMuscolare.schiena: 1,
+        GruppoMuscolare.bicipiti: 0.8,
+        GruppoMuscolare.petto: 0.1,
+      });
+
+      expect(frase, contains('schiena'));
+      expect(frase, contains('bicipiti'));
+      expect(frase, contains('2 gruppi'));
+      expect(frase, contains('concentrandoti'));
     });
   });
 
@@ -400,15 +453,25 @@ void main() {
 
   // ═════════════════════ il carosello e il calendario ═════════════════════
 
-  Widget attorno(Widget figlio, List<VoceStorico> voci, {double w = 328}) =>
-      ProviderScope(
-        overrides: [
-          storicoUnificatoProvider.overrideWith((ref) async => voci),
-          catalogoEserciziProvider.overrideWith(
-            (ref) async => CatalogoEsercizi.vuoto,
-          ),
+  Widget attorno(
+    Widget figlio,
+    List<VoceStorico> voci, {
+    double w = 328,
 
-          /*
+    /// ⚠️ Per i casi che dipendono da **che giorno è oggi**: la costanza si
+    /// calcola sulle settimane finite, quindi lo stesso test darebbe risposte
+    /// diverse il 2 e il 28 del mese. ⛔ Un test che cambia idea da solo è
+    /// peggio di nessun test.
+    List<Override> extra = const [],
+  }) => ProviderScope(
+    overrides: [
+      ...extra,
+      storicoUnificatoProvider.overrideWith((ref) async => voci),
+      catalogoEserciziProvider.overrideWith(
+        (ref) async => CatalogoEsercizi.vuoto,
+      ),
+
+      /*
            * 🚨 **Il profilo va sovrascritto o il test resta appeso.**
            *
            * ⛔ Da 3b-B.1 la figura chiede il sesso al profilo, e quello fa una
@@ -419,17 +482,17 @@ void main() {
            * ⚠️ Non è un difetto dell'app: è che un widget che parla con la rete
            * va isolato, e questo prima non lo faceva.
            */
-          profileProvider.overrideWith((ref) async => _profiloFinto),
-          sagomaDelCorpoProvider.overrideWith((ref, nome) async => _sagoma!),
-        ],
-        child: MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: SizedBox(width: w, child: figlio),
-            ),
-          ),
+      profileProvider.overrideWith((ref) async => _profiloFinto),
+      sagomaDelCorpoProvider.overrideWith((ref, nome) async => _sagoma!),
+    ],
+    child: MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(width: w, child: figlio),
         ),
-      );
+      ),
+    ),
+  );
 
   final unaCorsa = VoceStorico(
     sedute: const [],
@@ -537,6 +600,52 @@ void main() {
       expect(dove(), 1.0, reason: 'Non è arrivato in fondo alla seconda.');
     });
 
+    /// ══ 🚨 IL TEST CHE SOSTITUISCE L'OCCHIO ═══════════════════════════════
+    ///
+    /// ⛔ Il committente ha staccato il telefono, quindi queste tre card non le
+    /// ha guardate nessuno. ⚠️ E sono cambiate tutte e tre nello stesso giro: il
+    /// quadrato bianco della stella, la spiegazione sotto, il numerone e le
+    /// pasticche. L'altezza è **una sola** per tutte e tre, quindi basta che una
+    /// cresca perché un'altra sfori.
+    ///
+    /// 💡 Uno sforo in un `Column` **è** un'eccezione in un test: scorrendo le
+    /// tre pagine a due dimensioni di carattere si prende quello che a schermo
+    /// sarebbe la striscia gialla.
+    testWidgets('e nessuna delle tre sfora, nemmeno a carattere grande', (
+      tester,
+    ) async {
+      for (final scala in const [1.0, 1.3]) {
+        for (final larghezza in const [320.0, 360.0]) {
+          await tester.pumpWidget(
+            MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scala)),
+              child: attorno(const CaroselloDelMese(), [
+                unaCorsa,
+              ], w: larghezza),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          for (var i = 0; i < 3; i++) {
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: 'Card $i sfora a $larghezza px, carattere ×$scala.',
+            );
+
+            if (i < 2) {
+              await tester.fling(
+                find.byType(PageView),
+                const Offset(-400, 0),
+                1000,
+              );
+              await tester.pumpAndSettle();
+            }
+          }
+        }
+      }
+    });
+
     /// 🚨 **I puntini non sono un vezzo.** Prima si vedeva spuntare la card
     /// accanto, e quello diceva da solo che ce n'era un'altra. ⛔ A tutta pagina
     /// quel segnale sparisce: senza, due card su tre restano invisibili a chi
@@ -580,6 +689,74 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('L'), findsNothing);
+    });
+
+    /// 📌 *«Il calendario dovrebbe essere in una card, e sulla parte superiore
+    /// ci dovrebbe essere un valore percentuale … Inoltre, dovrebbe esserci un
+    /// numero che mi dice quanto sono allenato»* — B.12.
+    testWidgets('sta in una card, con i due numeri sopra', (tester) async {
+      await tester.pumpWidget(attorno(const CalendarioDelMese(), [unaCorsa]));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('Costanza'), findsOneWidget);
+      expect(find.text('Quanto sei allenato'), findsOneWidget);
+    });
+
+    /// ⛔ **A inizio mese la card scrive un trattino, non uno zero**: «0%»
+    /// direbbe che sei incostante, quando la verità è che non si sa ancora. È la
+    /// stessa regola del «0 km».
+    ///
+    /// ⚠️ La costanza si sovrascrive invece di costruirla con le date: quanto
+    /// vale dipende da **che giorno è oggi**, e un test che cambia risposta il 2
+    /// e il 28 del mese non prova niente. Il conto vero sta in
+    /// `costanza_test.dart`, dove «adesso» si passa a mano.
+    testWidgets('e a inizio mese scrive un trattino, non uno zero', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        attorno(
+          const CalendarioDelMese(),
+          [unaCorsa],
+          extra: [
+            costanzaDelMeseProvider.overrideWith(
+              (ref, mese) => const Costanza(
+                settimane: 1,
+                sedute: 1,
+                seduteASettimana: 1,
+                regolaritaNumero: 0,
+                regolaritaGiorni: 0,
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ancora presto per dirlo'), findsOneWidget);
+      expect(find.text('—'), findsOneWidget);
+      expect(find.text('0%'), findsNothing);
+    });
+
+    /// ⚠️ La testata è una `Row` di due colonne: a carattere grande su un
+    /// telefono stretto è il posto naturale dove sforare.
+    testWidgets('e la testata non sfora a carattere grande', (tester) async {
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: SizedBox.shrink(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: attorno(const CalendarioDelMese(), [unaCorsa], w: 320),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 

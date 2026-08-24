@@ -67,6 +67,7 @@ class PlanExercise {
     required this.id,
     required this.name,
     required this.prescription,
+    this.exerciseId,
     this.restSec,
     this.targetWeight,
     this.notes,
@@ -76,6 +77,12 @@ class PlanExercise {
   factory PlanExercise.fromJson(Map<String, dynamic> j) => PlanExercise(
     id: (j['id'] as num).toInt(),
     name: (j['exercise'] as Map?)?['name']?.toString() ?? 'Esercizio',
+
+    /// ⚠️ **`id` è la riga della scheda, `exerciseId` è l'esercizio.** Due
+    /// numeri diversi che si somigliano: usare il primo per cercare nel
+    /// catalogo trova l'esercizio sbagliato — e non dà nessun errore, perché un
+    /// id qualunque nel catalogo di solito esiste.
+    exerciseId: ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
     // 🚨 Arriva già formattata dal backend («3 × 8-12»): comporla qui
     // significherebbe avere due formati diversi fra app e pannello per la
     // stessa scheda.
@@ -88,6 +95,13 @@ class PlanExercise {
 
   final int id;
   final String name;
+
+  /// L'id dell'esercizio **nel catalogo**, quando il server lo manda.
+  ///
+  /// 💡 Serve a `pesiDellaScheda` per sapere che muscoli allena senza
+  /// riscrivere i muscoli dentro la scheda: stanno nel catalogo, e ci stanno una
+  /// volta sola.
+  final int? exerciseId;
   final String prescription;
   final int? restSec;
   final double? targetWeight;

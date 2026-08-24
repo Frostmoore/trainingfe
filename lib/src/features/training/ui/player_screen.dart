@@ -106,6 +106,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             PlayerExercise(
               name: riga.name,
               reps: _repsDa(riga.prescription),
+
+              // 🚨 La prescrizione si conserva: vedi la nota su
+              // `PlayerExercise.seriePreviste`.
+              seriePreviste: _seriePreviste(riga.prescription),
               restSec: riga.restSec ?? 90,
               targetWeight: riga.targetWeight,
               notes: riga.notes,
@@ -145,6 +149,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final trovato = RegExp(r'\d+').firstMatch(prescrizione);
 
     return trovato == null ? null : int.tryParse(trovato.group(0)!);
+  }
+
+  /// Le **serie** prescritte, estratte da «3 × 8-12» → 3.
+  ///
+  /// ⚠️ `null` se la prescrizione non ha la parte prima del «×»: allora non c'è
+  /// niente da conservare, e inventare un numero sarebbe peggio che non averlo.
+  static int? _seriePreviste(String prescrizione) {
+    final parti = prescrizione.split('×');
+
+    return parti.length > 1 ? int.tryParse(parti.first.trim()) : null;
   }
 
   /// Le ripetizioni prescritte, estratte da «3 × 8-12».
@@ -369,12 +383,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       final piano = await ref.read(planDetailProvider(_planId!).future);
 
       if (piano.editable && mounted) {
+        /*
+         * ══ 🚨 UN «SÌ» SU UNA CANCELLAZIONE ANONIMA NON È UN CONSENSO ══════
+         *
+         * ⛔ La finestra diceva *«Hai cambiato gli esercizi durante
+         * l'allenamento»* e basta. Il 24/08 quel «sì» ha tolto **due** esercizi
+         * dalla scheda del committente, e nessuno dei due era nominato.
+         *
+         * 💡 Adesso li elenca. ⚠️ Sono i soli che spariscono davvero: quelli
+         * aggiunti e quelli modificati non tolgono niente a nessuno, e metterli
+         * nella stessa lista annacquerebbe l'unica riga che conta.
+         */
+        final spariti = piano.exercises
+            .map((r) => r.name)
+            .where((n) => !_esercizi.any((e) => e.name.trim() == n))
+            .toList();
+
         final salva = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Salvare le modifiche alla scheda?'),
-            content: const Text(
-              'Hai cambiato gli esercizi durante l\'allenamento.',
+            content: Text(
+              spariti.isEmpty
+                  ? 'Hai cambiato gli esercizi durante l\'allenamento.'
+                  : 'Questi esercizi verranno TOLTI dalla scheda:\n\n'
+                        '${spariti.map((n) => '· $n').join('\n')}',
             ),
             actions: [
               TextButton(
@@ -430,7 +463,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 .map(
                   (e) => {
                     'name': e.name.trim(),
-                    'sets': e.rows.length,
+
+                    /*
+                     * 🚨 **La prescrizione, non le righe fatte.** Mandare
+                     * `rows.length` riscriveva la scheda con quante serie avevi
+                     * fatto: un esercizio non toccato ne ha tre di default,
+                     * quindi un allenamento interrotto trasformava 4×15 in 3×15
+                     * su tutto il resto. Vedi `PlayerExercise.seriePreviste`.
+                     */
+                    'sets': e.seriePreviste ?? e.rows.length,
                     'reps': e.reps,
                     'rest_sec': e.restSec,
                     'target_weight': e.targetWeight,
@@ -495,7 +536,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               padding: const EdgeInsets.all(Gap.md),
               children: [
                 for (final esercizio in _esercizi)
+                  /*
+                   * ══ 🚨 LA CHIAVE NON È UN'OTTIMIZZAZIONE — B.15, 24/08 ═════
+                   *
+                   * 📌 Il committente, dopo un allenamento vero: *«ho cercato di
+                   * rimuovere curl invertito, ma non mi è sparito dalla scheda
+                   * quindi semplicemente l'ho fatto»*. E sul server ne erano
+                   * spariti **due**.
+                   *
+                   * ⛔ Senza chiave, Flutter abbina i figli **per posizione**:
+                   * tolto l'elemento 8, la card che stava al 9 riceve i dati
+                   * dell'8 ma **si tiene il suo `State`** — e i
+                   * `TextEditingController`, che sono `late final`, restano
+                   * quelli di prima. A schermo non cambia niente.
+                   *
+                   * 🚨 E il danno non è cosmetico: chi tocca «rimuovi» e non
+                   * vede succedere niente **tocca di nuovo**, e il secondo tocco
+                   * cancella il vicino che nel frattempo è scivolato lì. Un
+                   * gesto, due esercizi persi, nessun errore da nessuna parte.
+                   *
+                   * 💡 `ObjectKey` e non `ValueKey(nome)`: due esercizi possono
+                   * chiamarsi uguale — o avere il nome vuoto, appena aggiunti —
+                   * e una chiave che collide è peggio di nessuna chiave.
+                   */
                   _CardEsercizio(
+                    key: ObjectKey(esercizio),
                     esercizio: esercizio,
                     onOk: (riga) => _ok(esercizio, riga),
                     onAggiungiSerie: () => _aggiungiSerie(esercizio),
@@ -558,6 +623,7 @@ class _CardEsercizio extends StatefulWidget {
     required this.onAggiungiSerie,
     required this.onCambiato,
     required this.onRimuovi,
+    super.key,
   });
 
   final PlayerExercise esercizio;

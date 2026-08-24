@@ -204,6 +204,7 @@ class PlayerExercise {
     required this.rows,
     this.exerciseId,
     this.reps,
+    this.seriePreviste,
     this.restSec = 90,
     this.targetWeight,
     this.notes,
@@ -213,6 +214,22 @@ class PlayerExercise {
 
   int? exerciseId;
   String name;
+
+  /// Le serie **prescritte** dalla scheda, quando viene da una scheda.
+  ///
+  /// ══ 🚨 LA PRESCRIZIONE NON È LO STORICO — B.15, 24/08/2026 ════════════
+  ///
+  /// ⛔ Il salvataggio a fine allenamento mandava `sets: rows.length`, cioè
+  /// **quante righe c'erano nel player**. Un esercizio non toccato ne riceve tre
+  /// di default, quindi dire «sì» a fine seduta riscriveva la scheda da 4×15 a
+  /// **3×15** su tutto quello che non si era fatto.
+  ///
+  /// 🚨 Quante serie hai fatto è **storia**; quante ne devi fare è **scheda**.
+  /// Sono due cose diverse e non devono passare per lo stesso campo.
+  ///
+  /// ⚠️ `null` per un esercizio aggiunto al volo: lì non c'è nessuna
+  /// prescrizione da conservare, e il numero di righe è l'unica cosa che si sa.
+  int? seriePreviste;
 
   /// Che muscoli allena, quando l'ha detto qualcuno — 3b-A.3.5, 24/08/2026.
   ///

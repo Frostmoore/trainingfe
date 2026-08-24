@@ -344,3 +344,18 @@ final sincronizzaLeSchedeProvider = Provider<SincronizzaLeSchede>(
     archivio: ref.watch(archivioSaluteProvider),
   ),
 );
+
+/// La sincronizzazione **all'apertura dell'app** — B.16.4.
+///
+/// 📌 *«le schede sul server si sincronizzano sul telefono quando apro l'app»*.
+///
+/// 🚨 **Non è `autoDispose`, ed è il motivo per cui gira una volta sola** per
+/// vita dell'app — stessa ragione di `avvioSaluteProvider`. Se lo fosse,
+/// ripartirebbe a ogni cambio di scheda.
+///
+/// ⛔ E non gira **durante** una seduta: riscrivere la scheda sotto le mani di
+/// chi si sta allenando è il difetto del 24/08, rifatto meglio. Girando una
+/// volta all'apertura, una seduta cominciata dopo lavora su una copia ferma.
+final avvioSchedeProvider = FutureProvider<EsitoSincronizzazione>(
+  (ref) => ref.read(sincronizzaLeSchedeProvider).gira(),
+);

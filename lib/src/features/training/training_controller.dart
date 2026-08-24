@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
+import '../health/health_controller.dart';
 import 'schede_ricevute_controller.dart';
+import 'sincronizza_le_schede.dart';
 
 /// Una scheda assegnata — A5.1.
 class WorkoutPlan {
@@ -138,6 +140,21 @@ final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
 final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
   ref,
 ) async {
+  /*
+   * 🚨 **Si aspetta la sincronizzazione d'avvio** — 3b-B.16.4.
+   *
+   * 📌 *«le schede sul server si sincronizzano sul telefono quando apro
+   * l'app»*: questo è il punto in cui l'elenco delle schede viene chiesto per
+   * la prima volta, quindi è qui che la sincronizzazione deve essere già
+   * passata.
+   *
+   * ⚠️ Non costa niente quando non c'è niente da fare, e **senza rete non
+   * blocca**: `gira()` torna subito con `senzaRete`. ⛔ Farla partire e non
+   * aspettarla vorrebbe dire un elenco che si riscrive sotto gli occhi mezzo
+   * secondo dopo — la stessa cosa che `avvioSaluteProvider` evita su «Oggi».
+   */
+  await ref.watch(avvioSchedeProvider.future);
+
   final locali = await ref.watch(schedeRicevuteProvider.future);
 
   final dalServer = await ref
@@ -167,10 +184,37 @@ final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
 ///
 /// ⚠️ **Id negativo = scheda ricevuta in chat**, che vive nell'archivio locale.
 /// Vedi `schedeUniteProvider` per il perché del segno.
+///
+/// ══ 🚨 DAL TELEFONO, NON DALLA RETE — 3b-B.16.9, 24/08/2026 ══════════════
+///
+/// 📌 *«tutto deve stare sul telefono … perché potrei non avere rete quando mi
+/// alleno»*.
+///
+/// ⛔ Prima questo provider andava **sempre** al server, e il player lo usa per
+/// costruire la lista degli esercizi: senza campo, l'allenamento non partiva
+/// affatto. In una palestra interrata è la differenza fra un'app che funziona e
+/// una che no.
+///
+/// 💡 Adesso legge la copia locale, che `SincronizzaLeSchede` tiene aggiornata
+/// all'apertura dell'app. ⚠️ La rete resta come **ripiego**, per la scheda che
+/// il telefono non ha ancora — e quello che arriva si scrive subito in locale,
+/// così la volta dopo c'è.
 final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
   ref,
   id,
 ) async {
+  if (id > 0) {
+    final locale = await ref
+        .watch(archivioSaluteProvider)
+        .schedaSulTelefono(id);
+
+    if (locale != null) {
+      return WorkoutPlan.fromJson(
+        (json.decode(locale.scheda) as Map).cast<String, dynamic>(),
+      );
+    }
+  }
+
   if (id < 0) {
     final locali = await ref.watch(schedeRicevuteProvider.future);
     final riga = locali.firstWhere((r) => -r.id == id);
@@ -185,6 +229,26 @@ final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
   final data = await ref
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>('/workout-plans/$id');
+
+  /*
+   * 💡 **Quello che arriva dalla rete si scrive subito sul telefono.** ⚠️ Senza,
+   * una scheda aperta per la prima volta resterebbe «solo di rete» fino alla
+   * sincronizzazione successiva — cioè fino alla prossima apertura dell'app,
+   * che è esattamente quando non serve più.
+   */
+  if (id > 0) {
+    await ref
+        .watch(archivioSaluteProvider)
+        .scriviSchedaDalServer(
+          idServer: id,
+          nome: data['name']?.toString() ?? 'Scheda',
+          scheda: json.encode(data),
+          aggiornataIlServer: DateTime.tryParse(
+            data['updated_at']?.toString() ?? '',
+          )?.toUtc(),
+          modificabile: data['editable'] == true,
+        );
+  }
 
   return WorkoutPlan.fromJson(data);
 });

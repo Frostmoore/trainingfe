@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
@@ -6,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import 'data/calorie_allenamento.dart';
+import 'data/catalogo_esercizi.dart';
 import 'data/gruppo_muscolare.dart';
 import 'data/session_models.dart';
 
@@ -196,24 +198,78 @@ class SessionActions {
         id = noto.$1;
         met = noto.$2;
       } else {
-        final creato = await _catalogo(exerciseName, muscoli);
+        /*
+         * ══ 🚨 PRIMA IL CATALOGO CHE ABBIAMO GIÀ — 3b-B.16.10, 24/08/2026 ══
+         *
+         * 📌 *«tutto deve stare sul telefono … perché potrei non avere rete
+         * quando mi alleno»*.
+         *
+         * ⛔ Prima si andava **dritti al server**, e senza rete la serie non si
+         * salvava affatto: il `throw` qui sotto scattava alla **prima** serie di
+         * ogni esercizio, perché il player gli id non ce li ha. In palestra,
+         * dove il campo spesso non c'è, questo vuol dire un'app che rifiuta di
+         * registrare l'allenamento che stai facendo.
+         *
+         * 💡 Il catalogo sta già sul telefono (`catalogoEserciziProvider` tiene
+         * una copia locale): per i 147 esercizi che conosciamo l'id si trova
+         * **senza toccare la rete**. Il server serve solo per un nome che non
+         * abbiamo mai visto.
+         */
+        /*
+         * ⚠️ **`await` e non `valueOrNull`.** Preso da un test: con
+         * `valueOrNull` il catalogo si usa solo **se per caso** è già caricato,
+         * e durante un allenamento spesso non lo è — nessuna schermata del
+         * player lo guarda. Il risultato sarebbe stato «a volte funziona»,
+         * cioè il tipo di comportamento peggiore da diagnosticare.
+         *
+         * 💡 Aspettarlo non può bloccare: `catalogoEserciziProvider` ricade
+         * sulla copia locale se la rete non c'è, e su un catalogo vuoto se
+         * nemmeno quella c'è. Torna sempre.
+         */
+        final dalTelefono = (await _ref.read(
+          catalogoEserciziProvider.future,
+        )).perNome(exerciseName);
 
-        id = (creato['id'] as num?)?.toInt() ?? exerciseId;
-        met = (creato['met'] as num?)?.toDouble();
-        nome = creato['name']?.toString() ?? exerciseName;
+        if (dalTelefono != null) {
+          id = dalTelefono.id;
+          met = dalTelefono.met;
+          nome = dalTelefono.nome;
+        } else {
+          try {
+            final creato = await _catalogo(exerciseName, muscoli);
+
+            id = (creato['id'] as num?)?.toInt() ?? exerciseId;
+            met = (creato['met'] as num?)?.toDouble();
+            nome = creato['name']?.toString() ?? exerciseName;
+          } on Object catch (e) {
+            debugPrint('serie: il catalogo non risponde — $e');
+          }
+        }
 
         if (id != null) _noti[exerciseName] = (id, met);
       }
     }
 
     /*
-     * ⛔ Senza un id non si scrive niente: una serie senza esercizio non si
-     * può né raggruppare né pesare, e lo storico mostrerebbe una riga vuota.
-     * 🚨 Meglio far vedere l'errore che salvare una serie che non dice niente.
+     * ══ ⛔ UNA SERIE FATTA NON SI PERDE MAI — 3b-B.16.10 ═══════════════════
+     *
+     * 🚨 Qui c'era un `throw`: senza id la serie **non si salvava**. ⚠️ Era la
+     * cosa peggiore che potesse fare — chi ha appena spinto un bilanciere non
+     * la rifà perché l'app non aveva campo.
+     *
+     * 💡 Adesso si salva con un id **provvisorio e negativo**, ricavato dal
+     * nome. ⚠️ Negativo di proposito: gli id veri sono positivi, quindi un
+     * provvisorio si riconosce a colpo d'occhio e non può collidere.
+     *
+     * 💡 E lo storico funziona lo stesso: `intensitaDeiMuscoli` cerca prima per
+     * id e **poi per nome**, e il nome ce l'ha. Le calorie usano il MET, che
+     * senza catalogo non c'è — e lì la stima ricade sul valore di serie.
+     *
+     * ⏳ **Debito dichiarato**: la riconciliazione (dare l'id vero a una serie
+     * provvisoria quando la rete torna) non c'è ancora. Sta nel piano come
+     * B.16.13, e finché non c'è quella serie resta con l'id negativo.
      */
-    if (id == null) {
-      throw StateError('Esercizio sconosciuto: la serie non è stata salvata');
-    }
+    id ??= -exerciseName.hashCode.abs();
 
     await _archivio.registraSerie(
       SerieDelleSeduteCompanion.insert(

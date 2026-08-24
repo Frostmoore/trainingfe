@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
+import '../../health/health_controller.dart';
 import '../data/catalogo_esercizi.dart';
 import '../data/session_models.dart';
 import '../rest_timer.dart';
@@ -422,7 +424,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           ),
         );
 
-        if (salva == true) await _salvaScheda();
+        if (salva == true) await _salvaSchedaSulTelefono();
       }
     }
 
@@ -451,37 +453,67 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
   }
 
-  Future<void> _salvaScheda() async {
-    try {
-      await ref
-          .read(planActionsProvider)
-          .update(
-            id: _planId!,
-            name: _planName ?? 'Scheda',
-            exercises: _esercizi
-                .where((e) => e.name.trim().isNotEmpty)
-                .map(
-                  (e) => {
-                    'name': e.name.trim(),
+  /// Scrive la scheda **sul telefono** — 3b-B.16.10.
+  ///
+  /// ══ 🚨 SUL TELEFONO, E SUBITO ═════════════════════════════════════════
+  ///
+  /// 📌 *«se inizio un allenamento, modifico un esercizio, ne aggiungo o rimuovo
+  /// uno, tutto deve stare sul telefono … perché potrei non avere rete quando mi
+  /// alleno»*.
+  ///
+  /// ⛔ Prima il salvataggio andava **dritto al server**, e in una palestra
+  /// senza campo falliva in silenzio: la modifica era persa e nessuno lo diceva.
+  /// 💡 Adesso si scrive in locale e la marca da spingere; `SincronizzaLeSchede`
+  /// la manda al server alla prima occasione.
+  ///
+  /// ⚠️ **La scheda resta quella che era, con le modifiche applicate sopra**:
+  /// non si ricostruisce da zero. Ricostruirla è ciò che il 24/08 ha fatto
+  /// sparire due esercizi — quello che il player non conosce (note del trainer,
+  /// giorni, alternative) andrebbe perso a ogni allenamento.
+  Future<void> _salvaSchedaSulTelefono() async {
+    final id = _planId;
 
-                    /*
-                     * 🚨 **La prescrizione, non le righe fatte.** Mandare
-                     * `rows.length` riscriveva la scheda con quante serie avevi
-                     * fatto: un esercizio non toccato ne ha tre di default,
-                     * quindi un allenamento interrotto trasformava 4×15 in 3×15
-                     * su tutto il resto. Vedi `PlayerExercise.seriePreviste`.
-                     */
-                    'sets': e.seriePreviste ?? e.rows.length,
-                    'reps': e.reps,
-                    'rest_sec': e.restSec,
-                    'target_weight': e.targetWeight,
-                    'notes': e.notes,
-                  },
-                )
-                .toList(),
+    if (id == null || id <= 0) return;
+
+    try {
+      final locale = await ref
+          .read(archivioSaluteProvider)
+          .schedaSulTelefono(id);
+
+      if (locale == null) return;
+
+      final scheda = (jsonDecode(locale.scheda) as Map).cast<String, dynamic>();
+
+      scheda['exercises'] = _esercizi
+          .where((e) => e.name.trim().isNotEmpty)
+          .map(
+            (e) => {
+              'id': -1,
+              'exercise': {'id': e.exerciseId, 'name': e.name.trim()},
+              'prescription':
+                  '${e.seriePreviste ?? e.rows.length} × ${e.reps ?? ''}'
+                      .trim(),
+              'name': e.name.trim(),
+              'sets': e.seriePreviste ?? e.rows.length,
+              'reps': e.reps,
+              'rest_sec': e.restSec,
+              'target_weight': e.targetWeight,
+              'notes': e.notes,
+            },
+          )
+          .toList();
+
+      await ref
+          .read(archivioSaluteProvider)
+          .scriviSchedaModificataQui(
+            idServer: id,
+            nome: _planName ?? locale.nome,
+            scheda: jsonEncode(scheda),
           );
+
+      ref.invalidate(planDetailProvider(id));
     } on Object catch (error) {
-      _avvisa('Scheda non salvata: ${ApiClient.unwrapError(error).message}');
+      _avvisa('Scheda non salvata: $error');
     }
   }
 

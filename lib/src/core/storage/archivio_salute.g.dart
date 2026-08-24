@@ -5477,6 +5477,563 @@ class BruciateDichiarateCompanion extends UpdateCompanion<BruciatoDichiarato> {
   }
 }
 
+class $SchedeDelServerTable extends SchedeDelServer
+    with TableInfo<$SchedeDelServerTable, SchedaDelServer> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SchedeDelServerTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idServerMeta = const VerificationMeta(
+    'idServer',
+  );
+  @override
+  late final GeneratedColumn<int> idServer = GeneratedColumn<int>(
+    'id_server',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
+  @override
+  late final GeneratedColumn<String> nome = GeneratedColumn<String>(
+    'nome',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _schedaMeta = const VerificationMeta('scheda');
+  @override
+  late final GeneratedColumn<String> scheda = GeneratedColumn<String>(
+    'scheda',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _aggiornataIlServerMeta =
+      const VerificationMeta('aggiornataIlServer');
+  @override
+  late final GeneratedColumn<DateTime> aggiornataIlServer =
+      GeneratedColumn<DateTime>(
+        'aggiornata_il_server',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _modificataQuiIlMeta = const VerificationMeta(
+    'modificataQuiIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> modificataQuiIl =
+      GeneratedColumn<DateTime>(
+        'modificata_qui_il',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _modificabileMeta = const VerificationMeta(
+    'modificabile',
+  );
+  @override
+  late final GeneratedColumn<bool> modificabile = GeneratedColumn<bool>(
+    'modificabile',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("modificabile" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _scartataMeta = const VerificationMeta(
+    'scartata',
+  );
+  @override
+  late final GeneratedColumn<String> scartata = GeneratedColumn<String>(
+    'scartata',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _scartataIlMeta = const VerificationMeta(
+    'scartataIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> scartataIl = GeneratedColumn<DateTime>(
+    'scartata_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    idServer,
+    nome,
+    scheda,
+    aggiornataIlServer,
+    modificataQuiIl,
+    modificabile,
+    scartata,
+    scartataIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'schede_del_server';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SchedaDelServer> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_server')) {
+      context.handle(
+        _idServerMeta,
+        idServer.isAcceptableOrUnknown(data['id_server']!, _idServerMeta),
+      );
+    }
+    if (data.containsKey('nome')) {
+      context.handle(
+        _nomeMeta,
+        nome.isAcceptableOrUnknown(data['nome']!, _nomeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomeMeta);
+    }
+    if (data.containsKey('scheda')) {
+      context.handle(
+        _schedaMeta,
+        scheda.isAcceptableOrUnknown(data['scheda']!, _schedaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_schedaMeta);
+    }
+    if (data.containsKey('aggiornata_il_server')) {
+      context.handle(
+        _aggiornataIlServerMeta,
+        aggiornataIlServer.isAcceptableOrUnknown(
+          data['aggiornata_il_server']!,
+          _aggiornataIlServerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('modificata_qui_il')) {
+      context.handle(
+        _modificataQuiIlMeta,
+        modificataQuiIl.isAcceptableOrUnknown(
+          data['modificata_qui_il']!,
+          _modificataQuiIlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('modificabile')) {
+      context.handle(
+        _modificabileMeta,
+        modificabile.isAcceptableOrUnknown(
+          data['modificabile']!,
+          _modificabileMeta,
+        ),
+      );
+    }
+    if (data.containsKey('scartata')) {
+      context.handle(
+        _scartataMeta,
+        scartata.isAcceptableOrUnknown(data['scartata']!, _scartataMeta),
+      );
+    }
+    if (data.containsKey('scartata_il')) {
+      context.handle(
+        _scartataIlMeta,
+        scartataIl.isAcceptableOrUnknown(data['scartata_il']!, _scartataIlMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idServer};
+  @override
+  SchedaDelServer map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SchedaDelServer(
+      idServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_server'],
+      )!,
+      nome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome'],
+      )!,
+      scheda: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scheda'],
+      )!,
+      aggiornataIlServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}aggiornata_il_server'],
+      ),
+      modificataQuiIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}modificata_qui_il'],
+      ),
+      modificabile: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}modificabile'],
+      )!,
+      scartata: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scartata'],
+      ),
+      scartataIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}scartata_il'],
+      ),
+    );
+  }
+
+  @override
+  $SchedeDelServerTable createAlias(String alias) {
+    return $SchedeDelServerTable(attachedDatabase, alias);
+  }
+}
+
+class SchedaDelServer extends DataClass implements Insertable<SchedaDelServer> {
+  /// L'id **firmato** come in `schedeUniteProvider`: positivo dal server.
+  final int idServer;
+
+  /// Il nome, per non dover aprire il JSON a ogni riga di un elenco.
+  final String nome;
+
+  /// Il dettaglio intero, come lo manda il server.
+  final String scheda;
+
+  /// L'`updated_at` del server **dell'ultima versione che abbiamo visto**.
+  ///
+  /// 🚨 Non «quando l'abbiamo scaricata»: è il timbro del server, ed è ciò che
+  /// permette di accorgersi che è cambiata **da un'altra parte**.
+  final DateTime? aggiornataIlServer;
+
+  /// Quando è stata toccata **qui**, se non è ancora stata spinta.
+  ///
+  /// ⚠️ `null` vuol dire **pulita**, non «mai modificata»: appena la spinta
+  /// riesce torna a `null`, perché da quel momento il server ha la stessa cosa.
+  final DateTime? modificataQuiIl;
+
+  /// Se il server ci lascia scriverla (`editable`).
+  ///
+  /// ⛔ Le schede del trainer non si spingono **mai**: il server le rifiuta con
+  /// un 403, e fingere di poterle modificare in locale creerebbe una copia
+  /// divergente che non tornerebbe più indietro.
+  final bool modificabile;
+
+  /// La copia che ha **perso** un conflitto, tenuta da parte.
+  ///
+  /// 🚨 Non si butta. Buttarla sarebbe il difetto del 24/08 con un altro nome:
+  /// una modifica vera che sparisce senza che nessuno lo dica.
+  final String? scartata;
+  final DateTime? scartataIl;
+  const SchedaDelServer({
+    required this.idServer,
+    required this.nome,
+    required this.scheda,
+    this.aggiornataIlServer,
+    this.modificataQuiIl,
+    required this.modificabile,
+    this.scartata,
+    this.scartataIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_server'] = Variable<int>(idServer);
+    map['nome'] = Variable<String>(nome);
+    map['scheda'] = Variable<String>(scheda);
+    if (!nullToAbsent || aggiornataIlServer != null) {
+      map['aggiornata_il_server'] = Variable<DateTime>(aggiornataIlServer);
+    }
+    if (!nullToAbsent || modificataQuiIl != null) {
+      map['modificata_qui_il'] = Variable<DateTime>(modificataQuiIl);
+    }
+    map['modificabile'] = Variable<bool>(modificabile);
+    if (!nullToAbsent || scartata != null) {
+      map['scartata'] = Variable<String>(scartata);
+    }
+    if (!nullToAbsent || scartataIl != null) {
+      map['scartata_il'] = Variable<DateTime>(scartataIl);
+    }
+    return map;
+  }
+
+  SchedeDelServerCompanion toCompanion(bool nullToAbsent) {
+    return SchedeDelServerCompanion(
+      idServer: Value(idServer),
+      nome: Value(nome),
+      scheda: Value(scheda),
+      aggiornataIlServer: aggiornataIlServer == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aggiornataIlServer),
+      modificataQuiIl: modificataQuiIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modificataQuiIl),
+      modificabile: Value(modificabile),
+      scartata: scartata == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scartata),
+      scartataIl: scartataIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scartataIl),
+    );
+  }
+
+  factory SchedaDelServer.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SchedaDelServer(
+      idServer: serializer.fromJson<int>(json['idServer']),
+      nome: serializer.fromJson<String>(json['nome']),
+      scheda: serializer.fromJson<String>(json['scheda']),
+      aggiornataIlServer: serializer.fromJson<DateTime?>(
+        json['aggiornataIlServer'],
+      ),
+      modificataQuiIl: serializer.fromJson<DateTime?>(json['modificataQuiIl']),
+      modificabile: serializer.fromJson<bool>(json['modificabile']),
+      scartata: serializer.fromJson<String?>(json['scartata']),
+      scartataIl: serializer.fromJson<DateTime?>(json['scartataIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idServer': serializer.toJson<int>(idServer),
+      'nome': serializer.toJson<String>(nome),
+      'scheda': serializer.toJson<String>(scheda),
+      'aggiornataIlServer': serializer.toJson<DateTime?>(aggiornataIlServer),
+      'modificataQuiIl': serializer.toJson<DateTime?>(modificataQuiIl),
+      'modificabile': serializer.toJson<bool>(modificabile),
+      'scartata': serializer.toJson<String?>(scartata),
+      'scartataIl': serializer.toJson<DateTime?>(scartataIl),
+    };
+  }
+
+  SchedaDelServer copyWith({
+    int? idServer,
+    String? nome,
+    String? scheda,
+    Value<DateTime?> aggiornataIlServer = const Value.absent(),
+    Value<DateTime?> modificataQuiIl = const Value.absent(),
+    bool? modificabile,
+    Value<String?> scartata = const Value.absent(),
+    Value<DateTime?> scartataIl = const Value.absent(),
+  }) => SchedaDelServer(
+    idServer: idServer ?? this.idServer,
+    nome: nome ?? this.nome,
+    scheda: scheda ?? this.scheda,
+    aggiornataIlServer: aggiornataIlServer.present
+        ? aggiornataIlServer.value
+        : this.aggiornataIlServer,
+    modificataQuiIl: modificataQuiIl.present
+        ? modificataQuiIl.value
+        : this.modificataQuiIl,
+    modificabile: modificabile ?? this.modificabile,
+    scartata: scartata.present ? scartata.value : this.scartata,
+    scartataIl: scartataIl.present ? scartataIl.value : this.scartataIl,
+  );
+  SchedaDelServer copyWithCompanion(SchedeDelServerCompanion data) {
+    return SchedaDelServer(
+      idServer: data.idServer.present ? data.idServer.value : this.idServer,
+      nome: data.nome.present ? data.nome.value : this.nome,
+      scheda: data.scheda.present ? data.scheda.value : this.scheda,
+      aggiornataIlServer: data.aggiornataIlServer.present
+          ? data.aggiornataIlServer.value
+          : this.aggiornataIlServer,
+      modificataQuiIl: data.modificataQuiIl.present
+          ? data.modificataQuiIl.value
+          : this.modificataQuiIl,
+      modificabile: data.modificabile.present
+          ? data.modificabile.value
+          : this.modificabile,
+      scartata: data.scartata.present ? data.scartata.value : this.scartata,
+      scartataIl: data.scartataIl.present
+          ? data.scartataIl.value
+          : this.scartataIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SchedaDelServer(')
+          ..write('idServer: $idServer, ')
+          ..write('nome: $nome, ')
+          ..write('scheda: $scheda, ')
+          ..write('aggiornataIlServer: $aggiornataIlServer, ')
+          ..write('modificataQuiIl: $modificataQuiIl, ')
+          ..write('modificabile: $modificabile, ')
+          ..write('scartata: $scartata, ')
+          ..write('scartataIl: $scartataIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    idServer,
+    nome,
+    scheda,
+    aggiornataIlServer,
+    modificataQuiIl,
+    modificabile,
+    scartata,
+    scartataIl,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SchedaDelServer &&
+          other.idServer == this.idServer &&
+          other.nome == this.nome &&
+          other.scheda == this.scheda &&
+          other.aggiornataIlServer == this.aggiornataIlServer &&
+          other.modificataQuiIl == this.modificataQuiIl &&
+          other.modificabile == this.modificabile &&
+          other.scartata == this.scartata &&
+          other.scartataIl == this.scartataIl);
+}
+
+class SchedeDelServerCompanion extends UpdateCompanion<SchedaDelServer> {
+  final Value<int> idServer;
+  final Value<String> nome;
+  final Value<String> scheda;
+  final Value<DateTime?> aggiornataIlServer;
+  final Value<DateTime?> modificataQuiIl;
+  final Value<bool> modificabile;
+  final Value<String?> scartata;
+  final Value<DateTime?> scartataIl;
+  const SchedeDelServerCompanion({
+    this.idServer = const Value.absent(),
+    this.nome = const Value.absent(),
+    this.scheda = const Value.absent(),
+    this.aggiornataIlServer = const Value.absent(),
+    this.modificataQuiIl = const Value.absent(),
+    this.modificabile = const Value.absent(),
+    this.scartata = const Value.absent(),
+    this.scartataIl = const Value.absent(),
+  });
+  SchedeDelServerCompanion.insert({
+    this.idServer = const Value.absent(),
+    required String nome,
+    required String scheda,
+    this.aggiornataIlServer = const Value.absent(),
+    this.modificataQuiIl = const Value.absent(),
+    this.modificabile = const Value.absent(),
+    this.scartata = const Value.absent(),
+    this.scartataIl = const Value.absent(),
+  }) : nome = Value(nome),
+       scheda = Value(scheda);
+  static Insertable<SchedaDelServer> custom({
+    Expression<int>? idServer,
+    Expression<String>? nome,
+    Expression<String>? scheda,
+    Expression<DateTime>? aggiornataIlServer,
+    Expression<DateTime>? modificataQuiIl,
+    Expression<bool>? modificabile,
+    Expression<String>? scartata,
+    Expression<DateTime>? scartataIl,
+  }) {
+    return RawValuesInsertable({
+      if (idServer != null) 'id_server': idServer,
+      if (nome != null) 'nome': nome,
+      if (scheda != null) 'scheda': scheda,
+      if (aggiornataIlServer != null)
+        'aggiornata_il_server': aggiornataIlServer,
+      if (modificataQuiIl != null) 'modificata_qui_il': modificataQuiIl,
+      if (modificabile != null) 'modificabile': modificabile,
+      if (scartata != null) 'scartata': scartata,
+      if (scartataIl != null) 'scartata_il': scartataIl,
+    });
+  }
+
+  SchedeDelServerCompanion copyWith({
+    Value<int>? idServer,
+    Value<String>? nome,
+    Value<String>? scheda,
+    Value<DateTime?>? aggiornataIlServer,
+    Value<DateTime?>? modificataQuiIl,
+    Value<bool>? modificabile,
+    Value<String?>? scartata,
+    Value<DateTime?>? scartataIl,
+  }) {
+    return SchedeDelServerCompanion(
+      idServer: idServer ?? this.idServer,
+      nome: nome ?? this.nome,
+      scheda: scheda ?? this.scheda,
+      aggiornataIlServer: aggiornataIlServer ?? this.aggiornataIlServer,
+      modificataQuiIl: modificataQuiIl ?? this.modificataQuiIl,
+      modificabile: modificabile ?? this.modificabile,
+      scartata: scartata ?? this.scartata,
+      scartataIl: scartataIl ?? this.scartataIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idServer.present) {
+      map['id_server'] = Variable<int>(idServer.value);
+    }
+    if (nome.present) {
+      map['nome'] = Variable<String>(nome.value);
+    }
+    if (scheda.present) {
+      map['scheda'] = Variable<String>(scheda.value);
+    }
+    if (aggiornataIlServer.present) {
+      map['aggiornata_il_server'] = Variable<DateTime>(
+        aggiornataIlServer.value,
+      );
+    }
+    if (modificataQuiIl.present) {
+      map['modificata_qui_il'] = Variable<DateTime>(modificataQuiIl.value);
+    }
+    if (modificabile.present) {
+      map['modificabile'] = Variable<bool>(modificabile.value);
+    }
+    if (scartata.present) {
+      map['scartata'] = Variable<String>(scartata.value);
+    }
+    if (scartataIl.present) {
+      map['scartata_il'] = Variable<DateTime>(scartataIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SchedeDelServerCompanion(')
+          ..write('idServer: $idServer, ')
+          ..write('nome: $nome, ')
+          ..write('scheda: $scheda, ')
+          ..write('aggiornataIlServer: $aggiornataIlServer, ')
+          ..write('modificataQuiIl: $modificataQuiIl, ')
+          ..write('modificabile: $modificabile, ')
+          ..write('scartata: $scartata, ')
+          ..write('scartataIl: $scartataIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -5497,6 +6054,9 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   );
   late final $BruciateDichiarateTable bruciateDichiarate =
       $BruciateDichiarateTable(this);
+  late final $SchedeDelServerTable schedeDelServer = $SchedeDelServerTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5513,6 +6073,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     seduteAllenamento,
     serieDelleSedute,
     bruciateDichiarate,
+    schedeDelServer,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -8525,6 +9086,275 @@ typedef $$BruciateDichiarateTableProcessedTableManager =
       BruciatoDichiarato,
       PrefetchHooks Function()
     >;
+typedef $$SchedeDelServerTableCreateCompanionBuilder =
+    SchedeDelServerCompanion Function({
+      Value<int> idServer,
+      required String nome,
+      required String scheda,
+      Value<DateTime?> aggiornataIlServer,
+      Value<DateTime?> modificataQuiIl,
+      Value<bool> modificabile,
+      Value<String?> scartata,
+      Value<DateTime?> scartataIl,
+    });
+typedef $$SchedeDelServerTableUpdateCompanionBuilder =
+    SchedeDelServerCompanion Function({
+      Value<int> idServer,
+      Value<String> nome,
+      Value<String> scheda,
+      Value<DateTime?> aggiornataIlServer,
+      Value<DateTime?> modificataQuiIl,
+      Value<bool> modificabile,
+      Value<String?> scartata,
+      Value<DateTime?> scartataIl,
+    });
+
+class $$SchedeDelServerTableFilterComposer
+    extends Composer<_$ArchivioSalute, $SchedeDelServerTable> {
+  $$SchedeDelServerTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idServer => $composableBuilder(
+    column: $table.idServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scheda => $composableBuilder(
+    column: $table.scheda,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aggiornataIlServer => $composableBuilder(
+    column: $table.aggiornataIlServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get modificataQuiIl => $composableBuilder(
+    column: $table.modificataQuiIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get modificabile => $composableBuilder(
+    column: $table.modificabile,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scartata => $composableBuilder(
+    column: $table.scartata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get scartataIl => $composableBuilder(
+    column: $table.scartataIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SchedeDelServerTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $SchedeDelServerTable> {
+  $$SchedeDelServerTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idServer => $composableBuilder(
+    column: $table.idServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scheda => $composableBuilder(
+    column: $table.scheda,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aggiornataIlServer => $composableBuilder(
+    column: $table.aggiornataIlServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get modificataQuiIl => $composableBuilder(
+    column: $table.modificataQuiIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get modificabile => $composableBuilder(
+    column: $table.modificabile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scartata => $composableBuilder(
+    column: $table.scartata,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get scartataIl => $composableBuilder(
+    column: $table.scartataIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SchedeDelServerTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $SchedeDelServerTable> {
+  $$SchedeDelServerTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idServer =>
+      $composableBuilder(column: $table.idServer, builder: (column) => column);
+
+  GeneratedColumn<String> get nome =>
+      $composableBuilder(column: $table.nome, builder: (column) => column);
+
+  GeneratedColumn<String> get scheda =>
+      $composableBuilder(column: $table.scheda, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get aggiornataIlServer => $composableBuilder(
+    column: $table.aggiornataIlServer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get modificataQuiIl => $composableBuilder(
+    column: $table.modificataQuiIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get modificabile => $composableBuilder(
+    column: $table.modificabile,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get scartata =>
+      $composableBuilder(column: $table.scartata, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get scartataIl => $composableBuilder(
+    column: $table.scartataIl,
+    builder: (column) => column,
+  );
+}
+
+class $$SchedeDelServerTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $SchedeDelServerTable,
+          SchedaDelServer,
+          $$SchedeDelServerTableFilterComposer,
+          $$SchedeDelServerTableOrderingComposer,
+          $$SchedeDelServerTableAnnotationComposer,
+          $$SchedeDelServerTableCreateCompanionBuilder,
+          $$SchedeDelServerTableUpdateCompanionBuilder,
+          (
+            SchedaDelServer,
+            BaseReferences<
+              _$ArchivioSalute,
+              $SchedeDelServerTable,
+              SchedaDelServer
+            >,
+          ),
+          SchedaDelServer,
+          PrefetchHooks Function()
+        > {
+  $$SchedeDelServerTableTableManager(
+    _$ArchivioSalute db,
+    $SchedeDelServerTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SchedeDelServerTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SchedeDelServerTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SchedeDelServerTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> idServer = const Value.absent(),
+                Value<String> nome = const Value.absent(),
+                Value<String> scheda = const Value.absent(),
+                Value<DateTime?> aggiornataIlServer = const Value.absent(),
+                Value<DateTime?> modificataQuiIl = const Value.absent(),
+                Value<bool> modificabile = const Value.absent(),
+                Value<String?> scartata = const Value.absent(),
+                Value<DateTime?> scartataIl = const Value.absent(),
+              }) => SchedeDelServerCompanion(
+                idServer: idServer,
+                nome: nome,
+                scheda: scheda,
+                aggiornataIlServer: aggiornataIlServer,
+                modificataQuiIl: modificataQuiIl,
+                modificabile: modificabile,
+                scartata: scartata,
+                scartataIl: scartataIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> idServer = const Value.absent(),
+                required String nome,
+                required String scheda,
+                Value<DateTime?> aggiornataIlServer = const Value.absent(),
+                Value<DateTime?> modificataQuiIl = const Value.absent(),
+                Value<bool> modificabile = const Value.absent(),
+                Value<String?> scartata = const Value.absent(),
+                Value<DateTime?> scartataIl = const Value.absent(),
+              }) => SchedeDelServerCompanion.insert(
+                idServer: idServer,
+                nome: nome,
+                scheda: scheda,
+                aggiornataIlServer: aggiornataIlServer,
+                modificataQuiIl: modificataQuiIl,
+                modificabile: modificabile,
+                scartata: scartata,
+                scartataIl: scartataIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SchedeDelServerTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $SchedeDelServerTable,
+      SchedaDelServer,
+      $$SchedeDelServerTableFilterComposer,
+      $$SchedeDelServerTableOrderingComposer,
+      $$SchedeDelServerTableAnnotationComposer,
+      $$SchedeDelServerTableCreateCompanionBuilder,
+      $$SchedeDelServerTableUpdateCompanionBuilder,
+      (
+        SchedaDelServer,
+        BaseReferences<
+          _$ArchivioSalute,
+          $SchedeDelServerTable,
+          SchedaDelServer
+        >,
+      ),
+      SchedaDelServer,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -8551,4 +9381,6 @@ class $ArchivioSaluteManager {
       $$SerieDelleSeduteTableTableManager(_db, _db.serieDelleSedute);
   $$BruciateDichiarateTableTableManager get bruciateDichiarate =>
       $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
+  $$SchedeDelServerTableTableManager get schedeDelServer =>
+      $$SchedeDelServerTableTableManager(_db, _db.schedeDelServer);
 }

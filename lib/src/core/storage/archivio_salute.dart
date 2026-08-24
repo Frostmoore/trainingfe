@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -40,6 +41,7 @@ part 'archivio_salute.g.dart';
     SeduteAllenamento,
     SerieDelleSedute,
     BruciateDichiarate,
+    SchedeDelServer,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -49,7 +51,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -183,6 +185,22 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 12) {
         await m.addColumn(bruciateDichiarate, bruciateDichiarate.daServer);
       }
+
+      /*
+       * v12 → v13 (3b-B.16): le schede del server vivono sul telefono.
+       *
+       * 📌 *«tutto deve stare sul telefono … perché potrei non avere rete
+       * quando mi alleno»*.
+       *
+       * ⚠️ **La tabella nasce vuota, e va bene**: la prima sincronizzazione la
+       * riempie. ⛔ Provare a precaricarla qui vorrebbe dire fare una chiamata
+       * di rete dentro una migrazione — cioè bloccare l'avvio dell'app su una
+       * cosa che può non rispondere.
+       *
+       * 💡 Nel backup ci finisce **da sola**: `esportaPerBackup()` enumera
+       * `allTables`, non un elenco scritto a mano.
+       */
+      if (da < 13) await m.createTable(schedeDelServer);
     },
   );
 
@@ -1015,6 +1033,111 @@ class ArchivioSalute extends _$ArchivioSalute {
     });
   }
 
+  // ─────────────── le schede del server, sul telefono (B.16) ───────────────
+
+  /// Tutte le schede che il telefono ha.
+  Future<List<SchedaDelServer>> schedeSulTelefono() =>
+      select(schedeDelServer).get();
+
+  /// Una scheda, o `null` se non c'è.
+  Future<SchedaDelServer?> schedaSulTelefono(int idServer) => (select(
+    schedeDelServer,
+  )..where((t) => t.idServer.equals(idServer))).getSingleOrNull();
+
+  /// Quelle con modifiche **non ancora spinte**.
+  Future<List<SchedaDelServer>> schedeDaSpingere() =>
+      (select(schedeDelServer)
+            ..where((t) => t.modificataQuiIl.isNotNull())
+            ..where((t) => t.modificabile.equals(true)))
+          .get();
+
+  /// Scrive quello che è arrivato dal server.
+  ///
+  /// ⚠️ Azzera `modificataQuiIl`: da questo momento la copia locale **è** quella
+  /// del server, quindi non c'è più niente da spingere. 🚨 Lasciarlo acceso
+  /// vorrebbe dire rispingere la versione del server come se fosse una modifica
+  /// nostra, all'infinito.
+  Future<void> scriviSchedaDalServer({
+    required int idServer,
+    required String nome,
+    required String scheda,
+    required DateTime? aggiornataIlServer,
+    required bool modificabile,
+    String? scartata,
+  }) => into(schedeDelServer).insertOnConflictUpdate(
+    SchedeDelServerCompanion.insert(
+      idServer: Value(idServer),
+      nome: nome,
+      scheda: scheda,
+      aggiornataIlServer: Value(aggiornataIlServer),
+      modificataQuiIl: const Value(null),
+      modificabile: Value(modificabile),
+      scartata: Value(scartata),
+      scartataIl: Value(scartata == null ? null : DateTime.now()),
+    ),
+  );
+
+  /// Scrive una modifica fatta **qui**, e la marca da spingere.
+  ///
+  /// 🚨 **Si chiama a ogni modifica, non a fine allenamento.** Il salvataggio in
+  /// blocco alla fine è ciò che il 24/08 ha reso possibile perdere due esercizi
+  /// con un clic: una modifica scritta subito non ha un momento in cui può
+  /// sparire.
+  Future<void> scriviSchedaModificataQui({
+    required int idServer,
+    required String nome,
+    required String scheda,
+    DateTime? quando,
+  }) async {
+    final fatto =
+        await (update(
+          schedeDelServer,
+        )..where((t) => t.idServer.equals(idServer))).write(
+          SchedeDelServerCompanion(
+            nome: Value(nome),
+            scheda: Value(scheda),
+            modificataQuiIl: Value(quando ?? DateTime.now()),
+          ),
+        );
+
+    /*
+     * ⛔ Se la riga non c'era, la modifica **non si inventa**: senza
+     * `aggiornataIlServer` la sincronizzazione non saprebbe su cosa stavamo
+     * scrivendo, e spingerebbe alla cieca sovrascrivendo il server. È
+     * esattamente il difetto che B.16 esiste per togliere.
+     */
+    if (fatto == 0) {
+      debugPrint(
+        'schede: modifica su una scheda che il telefono non ha: $idServer',
+      );
+    }
+  }
+
+  /// Segna che la spinta è riuscita: da qui la copia locale è pulita.
+  Future<void> segnaSchedaSpinta({
+    required int idServer,
+    required DateTime? aggiornataIlServer,
+    required String scheda,
+  }) => (update(schedeDelServer)..where((t) => t.idServer.equals(idServer)))
+      .write(
+        SchedeDelServerCompanion(
+          scheda: Value(scheda),
+          aggiornataIlServer: Value(aggiornataIlServer),
+          modificataQuiIl: const Value(null),
+        ),
+      );
+
+  /// Toglie dal telefono le schede che sul server non ci sono più.
+  ///
+  /// ⛔ **Mai quelle sporche.** Una scheda con modifiche non spinte che sparisce
+  /// dal server è un caso da guardare, non da eseguire: cancellarla butterebbe
+  /// il lavoro di chi l'ha modificata mentre era senza rete.
+  Future<int> togliSchedeSparite(Set<int> rimaste) =>
+      (delete(schedeDelServer)
+            ..where((t) => t.idServer.isNotIn(rimaste))
+            ..where((t) => t.modificataQuiIl.isNull()))
+          .go();
+
   // ───────────────── le schede ricevute dal trainer (S7.4) ─────────────────
 
   /// Salva una scheda arrivata via chat.
@@ -1664,6 +1787,81 @@ class ContenutiRifiutati extends Table {
   TextColumn get origineId => text().unique()();
 
   DateTimeColumn get rifiutatoIl => dateTime()();
+}
+
+@DataClassName('SchedaDelServer')
+/// Le schede del server, **sul telefono** — 3b-B.16, 24/08/2026.
+///
+/// ══ 📌 PERCHÉ ESISTE ══════════════════════════════════════════════════════
+///
+/// *«L'allenamento e le schede devono essere solide come il marmo, se inizio un
+/// allenamento, modifico un esercizio, ne aggiungo o rimuovo uno, tutto deve
+/// stare sul telefono. A questo punto facciamo che le schede sul server si
+/// sincronizzano sul telefono quando apro l'app e per le modifiche vince sempre
+/// la più recente (perché potrei non avere rete quando mi alleno)»*.
+///
+/// ⛔ **Non è `SchedeRicevute`**, e non vanno unite: quella tiene le schede
+/// arrivate **in chat**, che sul server non esistono e non tornano indietro.
+/// Questa è lo **specchio** delle schede del server, e sa tornare indietro.
+///
+/// ══ 🚨 I DUE CAMPI CHE FANNO FUNZIONARE LA SINCRONIZZAZIONE ═══════════════
+///
+/// ⛔ «Vince la più recente» detto alla lettera vorrebbe dire confrontare
+/// l'orologio del telefono con quello del server. ⚠️ Sono due orologi diversi:
+/// due minuti di sfasamento — normalissimi — farebbero vincere sempre il lato
+/// avanti, e **cancellerebbero modifiche vere senza dirlo**.
+///
+/// 💡 Nel caso normale il confronto **non serve**, e la regola diventa esatta
+/// invece che probabile:
+///
+/// | Copia locale | Chi vince |
+/// |---|---|
+/// | **pulita** (`modificataQuiIl == null`) | il server, sempre |
+/// | **sporca** e `aggiornataIlServer` non è cambiata | il telefono, sempre |
+/// | **sporca** e anche il server è cambiato | ⚠️ conflitto vero: la più recente |
+///
+/// 🚨 Il terzo caso è l'unico in cui i due orologi si incontrano, ed è raro:
+/// bisogna aver toccato la scheda **sul telefono e dal pannello** fra due
+/// aperture dell'app.
+class SchedeDelServer extends Table {
+  /// L'id **firmato** come in `schedeUniteProvider`: positivo dal server.
+  IntColumn get idServer => integer()();
+
+  /// Il nome, per non dover aprire il JSON a ogni riga di un elenco.
+  TextColumn get nome => text()();
+
+  /// Il dettaglio intero, come lo manda il server.
+  TextColumn get scheda => text()();
+
+  /// L'`updated_at` del server **dell'ultima versione che abbiamo visto**.
+  ///
+  /// 🚨 Non «quando l'abbiamo scaricata»: è il timbro del server, ed è ciò che
+  /// permette di accorgersi che è cambiata **da un'altra parte**.
+  DateTimeColumn get aggiornataIlServer => dateTime().nullable()();
+
+  /// Quando è stata toccata **qui**, se non è ancora stata spinta.
+  ///
+  /// ⚠️ `null` vuol dire **pulita**, non «mai modificata»: appena la spinta
+  /// riesce torna a `null`, perché da quel momento il server ha la stessa cosa.
+  DateTimeColumn get modificataQuiIl => dateTime().nullable()();
+
+  /// Se il server ci lascia scriverla (`editable`).
+  ///
+  /// ⛔ Le schede del trainer non si spingono **mai**: il server le rifiuta con
+  /// un 403, e fingere di poterle modificare in locale creerebbe una copia
+  /// divergente che non tornerebbe più indietro.
+  BoolColumn get modificabile => boolean().withDefault(const Constant(false))();
+
+  /// La copia che ha **perso** un conflitto, tenuta da parte.
+  ///
+  /// 🚨 Non si butta. Buttarla sarebbe il difetto del 24/08 con un altro nome:
+  /// una modifica vera che sparisce senza che nessuno lo dica.
+  TextColumn get scartata => text().nullable()();
+
+  DateTimeColumn get scartataIl => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {idServer};
 }
 
 @DataClassName('SchedaRicevuta')

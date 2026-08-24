@@ -118,15 +118,51 @@ class _LaSettimana extends ConsumerWidget {
 
     if (delle.isEmpty) return _SettimanaVuota(tutte: tutte);
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(Gap.md),
-      itemCount: delle.length,
-      /*
-       * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e uno
-       * `switch`: con i gruppi la distinzione non è più «da dove viene» ma
-       * «contiene una seduta o no», e una proprietà non merita due gerarchie.
-       */
-      itemBuilder: (context, i) => _CardAllenamento(voce: delle[i]),
+    /*
+     * ══ 🚨 DUE PER RIGA È UNA DIVISIONE, NON UNA LARGHEZZA — 3b-A.5.1 ══════
+     *
+     * 📌 Il committente: *«rettangoli verticali (due per riga) con la foto
+     * sopra e il dettaglio sotto»*.
+     *
+     * ⛔ La trappola è già stata pagata due volte in questo progetto: una
+     * larghezza fissa dentro un contenitore che manda a capo decide il numero
+     * di colonne **per caso**. A 328 px il quarto quadrato andava a capo, e
+     * niente se ne lamentava — compilava, passava l'analizzatore, e a schermo
+     * ne faceva tre.
+     *
+     * 💡 `crossAxisCount: 2` è la divisione dichiarata: le celle si adattano
+     * alla larghezza, non il contrario.
+     *
+     * ⚠️ **`mainAxisExtent` e non `childAspectRatio`**: con il rapporto,
+     * l'altezza del testo cresce con la larghezza dello schermo — su un
+     * telefono stretto la parte sotto la foto si stringe e il titolo va in
+     * overflow. Qui la foto è proporzionale e il **testo ha un'altezza fissa**,
+     * che è quello che serve perché ci stia sempre.
+     */
+    return LayoutBuilder(
+      builder: (context, vincoli) {
+        final larghezzaCella = (vincoli.maxWidth - Gap.md * 2 - Gap.sm) / 2;
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(Gap.md),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: Gap.sm,
+            mainAxisSpacing: Gap.sm,
+            mainAxisExtent:
+                larghezzaCella * _CardAllenamento.rapportoFoto +
+                _CardAllenamento.altezzaTestoIn(context),
+          ),
+          itemCount: delle.length,
+          /*
+           * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e
+           * uno `switch`: con i gruppi la distinzione non è più «da dove viene»
+           * ma «contiene una seduta o no», e una proprietà non merita due
+           * gerarchie.
+           */
+          itemBuilder: (context, i) => _CardAllenamento(voce: delle[i]),
+        );
+      },
     );
   }
 }
@@ -204,6 +240,35 @@ class _SettimanaVuota extends ConsumerWidget {
 class _CardAllenamento extends ConsumerWidget {
   const _CardAllenamento({required this.voce});
 
+  /// Quanto è alta la foto rispetto alla larghezza della cella — 3b-A.5.1.
+  ///
+  /// 💡 Un po' più larga che alta: una foto di allenamento è quasi sempre in
+  /// piedi, e un ritaglio 1:1 le taglierebbe la testa. ⚠️ Più alta di così e i
+  /// rettangoli non ci starebbero in due per riga senza scorrere per ognuno.
+  static const rapportoFoto = 0.78;
+
+  /// L'altezza della parte sotto la foto, **a carattere normale**.
+  ///
+  /// 🚨 Non dipende dalla **larghezza**, e questo è il punto: `mainAxisExtent`
+  /// la somma alla foto per sapere quanto è alta la cella, e un'altezza che
+  /// cambia con lo schermo farebbe sforare il titolo sui telefoni stretti.
+  ///
+  /// ⛔ **Dipende però dal carattere**, e per una volta il difetto l'ha trovato
+  /// il test invece dello schermo: a `textScale 1.3` quattro righe in 96 px non
+  /// ci stanno, e il blocco andava in overflow. Chi fatica a leggere il
+  /// carattere grande ce l'ha **sempre** acceso — non è un caso limite, è una
+  /// persona.
+  static const altezzaTesto = 96.0;
+
+  /// L'altezza vera, tenuto conto di quanto è grande il carattere.
+  ///
+  /// ⚠️ Si scala tutto il blocco e non le singole righe: sono quattro righe
+  /// corte, e la loro somma cresce in proporzione. 💡 `TextScaler.scale` invece
+  /// di `textScaleFactor` — quest'ultimo è deprecato e su Android 14 non
+  /// descrive più la scala non lineare.
+  static double altezzaTestoIn(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(altezzaTesto);
+
   final VoceStorico voce;
 
   @override
@@ -212,85 +277,147 @@ class _CardAllenamento extends ConsumerWidget {
     final seduta = voce.seduta;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: Gap.sm),
-      child: ListTile(
-        leading: SizedBox(width: 52, height: 52, child: _Miniatura(voce: voce)),
-        title: Text(
-          _titolo(),
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => _apri(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_riga1()),
-
             /*
-             * 💡 La riga dell'orologio compare **anche** quando il gruppo ha una
-             * seduta: il player sa quali esercizi hai fatto, l'orologio sa
-             * quanto ti è costato, e tenerli insieme dice più di quanto ognuno
-             * dei due saprebbe dire da solo.
+             * 📷 **La foto larga tutto il rettangolo**, come chiesto.
+             *
+             * ⚠️ Il menù dei tre punti ci sta **sopra**, in alto a destra: sotto
+             * ruberebbe una riga alla parte che deve dire cosa hai fatto, e
+             * quella parte ha un'altezza fissa.
              */
-            if (voce.dalPolso.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: _RigaOrologio(voce: voce),
-              ),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _Miniatura(voce: voce),
 
-            /*
-             * 🚨 **Le riprese si dicono.** Se il gruppo contiene più di una
-             * seduta vuol dire che qualcuno ha fermato e ripreso: senza questa
-             * riga, la durata del gruppo sembrerebbe sbagliata — «un'ora» per
-             * una seduta che sullo storico del server ne dura venti.
-             */
-            if (voce.sedute.length > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  voce.sedute.length == 2
-                      ? 'ripresa una volta'
-                      : 'ripresa ${voce.sedute.length - 1} volte',
-                  style: tema.textTheme.bodySmall?.copyWith(
-                    color: tema.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
-            if (voce.nomeScheda != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.assignment_turned_in_outlined,
-                      size: 14,
-                      color: tema.colorScheme.primary,
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: DecoratedBox(
+                      /*
+                       * 🚨 Un velo scuro sotto l'icona: su una foto chiara i
+                       * tre punti bianchi sparivano, e il menù diventava una
+                       * cosa che c'è solo se la sai.
+                       */
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        shape: BoxShape.circle,
+                      ),
+                      child: _Azioni(voce: voce, chiaro: true),
                     ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        voce.nomeScheda!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tema.textTheme.bodySmall?.copyWith(
+                  ),
+
+                  /*
+                   * 🚨 **La seduta aperta si vede da lontano.** Prima era un
+                   * pulsante «Riprendi» in fondo alla riga; in una griglia
+                   * quello spazio non c'è, e una seduta lasciata a metà è
+                   * proprio la cosa che non deve passare inosservata.
+                   */
+                  if (seduta != null && seduta.isOpen)
+                    Positioned(
+                      left: Gap.xs,
+                      bottom: Gap.xs,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
                           color: tema.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
+                          borderRadius: BorderRadius.circular(Gap.radiusSm),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Gap.sm,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            'in corso',
+                            style: tema.textTheme.labelSmall?.copyWith(
+                              color: tema.colorScheme.onPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
+                ],
+              ),
+            ),
+
+            SizedBox(
+              height: altezzaTestoIn(context),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Gap.sm,
+                  Gap.xs,
+                  Gap.sm,
+                  Gap.xs,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _titolo(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tema.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    Text(
+                      _riga1(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+
+                    /*
+                     * 💡 La riga dell'orologio compare **anche** quando il
+                     * gruppo ha una seduta: il player sa quali esercizi hai
+                     * fatto, l'orologio sa quanto ti è costato.
+                     *
+                     * ⚠️ Ma nella griglia sta su **una riga sola**: lo spazio è
+                     * fisso, e quello che non ci sta si legge aprendo la card.
+                     */
+                    if (voce.dalPolso.isNotEmpty)
+                      _RigaOrologio(voce: voce, righe: 1),
+
+                    if (voce.nomeScheda != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.assignment_turned_in_outlined,
+                            size: 12,
+                            color: tema.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              voce.nomeScheda!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tema.textTheme.labelSmall?.copyWith(
+                                color: tema.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
+            ),
           ],
         ),
-        isThreeLine: true,
-        trailing: seduta != null && seduta.isOpen
-            ? FilledButton(
-                onPressed: () => _apri(context),
-                child: const Text('Riprendi'),
-              )
-            : _Azioni(voce: voce),
-        onTap: () => _apri(context),
       ),
     );
   }
@@ -381,9 +508,22 @@ class _CardAllenamento extends ConsumerWidget {
   }
 }
 
-/// 💡 La foto della seduta quando c'è, l'icona del tipo quando la riga è solo
-/// dell'orologio. ⚠️ Un riquadro vuoto su una corsa sembrerebbe una foto che non
-/// si è caricata.
+/// La foto dell'allenamento, o il suo ripiego — 3b-A.5.2, 24/08/2026.
+///
+/// ══ 🚨 LA MAGGIOR PARTE DEGLI ALLENAMENTI NON HA UNA FOTO ═════════════════
+///
+/// ⛔ **E in una griglia questo si vede molto più che in un elenco.** Con la
+/// foto larga tutto il rettangolo, la mancanza occupa i due terzi della card:
+/// un rettangolo grigio ripetuto otto volte non è uno spazio vuoto, è una
+/// pagina che sembra rotta.
+///
+/// 💡 Quindi il ripiego **dice qualcosa**: l'icona del tipo di allenamento su
+/// un fondo tinto. ⚠️ Una corsa e una seduta di pesi non si somigliano più, e
+/// la card resta leggibile a colpo d'occhio anche senza scatti.
+///
+/// ⛔ **Non si usa `RiquadroFotoAssente`**: ha un lato fisso di 52 px, pensato
+/// per la miniatura di un `ListTile`. In una cella di griglia diventerebbe
+/// un'icona minuscola in mezzo a un campo grigio.
 class _Miniatura extends ConsumerWidget {
   const _Miniatura({required this.voce});
 
@@ -391,31 +531,64 @@ class _Miniatura extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tema = Theme.of(context);
     final seduta = voce.seduta;
-
-    if (seduta == null) {
-      final tipo = TipoAllenamento.da(voce.dalPolso.first.tipo);
-
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: tema.colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(Gap.radiusSm),
-        ),
-        child: Icon(tipo.icona, color: tema.colorScheme.onSecondaryContainer),
-      );
-    }
 
     // 🚨 La miniatura viene dal TELEFONO — S5.3. `sessione.photos` arrivava dal
     // server (C5) e da S5 non c'e' piu': le foto sono file locali.
-    final foto = ref.watch(fotoSessioneProvider(seduta.id)).valueOrNull;
+    final foto = seduta == null
+        ? null
+        : ref.watch(fotoSessioneProvider(seduta.id)).valueOrNull;
+
     final prima = (foto == null || foto.isEmpty) ? null : foto.first;
 
-    if (prima == null) return const RiquadroFotoAssente();
+    if (prima != null) return FotoLocale(file: prima.file);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(Gap.radiusSm),
-      child: FotoLocale(file: prima.file),
+    return _SenzaFoto(voce: voce);
+  }
+}
+
+/// Il fondo tinto con l'icona del tipo.
+class _SenzaFoto extends StatelessWidget {
+  const _SenzaFoto({required this.voce});
+
+  final VoceStorico voce;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    /*
+     * 💡 Il tipo viene dall'orologio quando c'è, e per una seduta dell'app si
+     * ricade sui pesi: è quello che si fa aprendo il player, e un'icona
+     * generica direbbe meno di una probabile.
+     */
+    final icona = voce.dalPolso.isEmpty
+        ? Icons.fitness_center_rounded
+        : TipoAllenamento.da(voce.dalPolso.first.tipo).icona;
+
+    return DecoratedBox(
+      /*
+       * ⚠️ Un gradiente e non una tinta piatta: otto rettangoli dello stesso
+       * colore esatto sembrano segnaposto in attesa di caricare. Con una
+       * sfumatura leggera sembrano quello che sono — una scelta.
+       */
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tema.colorScheme.secondaryContainer,
+            tema.colorScheme.surfaceContainerHighest,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          icona,
+          size: 40,
+          color: tema.colorScheme.onSecondaryContainer.withValues(alpha: 0.75),
+        ),
+      ),
     );
   }
 }
@@ -425,9 +598,17 @@ class _Miniatura extends ConsumerWidget {
 /// 💡 Piccola e grigia di proposito: sotto una seduta del player è un
 /// **complemento**, non la notizia.
 class _RigaOrologio extends StatelessWidget {
-  const _RigaOrologio({required this.voce});
+  const _RigaOrologio({required this.voce, this.righe});
 
   final VoceStorico voce;
+
+  /// Quante righe al massimo — 3b-A.5.
+  ///
+  /// ⚠️ Nella griglia lo spazio sotto la foto è **fisso**: senza un limite,
+  /// «dall'orologio (3 tratti) · 47 min · 5,2 km» andrebbe a capo e spingerebbe
+  /// fuori la riga della scheda. 💡 `null` = nessun limite, che è come si
+  /// comportava prima e come serve dove lo spazio non è contato.
+  final int? righe;
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +643,8 @@ class _RigaOrologio extends StatelessWidget {
               '$minuti min',
               if (distanza > 0) _distanza(distanza),
             ].join(' · '),
+            maxLines: righe,
+            overflow: righe == null ? null : TextOverflow.ellipsis,
             style: tema.textTheme.bodySmall?.copyWith(
               color: tema.colorScheme.onSurfaceVariant,
             ),
@@ -484,13 +667,20 @@ class _RigaOrologio extends StatelessWidget {
 /// correzione, un'assegnazione, uno scollegamento — e tre icone su ogni riga
 /// renderebbero lo storico un pannello di comando invece di un elenco.
 class _Azioni extends ConsumerWidget {
-  const _Azioni({required this.voce});
+  const _Azioni({required this.voce, this.chiaro = false});
 
   final VoceStorico voce;
 
+  /// L'icona sta **sopra una foto** — 3b-A.5.
+  ///
+  /// 🚨 Su una foto chiara i tre punti del colore normale sparivano: il menù
+  /// diventava una cosa che c'è solo se la sai già. Bianchi su un velo scuro si
+  /// vedono su qualunque scatto.
+  final bool chiaro;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<_Gesto>(
-    icon: const Icon(Icons.more_vert),
+    icon: Icon(Icons.more_vert, color: chiaro ? Colors.white : null),
     tooltip: 'Altro',
     onSelected: (g) => switch (g) {
       _Gesto.correggiKcal => _correggiKcal(context, ref),

@@ -29,20 +29,18 @@ void main() {
   );
 
   group('🥇 la soglia', () {
-    test('sopra le 500 è intenso', () {
-      expect(dalPolso(kcal: 501).intenso, isTrue);
+    test('sopra le 600 è intenso', () {
+      expect(dalPolso(kcal: 601).intenso, isTrue);
     });
 
-    /// ⚠️ **Cinquecento esatte contano.** *«superiori alle 500kcal»* si legge
-    /// come «da 500 in su»: escludere il valore tondo vorrebbe dire che
-    /// l'unico allenamento che centra la soglia in pieno è l'unico che non la
-    /// passa.
-    test('e cinquecento esatte pure', () {
-      expect(dalPolso(kcal: 500).intenso, isTrue);
+    /// ⚠️ **Il valore tondo conta.** Escluderlo vorrebbe dire che l'unico
+    /// allenamento che centra la soglia in pieno è l'unico che non la passa.
+    test('e seicento esatte pure', () {
+      expect(dalPolso(kcal: 600).intenso, isTrue);
     });
 
     test('sotto no', () {
-      expect(dalPolso(kcal: 499).intenso, isFalse);
+      expect(dalPolso(kcal: 599).intenso, isFalse);
     });
 
     /// 🚨 *«Non lo so»* non è *«non è stato intenso»* — ma una medaglia non si
@@ -57,7 +55,7 @@ void main() {
   /// stesso allenamento è d'oro nello storico e non abbastanza intenso per la
   /// medaglia.
   test('e la soglia è quella dichiarata, non un numero sparso', () {
-    expect(VoceStorico.kcalIntenso, 500);
+    expect(VoceStorico.kcalIntenso, 600);
     expect(dalPolso(kcal: VoceStorico.kcalIntenso).intenso, isTrue);
     expect(dalPolso(kcal: VoceStorico.kcalIntenso - 1).intenso, isFalse);
   });

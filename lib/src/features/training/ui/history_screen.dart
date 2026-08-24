@@ -294,17 +294,6 @@ class _SettimanaVuota extends ConsumerWidget {
 /// A.6 prende anche le tre del carosello.
 const chiaveCardAllenamento = Key('card-allenamento');
 
-/// 🥇 L'oro degli allenamenti intensi — 3b-B.20.6.
-///
-/// ⚠️ **Scritto a mano, e non c'era alternativa.** `ColorScheme` non ha uno slot
-/// per l'oro, e riusarne uno vicino — `tertiary` — vorrebbe dire dare due
-/// significati allo stesso colore: `tertiary` in questa app dice già
-/// «calorie bruciate».
-///
-/// 💡 Non è giallo pieno ma un ambra scuro: un giallo acceso sopra una foto in
-/// una griglia fitta grida, e questo deve **premiare**, non allarmare.
-const oroDellIntenso = Color(0xFFC9A227);
-
 class _CardAllenamento extends ConsumerWidget {
   const _CardAllenamento({required this.voce});
 

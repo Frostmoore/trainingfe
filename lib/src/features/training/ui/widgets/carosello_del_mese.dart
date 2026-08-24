@@ -39,6 +39,20 @@ import 'figura_del_corpo.dart';
 import 'grafico_dei_mesi.dart';
 import 'stella_dei_muscoli.dart';
 
+/// ══ 🧩 E QUI DENTRO C'È LA VESTIZIONE, NON SOLO IL MESE — 3b-B.20.1 ═══════
+///
+/// 📌 *«aggiungere sopra le tre cards a carosello come nella sezione storico,
+/// ma limitate allo specifico allenamento»*.
+///
+/// ⚠️ **«Come nella sezione storico» vuol dire *le stesse*, non *simili*.**
+/// `CardDelCarosello`, `RiquadroBianco`, `StellaInRiquadro` e
+/// `PuntinoDelCarosello` erano private: adesso sono pubbliche perché le usa
+/// anche `CaroselloDellAllenamento`. ⛔ Rifarle di là avrebbe prodotto due
+/// caroselli che si somigliano finché qualcuno non tocca uno dei due.
+///
+/// 💡 Quello che resta privato è ciò che parla **del mese**: da dove vengono i
+/// numeri, e la card che li mostra.
+
 /// L'altezza di tutte e tre le card.
 ///
 /// 🚨 **Un numero solo**, ed è quello che rende vero «altezza identica».
@@ -65,7 +79,7 @@ const double ariaSopraIlCarosello = Gap.md;
 /// vedeva **spuntare** la card accanto, e quello diceva da solo «ce n'è
 /// un'altra». ⛔ A tutta pagina quel segnale sparisce: senza i puntini, due card
 /// su tre diventano invisibili a chi non prova a trascinare.
-const double _altezzaPuntini = 18;
+const double altezzaPuntiniDelCarosello = 18;
 
 /// La chiave dell'i-esimo puntino, per i test.
 ///
@@ -122,17 +136,17 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
     final titolo = DateFormat('MMMM y', 'it').format(mese);
 
     final card = [
-      _Card(
+      CardDelCarosello(
         titolo: 'Cosa hai allenato',
         sottotitolo: titolo,
         child: FiguraDelCorpo(intensita: intensita),
       ),
-      _Card(
+      CardDelCarosello(
         titolo: 'I gruppi muscolari',
         sottotitolo: titolo,
-        child: _Stella(intensita: intensita),
+        child: StellaInRiquadro(intensita: intensita),
       ),
-      _Card(
+      CardDelCarosello(
         titolo: 'Il mese in numeri',
         sottotitolo: titolo,
         child: _Numeri(
@@ -165,12 +179,15 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
             ),
           ),
           SizedBox(
-            height: _altezzaPuntini,
+            height: altezzaPuntiniDelCarosello,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (var i = 0; i < card.length; i++)
-                  _Puntino(key: chiavePuntino(i), acceso: i == _pagina),
+                  PuntinoDelCarosello(
+                    key: chiavePuntino(i),
+                    acceso: i == _pagina,
+                  ),
               ],
             ),
           ),
@@ -180,8 +197,8 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
   }
 }
 
-class _Puntino extends StatelessWidget {
-  const _Puntino({required this.acceso, super.key});
+class PuntinoDelCarosello extends StatelessWidget {
+  const PuntinoDelCarosello({required this.acceso, super.key});
 
   final bool acceso;
 
@@ -207,11 +224,12 @@ class _Puntino extends StatelessWidget {
   }
 }
 
-class _Card extends StatelessWidget {
-  const _Card({
+class CardDelCarosello extends StatelessWidget {
+  const CardDelCarosello({
     required this.titolo,
     required this.sottotitolo,
     required this.child,
+    super.key,
   });
 
   final String titolo;
@@ -271,8 +289,8 @@ class _Card extends StatelessWidget {
 /// 💡 Sta qui e non copiato in due posti: le card della stella e dei numeri
 /// devono avere **lo stesso** riquadro, o accostate si vede che sono due cose
 /// disegnate in momenti diversi.
-class _Riquadro extends StatelessWidget {
-  const _Riquadro({required this.child});
+class RiquadroBianco extends StatelessWidget {
+  const RiquadroBianco({required this.child, super.key});
 
   final Widget child;
 
@@ -317,8 +335,8 @@ class _Riquadro extends StatelessWidget {
 /// 💡 E le tre cose che ci sono messe sono le domande che la stella fa venire
 /// in mente e non risponde: quanti gruppi, qual è il più allenato, quale sto
 /// trascurando.
-class _Stella extends StatelessWidget {
-  const _Stella({required this.intensita});
+class StellaInRiquadro extends StatelessWidget {
+  const StellaInRiquadro({required this.intensita, super.key});
 
   final Map<GruppoMuscolare, double> intensita;
 
@@ -381,7 +399,7 @@ class _Stella extends StatelessWidget {
                 flex: 6,
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: _Riquadro(
+                  child: RiquadroBianco(
                     child: StellaDeiMuscoli(intensita: intensita),
                   ),
                 ),
@@ -526,7 +544,7 @@ class _Numeri extends StatelessWidget {
          */
         Expanded(
           flex: 5,
-          child: _Riquadro(
+          child: RiquadroBianco(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -598,7 +616,7 @@ class _Numeri extends StatelessWidget {
          */
         Expanded(
           flex: 4,
-          child: _Riquadro(
+          child: RiquadroBianco(
             child: GraficoDeiMesi(mesi: mesi, corrente: mese),
           ),
         ),

@@ -48,7 +48,23 @@ void main() {
     staccato: false,
   );
 
+  /// ⚠️ **Una finestra alta, e serve davvero** — 3b-B.20.1, 25/08.
+  ///
+  /// 🚨 Da quando in cima alla pagina c'è il carosello (420 px più i puntini),
+  /// in una finestra da telefono i numeri e la riga della provenienza finiscono
+  /// **sotto la piega** — e `ListView` costruisce solo quello che si vede,
+  /// quindi `find.text` non trova widget che non esistono ancora.
+  ///
+  /// ⛔ Il difetto non era nella pagina: era che il test guardava una finestra
+  /// più corta dello schermo di chiunque. È lo stesso inciampo di
+  /// `player_rimuovi_test`.
   Future<void> apri(WidgetTester tester, AllenamentoDaOrologio a) async {
+    tester.view
+      ..physicalSize = const Size(1200, 4000)
+      ..devicePixelRatio = 1;
+
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -194,6 +210,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      // ⚠️ La riga della provenienza sta **in fondo**, sotto il carosello: senza
+      // scorrere, `ListView` non l'ha nemmeno costruita.
+      await tester.scrollUntilVisible(
+        find.textContaining('tratti'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       expect(find.textContaining('2 tratti'), findsOneWidget);
     });

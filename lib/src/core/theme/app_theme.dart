@@ -176,6 +176,21 @@ class AppTheme {
 ButtonStyle bottonePieno({double altezza = 48}) =>
     FilledButton.styleFrom(minimumSize: Size.fromHeight(altezza));
 
+/// 🥇 L'oro degli allenamenti intensi — 3b-B.20.6.
+///
+/// ⚠️ **Scritto a mano, e non c'era alternativa.** `ColorScheme` non ha uno slot
+/// per l'oro, e riusarne uno vicino — `tertiary` — vorrebbe dire dare due
+/// significati allo stesso colore: `tertiary` in questa app dice già «calorie
+/// bruciate».
+///
+/// 💡 Non è giallo pieno ma un ambra scuro: un giallo acceso sopra una foto in
+/// una griglia fitta grida, e questo deve **premiare**, non allarmare.
+///
+/// 🚨 Sta **nel tema** e non nello schermo dello storico: lo usano il bordo
+/// della card e la riga «Allenamento intenso» dentro l'allenamento, e un colore
+/// scritto due volte è un colore che prima o poi è due colori.
+const oroDellIntenso = Color(0xFFC9A227);
+
 class Gap {
   const Gap._();
 

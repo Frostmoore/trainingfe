@@ -46,8 +46,12 @@ class VoceStorico {
   /// tutte e due le provenienze senza inventare un tipo comune.
   final String? nomeScheda;
 
-  /// L'**id firmato** della stessa scheda — negativo se arrivata in chat,
-  /// positivo se dal server.
+  /// L'id della stessa scheda, **sul telefono**.
+  ///
+  /// ⛔ Qui c'era scritto *«id firmato: negativo se arrivata in chat, positivo
+  /// se dal server»*. Il trucco del segno è sparito con B.17.6, quando le due
+  /// tabelle locali sono diventate una: adesso è l'id di `SchedeSulTelefono`, e
+  /// la provenienza è una **colonna** di quella riga.
   ///
   /// ══ 🚨 IL NOME NON BASTA PIÙ — B.9, 24/08/2026 ═════════════════════════
   ///
@@ -165,15 +169,31 @@ class VoceStorico {
   /// 🥇 La soglia oltre la quale un allenamento è **intenso** — 3b-B.20.6.
   ///
   /// 📌 *«Tutti gli allenamenti superiori alle 500kcal devono essere circondati
-  /// d'oro e ci deve essere un flag per poter dire che sono allenamenti intensi
-  /// (ci servirà per gli achievements in futuro)»*.
+  /// d'oro»* — e poi *«scegli un numero di calorie che si possono classificare
+  /// come allenamento intenso»*.
+  ///
+  /// ══ 💡 PERCHÉ 600 E NON 500 ═══════════════════════════════════════════
+  ///
+  /// Quello che si confronta sono le calorie **attive**, cioè sopra il basale.
+  /// Seicento attive sono circa **un'ora a intensità genuinamente alta** per un
+  /// adulto di taglia media (~7 MET × 87 kg × 1 h ≈ 610): è una definizione che
+  /// parla di *quanto forte*, non di *quanto a lungo*.
+  ///
+  /// ⛔ **A 500 si accendeva quasi sempre.** L'allenamento del committente del
+  /// 24/08 stava a 1169: con la soglia a cinquecento l'oro sarebbe diventato il
+  /// colore normale delle card, e un distintivo che si accende ogni volta non è
+  /// un distintivo. ⚠️ E a 800 restavano fuori le sedute di pesi, che bruciano
+  /// meno di quanto sembra proprio perché sono fatte di pause.
+  ///
+  /// ⏳ **Va tarata sui dati veri**, e costa una riga: con un mese di storico si
+  /// conta quante sedute la passano, e se sono più di una su tre si alza.
   ///
   /// 🚨 **Scritta una volta sola, qui.** È lo stesso motivo per cui `kcal` sta
   /// qui e non nei due posti che la usano: una soglia copiata nel widget che
   /// disegna il bordo e poi di nuovo dentro le medaglie divergerebbe alla prima
   /// modifica — e lo stesso allenamento sarebbe d'oro nello storico e non
   /// abbastanza intenso per la medaglia.
-  static const kcalIntenso = 500;
+  static const kcalIntenso = 600;
 
   /// Se questo allenamento conta come **intenso**.
   ///
@@ -272,11 +292,12 @@ abstract final class StoricoUnificato {
     required List<WorkoutSession> sessioni,
     required List<AllenamentoDaOrologio> dallOrologio,
 
-    /// I nomi delle schede, per **id firmato**.
+    /// I nomi delle schede, per id.
     ///
-    /// 🚨 **Negativo = arrivata in chat, positivo = dal server.** È la stessa
-    /// convenzione di `schedeUniteProvider`, e riusarla è quello che permette a
-    /// una sola mappa di contenere tutte e due le provenienze.
+    /// ⛔ Qui c'era la convenzione degli **id firmati** — negativo dalla chat,
+    /// positivo dal server — che serviva a far stare due provenienze in una
+    /// mappa sola. 💡 Da B.17.6 le schede stanno in **una tabella sola**, quindi
+    /// una mappa sola basta senza bisogno di nessun segno.
     Map<int, String> nomiDelleSchede = const {},
   }) {
     final voci = <VoceStorico>[];

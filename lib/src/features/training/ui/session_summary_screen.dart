@@ -11,6 +11,7 @@ import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
+import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_fatti.dart';
 
 /// Il riepilogo di fine allenamento — G7.
@@ -119,6 +120,16 @@ class _Corpo extends ConsumerWidget {
             ),
           ],
         ),
+
+        /*
+         * 📌 *«aggiungere sopra le tre cards a carosello come nella sezione
+         * storico, ma limitate allo specifico allenamento»* — 3b-B.20.1.
+         *
+         * ⚠️ **Serve il gruppo, non la singola seduta**: una seduta fermata per
+         * sbaglio e ripresa è *un* allenamento, e le tre card devono parlare di
+         * quello. 💡 `voceDelloStoricoProvider` lo trova nello storico già fuso.
+         */
+        _CaroselloDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
         _Calorie(sessione: sessione),
@@ -501,6 +512,40 @@ class _Numero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Le tre card di **questa** seduta — 3b-B.20.1.
+///
+/// 🚨 **Passa dallo storico fuso invece che dalla seduta**, e non è un giro
+/// lungo: una seduta fermata per sbaglio e ripresa sono due righe in archivio e
+/// **un** allenamento nella vita di chi l'ha fatto. Le card devono parlare di
+/// quello, o i chili sollevati sarebbero solo quelli della prima metà.
+///
+/// ⚠️ Mentre lo storico carica non si mette uno scheletro: sopra c'è già il
+/// titolo e sotto ci sono già i numeri, e una macchia grigia in mezzo che
+/// compare per un istante a ogni apertura dà l'idea di una pagina che fatica.
+class _CaroselloDiQuestaSeduta extends ConsumerWidget {
+  const _CaroselloDiQuestaSeduta({required this.sessione});
+
+  final WorkoutSession sessione;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voci = ref.watch(storicoUnificatoProvider).valueOrNull;
+
+    if (voci == null) return const SizedBox.shrink();
+
+    final voce = voci
+        .where((v) => v.sedute.any((s) => s.id == sessione.id))
+        .firstOrNull;
+
+    if (voce == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.lg),
+      child: CaroselloDellAllenamento(voce: voce),
     );
   }
 }

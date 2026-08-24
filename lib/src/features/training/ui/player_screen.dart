@@ -473,12 +473,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   Future<void> _salvaSchedaSulTelefono() async {
     final id = _planId;
 
-    if (id == null || id <= 0) return;
+    if (id == null) return;
 
     try {
-      final locale = await ref
-          .read(archivioSaluteProvider)
-          .schedaSulTelefono(id);
+      final locale = await ref.read(archivioSaluteProvider).laScheda(id);
 
       if (locale == null) return;
 
@@ -505,9 +503,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
       await ref
           .read(archivioSaluteProvider)
-          .scriviSchedaModificataQui(
-            idServer: id,
+          .scriviScheda(
+            id: id,
             nome: _planName ?? locale.nome,
+            mia: locale.mia,
             scheda: jsonEncode(scheda),
           );
 

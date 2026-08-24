@@ -2,11 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/providers.dart';
+import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
+import 'porta_giu_le_schede.dart';
 import 'schede_ricevute_controller.dart';
-import 'sincronizza_le_schede.dart';
 
 /// Una scheda assegnata — A5.1.
 class WorkoutPlan {
@@ -113,72 +112,50 @@ class PlanExercise {
   final String? imageUrl;
 }
 
-/// Le schede pubblicate dell'iscritto.
-final plansProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
-  ref,
-) async {
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<List<dynamic>>('/workout-plans');
-
-  return data
-      .map((e) => WorkoutPlan.fromJson((e as Map).cast<String, dynamic>()))
-      .toList();
-});
-
-/// Tutte le schede: quelle sul server **più quelle ricevute in chat** — S7.4.
+/// Le schede dell'iscritto, **dal telefono** — 3b-B.17, 24/08/2026.
 ///
-/// 🚨 **Le due sorgenti non sono un'anomalia: sono il risultato della fase.**
-/// Le schede che l'iscritto si scrive da sé restano sul server — sono sue e non
-/// dicono niente a nessuno. Quelle **prescritte dal trainer** non ci arrivano
-/// mai: dire *«questa persona segue questo programma»* è l'informazione che
-/// questa fase esiste per non far scrivere da nessuna parte.
+/// ══ 📌 IL SERVER NON C'ENTRA PIÙ ══════════════════════════════════════════
 ///
-/// ⚠️ **Se il server non risponde, le schede ricevute si vedono lo stesso.** È
-/// la conseguenza pratica più visibile di averle in locale, e non va persa
-/// dietro un `Future.wait` che fallisce insieme.
+/// *«la scheda risiede sul telefono (e finisce nel backup). Basta, niente
+/// server, sticazzi crea solo problemi»*.
+///
+/// ⛔ Qui c'erano **tre** sorgenti da tenere d'accordo: le schede sul server,
+/// quelle arrivate in chat, e la copia locale con la sincronizzazione fra le
+/// prime due. 💡 Adesso ce n'è una: quello che sta sul telefono.
+///
+/// ⚠️ Resta `schedePortateGiuProvider`, che è **un'importazione una tantum**:
+/// le schede che stavano già sul server scendono una volta e poi il server non
+/// si guarda più. Vedi `porta_giu_le_schede.dart`.
 final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
   ref,
 ) async {
+  // ⚠️ Prima si porta giù quello che c'era; poi si legge il telefono.
+  await ref.watch(schedePortateGiuProvider.future);
+
+  final archivio = ref.watch(archivioSaluteProvider);
+
   /*
-   * 🚨 **Si aspetta la sincronizzazione d'avvio** — 3b-B.16.4.
-   *
-   * 📌 *«le schede sul server si sincronizzano sul telefono quando apro
-   * l'app»*: questo è il punto in cui l'elenco delle schede viene chiesto per
-   * la prima volta, quindi è qui che la sincronizzazione deve essere già
-   * passata.
-   *
-   * ⚠️ Non costa niente quando non c'è niente da fare, e **senza rete non
-   * blocca**: `gira()` torna subito con `senzaRete`. ⛔ Farla partire e non
-   * aspettarla vorrebbe dire un elenco che si riscrive sotto gli occhi mezzo
-   * secondo dopo — la stessa cosa che `avvioSaluteProvider` evita su «Oggi».
+   * 🚨 Si ridisegna quando le schede cambiano: drift non notifica da solo chi
+   * legge con `Future`, e senza questo chi ne salva una resterebbe a guardare
+   * l'elenco di prima.
    */
-  await ref.watch(avvioSchedeProvider.future);
+  ref.watch(revisioneSchedeProvider);
 
-  final locali = await ref.watch(schedeRicevuteProvider.future);
-
-  final dalServer = await ref
-      .watch(plansProvider.future)
-      .catchError((Object _) => const <WorkoutPlan>[]);
+  final locali = await archivio.tutteLeSchede();
 
   return [
-    ...locali.map(
-      (r) => WorkoutPlan.fromJson({
+    for (final r in locali)
+      WorkoutPlan.fromJson({
         ...(json.decode(r.scheda) as Map).cast<String, dynamic>(),
-
-        // 🚨 **Id negativo, e non è un trucco sporco: è l'unico modo di
-        // distinguerle.** L'id dentro il JSON è quello del **modello sul
-        // server**, e collide allegramente con quello di una scheda scritta
-        // dall'iscritto. Il segno dice a `planDetailProvider` dove andare a
-        // cercare — e sbagliare strada vorrebbe dire chiedere al server una
-        // scheda che non ha, cioè un 404 su una scheda che si sta guardando.
-        'id': -r.id,
-        'editable': false,
+        'id': r.id,
+        'name': r.nome,
+        'editable': r.mia,
       }),
-    ),
-    ...dalServer,
   ];
 });
+
+/// Cambia quando una scheda viene scritta o buttata.
+final revisioneSchedeProvider = StateProvider<int>((ref) => 0);
 
 /// Il dettaglio di una scheda, con gli esercizi.
 ///
@@ -204,9 +181,7 @@ final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
   id,
 ) async {
   if (id > 0) {
-    final locale = await ref
-        .watch(archivioSaluteProvider)
-        .schedaSulTelefono(id);
+    final locale = await ref.watch(archivioSaluteProvider).laScheda(id);
 
     if (locale != null) {
       return WorkoutPlan.fromJson(
@@ -226,86 +201,105 @@ final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
     });
   }
 
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/workout-plans/$id');
-
   /*
-   * 💡 **Quello che arriva dalla rete si scrive subito sul telefono.** ⚠️ Senza,
-   * una scheda aperta per la prima volta resterebbe «solo di rete» fino alla
-   * sincronizzazione successiva — cioè fino alla prossima apertura dell'app,
-   * che è esattamente quando non serve più.
+   * ⛔ **E se il telefono non ce l'ha, non c'e' nient'altro da guardare.**
+   *
+   * 🚨 Qui c'era il ripiego sulla rete. Da B.17 le schede vivono sul telefono e
+   * basta: una scheda che qui non c'e' **non esiste**, e chiederla al server
+   * vorrebbe dire far ricomparire dal nulla una che l'iscritto ha cancellato.
    */
-  if (id > 0) {
-    await ref
-        .watch(archivioSaluteProvider)
-        .scriviSchedaDalServer(
-          idServer: id,
-          nome: data['name']?.toString() ?? 'Scheda',
-          scheda: json.encode(data),
-          aggiornataIlServer: DateTime.tryParse(
-            data['updated_at']?.toString() ?? '',
-          )?.toUtc(),
-          modificabile: data['editable'] == true,
-        );
-  }
-
-  return WorkoutPlan.fromJson(data);
+  throw StateError('Scheda $id non trovata sul telefono');
 });
 
-/// Le scritture sulle schede — C11.
+/// Le scritture sulle schede — C11, riscritte in 3b-B.17.
 ///
-/// L'iscritto si scrive le proprie (decisione D1); quelle del trainer le legge
-/// e le esegue. Il rifiuto arriva dal server con `code: plan_not_editable`, ma
-/// l'app non ci arriva mai perché nasconde il pulsante quando `editable` è
-/// falso.
+/// ══ 📌 TUTTO SUL TELEFONO ═════════════════════════════════════════════════
+///
+/// *«la scheda risiede sul telefono (e finisce nel backup). Basta, niente
+/// server»*.
+///
+/// ⛔ Queste tre chiamate andavano al server. Adesso scrivono nell'archivio
+/// locale, e basta: 💡 niente rete vuol dire niente errore di rete, niente
+/// salvataggio che fallisce in palestra, niente due copie da tenere d'accordo.
+///
+/// ⚠️ L'iscritto si scrive le proprie (decisione D1); quelle del trainer le
+/// legge e le esegue — `mia = false`, e l'app non mostra il pulsante.
 class PlanActions {
   PlanActions(this._ref);
 
   final Ref _ref;
 
-  ApiClient get _api => _ref.read(apiClientProvider);
+  ArchivioSalute get _archivio => _ref.read(archivioSaluteProvider);
 
+  void _rileggi() => _ref.read(revisioneSchedeProvider.notifier).state++;
+
+  /// Crea una scheda **qui**, e ne restituisce l'id.
   Future<int> create({
     required String name,
     String? notes,
     required List<Map<String, dynamic>> exercises,
   }) async {
-    final data = await _api.post<Map<String, dynamic>>(
-      '/workout-plans',
-      body: {'name': name, 'notes': notes, 'exercises': exercises},
+    final id = await _archivio.prossimoIdLocale();
+
+    await _archivio.scriviScheda(
+      id: id,
+      nome: name,
+      mia: true,
+      scheda: json.encode({
+        'id': id,
+        'name': name,
+        'notes': notes,
+        'editable': true,
+        'exercises': exercises,
+      }),
     );
 
-    _ref.invalidate(plansProvider);
+    _rileggi();
 
-    return (data['id'] as num).toInt();
+    return id;
   }
 
+  /// Riscrive una scheda che c'è già.
+  ///
+  /// ⚠️ **`exercises` assente vuol dire «non toccare gli esercizi»**: rinominare
+  /// una scheda non deve costringere a rimandare tutte le righe — ed è anche la
+  /// guardia che impedisce a una rinomina di svuotarla.
   Future<void> update({
     required int id,
     required String name,
     String? notes,
     List<Map<String, dynamic>>? exercises,
   }) async {
-    await _api.put<Map<String, dynamic>>(
-      '/workout-plans/$id',
-      body: {
-        'name': name,
-        'notes': notes,
-        // `exercises` assente significa «non toccare gli esercizi»: rinominare
-        // una scheda non deve costringere a rimandare tutte le righe.
-        'exercises': ?exercises,
-      },
+    final vecchia = await _archivio.laScheda(id);
+
+    if (vecchia == null) return;
+
+    final scheda = (json.decode(vecchia.scheda) as Map).cast<String, dynamic>();
+
+    scheda['name'] = name;
+    scheda['notes'] = notes;
+
+    if (exercises != null) scheda['exercises'] = exercises;
+
+    await _archivio.scriviScheda(
+      id: id,
+      nome: name,
+      mia: vecchia.mia,
+      scheda: json.encode(scheda),
     );
 
-    _ref.invalidate(plansProvider);
+    _rileggi();
     _ref.invalidate(planDetailProvider(id));
   }
 
+  /// Butta una scheda.
+  ///
+  /// 📌 *«se serve una nuova scheda il trainer la rimanda e l'utente cancella la
+  /// vecchia e usa la nuova»*: qui cancellare è normale, non un incidente.
   Future<void> delete(int id) async {
-    await _api.delete('/workout-plans/$id');
+    await _archivio.cancellaScheda(id);
 
-    _ref.invalidate(plansProvider);
+    _rileggi();
   }
 }
 

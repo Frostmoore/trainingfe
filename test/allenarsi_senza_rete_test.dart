@@ -113,11 +113,10 @@ void main() {
   }
 
   /// La scheda com'è arrivata l'ultima volta che c'era campo.
-  Future<void> laSchedaEGiaSulTelefono() => archivio.scriviSchedaDalServer(
-    idServer: 8,
+  Future<void> laSchedaEGiaSulTelefono() => archivio.scriviScheda(
+    id: 8,
     nome: 'Giorno 1',
-    aggiornataIlServer: DateTime.utc(2026, 8, 24, 10),
-    modificabile: true,
+    mia: true,
     scheda: jsonEncode({
       'id': 8,
       'name': 'Giorno 1',
@@ -249,7 +248,7 @@ void main() {
 
       await contenitore.read(planDetailProvider(8).future);
 
-      expect(await archivio.schedaSulTelefono(8), isNotNull);
+      expect(await archivio.laScheda(8), isNotNull);
     },
   );
 }

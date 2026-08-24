@@ -11,7 +11,6 @@ import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/ui/progress_screen.dart';
 import '../session_controller.dart';
-import '../sincronizza_le_schede.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
 import 'widgets/barra_settimana.dart';
@@ -201,11 +200,11 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                * di nuovo esattamente quello che mostrava prima. Il gesto
                * sembrerebbe funzionare e non farebbe niente.
                */
-              onRefresh: () => aggiornaTutto(context, ref, () async {
-                await risincronizzaLeSchede(ref);
-
-                ref.invalidate(schedeUniteProvider);
-              }),
+              onRefresh: () => aggiornaTutto(
+                context,
+                ref,
+                () => ref.invalidate(schedeUniteProvider),
+              ),
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
                 itemCount: elenco.length + 1,

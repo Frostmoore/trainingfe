@@ -32,6 +32,7 @@ class LocalCache {
   static const _senzaPalestra = 'gym.senza_palestra';
   static const _ultimaPersona = 'sessione.ultima_persona';
   static const _accoglienzaFatta = 'sessione.accoglienza_fatta';
+  static const _schedePortateGiu = 'schede.portate_giu';
 
   // ───────────────────────── chi c'era prima ─────────────────────────
 
@@ -80,6 +81,20 @@ class LocalCache {
 
     await _prefs.setStringList(_accoglienzaFatta, fatti.toList());
   }
+
+  /// Se le schede che stavano sul server sono già scese — 3b-B.17.
+  ///
+  /// ⛔ **Una volta per telefono.** Dal 24/08 le schede vivono qui e basta: il
+  /// server non è più una sorgente, e questa importazione esiste solo perché
+  /// quelle che c'erano già non si buttano.
+  ///
+  /// ⚠️ Il segno si mette **dopo** che è andata a buon fine: metterlo prima
+  /// vorrebbe dire che un'importazione fallita a metà non si ripete mai più, e
+  /// le schede rimaste sul server sparirebbero per sempre.
+  bool get schedePortateGiu => _prefs.getBool(_schedePortateGiu) ?? false;
+
+  Future<void> segnaSchedePortateGiu() =>
+      _prefs.setBool(_schedePortateGiu, true);
 
   // ───────────────────────── palestra ─────────────────────────
 

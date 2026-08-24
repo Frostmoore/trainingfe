@@ -35,7 +35,9 @@ import '../../../core/ui/states.dart';
 import '../../health/tipo_allenamento.dart';
 import '../data/storico_unificato.dart';
 import '../storico_unificato_controller.dart';
+import 'widgets/azioni_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
+import 'widgets/esercizi_dalla_scheda.dart';
 
 class AllenamentoOrologioScreen extends ConsumerWidget {
   const AllenamentoOrologioScreen({required this.id, super.key});
@@ -92,7 +94,9 @@ class _Dettaglio extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
-    final tipo = TipoAllenamento.da(voce.dalPolso.first.tipo);
+    // 💡 **Quello che vale**: il tipo dichiarato se c'è, se no quello
+    // dell'orologio. Vedi `VoceStorico.tipo`.
+    final tipo = TipoAllenamento.da(voce.tipo ?? voce.dalPolso.first.tipo);
 
     // 💡 I muscoli adesso li calcola `CaroselloDellAllenamento`, che è anche
     // l'unico a disegnarli: tenerne una seconda copia qui vorrebbe dire due
@@ -139,6 +143,21 @@ class _Dettaglio extends ConsumerWidget {
 
         const SizedBox(height: Gap.md),
 
+        /*
+         * ══ 🏋️ E QUI LA PAGINA DIVENTA QUELLA DI UN ALLENAMENTO VERO ═══════
+         *
+         * 📌 *«nel caso di allenamenti con l'orologio, se ci ho allegato una
+         * scheda, la pagina deve diventare IDENTICA a quella di un allenamento
+         * nato nell'app»* — 3b-B.20.4.
+         *
+         * ⚠️ **«Identica» non vuol dire «con dentro le stesse cifre».** Un
+         * allenamento del polso non ha ripetizioni registrate: le card degli
+         * esercizi ci sono, e mostrano **la prescrizione della scheda** dicendo
+         * che è quella. ⛔ Inventare dei carichi per far tornare la somiglianza
+         * darebbe una pagina che *sembra* informata.
+         */
+        EserciziDallaScheda(schedaId: voce.schedaId),
+
         const SizedBox(height: Gap.md),
 
         /*
@@ -154,6 +173,10 @@ class _Dettaglio extends ConsumerWidget {
             color: tema.colorScheme.onSurfaceVariant,
           ),
         ),
+
+        const SizedBox(height: Gap.lg),
+        AzioniDellAllenamento(voce: voce),
+        const SizedBox(height: Gap.lg),
       ],
     );
   }

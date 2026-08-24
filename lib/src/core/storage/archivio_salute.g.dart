@@ -2720,6 +2720,17 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tipoSceltoMeta = const VerificationMeta(
+    'tipoScelto',
+  );
+  @override
+  late final GeneratedColumn<String> tipoScelto = GeneratedColumn<String>(
+    'tipo_scelto',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nascostoMeta = const VerificationMeta(
     'nascosto',
   );
@@ -2761,6 +2772,7 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     distanzaMetri,
     passi,
     schedaAssegnata,
+    tipoScelto,
     nascosto,
     staccato,
   ];
@@ -2841,6 +2853,12 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
         ),
       );
     }
+    if (data.containsKey('tipo_scelto')) {
+      context.handle(
+        _tipoSceltoMeta,
+        tipoScelto.isAcceptableOrUnknown(data['tipo_scelto']!, _tipoSceltoMeta),
+      );
+    }
     if (data.containsKey('nascosto')) {
       context.handle(
         _nascostoMeta,
@@ -2901,6 +2919,10 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
       schedaAssegnata: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}scheda_assegnata'],
+      ),
+      tipoScelto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo_scelto'],
       ),
       nascosto: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -2965,15 +2987,42 @@ class AllenamentoDaOrologio extends DataClass
   /// La scheda che questa persona dice di aver fatto — richiesta del 19/08:
   /// *«devo poter scegliere di assegnarvi una mia scheda»*.
   ///
-  /// 💡 È l'`id` locale di `SchedeRicevute`. `null` vuol dire «non l'ho
-  /// assegnata», che è lo stato normale: la maggior parte delle corse non
-  /// corrisponde a nessuna scheda.
+  /// 💡 È l'`id` locale in `SchedeSulTelefono` — quello di **qui**, non quello
+  /// del server. `null` vuol dire «non l'ho assegnata», che è lo stato normale:
+  /// la maggior parte delle corse non corrisponde a nessuna scheda.
+  ///
+  /// ⚠️ **È il motivo per cui la migrazione v14 → v15 non rinumera gli id.**
+  /// Rinumerarli avrebbe spostato in silenzio gli allenamenti già fatti su
+  /// schede diverse da quelle vere.
   ///
   /// 🚨 **Una risincronizzazione non la cancella**: `scriviAllenamenti()` usa
   /// `insertOrIgnore`, quindi una riga già presente non viene riscritta. ⚠️ Con
   /// `insertOrReplace` l'orologio sovrascriverebbe una scelta della persona
   /// ogni volta che si rileggono gli ultimi sette giorni — cioè a ogni avvio.
   final int? schedaAssegnata;
+
+  /// Il tipo che **hai dichiarato tu**, quando quello dell'orologio non va —
+  /// 3b-B.20.5, 25/08/2026.
+  ///
+  /// 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
+  /// scheda. Tipo corsa, bicicletta, nuoto, ste cose qui, in modo che possa
+  /// stimare i muscoli coinvolti e le calorie»*.
+  ///
+  /// 🚨 **È una colonna diversa da `tipo`, e la differenza è tutto.** `tipo` lo
+  /// scrive l'orologio; questa la scrive una persona. ⛔ Sovrascrivere `tipo`
+  /// avrebbe cancellato quello che il sensore ha visto per mettercelo dentro un
+  /// parere — e alla prima risincronizzazione i due si sarebbero contesi la
+  /// stessa casella.
+  ///
+  /// 💡 È la **gemella di `schedaAssegnata`**, e per la stessa ragione:
+  /// `scriviAllenamenti()` usa `insertOrIgnore`, quindi una riga già presente
+  /// non viene riscritta e la scelta sopravvive a ogni lettura degli ultimi
+  /// sette giorni. ⚠️ Con `insertOrReplace` l'orologio la cancellerebbe a ogni
+  /// avvio.
+  ///
+  /// ⚠️ Vale un codice di `TipoScelto`, non un testo libero: `null` vuol dire
+  /// «non l'ho dichiarato», e allora vale quello dell'orologio.
+  final String? tipoScelto;
 
   /// Nascosto dallo storico perché è il doppione di una seduta del player.
   ///
@@ -3014,6 +3063,7 @@ class AllenamentoDaOrologio extends DataClass
     this.distanzaMetri,
     this.passi,
     this.schedaAssegnata,
+    this.tipoScelto,
     required this.nascosto,
     required this.staccato,
   });
@@ -3037,6 +3087,9 @@ class AllenamentoDaOrologio extends DataClass
     if (!nullToAbsent || schedaAssegnata != null) {
       map['scheda_assegnata'] = Variable<int>(schedaAssegnata);
     }
+    if (!nullToAbsent || tipoScelto != null) {
+      map['tipo_scelto'] = Variable<String>(tipoScelto);
+    }
     map['nascosto'] = Variable<bool>(nascosto);
     map['staccato'] = Variable<bool>(staccato);
     return map;
@@ -3059,6 +3112,9 @@ class AllenamentoDaOrologio extends DataClass
       schedaAssegnata: schedaAssegnata == null && nullToAbsent
           ? const Value.absent()
           : Value(schedaAssegnata),
+      tipoScelto: tipoScelto == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tipoScelto),
       nascosto: Value(nascosto),
       staccato: Value(staccato),
     );
@@ -3079,6 +3135,7 @@ class AllenamentoDaOrologio extends DataClass
       distanzaMetri: serializer.fromJson<int?>(json['distanzaMetri']),
       passi: serializer.fromJson<int?>(json['passi']),
       schedaAssegnata: serializer.fromJson<int?>(json['schedaAssegnata']),
+      tipoScelto: serializer.fromJson<String?>(json['tipoScelto']),
       nascosto: serializer.fromJson<bool>(json['nascosto']),
       staccato: serializer.fromJson<bool>(json['staccato']),
     );
@@ -3096,6 +3153,7 @@ class AllenamentoDaOrologio extends DataClass
       'distanzaMetri': serializer.toJson<int?>(distanzaMetri),
       'passi': serializer.toJson<int?>(passi),
       'schedaAssegnata': serializer.toJson<int?>(schedaAssegnata),
+      'tipoScelto': serializer.toJson<String?>(tipoScelto),
       'nascosto': serializer.toJson<bool>(nascosto),
       'staccato': serializer.toJson<bool>(staccato),
     };
@@ -3111,6 +3169,7 @@ class AllenamentoDaOrologio extends DataClass
     Value<int?> distanzaMetri = const Value.absent(),
     Value<int?> passi = const Value.absent(),
     Value<int?> schedaAssegnata = const Value.absent(),
+    Value<String?> tipoScelto = const Value.absent(),
     bool? nascosto,
     bool? staccato,
   }) => AllenamentoDaOrologio(
@@ -3127,6 +3186,7 @@ class AllenamentoDaOrologio extends DataClass
     schedaAssegnata: schedaAssegnata.present
         ? schedaAssegnata.value
         : this.schedaAssegnata,
+    tipoScelto: tipoScelto.present ? tipoScelto.value : this.tipoScelto,
     nascosto: nascosto ?? this.nascosto,
     staccato: staccato ?? this.staccato,
   );
@@ -3147,6 +3207,9 @@ class AllenamentoDaOrologio extends DataClass
       schedaAssegnata: data.schedaAssegnata.present
           ? data.schedaAssegnata.value
           : this.schedaAssegnata,
+      tipoScelto: data.tipoScelto.present
+          ? data.tipoScelto.value
+          : this.tipoScelto,
       nascosto: data.nascosto.present ? data.nascosto.value : this.nascosto,
       staccato: data.staccato.present ? data.staccato.value : this.staccato,
     );
@@ -3164,6 +3227,7 @@ class AllenamentoDaOrologio extends DataClass
           ..write('distanzaMetri: $distanzaMetri, ')
           ..write('passi: $passi, ')
           ..write('schedaAssegnata: $schedaAssegnata, ')
+          ..write('tipoScelto: $tipoScelto, ')
           ..write('nascosto: $nascosto, ')
           ..write('staccato: $staccato')
           ..write(')'))
@@ -3181,6 +3245,7 @@ class AllenamentoDaOrologio extends DataClass
     distanzaMetri,
     passi,
     schedaAssegnata,
+    tipoScelto,
     nascosto,
     staccato,
   );
@@ -3197,6 +3262,7 @@ class AllenamentoDaOrologio extends DataClass
           other.distanzaMetri == this.distanzaMetri &&
           other.passi == this.passi &&
           other.schedaAssegnata == this.schedaAssegnata &&
+          other.tipoScelto == this.tipoScelto &&
           other.nascosto == this.nascosto &&
           other.staccato == this.staccato);
 }
@@ -3212,6 +3278,7 @@ class AllenamentiDaOrologioCompanion
   final Value<int?> distanzaMetri;
   final Value<int?> passi;
   final Value<int?> schedaAssegnata;
+  final Value<String?> tipoScelto;
   final Value<bool> nascosto;
   final Value<bool> staccato;
   const AllenamentiDaOrologioCompanion({
@@ -3224,6 +3291,7 @@ class AllenamentiDaOrologioCompanion
     this.distanzaMetri = const Value.absent(),
     this.passi = const Value.absent(),
     this.schedaAssegnata = const Value.absent(),
+    this.tipoScelto = const Value.absent(),
     this.nascosto = const Value.absent(),
     this.staccato = const Value.absent(),
   });
@@ -3237,6 +3305,7 @@ class AllenamentiDaOrologioCompanion
     this.distanzaMetri = const Value.absent(),
     this.passi = const Value.absent(),
     this.schedaAssegnata = const Value.absent(),
+    this.tipoScelto = const Value.absent(),
     this.nascosto = const Value.absent(),
     this.staccato = const Value.absent(),
   }) : fonte = Value(fonte),
@@ -3253,6 +3322,7 @@ class AllenamentiDaOrologioCompanion
     Expression<int>? distanzaMetri,
     Expression<int>? passi,
     Expression<int>? schedaAssegnata,
+    Expression<String>? tipoScelto,
     Expression<bool>? nascosto,
     Expression<bool>? staccato,
   }) {
@@ -3266,6 +3336,7 @@ class AllenamentiDaOrologioCompanion
       if (distanzaMetri != null) 'distanza_metri': distanzaMetri,
       if (passi != null) 'passi': passi,
       if (schedaAssegnata != null) 'scheda_assegnata': schedaAssegnata,
+      if (tipoScelto != null) 'tipo_scelto': tipoScelto,
       if (nascosto != null) 'nascosto': nascosto,
       if (staccato != null) 'staccato': staccato,
     });
@@ -3281,6 +3352,7 @@ class AllenamentiDaOrologioCompanion
     Value<int?>? distanzaMetri,
     Value<int?>? passi,
     Value<int?>? schedaAssegnata,
+    Value<String?>? tipoScelto,
     Value<bool>? nascosto,
     Value<bool>? staccato,
   }) {
@@ -3294,6 +3366,7 @@ class AllenamentiDaOrologioCompanion
       distanzaMetri: distanzaMetri ?? this.distanzaMetri,
       passi: passi ?? this.passi,
       schedaAssegnata: schedaAssegnata ?? this.schedaAssegnata,
+      tipoScelto: tipoScelto ?? this.tipoScelto,
       nascosto: nascosto ?? this.nascosto,
       staccato: staccato ?? this.staccato,
     );
@@ -3329,6 +3402,9 @@ class AllenamentiDaOrologioCompanion
     if (schedaAssegnata.present) {
       map['scheda_assegnata'] = Variable<int>(schedaAssegnata.value);
     }
+    if (tipoScelto.present) {
+      map['tipo_scelto'] = Variable<String>(tipoScelto.value);
+    }
     if (nascosto.present) {
       map['nascosto'] = Variable<bool>(nascosto.value);
     }
@@ -3350,6 +3426,7 @@ class AllenamentiDaOrologioCompanion
           ..write('distanzaMetri: $distanzaMetri, ')
           ..write('passi: $passi, ')
           ..write('schedaAssegnata: $schedaAssegnata, ')
+          ..write('tipoScelto: $tipoScelto, ')
           ..write('nascosto: $nascosto, ')
           ..write('staccato: $staccato')
           ..write(')'))
@@ -3608,8 +3685,9 @@ class SedutaAllenamento extends DataClass
 
   /// L'`id` **del server** della scheda eseguita, come lo mandava `plan_id`.
   ///
-  /// ⚠️ Non l'id locale di `SchedeRicevute`: quello cambia da telefono a
-  /// telefono, questo no. Le due cose si incrociano su `SchedeRicevute.origineId`.
+  /// ⚠️ Non l'id locale in `SchedeSulTelefono`: quello cambia da telefono a
+  /// telefono, questo no. Le due cose si incrociano su
+  /// `SchedeSulTelefono.idOrigine`, con `origine = 'server'`.
   final int? schedaServerId;
 
   /// 💡 Copiato al momento della seduta, non risolto ogni volta: la scheda può
@@ -6950,6 +7028,7 @@ typedef $$AllenamentiDaOrologioTableCreateCompanionBuilder =
       Value<int?> distanzaMetri,
       Value<int?> passi,
       Value<int?> schedaAssegnata,
+      Value<String?> tipoScelto,
       Value<bool> nascosto,
       Value<bool> staccato,
     });
@@ -6964,6 +7043,7 @@ typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
       Value<int?> distanzaMetri,
       Value<int?> passi,
       Value<int?> schedaAssegnata,
+      Value<String?> tipoScelto,
       Value<bool> nascosto,
       Value<bool> staccato,
     });
@@ -7019,6 +7099,11 @@ class $$AllenamentiDaOrologioTableFilterComposer
 
   ColumnFilters<int> get schedaAssegnata => $composableBuilder(
     column: $table.schedaAssegnata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipoScelto => $composableBuilder(
+    column: $table.tipoScelto,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7087,6 +7172,11 @@ class $$AllenamentiDaOrologioTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tipoScelto => $composableBuilder(
+    column: $table.tipoScelto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get nascosto => $composableBuilder(
     column: $table.nascosto,
     builder: (column) => ColumnOrderings(column),
@@ -7137,6 +7227,11 @@ class $$AllenamentiDaOrologioTableAnnotationComposer
 
   GeneratedColumn<int> get schedaAssegnata => $composableBuilder(
     column: $table.schedaAssegnata,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tipoScelto => $composableBuilder(
+    column: $table.tipoScelto,
     builder: (column) => column,
   );
 
@@ -7202,6 +7297,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> distanzaMetri = const Value.absent(),
                 Value<int?> passi = const Value.absent(),
                 Value<int?> schedaAssegnata = const Value.absent(),
+                Value<String?> tipoScelto = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
                 Value<bool> staccato = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion(
@@ -7214,6 +7310,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 distanzaMetri: distanzaMetri,
                 passi: passi,
                 schedaAssegnata: schedaAssegnata,
+                tipoScelto: tipoScelto,
                 nascosto: nascosto,
                 staccato: staccato,
               ),
@@ -7228,6 +7325,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> distanzaMetri = const Value.absent(),
                 Value<int?> passi = const Value.absent(),
                 Value<int?> schedaAssegnata = const Value.absent(),
+                Value<String?> tipoScelto = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
                 Value<bool> staccato = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion.insert(
@@ -7240,6 +7338,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 distanzaMetri: distanzaMetri,
                 passi: passi,
                 schedaAssegnata: schedaAssegnata,
+                tipoScelto: tipoScelto,
                 nascosto: nascosto,
                 staccato: staccato,
               ),

@@ -179,6 +179,28 @@ Future<void> assegnaSchedaAllAllenamento(
   ref.read(revisioneAllenamentiProvider.notifier).state++;
 }
 
+/// Dichiara che tipo di allenamento era — 3b-B.20.5, 25/08/2026.
+///
+/// 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
+/// scheda. Tipo corsa, bicicletta, nuoto, ste cose qui, in modo che possa
+/// stimare i muscoli coinvolti e le calorie»*.
+///
+/// 💡 `null` toglie la dichiarazione e rimette in gioco quello dell'orologio:
+/// una scelta che non si può disfare è una trappola. È la stessa regola di
+/// [assegnaSchedaAllAllenamento], e non è un caso — sono lo stesso gesto su due
+/// campi diversi: *«quella cosa lì, in realtà, era questa»*.
+Future<void> dichiaraTipoAllenamento(
+  WidgetRef ref, {
+  required int allenamentoId,
+  required String? codice,
+}) async {
+  await ref
+      .read(archivioSaluteProvider)
+      .dichiaraTipoAllenamento(allenamentoId, codice);
+
+  ref.read(revisioneAllenamentiProvider.notifier).state++;
+}
+
 /// «Non è lo stesso allenamento» — FASE 1-bis.
 ///
 /// ── 🚨 È la contropartita della regola larga ──────────────────────────────
@@ -201,4 +223,73 @@ Future<void> staccaAllenamento(
       .staccaAllenamento(allenamentoId, staccato: staccato);
 
   ref.read(revisioneAllenamentiProvider.notifier).state++;
+}
+
+/// Toglie un allenamento dallo storico — 3b-B.20.2, 25/08/2026.
+///
+/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+///
+/// *«possibilità di rimuovere un allenamento»*.
+///
+/// ══ 🚨 DUE GESTI DIVERSI, PERCHÉ LE DUE COSE SONO DIVERSE ═════════════════
+///
+/// | Cosa | Come sparisce | Perché |
+/// |---|---|---|
+/// | le sedute dell'app | **cancellate**, serie comprese | vivono solo qui: cancellarle è definitivo |
+/// | le righe dell'orologio | **nascoste** | ⛔ una `DELETE` non basterebbe |
+///
+/// ⛔ **Cancellare una riga dell'orologio non la fa sparire**: il dato vero sta
+/// in Health Connect, e `scriviAllenamenti()` la reinserisce alla prossima
+/// sincronizzazione — `insertOrIgnore` su `(fonte, iniziatoIl)` non ritrova
+/// niente, quindi ricrea la riga. 🚨 Chi la togliesse così se la vedrebbe
+/// tornare da sola dopo mezz'ora, e sarebbe un difetto della specie peggiore:
+/// funziona finché non guardi.
+///
+/// 💡 `nascosto` esiste apposta ed è **già** ciò che lo storico salta. La
+/// differenza con il vecchio comando «nascondi» non è tecnica, è di intenzione:
+/// lì si toglieva dagli occhi una riga sola, qui si toglie **l'allenamento**,
+/// con tutto quello che ci sta dentro.
+///
+/// ⚠️ Chi chiama **deve** aver chiesto conferma, e la conferma deve dire cosa si
+/// porta via: le serie registrate spariscono per sempre, e le calorie escono dal
+/// bilancio della giornata. ⛔ Una cancellazione che non dice cosa cancella è la
+/// cosa che il 24/08 ha fatto sparire due esercizi.
+Future<void> rimuoviAllenamento(WidgetRef ref, VoceStorico voce) async {
+  final archivio = ref.read(archivioSaluteProvider);
+
+  for (final seduta in voce.sedute) {
+    await archivio.cancellaSeduta(seduta.id);
+  }
+
+  for (final dal in voce.dalPolso) {
+    await archivio.nascondiAllenamento(dal.id, nascosto: true);
+  }
+
+  ref.read(revisioneAllenamentiProvider.notifier).state++;
+  ref.invalidate(sessionsProvider);
+}
+
+/// Cosa si porta via la rimozione, detto in una frase.
+///
+/// 🚨 **Si contano le cose vere, non si dice «tutto»**: «12 serie registrate»
+/// ferma la mano, «questo allenamento» no. ⚠️ E le due provenienze hanno destini
+/// diversi — vedi [rimuoviAllenamento] — quindi la frase lo dice.
+String cosaSiPortaViaLaRimozione(VoceStorico voce) {
+  final pezzi = <String>[];
+
+  var serie = 0;
+  for (final s in voce.sedute) {
+    serie += s.sets.length;
+  }
+
+  if (serie > 0) {
+    pezzi.add(serie == 1 ? '1 serie registrata' : '$serie serie registrate');
+  }
+
+  final kcal = voce.kcal;
+  if (kcal != null && kcal > 0) pezzi.add('$kcal kcal dal bilancio di oggi');
+
+  if (pezzi.isEmpty) return 'Sparirà dallo storico.';
+
+  return 'Spariranno anche ${pezzi.join(' e ')}.';
 }

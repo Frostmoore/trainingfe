@@ -57,7 +57,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -307,6 +307,21 @@ class ArchivioSalute extends _$ArchivioSalute {
         );
 
         await m.deleteTable('schede_ricevute');
+      }
+
+      /*
+       * ⚠️ v15 → v16 (3b-B.20.5): il tipo dichiarato a mano.
+       *
+       * 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
+       * scheda»*.
+       *
+       * 💡 Una colonna **accanto** a `tipo`, non al suo posto: quello lo scrive
+       * l'orologio, questo lo scrive una persona, e schiacciarli su una casella
+       * sola vorrebbe dire che a ogni risincronizzazione si contendono il
+       * campo. 🚨 Nasce vuota, ed è giusto: nessuno ha ancora dichiarato niente.
+       */
+      if (da < 16) {
+        await m.addColumn(allenamentiDaOrologio, allenamentiDaOrologio.tipoScelto);
       }
     },
   );
@@ -774,6 +789,16 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> assegnaSchedaAllenamento(int id, int? schedaId) =>
       (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
         AllenamentiDaOrologioCompanion(schedaAssegnata: Value(schedaId)),
+      );
+
+  /// Dichiara che tipo di allenamento era — 3b-B.20.5.
+  ///
+  /// 💡 `null` toglie la dichiarazione e rimette in gioco quello dell'orologio:
+  /// una scelta che non si può disfare è una trappola, ed è la stessa regola di
+  /// `assegnaSchedaAllenamento`.
+  Future<void> dichiaraTipoAllenamento(int id, String? codice) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(tipoScelto: Value(codice)),
       );
 
   /// Nasconde o rimette un allenamento nello storico.
@@ -2069,6 +2094,29 @@ class AllenamentiDaOrologio extends Table {
   /// `insertOrReplace` l'orologio sovrascriverebbe una scelta della persona
   /// ogni volta che si rileggono gli ultimi sette giorni — cioè a ogni avvio.
   IntColumn get schedaAssegnata => integer().nullable()();
+
+  /// Il tipo che **hai dichiarato tu**, quando quello dell'orologio non va —
+  /// 3b-B.20.5, 25/08/2026.
+  ///
+  /// 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
+  /// scheda. Tipo corsa, bicicletta, nuoto, ste cose qui, in modo che possa
+  /// stimare i muscoli coinvolti e le calorie»*.
+  ///
+  /// 🚨 **È una colonna diversa da `tipo`, e la differenza è tutto.** `tipo` lo
+  /// scrive l'orologio; questa la scrive una persona. ⛔ Sovrascrivere `tipo`
+  /// avrebbe cancellato quello che il sensore ha visto per mettercelo dentro un
+  /// parere — e alla prima risincronizzazione i due si sarebbero contesi la
+  /// stessa casella.
+  ///
+  /// 💡 È la **gemella di `schedaAssegnata`**, e per la stessa ragione:
+  /// `scriviAllenamenti()` usa `insertOrIgnore`, quindi una riga già presente
+  /// non viene riscritta e la scelta sopravvive a ogni lettura degli ultimi
+  /// sette giorni. ⚠️ Con `insertOrReplace` l'orologio la cancellerebbe a ogni
+  /// avvio.
+  ///
+  /// ⚠️ Vale un codice di `TipoScelto`, non un testo libero: `null` vuol dire
+  /// «non l'ho dichiarato», e allora vale quello dell'orologio.
+  TextColumn get tipoScelto => text().nullable()();
 
   /// Nascosto dallo storico perché è il doppione di una seduta del player.
   ///

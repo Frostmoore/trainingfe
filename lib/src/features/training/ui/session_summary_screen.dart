@@ -11,6 +11,7 @@ import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
+import 'widgets/azioni_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_fatti.dart';
 
@@ -166,6 +167,14 @@ class _Corpo extends ConsumerWidget {
          */
         for (final esercizio in raggruppaPerEsercizio(sessione.sets))
           CardEsercizioFatto(esercizio: esercizio),
+
+        /*
+         * 🗑️ **Rimuovere l'allenamento sta anche qui** — 3b-B.20.2/B.20.4. La
+         * pagina di una seduta dell'app e quella di un allenamento del polso
+         * devono poter fare le stesse cose, o «identica» resta una parola.
+         */
+        const SizedBox(height: Gap.lg),
+        _AzioniDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
         FilledButton(
@@ -547,5 +556,31 @@ class _CaroselloDiQuestaSeduta extends ConsumerWidget {
       padding: const EdgeInsets.only(top: Gap.lg),
       child: CaroselloDellAllenamento(voce: voce),
     );
+  }
+}
+
+/// Le azioni di **questa** seduta — 3b-B.20.2.
+///
+/// ⚠️ Passa dallo storico fuso per la stessa ragione del carosello: rimuovere
+/// deve portarsi via **tutto il gruppo**, non solo la metà su cui si è aperta la
+/// pagina. Una seduta fermata e ripresa sono due righe e un allenamento solo.
+class _AzioniDiQuestaSeduta extends ConsumerWidget {
+  const _AzioniDiQuestaSeduta({required this.sessione});
+
+  final WorkoutSession sessione;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voci = ref.watch(storicoUnificatoProvider).valueOrNull;
+
+    if (voci == null) return const SizedBox.shrink();
+
+    final voce = voci
+        .where((v) => v.sedute.any((s) => s.id == sessione.id))
+        .firstOrNull;
+
+    if (voce == null) return const SizedBox.shrink();
+
+    return AzioniDellAllenamento(voce: voce);
   }
 }

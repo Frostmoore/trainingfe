@@ -65,6 +65,33 @@ void main() {
       'aggiornato_il INTEGER)',
     );
 
+    /*
+     * ⚠️ **E anche le tabelle che i passi SUCCESSIVI toccano** — 25/08.
+     *
+     * 🚨 Questa finzione parte dalla v14, quindi `onUpgrade` esegue **tutti** i
+     * passi da lì in avanti — non solo quello che fonde le schede. Il passo
+     * v15 → v16 aggiunge una colonna agli allenamenti dell'orologio, e su un
+     * database che quella tabella non ce l'ha esplode.
+     *
+     * 💡 Chi aggiunge un passo nuovo che tocca una tabella non elencata qui
+     * deve aggiungerla, o vedrà fallire cinque prove che con le schede non
+     * c'entrano niente.
+     */
+    await esegui(
+      'CREATE TABLE allenamenti_da_orologio ('
+      'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+      'fonte TEXT NOT NULL, '
+      'tipo TEXT NOT NULL, '
+      'iniziato_il INTEGER NOT NULL, '
+      'finito_il INTEGER NOT NULL, '
+      'kcal INTEGER, '
+      'distanza_metri INTEGER, '
+      'passi INTEGER, '
+      'scheda_assegnata INTEGER, '
+      'nascosto INTEGER NOT NULL DEFAULT 0, '
+      'staccato INTEGER NOT NULL DEFAULT 0)',
+    );
+
     // La scheda scesa dal server: id positivo, non è mia.
     await esegui(
       "INSERT INTO schede_sul_telefono VALUES (8, 'Giorno 1', '{}', 1000, 0)",

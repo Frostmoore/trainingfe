@@ -32,8 +32,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../profile/corpo_controller.dart';
+import '../../data/calorie_allenamento.dart';
 import '../../data/catalogo_esercizi.dart';
 import '../../data/storico_unificato.dart';
+import '../../data/tipo_scelto.dart';
 import '../../muscoli_allenati.dart';
 import 'carosello_del_mese.dart';
 import 'figura_del_corpo.dart';
@@ -141,7 +144,7 @@ class _CaroselloDellAllenamentoState
 }
 
 /// I numeri di **questo** allenamento.
-class _NumeriDellAllenamento extends StatelessWidget {
+class _NumeriDellAllenamento extends ConsumerWidget {
   const _NumeriDellAllenamento({required this.voce});
 
   final VoceStorico voce;
@@ -184,11 +187,40 @@ class _NumeriDellAllenamento extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
     final metri = voce.distanzaMetri;
-    final kcal = voce.kcal;
     final volume = _volume;
+
+    /*
+     * ══ 🔥 LE CALORIE STIMATE DAL TIPO CHE HAI DICHIARATO — 3b-B.20.5 ══════
+     *
+     * 📌 *«in modo che possa stimare i muscoli coinvolti e le calorie tanto le
+     * facciamo con una formula»*.
+     *
+     * ⚠️ **Solo quando non ce ne sono di vere.** `voce.kcal` è una catena di
+     * priorità documentata — correzione a mano, poi orologio, poi stima — e
+     * questa formula sta **sotto** tutte: se l'orologio le ha misurate, una
+     * moltiplicazione non le migliora. ⛔ Sostituirle vorrebbe dire buttare una
+     * misura per un'ipotesi.
+     *
+     * 💡 `MET × kg × ore`, la stessa formula delle sedute. Il peso è quello che
+     * hai registrato; senza, il ripiego prudente di `CalorieAllenamento`.
+     */
+    final sport = TipoScelto.per(voce.tipoDichiarato);
+
+    final stimate = sport == null
+        ? null
+        : CalorieAllenamento.formula(
+            durata: voce.durata,
+            kg:
+                ref.watch(corpoOggiProvider).valueOrNull?.weightKg ??
+                CalorieAllenamento.pesoDiRipiego,
+            metMedio: sport.met,
+          );
+
+    final kcal = voce.kcal ?? (stimate == 0 ? null : stimate);
+    final kcalStimate = voce.kcal == null && kcal != null;
 
     final minuti = voce.durata.inMinutes;
 
@@ -205,7 +237,8 @@ class _NumeriDellAllenamento extends StatelessWidget {
      */
     final numeri = <(String, String)>[
       ('$minuti', 'minuti'),
-      if (kcal != null && kcal > 0) ('$kcal', 'kcal'),
+      if (kcal != null && kcal > 0)
+        ('$kcal', kcalStimate ? 'kcal stimate' : 'kcal'),
       if (volume != null) (_kg(volume), 'kg sollevati'),
       if (_serie > 0) ('$_serie', _serie == 1 ? 'serie' : 'serie fatte'),
       if (metri != null && metri > 0) (_distanza(metri), 'percorsi'),

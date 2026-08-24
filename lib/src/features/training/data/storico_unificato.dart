@@ -68,6 +68,32 @@ class VoceStorico {
   /// errore. È lo stesso difetto del «Rematore corda» sul server, visto da qui.
   final int? schedaId;
 
+  /// Il tipo che **una persona** ha dichiarato per questo allenamento — B.20.5.
+  ///
+  /// 🚨 `null` quando nessuno l'ha dichiarato, e allora vale quello
+  /// dell'orologio. ⛔ Non ci si cade sopra per ripiego: un tipo dichiarato e un
+  /// tipo letto da un sensore sono due cose diverse, e chi legge questa
+  /// proprietà lo sta chiedendo apposta.
+  ///
+  /// 💡 Il **primo** tratto che ce l'ha: il raggruppamento tiene insieme i pezzi
+  /// di un allenamento solo, quindi dichiararlo su uno vale per tutti.
+  String? get tipoDichiarato {
+    for (final a in dalPolso) {
+      final scelto = a.tipoScelto;
+      if (scelto != null && scelto.isNotEmpty) return scelto;
+    }
+
+    return null;
+  }
+
+  /// Il codice che **vale** per questo allenamento: il tuo se c'è, se no quello
+  /// dell'orologio.
+  ///
+  /// ⚠️ `null` per una riga che viene solo dall'app: lì il tipo non esiste
+  /// affatto, e inventarne uno sarebbe la deduzione che B.9 ha vietato.
+  String? get tipo =>
+      tipoDichiarato ?? (dalPolso.isEmpty ? null : dalPolso.first.tipo);
+
   /// La seduta principale: la **prima**, quando c'è.
   ///
   /// 🚨 È quella che si apre toccando la riga, e quella che dà il titolo. ⚠️ La

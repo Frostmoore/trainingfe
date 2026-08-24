@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/catalogo_esercizi.dart';
 import 'data/gruppo_muscolare.dart';
 import 'data/storico_unificato.dart';
+import 'data/tipo_scelto.dart';
 import 'storico_unificato_controller.dart';
 import 'training_controller.dart';
 
@@ -135,7 +136,29 @@ Map<GruppoMuscolare, double> intensitaDeiMuscoli({
      * ⛔ Senza scheda non si colora niente, e va bene così: vedi la nota in
      * cima alla funzione.
      */
-    final pesi = pesiDelleSchede[v.schedaId];
+    /*
+     * ══ 🚨 IL TIPO CHE HAI DICHIARATO TU — 3b-B.20.5, 25/08/2026 ═══════════
+     *
+     * 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
+     * scheda … in modo che possa stimare i muscoli coinvolti»*.
+     *
+     * ⚠️ **Non contraddice B.9**, e va letto bene. Quel giorno era stata
+     * cancellata `MuscoliDelTipo`, che indovinava i muscoli dal codice che
+     * l'orologio scrive **da solo**: *«I gruppi muscolari NON arrivano
+     * dall'orologio»*. Quella regola resta.
+     *
+     * 💡 Qui la fonte è un'altra: `tipoScelto` la scrive **una persona**, ed è
+     * una dichiarazione, non un'ipotesi — esattamente come la scheda associata
+     * qui sotto. ⛔ Se ha detto «era una nuotata», rifiutarsi di colorare le
+     * spalle vorrebbe dire farglielo scrivere per niente.
+     *
+     * 🚨 **Viene prima della scheda**: chi ha dichiarato «corsa» su un
+     * allenamento a cui aveva attaccato una scheda di pesi ha corretto proprio
+     * quello, e la correzione più recente vince.
+     */
+    final sport = TipoScelto.per(v.tipoDichiarato);
+
+    final pesi = sport?.muscoli ?? pesiDelleSchede[v.schedaId];
 
     if (pesi == null || pesi.isEmpty) continue;
 

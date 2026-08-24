@@ -1827,7 +1827,7 @@ extension MinutiDelCampione on CampioneSonno {
 @DataClassName('PianoRicevuto')
 /// I piani alimentari arrivati dal trainer via chat — G8.4.
 ///
-/// 🚨 **Gemella di `SchedeRicevute`, e per la stessa ragione**: vivono sul
+/// 🚨 **Gemella delle schede, e per la stessa ragione**: vivono sul
 /// telefono. Un piano dice cosa mangia una persona, e da un piano si capisce
 /// molto di lei — il modello resta sul server, il legame fra la persona e il
 /// piano non ci arriva mai (D4).
@@ -2056,9 +2056,13 @@ class AllenamentiDaOrologio extends Table {
   /// La scheda che questa persona dice di aver fatto — richiesta del 19/08:
   /// *«devo poter scegliere di assegnarvi una mia scheda»*.
   ///
-  /// 💡 È l'`id` locale di `SchedeRicevute`. `null` vuol dire «non l'ho
-  /// assegnata», che è lo stato normale: la maggior parte delle corse non
-  /// corrisponde a nessuna scheda.
+  /// 💡 È l'`id` locale in `SchedeSulTelefono` — quello di **qui**, non quello
+  /// del server. `null` vuol dire «non l'ho assegnata», che è lo stato normale:
+  /// la maggior parte delle corse non corrisponde a nessuna scheda.
+  ///
+  /// ⚠️ **È il motivo per cui la migrazione v14 → v15 non rinumera gli id.**
+  /// Rinumerarli avrebbe spostato in silenzio gli allenamenti già fatti su
+  /// schede diverse da quelle vere.
   ///
   /// 🚨 **Una risincronizzazione non la cancella**: `scriviAllenamenti()` usa
   /// `insertOrIgnore`, quindi una riga già presente non viene riscritta. ⚠️ Con
@@ -2125,7 +2129,7 @@ class AllenamentiDaOrologio extends Table {
 ///
 /// 1. La migrazione (11.3) deve poter riscaricare senza duplicare: la chiave
 ///    unica è `idServer`, e una seconda passata non crea righe doppie.
-/// 2. `SchedeRicevute` e le foto della seduta puntano all'id del server. ⛔
+/// 2. Le schede ricevute e le foto della seduta puntano all'id del server. ⛔
 ///    Buttarlo vorrebbe dire perdere il legame fra una seduta e la scheda che
 ///    è stata eseguita.
 ///
@@ -2140,8 +2144,9 @@ class SeduteAllenamento extends Table {
 
   /// L'`id` **del server** della scheda eseguita, come lo mandava `plan_id`.
   ///
-  /// ⚠️ Non l'id locale di `SchedeRicevute`: quello cambia da telefono a
-  /// telefono, questo no. Le due cose si incrociano su `SchedeRicevute.origineId`.
+  /// ⚠️ Non l'id locale in `SchedeSulTelefono`: quello cambia da telefono a
+  /// telefono, questo no. Le due cose si incrociano su
+  /// `SchedeSulTelefono.idOrigine`, con `origine = 'server'`.
   IntColumn get schedaServerId => integer().nullable()();
 
   /// 💡 Copiato al momento della seduta, non risolto ogni volta: la scheda può

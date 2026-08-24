@@ -14,8 +14,10 @@ import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
 import '../data/storico_unificato.dart';
 import '../session_controller.dart';
+import '../settimana_scelta.dart';
 import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
+import 'widgets/barra_settimana.dart';
 
 /// Lo storico degli allenamenti — C10.
 ///
@@ -27,7 +29,19 @@ class HistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => const Scaffold(
-    appBar: IntestazioneApp(titolo: 'Storico allenamenti'),
+    /*
+     * 🆕 **Il navigatore sta anche qui** — 3b-A.4.1.
+     *
+     * ⚠️ Ci si arriva dalla scheda «Allenamento» del riepilogo di oggi, ed è lo
+     * **stesso** storico della sezione Allenamento. Averlo di là e non di qua
+     * lo farebbe sembrare una funzione che va e viene a seconda di come ci sei
+     * entrato.
+     */
+    appBar: IntestazioneApp(
+      titolo: 'Storico allenamenti',
+      altezzaSotto: altezzaBarraSettimana,
+      sotto: BarraSettimana(),
+    ),
     body: StoricoAllenamenti(),
   );
 }
@@ -62,92 +76,119 @@ class StoricoAllenamenti extends ConsumerWidget {
         error: ApiClient.unwrapError(e),
         onRetry: () => ref.invalidate(storicoUnificatoProvider),
       ),
-      data: (lista) => lista.isEmpty
-          ? const EmptyState(
-              icon: Icons.fitness_center_rounded,
-              title: 'Nessun allenamento',
-              message:
-                  'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
-            )
-          : RefreshIndicator(
-              onRefresh: () => aggiornaTutto(context, ref, () {
-                ref.invalidate(sessionsProvider);
-                ref.invalidate(allenamentiDalPolsoProvider);
-              }),
-              child: _PerSettimana(voci: lista),
-            ),
+      data: (lista) => RefreshIndicator(
+        onRefresh: () => aggiornaTutto(context, ref, () {
+          ref.invalidate(sessionsProvider);
+          ref.invalidate(allenamentiDalPolsoProvider);
+        }),
+        child: _LaSettimana(tutte: lista),
+      ),
     );
   }
 }
 
-class _PerSettimana extends StatelessWidget {
-  const _PerSettimana({required this.voci});
+/// Gli allenamenti della settimana scelta — 3b-A.4, 24/08/2026.
+///
+/// ══ 🚨 UNA SETTIMANA ALLA VOLTA, NON TUTTE IN FILA ════════════════════════
+///
+/// 📌 Il committente: *«Va aggiunto, nell'header, un navigatore per settimana e
+/// lo storico deve essere ordinato per settimana»*.
+///
+/// ⛔ Prima le settimane erano **tutte** in un elenco lungo, ognuna con la sua
+/// intestazione. Con un navigatore in cima quel disegno diventa contraddittorio:
+/// le frecce direbbero di guardare una settimana e sotto ci sarebbero anche le
+/// altre. ⚠️ E la riga «18 – 24 ago · 3 sedute» direbbe la stessa cosa del
+/// navigatore, a dieci pixel di distanza.
+///
+/// 💡 Il **conteggio** però serviva davvero — è la domanda che ci si fa
+/// guardando lo storico — e infatti non è sparito: è finito nell'etichetta del
+/// navigatore, dove sta insieme all'intervallo che descrive.
+class _LaSettimana extends ConsumerWidget {
+  const _LaSettimana({required this.tutte});
 
-  final List<VoceStorico> voci;
-
-  /// Il lunedì della settimana di una data.
-  ///
-  /// 🚨 **`d` dev'essere già locale** — A3. `DateTime(y, m, d)` costruisce una
-  /// data nel fuso del telefono, ma legge `year`/`month`/`day` **dall'oggetto
-  /// che riceve**: su un `DateTime` in UTC quei campi sono i componenti UTC, e
-  /// una seduta di lunedì alle 00:30 finiva raggruppata nella settimana prima.
-  ///
-  /// ⚠️ Il `.toLocal()` sta a monte, in `WorkoutSession.fromJson`: qui non si
-  /// rimedia, perché rimediare due volte nasconde dove sta la regola.
-  static DateTime _lunedi(DateTime d) =>
-      DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
+  /// 🚨 **Tutte**, non solo quelle della settimana: lo stato vuoto deve poter
+  /// dire *dov'è* l'ultimo allenamento, e per saperlo gli servono le altre.
+  final List<VoceStorico> tutte;
 
   @override
-  Widget build(BuildContext context) {
-    final gruppi = <DateTime, List<VoceStorico>>{};
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inizio = ref.watch(settimanaSceltaProvider);
 
-    for (final v in voci) {
-      gruppi.putIfAbsent(_lunedi(v.quando), () => []).add(v);
-    }
+    final delle = tutte.where((v) => lunediDi(v.quando) == inizio).toList();
 
-    final settimane = gruppi.keys.toList()..sort((a, b) => b.compareTo(a));
+    if (delle.isEmpty) return _SettimanaVuota(tutte: tutte);
 
     return ListView.builder(
       padding: const EdgeInsets.all(Gap.md),
-      itemCount: settimane.length,
-      itemBuilder: (context, i) {
-        final inizio = settimane[i];
-        final fine = inizio.add(const Duration(days: 6));
-        final delle = gruppi[inizio]!;
+      itemCount: delle.length,
+      /*
+       * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e uno
+       * `switch`: con i gruppi la distinzione non è più «da dove viene» ma
+       * «contiene una seduta o no», e una proprietà non merita due gerarchie.
+       */
+      itemBuilder: (context, i) => _CardAllenamento(voce: delle[i]),
+    );
+  }
+}
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: Gap.md, bottom: Gap.sm),
-              child: Text(
-                /*
-                 * 🚨 Si contano i **gruppi**, non le registrazioni — FASE 1-bis.
-                 *
-                 * 💡 È il numero che rende visibile tutto il lavoro del
-                 * raggruppamento: «1 seduta» al posto di «2 sedute» è l'unica
-                 * cosa che si nota a colpo d'occhio quando l'app e l'orologio
-                 * hanno registrato la stessa ora.
-                 */
-                '${DateFormat('d MMM', 'it').format(inizio)} – '
-                '${DateFormat('d MMM y', 'it').format(fine)}'
-                '   ·   ${delle.length} ${delle.length == 1 ? 'seduta' : 'sedute'}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            /*
-             * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e
-             * uno `switch`: con i gruppi la distinzione non è più «da dove
-             * viene» ma «contiene una seduta o no», e una proprietà non merita
-             * due gerarchie.
-             */
-            for (final v in delle) _CardAllenamento(voce: v),
-          ],
-        );
-      },
+/// Una settimana senza allenamenti — 3b-A.4, 24/08/2026.
+///
+/// ══ 💡 UNO STATO VUOTO CHE SA DOVE GUARDARE ═══════════════════════════════
+///
+/// ⚠️ Con un navigatore per settimana le settimane vuote diventano una cosa
+/// **normale**: chi si è fermato un mese ne trova quattro di fila. ⛔ Un
+/// «Nessun allenamento» e basta lo lascerebbe a premere la freccia indietro
+/// finché non ricompare qualcosa — cioè a cercare a tentoni una cosa che l'app
+/// sa già dov'è.
+///
+/// 🚨 E le due frasi sono **diverse**: «non ti sei ancora mai allenato» e «in
+/// questa settimana no» sono due situazioni che non si somigliano affatto, e
+/// dirle allo stesso modo sarebbe scoraggiante per la prima e inutile per la
+/// seconda.
+class _SettimanaVuota extends ConsumerWidget {
+  const _SettimanaVuota({required this.tutte});
+
+  final List<VoceStorico> tutte;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tutte.isEmpty) {
+      return const EmptyState(
+        icon: Icons.fitness_center_rounded,
+        title: 'Nessun allenamento',
+        message:
+            'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
+      );
+    }
+
+    // 🚨 `tutte` arriva già dal più recente al più vecchio: `first` è l'ultimo
+    // allenamento fatto. Riordinare qui vorrebbe dire due ordini nello stesso
+    // schermo, e non c'è motivo.
+    final ultimo = tutte.first;
+    final inizio = ref.watch(settimanaSceltaProvider);
+    final eFuturo = ultimo.quando.isBefore(inizio);
+
+    return ListView(
+      padding: const EdgeInsets.all(Gap.md),
+      children: [
+        const SizedBox(height: Gap.xl),
+        EmptyState(
+          icon: Icons.event_busy_rounded,
+          title: 'Niente in questa settimana',
+          message: eFuturo
+              ? 'L\'ultimo allenamento è del '
+                    '${DateFormat('d MMMM', 'it').format(ultimo.quando)}.'
+              : 'Ci sono allenamenti in altre settimane.',
+        ),
+        Center(
+          child: TextButton.icon(
+            onPressed: () =>
+                ref.read(settimanaSceltaProvider.notifier).vaiA(ultimo.quando),
+            icon: const Icon(Icons.history_rounded, size: 18),
+            label: const Text('Vai all\'ultimo allenamento'),
+          ),
+        ),
+      ],
     );
   }
 }

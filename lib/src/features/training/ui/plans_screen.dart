@@ -13,6 +13,7 @@ import '../../progress/ui/progress_screen.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
+import 'widgets/barra_settimana.dart';
 
 /// La sezione Allenamento — A5.1, riorganizzata in G6.
 ///
@@ -47,12 +48,26 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
          */
         // Il selettore sta **nella barra**, sotto il titolo: è la posizione in
         // cui si cerca un cambio di vista, e non ruba una riga al contenuto.
-        altezzaSotto: 52,
-        sotto: SizedBox(
-          height: 52,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
-            /*
+        /*
+         * 🆕 **Il navigatore per settimana, e solo sullo Storico** — 3b-A.4.1.
+         *
+         * ⚠️ **Solo lì**, e non per risparmiare spazio: su «Schede» e «Foto»
+         * una freccia per settimana comanderebbe qualcosa che non c'è. Un
+         * comando che non fa niente insegna a non fidarsi degli altri.
+         *
+         * 🚨 `altezzaSotto` va **sommata a mano**: `Scaffold` non sa quanto
+         * spazio serve a `sotto` e lo taglierebbe. Sbagliarla non dà un errore,
+         * dà un navigatore mezzo tagliato.
+         */
+        altezzaSotto: _vista == 0 ? 52 + altezzaBarraSettimana : 52,
+        sotto: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 52,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
+                /*
              * 🎯 **Centrato** — 3b-A.1.1, 23/08/2026, su richiesta del
              * committente: *«Le pasticche con storico, schede e foto devono
              * essere centrate, non allineate a sinistra»*.
@@ -65,20 +80,20 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
              * 💡 `Center` + `mainAxisSize` implicito: il gruppo prende la
              * larghezza che gli serve e sta in mezzo.
              */
-            child: Center(
-              child: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(
-                    value: 0,
-                    label: Text('Storico'),
-                    icon: Icon(Icons.history_rounded),
-                  ),
-                  ButtonSegment(
-                    value: 1,
-                    label: Text('Schede'),
-                    icon: Icon(Icons.assignment_outlined),
-                  ),
-                  /*
+                child: Center(
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 0,
+                        label: Text('Storico'),
+                        icon: Icon(Icons.history_rounded),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        label: Text('Schede'),
+                        icon: Icon(Icons.assignment_outlined),
+                      ),
+                      /*
                  * 📷 **Le foto dei progressi** — 3b-P.9.1, 22/08/2026.
                  *
                  * 📌 Il committente: *«Non ha senso che sia qui [nelle
@@ -90,18 +105,21 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                  * accanto a un `SegmentedButton` avrebbe dato due comandi
                  * diversi per la stessa cosa nella stessa schermata.
                  */
-                  ButtonSegment(
-                    value: 2,
-                    label: Text('Foto'),
-                    icon: Icon(Icons.photo_camera_outlined),
+                      ButtonSegment(
+                        value: 2,
+                        label: Text('Foto'),
+                        icon: Icon(Icons.photo_camera_outlined),
+                      ),
+                    ],
+                    selected: {_vista},
+                    onSelectionChanged: (s) => setState(() => _vista = s.first),
+                    showSelectedIcon: false,
                   ),
-                ],
-                selected: {_vista},
-                onSelectionChanged: (s) => setState(() => _vista = s.first),
-                showSelectedIcon: false,
+                ),
               ),
             ),
-          ),
+            if (_vista == 0) const BarraSettimana(),
+          ],
         ),
       ),
       /*

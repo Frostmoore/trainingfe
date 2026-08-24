@@ -23,6 +23,7 @@ import '../../../training/bruciate_locali.dart';
 import '../../../training/data/storico_unificato.dart';
 import '../../data/dashboard_models.dart';
 import '../../riassunto_settimana.dart';
+import 'barra_del_consumo.dart';
 import 'onda_metrica.dart';
 
 /// Le schede del riepilogo di oggi — D5.
@@ -82,7 +83,8 @@ class CaloriesCard extends ConsumerWidget {
      * numero viene disegnato: la parola «consumo», in quella riga, si legge
      * come un terzo conteggio.
      */
-    final consumo = ref.watch(targetLocaleProvider).valueOrNull?.target?.tdee;
+    final stima = ref.watch(targetLocaleProvider).valueOrNull?.target;
+    final consumo = stima?.tdee;
 
     // 🚨 Le bruciate entrano nell'obiettivo — N23.B1. La regola sta in
     // `TargetDelGiorno` e in nessun altro posto: le schermate che mostrano un
@@ -132,6 +134,17 @@ class CaloriesCard extends ConsumerWidget {
 
     final target = delGiorno.kcal ?? 0;
     final haObiettivo = delGiorno.esiste;
+
+    /*
+     * ⚠️ **`oggi` e non una data qualunque**: e' lo stesso istante usato per
+     * cercare le bruciate, quindi la parte a riposo e quella in movimento
+     * parlano dello stesso momento. Prenderne due letture diverse
+     * dell'orologio, a cavallo della mezzanotte, farebbe dire alla barra una
+     * cosa impossibile.
+     */
+    final basaleOra = stima == null
+        ? 0.0
+        : basaleFinora(bmr: stima.bmr, adesso: oggi);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -203,20 +216,24 @@ class CaloriesCard extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  if (bruciate.esistono)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 18,
-                          color: theme.colorScheme.tertiary,
-                        ),
-                        Text(
-                          '${bruciate.kcal}',
-                          style: theme.textTheme.titleSmall,
-                        ),
-                      ],
-                    ),
+                  /*
+                   * ⛔ **Qui c'era la fiammella con le bruciate, e se n'è
+                   * andata** — 3b-B.19, 25/08/2026.
+                   *
+                   * 🚨 Non per far posto: perché diceva un numero **diverso**
+                   * da quello della barra qui sotto. Quella fiammella mostra le
+                   * calorie **attive** (60); la barra mostra quanto hai bruciato
+                   * in tutto, basale compreso (1.480). Due numeri con la stessa
+                   * etichetta «bruciate» nella stessa card, uno venti volte
+                   * l'altro.
+                   *
+                   * ⚠️ È lo stesso difetto di lettura del 21/08 sull'etichetta
+                   * «consumo»: *«si legge come un terzo numero della stessa
+                   * famiglia, in contraddizione con gli altri due»*. 💡 Il
+                   * numero attivo non è sparito — è la voce **«in movimento»**
+                   * della legenda, dove ha accanto il colore che gli
+                   * corrisponde nella barra.
+                   */
                 ],
               ),
 
@@ -321,6 +338,57 @@ class CaloriesCard extends ConsumerWidget {
                   ),
                 ],
               ),
+              /*
+               * ══ 🔥 E SOTTO, QUANTO HAI BRUCIATO — 3b-B.19, 25/08/2026 ═════
+               *
+               * 📌 *«vorrei sotto un'altra barra dove mi dice le calorie
+               * bruciate … le calorie che ho bruciato perché sono vivo del
+               * colore d'accento, e le calorie "attive" diciamo rosse … ma
+               * nella stessa barra»*.
+               *
+               * ⚠️ **Fuori dal `if (haObiettivo)`**, di proposito: mangiare e
+               * bruciare sono due cose diverse, e chi non ha un obiettivo
+               * calorico — perché non l'ha impostato, o perché non lo vuole —
+               * brucia calorie lo stesso. 💡 Questa barra chiede solo che il
+               * profilo basti a calcolare BMR e TDEE.
+               *
+               * 🚨 **Il basale, non il TDEE, mappato sull'ora**: il TDEE
+               * contiene già una previsione di movimento, e sommargli le attive
+               * misurate conterebbe due volte la stessa cosa. Vedi
+               * `basaleFinora()`.
+               */
+              if (stima != null) ...[
+                const SizedBox(height: Gap.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text('Bruciate', style: theme.textTheme.labelLarge),
+                    const Spacer(),
+                    Text(
+                      '${(basaleOra + bruciate.kcal).round()}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      ' / ${stima.tdee.round()} kcal',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Gap.xs),
+                BarraDelConsumo(
+                  basale: basaleOra,
+                  attive: bruciate.kcal.toDouble(),
+                  tdee: stima.tdee,
+                ),
+                const SizedBox(height: Gap.xs),
+                LegendaDelConsumo(
+                  basale: basaleOra,
+                  attive: bruciate.kcal.toDouble(),
+                ),
+              ],
             ],
           ),
         ),

@@ -61,6 +61,7 @@ class EsitoSincronizzazione {
     this.conflitti = 0,
     this.tolte = 0,
     this.senzaRete = false,
+    this.sedutaAperta = false,
   });
 
   /// Quante sono arrivate dal server.
@@ -79,13 +80,19 @@ class EsitoSincronizzazione {
   /// allena lo stesso, con quello che c'è sul telefono.
   final bool senzaRete;
 
+  /// ⛔ **Non si è sincronizzato perché c'era una seduta aperta**, e neanche
+  /// questo è un errore: è la guardia che impedisce di riscrivere la scheda
+  /// sotto le mani di chi si sta allenando.
+  final bool sedutaAperta;
+
   bool get haFattoQualcosa =>
       tirate > 0 || spinte > 0 || conflitti > 0 || tolte > 0;
 
   @override
   String toString() =>
       'tirate=$tirate spinte=$spinte conflitti=$conflitti tolte=$tolte'
-      '${senzaRete ? ' (senza rete)' : ''}';
+      '${senzaRete ? ' (senza rete)' : ''}'
+      '${sedutaAperta ? ' (seduta aperta)' : ''}';
 }
 
 class SincronizzaLeSchede {
@@ -96,6 +103,27 @@ class SincronizzaLeSchede {
 
   /// Tira, spinge, e risolve i conflitti veri.
   Future<EsitoSincronizzazione> gira() async {
+    /*
+     * ══ ⛔ MAI MENTRE UNA SEDUTA È APERTA — B.16.4 ═════════════════════════
+     *
+     * 🚨 Riscrivere la scheda **sotto le mani di chi si sta allenando** è il
+     * difetto del 24/08 rifatto meglio: la lista degli esercizi cambierebbe a
+     * metà allenamento, e le modifiche fatte nel player — che stanno nella
+     * copia locale, marcata da spingere — verrebbero sovrascritte da quella del
+     * server.
+     *
+     * ⚠️ Da B.16.14 questa guardia serve **davvero**: prima la
+     * sincronizzazione girava una volta all'avvio e una seduta cominciata dopo
+     * era al sicuro da sola. Adesso gira anche cambiando schermata e tirando
+     * giù — cioè **anche a metà allenamento**, se uno esce dal player a
+     * guardare qualcosa e rientra.
+     */
+    if (await _sedutaAperta()) {
+      debugPrint('schede: seduta aperta, non si sincronizza');
+
+      return const EsitoSincronizzazione(sedutaAperta: true);
+    }
+
     final List<dynamic> elenco;
 
     try {
@@ -319,6 +347,17 @@ class SincronizzaLeSchede {
         },
   ];
 
+  /// Se c'è un allenamento in corso.
+  ///
+  /// ⚠️ Si guarda **l'archivio**, non un flag in memoria: una seduta aperta
+  /// sopravvive alla chiusura dell'app — è la stessa proprietà che permette di
+  /// riprendere un allenamento interrotto — e un flag lo perderebbe.
+  Future<bool> _sedutaAperta() async {
+    final sedute = await archivio.sedute();
+
+    return sedute.any((s) => s.finitaIl == null);
+  }
+
   /// Se due istanti sono lo stesso momento, comunque siano scritti.
   ///
   /// ⚠️ Anche la **precisione** conta: Drift salva le date al secondo, il server
@@ -345,17 +384,39 @@ final sincronizzaLeSchedeProvider = Provider<SincronizzaLeSchede>(
   ),
 );
 
-/// La sincronizzazione **all'apertura dell'app** — B.16.4.
+/// La sincronizzazione delle schede — B.16.4, allargata in B.16.14.
 ///
-/// 📌 *«le schede sul server si sincronizzano sul telefono quando apro l'app»*.
+/// ══ 📌 QUANDO GIRA, E PERCHÉ NON SOLO ALL'APERTURA ════════════════════════
 ///
-/// 🚨 **Non è `autoDispose`, ed è il motivo per cui gira una volta sola** per
-/// vita dell'app — stessa ragione di `avvioSaluteProvider`. Se lo fosse,
-/// ripartirebbe a ogni cambio di scheda.
+/// La prima versione girava **una volta per vita dell'app**, e il committente
+/// l'ha bocciata subito: *«non va bene che lo vedo solo al riavvio, si deve
+/// vedere anche quando aggiorno scorrendo in basso o quando cambio
+/// schermata»*. ⚠️ Aveva ragione — una modifica fatta dal pannello sarebbe
+/// rimasta invisibile finché non chiudevi l'app, e nessuno chiude l'app.
 ///
-/// ⛔ E non gira **durante** una seduta: riscrivere la scheda sotto le mani di
-/// chi si sta allenando è il difetto del 24/08, rifatto meglio. Girando una
-/// volta all'apertura, una seduta cominciata dopo lavora su una copia ferma.
-final avvioSchedeProvider = FutureProvider<EsitoSincronizzazione>(
+/// | Quando | Come |
+/// |---|---|
+/// | all'apertura | la prima schermata che guarda le schede lo costruisce |
+/// | **cambiando schermata** | è `autoDispose`: uscendo muore, rientrando rinasce |
+/// | **tirando giù per aggiornare** | `risincronizzaLeSchede(ref)`, che lo invalida |
+///
+/// 🚨 **`autoDispose` è il pezzo che fa funzionare il secondo caso**, ed è il
+/// contrario di quello che serve a `avvioSaluteProvider` — lì si vuole una
+/// volta sola, qui si vuole a ogni ritorno.
+///
+/// 💡 Costa poco quando non c'è niente da fare: una `GET` dell'elenco, e i
+/// dettagli si scaricano **solo** per le schede il cui timbro è cambiato.
+final avvioSchedeProvider = FutureProvider.autoDispose<EsitoSincronizzazione>(
   (ref) => ref.read(sincronizzaLeSchedeProvider).gira(),
 );
+
+/// Rifà la sincronizzazione **adesso**, e aspetta che finisca.
+///
+/// 💡 Serve al «tira giù per aggiornare»: lì il provider è ancora vivo — la
+/// schermata non è mai uscita — quindi `autoDispose` da solo non basta e va
+/// invalidato a mano.
+Future<EsitoSincronizzazione> risincronizzaLeSchede(WidgetRef ref) {
+  ref.invalidate(avvioSchedeProvider);
+
+  return ref.read(avvioSchedeProvider.future);
+}

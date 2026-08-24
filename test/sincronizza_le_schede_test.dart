@@ -350,6 +350,72 @@ void main() {
     );
   });
 
+  // ═══════════════ quando gira ═══════════════
+
+  /// ══ ⛔ MAI MENTRE UNA SEDUTA È APERTA — B.16.4 ═════════════════════════
+  ///
+  /// 🚨 Riscrivere la scheda **sotto le mani di chi si sta allenando** è il
+  /// difetto del 24/08 rifatto meglio: la lista degli esercizi cambierebbe a
+  /// metà allenamento, e le modifiche fatte nel player verrebbero sovrascritte.
+  ///
+  /// ⚠️ Da B.16.14 questa guardia serve **davvero**: prima si sincronizzava
+  /// solo all'avvio e una seduta cominciata dopo era al sicuro da sola. Adesso
+  /// gira anche cambiando schermata — cioè anche a metà allenamento, se uno
+  /// esce dal player un attimo e rientra.
+  test('con una seduta aperta non si sincronizza affatto', () async {
+    final vecchia = scheda(quando: '2026-08-24T10:00:00Z');
+    elenco([vecchia]);
+    dettaglio(vecchia);
+    await sincronizza.gira();
+
+    await archivio.apriSeduta(schedaServerId: 8, nomeScheda: 'Giorno 1');
+
+    // Il server nel frattempo è cambiato: non deve entrare comunque.
+    final nuova = scheda(
+      quando: '2026-08-24T18:00:00Z',
+      esercizi: ['Piegamenti', 'Crunch'],
+    );
+    elenco([nuova]);
+    dettaglio(nuova);
+
+    final esito = await sincronizza.gira();
+
+    expect(esito.sedutaAperta, isTrue);
+    expect(esito.haFattoQualcosa, isFalse);
+
+    final locale = await archivio.schedaSulTelefono(8);
+    final dentro = jsonDecode(locale!.scheda) as Map<String, dynamic>;
+
+    expect(
+      (dentro['exercises'] as List).length,
+      1,
+      reason: 'La scheda è cambiata sotto le mani di chi si sta allenando.',
+    );
+  });
+
+  /// 💡 E appena la seduta è chiusa, riprende come se niente fosse.
+  test('e appena la seduta è chiusa riprende', () async {
+    final vecchia = scheda(quando: '2026-08-24T10:00:00Z');
+    elenco([vecchia]);
+    dettaglio(vecchia);
+    await sincronizza.gira();
+
+    final seduta = await archivio.apriSeduta(schedaServerId: 8);
+    await archivio.chiudiSeduta(seduta, quando: DateTime.now());
+
+    final nuova = scheda(
+      quando: '2026-08-24T18:00:00Z',
+      esercizi: ['Piegamenti', 'Crunch'],
+    );
+    elenco([nuova]);
+    dettaglio(nuova);
+
+    final esito = await sincronizza.gira();
+
+    expect(esito.sedutaAperta, isFalse);
+    expect(esito.tirate, 1);
+  });
+
   // ═══════════════ le sparite ═══════════════
 
   test(

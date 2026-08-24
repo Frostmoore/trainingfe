@@ -25,6 +25,8 @@ class MeseInNumeri {
     this.kgSollevati,
     this.metri,
     this.kcal,
+    this.minuti,
+    this.serie,
   });
 
   /// Quante volte ti sei allenato: **i gruppi**, non le registrazioni.
@@ -45,8 +47,66 @@ class MeseInNumeri {
   /// Le calorie, dalla stessa catena di priorità dello storico.
   final int? kcal;
 
+  /// I minuti passati ad allenarsi, sommati su tutte le sessioni.
+  ///
+  /// ⚠️ `null` — e non `0` — quando nessuna sessione ha una durata: sono due
+  /// affermazioni diverse, come per i chili e i chilometri.
+  final int? minuti;
+
+  /// Le serie registrate nell'app.
+  ///
+  /// ⛔ `null` per chi non registra le serie, che è il caso di chi usa solo
+  /// l'orologio: «0 serie» direbbe che non ne ha fatte, e non è vero — è che
+  /// non le ha scritte.
+  final int? serie;
+
   bool get eVuoto => sessioni == 0;
 }
+
+/// Quante sessioni per ciascuno degli ultimi [quanti] mesi, dal più vecchio.
+///
+/// 📌 Il committente: *«ci puoi mettere anche sotto un grafico dentro a un altro
+/// rettangolo bianco con il confronto degli allenamenti degli ultimi x mesi»*.
+///
+/// 🚨 **I mesi vuoti ci sono lo stesso, con zero.** ⛔ Saltarli farebbe un
+/// grafico dove due colonne vicine sono maggio e settembre: l'occhio legge una
+/// continuità che non c'è, e un mese in cui non ti sei allenato **è
+/// un'informazione**, forse la più importante del grafico.
+///
+/// ⚠️ Qui lo zero è **giusto**, al contrario di «0 km»: la domanda è «quante
+/// sessioni a giugno», e la risposta *è* zero. Non è un dato mancante.
+List<({DateTime mese, int sessioni})> sessioniPerMese(
+  Iterable<VoceStorico> voci, {
+  required DateTime fino,
+  int quanti = 6,
+}) {
+  final mesi = <DateTime>[
+    for (var i = quanti - 1; i >= 0; i--) DateTime(fino.year, fino.month - i),
+  ];
+
+  final conteggio = {for (final m in mesi) m: 0};
+
+  for (final v in voci) {
+    final m = DateTime(v.quando.year, v.quando.month);
+
+    if (!conteggio.containsKey(m)) continue;
+
+    conteggio[m] = conteggio[m]! + 1;
+  }
+
+  return [for (final m in mesi) (mese: m, sessioni: conteggio[m]!)];
+}
+
+/// Il grafico degli ultimi sei mesi, fino al mese scelto.
+final sessioniPerMeseProvider =
+    Provider.family<List<({DateTime mese, int sessioni})>, DateTime>((
+      ref,
+      mese,
+    ) {
+      final voci = ref.watch(storicoUnificatoProvider).valueOrNull ?? const [];
+
+      return sessioniPerMese(voci, fino: mese);
+    });
 
 /// I numeri del mese di una data.
 MeseInNumeri numeriDelMese(Iterable<VoceStorico> voci) {
@@ -57,11 +117,27 @@ MeseInNumeri numeriDelMese(Iterable<VoceStorico> voci) {
   var conMetri = false;
   var kcal = 0;
   var conKcal = false;
+  var minuti = 0;
+  var conMinuti = false;
+  var serie = 0;
+  var conSerie = false;
 
   for (final v in voci) {
     sessioni++;
 
+    final durata = v.durata.inMinutes;
+
+    if (durata > 0) {
+      minuti += durata;
+      conMinuti = true;
+    }
+
     for (final seduta in v.sedute) {
+      if (seduta.sets.isNotEmpty) {
+        serie += seduta.sets.length;
+        conSerie = true;
+      }
+
       for (final serie in seduta.sets) {
         final peso = serie.weight;
         final ripetizioni = serie.reps;
@@ -104,6 +180,8 @@ MeseInNumeri numeriDelMese(Iterable<VoceStorico> voci) {
     kgSollevati: conKg ? kg : null,
     metri: conMetri ? metri : null,
     kcal: conKcal ? kcal : null,
+    minuti: conMinuti ? minuti : null,
+    serie: conSerie ? serie : null,
   );
 }
 

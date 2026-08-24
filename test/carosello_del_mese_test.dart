@@ -248,6 +248,90 @@ void main() {
       expect(frase, contains('2 gruppi'));
       expect(frase, contains('concentrandoti'));
     });
+
+    /// 📌 *«metti qualche valore a sx e il quadrato a dx»* — B.14.
+    ///
+    /// 🚨 **Il trascurato è il meno allenato fra TUTTI i gruppi**, non fra
+    /// quelli toccati: il gruppo che non hai mai allenato è proprio quello che
+    /// una classifica dei toccati non nominerebbe mai — ed è quello che
+    /// interessa.
+    test('i numeri accanto alla stella, e il trascurato è quello a zero', () {
+      final n = numeriDeiMuscoli(const {
+        GruppoMuscolare.schiena: 1,
+        GruppoMuscolare.bicipiti: 0.8,
+        GruppoMuscolare.petto: 0.05,
+      });
+
+      expect(n.piuAllenato, GruppoMuscolare.schiena);
+      expect(n.toccati, 2, reason: 'Il petto è sotto la soglia.');
+      expect(n.possibili, greaterThan(8));
+
+      // ⛔ Non il petto (0,05): un gruppo mai toccato vale meno.
+      expect(n.trascurato, isNot(GruppoMuscolare.petto));
+      expect(n.trascurato, isNot(GruppoMuscolare.schiena));
+    });
+
+    test('e senza niente non inventa un più allenato', () {
+      final n = numeriDeiMuscoli(const {});
+
+      expect(n.piuAllenato, isNull);
+      expect(n.trascurato, isNull);
+      expect(n.toccati, 0);
+    });
+  });
+
+  // ═════════════════════ i sei mesi ═════════════════════
+
+  group('Il grafico degli ultimi mesi', () {
+    /// ══ 🚨 I MESI VUOTI CI SONO, CON ZERO ═══════════════════════════════════
+    ///
+    /// ⛔ Saltarli farebbe un grafico dove due colonne vicine sono maggio e
+    /// settembre: l'occhio legge una continuità che non c'è. ⚠️ E un mese in cui
+    /// non ti sei allenato **è un'informazione**, forse la più importante del
+    /// grafico.
+    ///
+    /// 💡 Qui lo zero è **giusto**, al contrario di «0 km»: la domanda è «quante
+    /// sessioni a giugno», e la risposta *è* zero — non è un dato mancante.
+    test('i mesi vuoti ci sono lo stesso', () {
+      final mesi = sessioniPerMese([
+        VoceStorico(
+          sedute: const [],
+          dalPolso: [
+            orologio(id: 1, tipo: 'RUNNING', quando: DateTime(2026, 8, 10)),
+          ],
+        ),
+      ], fino: DateTime(2026, 8));
+
+      expect(mesi.length, 6);
+      expect(mesi.first.mese, DateTime(2026, 3));
+      expect(mesi.last.mese, DateTime(2026, 8));
+      expect(mesi.last.sessioni, 1);
+      expect(mesi.map((m) => m.sessioni).toList(), [0, 0, 0, 0, 0, 1]);
+    });
+
+    /// ⚠️ Anche a cavallo dell'anno: sei mesi indietro da gennaio sono
+    /// agosto-gennaio, non «mese -4».
+    test('e la finestra scavalca l anno', () {
+      final mesi = sessioniPerMese(const [], fino: DateTime(2026));
+
+      expect(mesi.first.mese, DateTime(2025, 8));
+      expect(mesi.last.mese, DateTime(2026));
+    });
+
+    /// ⛔ Quello che sta fuori dalla finestra non conta: sarebbe una colonna in
+    /// più che nessuno ha chiesto, o peggio un conteggio gonfiato.
+    test('e quello di un anno fa non entra', () {
+      final mesi = sessioniPerMese([
+        VoceStorico(
+          sedute: const [],
+          dalPolso: [
+            orologio(id: 1, tipo: 'RUNNING', quando: DateTime(2025, 8, 10)),
+          ],
+        ),
+      ], fino: DateTime(2026, 8));
+
+      expect(mesi.every((m) => m.sessioni == 0), isTrue);
+    });
   });
 
   // ═════════════════════ il mese in numeri ═════════════════════

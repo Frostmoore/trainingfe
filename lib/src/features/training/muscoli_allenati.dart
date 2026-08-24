@@ -169,6 +169,70 @@ Map<GruppoMuscolare, double> intensitaDeiMuscoli({
   };
 }
 
+/// I numeri della stella, per la colonna accanto al grafico — B.14.
+///
+/// 📌 Il committente: *«visto che c'è anche troppa aria a dx e sx, metti qualche
+/// valore a sx e il quadrato a dx»*.
+///
+/// 💡 **Sono le tre domande che la stella fa venire in mente e non risponde**:
+/// quanti gruppi ho toccato, qual è il più allenato, e quale sto trascurando.
+/// ⛔ Leggerle dal disegno si può, ma solo contando i raggi a occhio.
+class NumeriDeiMuscoli {
+  const NumeriDeiMuscoli({
+    required this.toccati,
+    required this.possibili,
+    required this.equilibrio,
+    this.piuAllenato,
+    this.trascurato,
+  });
+
+  /// Quanti gruppi hanno preso almeno un po' di lavoro.
+  final int toccati;
+
+  /// Quanti gruppi esistono in tutto.
+  final int possibili;
+
+  /// Da 0 a 1: la media delle intensità su **tutti** i gruppi.
+  ///
+  /// ⚠️ La media e non il rapporto fra massimo e minimo: il massimo vale 1 per
+  /// costruzione e il minimo di un gruppo appena sfiorato è quasi zero, quindi
+  /// quel rapporto sarebbe enorme sempre e direbbe «sbilanciato» a chiunque.
+  final double equilibrio;
+
+  final GruppoMuscolare? piuAllenato;
+
+  /// Il meno allenato **fra quelli che esistono**, non fra quelli toccati.
+  ///
+  /// 🚨 Il gruppo che non hai mai allenato è quello che ti interessa di più, ed
+  /// è proprio quello che una classifica dei toccati non nominerebbe mai.
+  final GruppoMuscolare? trascurato;
+
+  int get percentualeEquilibrio => (equilibrio * 100).round();
+}
+
+NumeriDeiMuscoli numeriDeiMuscoli(Map<GruppoMuscolare, double> intensita) {
+  final tutti = GruppoMuscolare.values.where((g) => g.eUnMuscolo).toList();
+
+  if (intensita.isEmpty) {
+    return NumeriDeiMuscoli(toccati: 0, possibili: tutti.length, equilibrio: 0);
+  }
+
+  final ordinati = intensita.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  final trascurati = tutti.map((g) => (g, intensita[g] ?? 0.0)).toList()
+    ..sort((a, b) => a.$2.compareTo(b.$2));
+
+  return NumeriDeiMuscoli(
+    toccati: intensita.values.where((v) => v >= 0.15).length,
+    possibili: tutti.length,
+    equilibrio:
+        intensita.values.fold<double>(0, (a, b) => a + b) / tutti.length,
+    piuAllenato: ordinati.first.key,
+    trascurato: trascurati.first.$1,
+  );
+}
+
 /// Una riga in italiano che dice **cosa** hai allenato, **quanto** e **come**.
 ///
 /// 📌 Il committente, sulla card della stella: *«sotto ci deve essere una breve

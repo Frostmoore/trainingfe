@@ -34,19 +34,24 @@ import '../../data/gruppo_muscolare.dart';
 import '../../mese_in_numeri.dart';
 import '../../muscoli_allenati.dart';
 import '../../settimana_scelta.dart';
+import 'cilindro_del_numero.dart';
 import 'figura_del_corpo.dart';
+import 'grafico_dei_mesi.dart';
 import 'stella_dei_muscoli.dart';
 
 /// L'altezza di tutte e tre le card.
 ///
 /// 🚨 **Un numero solo**, ed è quello che rende vero «altezza identica».
 ///
-/// ⚠️ **Cresciuto in B.11 da 232 a 300**: la card della stella adesso ha sotto
-/// una riga di spiegazione, e quella dei numeri una fila di pasticche. ⛔ Tenere
-/// il numero vecchio avrebbe schiacciato il quadrato della stella fino a
-/// renderlo inutile — e l'altezza è **una sola**, quindi la card più esigente
-/// decide per tutte.
-const double altezzaCarosello = 300;
+/// ⚠️ **Cresciuto due volte**: 232 → 300 in B.11 (la stella ha guadagnato il
+/// quadrato e la spiegazione), 300 → **420** in B.14 (la card dei numeri ha
+/// guadagnato il cilindro, le pasticche e il grafico dei sei mesi).
+///
+/// ⛔ L'altezza è **una sola**, quindi la card più esigente decide per tutte. È
+/// il vincolo che rende vero «altezza identica», e anche il motivo per cui la
+/// card dei numeri sembrava vuota: era alta quanto la stella e non aveva niente
+/// da metterci dentro.
+const double altezzaCarosello = 420;
 
 /// L'aria fra l'intestazione e la prima card — 3b-B.7.
 ///
@@ -130,7 +135,11 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
       _Card(
         titolo: 'Il mese in numeri',
         sottotitolo: titolo,
-        child: _Numeri(numeri: numeri),
+        child: _Numeri(
+          numeri: numeri,
+          mesi: ref.watch(sessioniPerMeseProvider(mese)),
+          mese: mese,
+        ),
       ),
     ];
 
@@ -257,11 +266,57 @@ class _Card extends StatelessWidget {
   }
 }
 
-/// La stella dentro un quadrato bianco, con sotto la spiegazione — B.11.
+/// Il rettangolo bianco che ospita un grafico o un numero — B.14.
+///
+/// 💡 Sta qui e non copiato in due posti: le card della stella e dei numeri
+/// devono avere **lo stesso** riquadro, o accostate si vede che sono due cose
+/// disegnate in momenti diversi.
+class _Riquadro extends StatelessWidget {
+  const _Riquadro({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        /*
+         * ⚠️ **Bianco vero, non `surface`.** Il committente ha chiesto un
+         * riquadro **bianco**, e su questa card il fondo è già chiaro: un bianco
+         * «di tema» sarebbe invisibile in chiaro e nero in scuro, cioè in
+         * nessuno dei due casi quello che ha chiesto.
+         */
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(Gap.radiusSm),
+        border: Border.all(
+          color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(padding: const EdgeInsets.all(Gap.xs), child: child),
+    );
+  }
+}
+
+/// La stella a destra, i numeri a sinistra — B.11, rifatta in B.14.
 ///
 /// 📌 *«quella della stella deve avere il grafico dentro a un quadrato bianco e
-/// sotto ci deve essere una breve spiegazione di cosa ho allenato, quanto e
-/// come»*.
+/// sotto ci deve essere una breve spiegazione»* e poi, a schermo: *«c'è troppo
+/// poca aria nella frase di sotto, e — visto che c'è anche troppa aria a dx e sx
+/// — metti qualche valore a sx e il quadrato a dx»*.
+///
+/// ══ ⚠️ IL VUOTO LATERALE NON ERA UN PROBLEMA DI MARGINI ═══════════════════
+///
+/// ⛔ Il quadrato è **quadrato**: dentro una card larga tutta la pagina e alta
+/// quanto basta, il suo lato lo decide **l'altezza** — e la larghezza che
+/// avanza resta vuota per forza. 🚨 Allargare il quadrato non si poteva
+/// (diventerebbe un rettangolo e la stella si deformerebbe), quindi l'unica
+/// risposta vera era **mettere qualcosa in quello spazio**.
+///
+/// 💡 E le tre cose che ci sono messe sono le domande che la stella fa venire
+/// in mente e non risponde: quanti gruppi, qual è il più allenato, quale sto
+/// trascurando.
 class _Stella extends StatelessWidget {
   const _Stella({required this.intensita});
 
@@ -270,50 +325,86 @@ class _Stella extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final numeri = numeriDeiMuscoli(intensita);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        /*
-         * 🚨 **`Expanded` + `AspectRatio(1)`, e non un quadrato di lato fisso.**
-         * ⛔ Un numero scelto a mano sarebbe giusto su un telefono solo: troppo
-         * grande su uno stretto — e il quadrato uscirebbe dai bordi — troppo
-         * piccolo su uno largo. Qui il lato è **quello che l'altezza concede**,
-         * e la larghezza si adegua.
-         */
         Expanded(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                /*
-                 * ⚠️ **Bianco vero, non `surface`.** Il committente ha chiesto
-                 * un quadrato **bianco**, e su questa card il fondo è già chiaro:
-                 * un bianco «di tema» sarebbe invisibile in chiaro e nero in
-                 * scuro, cioè in nessuno dei due casi quello che ha chiesto.
-                 */
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Gap.radiusSm),
-                border: Border.all(
-                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 4,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Valore(
+                      etichetta: 'Gruppi allenati',
+                      valore: '${numeri.toccati}/${numeri.possibili}',
+                    ),
+                    _Valore(
+                      etichetta: 'Equilibrio',
+                      valore: '${numeri.percentualeEquilibrio}%',
+                    ),
+                    _Valore(
+                      etichetta: 'Il più allenato',
+                      valore: numeri.piuAllenato?.etichettaBreve ?? '—',
+                    ),
+
+                    /*
+                     * 🚨 **Il trascurato è il valore che serve davvero.** Gli
+                     * altri tre raccontano come è andata; questo dice **cosa
+                     * fare**. ⚠️ È il meno allenato fra *tutti* i gruppi, non fra
+                     * quelli toccati: quello che non hai mai allenato è proprio
+                     * quello che una classifica dei toccati non nominerebbe.
+                     */
+                    _Valore(
+                      etichetta: 'Trascurato',
+                      valore: numeri.trascurato?.etichettaBreve ?? '—',
+                      acceso: true,
+                    ),
+                  ],
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(Gap.xs),
-                child: StellaDeiMuscoli(intensita: intensita),
+
+              const SizedBox(width: Gap.sm),
+
+              /*
+               * 🚨 **`AspectRatio(1)` e non un lato fisso.** ⛔ Un numero scelto
+               * a mano sarebbe giusto su un telefono solo: troppo grande su uno
+               * stretto — e il quadrato uscirebbe dai bordi — troppo piccolo su
+               * uno largo.
+               */
+              Expanded(
+                flex: 6,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: _Riquadro(
+                    child: StellaDeiMuscoli(intensita: intensita),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
 
-        const SizedBox(height: Gap.xs),
-
-        Text(
-          spiegazioneDeiMuscoli(intensita),
-          textAlign: TextAlign.center,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: tema.textTheme.bodySmall?.copyWith(
-            color: tema.colorScheme.onSurfaceVariant,
+        /*
+         * 📌 *«c'è troppo poca aria nella frase di sotto»*: un `Gap.xs` sopra e
+         * niente sotto. Adesso la frase ha aria da tutte e quattro le parti.
+         */
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.md, Gap.xs, Gap.xs),
+          child: Text(
+            spiegazioneDeiMuscoli(intensita),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
         ),
       ],
@@ -321,15 +412,81 @@ class _Stella extends StatelessWidget {
   }
 }
 
-/// I numeri del mese: tutto centrato, le sessioni in grande, il resto in
-/// pasticche — B.11.
+/// Un'etichetta piccola sopra e un valore sotto.
+class _Valore extends StatelessWidget {
+  const _Valore({
+    required this.etichetta,
+    required this.valore,
+    this.acceso = false,
+  });
+
+  final String etichetta;
+  final String valore;
+
+  /// 💡 Quello che merita l'occhio prende il colore d'accento. ⛔ Se lo
+  /// prendessero tutti e quattro, non lo prenderebbe nessuno.
+  final bool acceso;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          etichetta,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: tema.textTheme.labelSmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          valore,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: tema.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+            color: acceso
+                ? tema.colorScheme.tertiary
+                : tema.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// I numeri del mese: il cilindro, le pasticche e i sei mesi — B.11, rifatta in
+/// B.13 e B.14.
 ///
-/// 📌 *«la terza card deve avere tutto centrato, con in grande il numero di
-/// sessioni di allenamento e sotto, tipo pasticche, gli altri dati»*.
+/// 📌 *«la terza card continua a farmi cagare. Serve più aria tra tutti gli
+/// elementi, il numero di sessioni deve essere più grande, il quadrato deve
+/// essere un rettangolo, e si deve vedere tipo "cilindro" con vicino altri due o
+/// tre numeri … Di base aggiungi anche altri dati finché la card non sembra
+/// "piena", ci puoi mettere anche sotto un grafico dentro a un altro rettangolo
+/// bianco con il confronto degli allenamenti degli ultimi x mesi»*.
+///
+/// ══ ⚠️ TRE GIRI SULLA STESSA CARD, E VALE LA PENA DIRE PERCHÉ ═════════════
+///
+/// | Giro | Cos'era | Perché non bastava |
+/// |---|---|---|
+/// | B.11 | tutto centrato, sessioni in grande | a schermo **sembrava vuota** |
+/// | B.13 | numero dentro un quadrato bianco | riempiva il quadrato, non la card |
+/// | B.14 | cilindro + pasticche + grafico | c'è **abbastanza roba** da riempirla |
+///
+/// 🚨 La lezione non è «era brutta»: è che **il vuoto non si toglie centrando
+/// meglio**. Una card alta trecento punti con tre righe dentro resta vuota
+/// comunque le si dispongano, e l'unica risposta vera è avere qualcosa da dire.
 class _Numeri extends StatelessWidget {
-  const _Numeri({required this.numeri});
+  const _Numeri({required this.numeri, required this.mesi, required this.mese});
 
   final MeseInNumeri numeri;
+  final List<({DateTime mese, int sessioni})> mesi;
+  final DateTime mese;
 
   @override
   Widget build(BuildContext context) {
@@ -341,91 +498,79 @@ class _Numeri extends StatelessWidget {
      * lezione del «0 bruciate» del 23/08.
      */
     final pasticche = <(IconData, String)>[
-      if (numeri.kgSollevati != null)
-        (
-          Icons.monitor_weight_outlined,
-          '${_migliaia(numeri.kgSollevati!.round())} kg',
-        ),
-      if (numeri.metri != null)
-        (Icons.route_outlined, _distanza(numeri.metri!)),
+      if (numeri.minuti != null)
+        (Icons.timer_outlined, _durata(numeri.minuti!)),
       if (numeri.kcal != null)
         (
           Icons.local_fire_department_outlined,
           '${_migliaia(numeri.kcal!)} kcal',
         ),
+      if (numeri.kgSollevati != null)
+        (
+          Icons.monitor_weight_outlined,
+          '${_migliaia(numeri.kgSollevati!.round())} kg',
+        ),
+      if (numeri.serie != null) (Icons.repeat_rounded, '${numeri.serie} serie'),
+      if (numeri.metri != null)
+        (Icons.route_outlined, _distanza(numeri.metri!)),
     ];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         /*
-         * ══ 🚨 IL NUMERO STA NEL QUADRATO, COME LA STELLA — B.13 ═══════════
-         *
-         * 📌 *«è tutto troppo piccolo, sembra vuota. Quindi o metti il numero di
-         * sessioni dentro un grande quadrato bianco, scritto più grande e di un
-         * altro colore»*.
-         *
-         * ⛔ Il difetto era **l'altezza condivisa**: la card più esigente — la
-         * stella, col quadrato e la spiegazione — decide per tutte e tre, e qui
-         * restavano tre righe di contenuto in trecento punti. Centrate, e quindi
-         * circondate di vuoto da tutte le parti.
-         *
-         * 💡 Lo stesso quadrato della stella riempie lo spazio **e** rende le
-         * tre card una famiglia: figura, stella e numero occupano tutte la
-         * stessa forma, e scorrendo non salta niente.
+         * 📌 *«il quadrato deve essere un rettangolo»*: `Expanded` con un peso,
+         * non più `AspectRatio(1)`. 💡 Così il cilindro prende **tutta** la
+         * larghezza della card, che è quello che rende il numero più grande
+         * senza toccare nessun `fontSize`.
          */
         Expanded(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Gap.radiusSm),
-                border: Border.all(
-                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    /*
-                     * ⚠️ **`FittedBox` e non una dimensione scelta a mano**: il
-                     * numero può essere «3» o «31», e un `fontSize` fisso
-                     * andrebbe bene per uno dei due. Qui il numero è grande
-                     * quanto il quadrato concede, sempre.
-                     */
-                    FittedBox(
-                      child: Text(
-                        '${numeri.sessioni}',
-                        style: tema.textTheme.displayLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
+          flex: 5,
+          child: _Riquadro(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, vincoli) => CilindroDelNumero(
+                      valore: numeri.sessioni,
 
-                          // 💡 *«di un altro colore»*: `tertiary` è l'accento
-                          // della palestra, quello decorativo — è il colore che
-                          // esiste apposta per queste cose.
-                          color: tema.colorScheme.tertiary,
-                          height: 1,
-                        ),
+                      /*
+                       * 💡 Il passo del cilindro esce dall'altezza disponibile,
+                       * non da un numero scritto qui: cinque posizioni — due
+                       * vicini sopra, due sotto, e quello buono.
+                       */
+                      altezzaCifra: vincoli.maxHeight / 5,
+                      stile: tema.textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: tema.colorScheme.tertiary,
+                        height: 1,
                       ),
-                    ),
-                    Text(
-                      numeri.sessioni == 1 ? 'sessione' : 'sessioni',
-                      style: tema.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      stileVicini: tema.textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
                         color: tema.colorScheme.onSurfaceVariant,
+                        height: 1,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                Text(
+                  numeri.sessioni == 1 ? 'sessione' : 'sessioni',
+                  style: tema.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
 
-        const SizedBox(height: Gap.xs),
+        // 📌 *«Serve più aria tra tutti gli elementi»*.
+        const SizedBox(height: Gap.md),
 
         /*
-         * 🚨 **`Wrap` e non `Row`**: tre pasticche con numeri a quattro cifre
+         * 🚨 **`Wrap` e non `Row`**: cinque pasticche con numeri a quattro cifre
          * non ci stanno in riga su un telefono stretto, e una `Row` non lo
          * direbbe con un errore — lo direbbe con la striscia gialla di overflow
          * addosso a chi guarda.
@@ -439,9 +584,29 @@ class _Numeri extends StatelessWidget {
               _Pasticca(icona: icona, testo: testo),
           ],
         ),
+
+        const SizedBox(height: Gap.md),
+
+        /*
+         * 📌 *«ci puoi mettere anche sotto un grafico dentro a un altro
+         * rettangolo bianco con il confronto degli allenamenti degli ultimi x
+         * mesi»*.
+         */
+        Expanded(
+          flex: 4,
+          child: _Riquadro(
+            child: GraficoDeiMesi(mesi: mesi, corrente: mese),
+          ),
+        ),
       ],
     );
   }
+
+  /// 💡 Sotto l'ora si scrivono i minuti: «0,7 h» per mezz'ora in palestra
+  /// sarebbe una precisione finta. Stessa regola di `_distanza`.
+  static String _durata(int minuti) => minuti < 60
+      ? '$minuti min'
+      : '${(minuti / 60).toStringAsFixed(minuti % 60 == 0 ? 0 : 1).replaceAll('.', ',')} h';
 
   /// 💡 Sotto il chilometro si scrivono i metri: «0,2 km» per una camminata in
   /// palestra sarebbe una precisione finta. Stessa regola di `_RigaOrologio`.

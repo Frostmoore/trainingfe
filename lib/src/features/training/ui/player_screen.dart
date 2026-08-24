@@ -463,8 +463,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   ///
   /// ⛔ Prima il salvataggio andava **dritto al server**, e in una palestra
   /// senza campo falliva in silenzio: la modifica era persa e nessuno lo diceva.
-  /// 💡 Adesso si scrive in locale e la marca da spingere; `SincronizzaLeSchede`
-  /// la manda al server alla prima occasione.
+  /// 💡 Adesso si scrive in locale, e lì resta: da B.17 il server le schede non
+  /// le sa più, quindi non c'è niente da mandare e niente che possa fallire.
   ///
   /// ⚠️ **La scheda resta quella che era, con le modifiche applicate sopra**:
   /// non si ricostruisce da zero. Ricostruirla è ciò che il 24/08 ha fatto
@@ -503,10 +503,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
       await ref
           .read(archivioSaluteProvider)
-          .scriviScheda(
+          .aggiornaScheda(
             id: id,
             nome: _planName ?? locale.nome,
-            mia: locale.mia,
             scheda: jsonEncode(scheda),
           );
 

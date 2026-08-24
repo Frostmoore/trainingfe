@@ -1700,534 +1700,6 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
   }
 }
 
-class $SchedeRicevuteTable extends SchedeRicevute
-    with TableInfo<$SchedeRicevuteTable, SchedaRicevuta> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $SchedeRicevuteTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _messaggioIdMeta = const VerificationMeta(
-    'messaggioId',
-  );
-  @override
-  late final GeneratedColumn<int> messaggioId = GeneratedColumn<int>(
-    'messaggio_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _mittenteIdMeta = const VerificationMeta(
-    'mittenteId',
-  );
-  @override
-  late final GeneratedColumn<int> mittenteId = GeneratedColumn<int>(
-    'mittente_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
-  @override
-  late final GeneratedColumn<String> nome = GeneratedColumn<String>(
-    'nome',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _schedaMeta = const VerificationMeta('scheda');
-  @override
-  late final GeneratedColumn<String> scheda = GeneratedColumn<String>(
-    'scheda',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _origineIdMeta = const VerificationMeta(
-    'origineId',
-  );
-  @override
-  late final GeneratedColumn<String> origineId = GeneratedColumn<String>(
-    'origine_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _ricevutaIlMeta = const VerificationMeta(
-    'ricevutaIl',
-  );
-  @override
-  late final GeneratedColumn<DateTime> ricevutaIl = GeneratedColumn<DateTime>(
-    'ricevuta_il',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _aggiornatoIlMeta = const VerificationMeta(
-    'aggiornatoIl',
-  );
-  @override
-  late final GeneratedColumn<DateTime> aggiornatoIl = GeneratedColumn<DateTime>(
-    'aggiornato_il',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    messaggioId,
-    mittenteId,
-    nome,
-    scheda,
-    origineId,
-    ricevutaIl,
-    aggiornatoIl,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'schede_ricevute';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<SchedaRicevuta> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('messaggio_id')) {
-      context.handle(
-        _messaggioIdMeta,
-        messaggioId.isAcceptableOrUnknown(
-          data['messaggio_id']!,
-          _messaggioIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_messaggioIdMeta);
-    }
-    if (data.containsKey('mittente_id')) {
-      context.handle(
-        _mittenteIdMeta,
-        mittenteId.isAcceptableOrUnknown(data['mittente_id']!, _mittenteIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_mittenteIdMeta);
-    }
-    if (data.containsKey('nome')) {
-      context.handle(
-        _nomeMeta,
-        nome.isAcceptableOrUnknown(data['nome']!, _nomeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_nomeMeta);
-    }
-    if (data.containsKey('scheda')) {
-      context.handle(
-        _schedaMeta,
-        scheda.isAcceptableOrUnknown(data['scheda']!, _schedaMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_schedaMeta);
-    }
-    if (data.containsKey('origine_id')) {
-      context.handle(
-        _origineIdMeta,
-        origineId.isAcceptableOrUnknown(data['origine_id']!, _origineIdMeta),
-      );
-    }
-    if (data.containsKey('ricevuta_il')) {
-      context.handle(
-        _ricevutaIlMeta,
-        ricevutaIl.isAcceptableOrUnknown(data['ricevuta_il']!, _ricevutaIlMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_ricevutaIlMeta);
-    }
-    if (data.containsKey('aggiornato_il')) {
-      context.handle(
-        _aggiornatoIlMeta,
-        aggiornatoIl.isAcceptableOrUnknown(
-          data['aggiornato_il']!,
-          _aggiornatoIlMeta,
-        ),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  SchedaRicevuta map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SchedaRicevuta(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      messaggioId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}messaggio_id'],
-      )!,
-      mittenteId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}mittente_id'],
-      )!,
-      nome: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}nome'],
-      )!,
-      scheda: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}scheda'],
-      )!,
-      origineId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}origine_id'],
-      ),
-      ricevutaIl: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}ricevuta_il'],
-      )!,
-      aggiornatoIl: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}aggiornato_il'],
-      ),
-    );
-  }
-
-  @override
-  $SchedeRicevuteTable createAlias(String alias) {
-    return $SchedeRicevuteTable(attachedDatabase, alias);
-  }
-}
-
-class SchedaRicevuta extends DataClass implements Insertable<SchedaRicevuta> {
-  final int id;
-
-  /// 🚨 **L'id del messaggio, unico.** È ciò che impedisce che toccare due
-  /// volte «aggiungi» produca due copie della stessa scheda.
-  ///
-  /// ⚠️ Non è l'id della *scheda*: lo stesso modello può arrivare due volte —
-  /// il trainer lo rimanda dopo averlo corretto — e sono **due schede diverse**
-  /// nella vita di chi le riceve.
-  final int messaggioId;
-  final int mittenteId;
-
-  /// Il nome, estratto per poterlo mostrare senza aprire il JSON a ogni riga.
-  final String nome;
-
-  /// La scheda intera, serializzata.
-  final String scheda;
-
-  /// 🆕 G8 — l'identita' stabile (D15). Vedi `PianiRicevuti.origineId`.
-  final String? origineId;
-  final DateTime ricevutaIl;
-  final DateTime? aggiornatoIl;
-  const SchedaRicevuta({
-    required this.id,
-    required this.messaggioId,
-    required this.mittenteId,
-    required this.nome,
-    required this.scheda,
-    this.origineId,
-    required this.ricevutaIl,
-    this.aggiornatoIl,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['messaggio_id'] = Variable<int>(messaggioId);
-    map['mittente_id'] = Variable<int>(mittenteId);
-    map['nome'] = Variable<String>(nome);
-    map['scheda'] = Variable<String>(scheda);
-    if (!nullToAbsent || origineId != null) {
-      map['origine_id'] = Variable<String>(origineId);
-    }
-    map['ricevuta_il'] = Variable<DateTime>(ricevutaIl);
-    if (!nullToAbsent || aggiornatoIl != null) {
-      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl);
-    }
-    return map;
-  }
-
-  SchedeRicevuteCompanion toCompanion(bool nullToAbsent) {
-    return SchedeRicevuteCompanion(
-      id: Value(id),
-      messaggioId: Value(messaggioId),
-      mittenteId: Value(mittenteId),
-      nome: Value(nome),
-      scheda: Value(scheda),
-      origineId: origineId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(origineId),
-      ricevutaIl: Value(ricevutaIl),
-      aggiornatoIl: aggiornatoIl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(aggiornatoIl),
-    );
-  }
-
-  factory SchedaRicevuta.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SchedaRicevuta(
-      id: serializer.fromJson<int>(json['id']),
-      messaggioId: serializer.fromJson<int>(json['messaggioId']),
-      mittenteId: serializer.fromJson<int>(json['mittenteId']),
-      nome: serializer.fromJson<String>(json['nome']),
-      scheda: serializer.fromJson<String>(json['scheda']),
-      origineId: serializer.fromJson<String?>(json['origineId']),
-      ricevutaIl: serializer.fromJson<DateTime>(json['ricevutaIl']),
-      aggiornatoIl: serializer.fromJson<DateTime?>(json['aggiornatoIl']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'messaggioId': serializer.toJson<int>(messaggioId),
-      'mittenteId': serializer.toJson<int>(mittenteId),
-      'nome': serializer.toJson<String>(nome),
-      'scheda': serializer.toJson<String>(scheda),
-      'origineId': serializer.toJson<String?>(origineId),
-      'ricevutaIl': serializer.toJson<DateTime>(ricevutaIl),
-      'aggiornatoIl': serializer.toJson<DateTime?>(aggiornatoIl),
-    };
-  }
-
-  SchedaRicevuta copyWith({
-    int? id,
-    int? messaggioId,
-    int? mittenteId,
-    String? nome,
-    String? scheda,
-    Value<String?> origineId = const Value.absent(),
-    DateTime? ricevutaIl,
-    Value<DateTime?> aggiornatoIl = const Value.absent(),
-  }) => SchedaRicevuta(
-    id: id ?? this.id,
-    messaggioId: messaggioId ?? this.messaggioId,
-    mittenteId: mittenteId ?? this.mittenteId,
-    nome: nome ?? this.nome,
-    scheda: scheda ?? this.scheda,
-    origineId: origineId.present ? origineId.value : this.origineId,
-    ricevutaIl: ricevutaIl ?? this.ricevutaIl,
-    aggiornatoIl: aggiornatoIl.present ? aggiornatoIl.value : this.aggiornatoIl,
-  );
-  SchedaRicevuta copyWithCompanion(SchedeRicevuteCompanion data) {
-    return SchedaRicevuta(
-      id: data.id.present ? data.id.value : this.id,
-      messaggioId: data.messaggioId.present
-          ? data.messaggioId.value
-          : this.messaggioId,
-      mittenteId: data.mittenteId.present
-          ? data.mittenteId.value
-          : this.mittenteId,
-      nome: data.nome.present ? data.nome.value : this.nome,
-      scheda: data.scheda.present ? data.scheda.value : this.scheda,
-      origineId: data.origineId.present ? data.origineId.value : this.origineId,
-      ricevutaIl: data.ricevutaIl.present
-          ? data.ricevutaIl.value
-          : this.ricevutaIl,
-      aggiornatoIl: data.aggiornatoIl.present
-          ? data.aggiornatoIl.value
-          : this.aggiornatoIl,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SchedaRicevuta(')
-          ..write('id: $id, ')
-          ..write('messaggioId: $messaggioId, ')
-          ..write('mittenteId: $mittenteId, ')
-          ..write('nome: $nome, ')
-          ..write('scheda: $scheda, ')
-          ..write('origineId: $origineId, ')
-          ..write('ricevutaIl: $ricevutaIl, ')
-          ..write('aggiornatoIl: $aggiornatoIl')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    messaggioId,
-    mittenteId,
-    nome,
-    scheda,
-    origineId,
-    ricevutaIl,
-    aggiornatoIl,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SchedaRicevuta &&
-          other.id == this.id &&
-          other.messaggioId == this.messaggioId &&
-          other.mittenteId == this.mittenteId &&
-          other.nome == this.nome &&
-          other.scheda == this.scheda &&
-          other.origineId == this.origineId &&
-          other.ricevutaIl == this.ricevutaIl &&
-          other.aggiornatoIl == this.aggiornatoIl);
-}
-
-class SchedeRicevuteCompanion extends UpdateCompanion<SchedaRicevuta> {
-  final Value<int> id;
-  final Value<int> messaggioId;
-  final Value<int> mittenteId;
-  final Value<String> nome;
-  final Value<String> scheda;
-  final Value<String?> origineId;
-  final Value<DateTime> ricevutaIl;
-  final Value<DateTime?> aggiornatoIl;
-  const SchedeRicevuteCompanion({
-    this.id = const Value.absent(),
-    this.messaggioId = const Value.absent(),
-    this.mittenteId = const Value.absent(),
-    this.nome = const Value.absent(),
-    this.scheda = const Value.absent(),
-    this.origineId = const Value.absent(),
-    this.ricevutaIl = const Value.absent(),
-    this.aggiornatoIl = const Value.absent(),
-  });
-  SchedeRicevuteCompanion.insert({
-    this.id = const Value.absent(),
-    required int messaggioId,
-    required int mittenteId,
-    required String nome,
-    required String scheda,
-    this.origineId = const Value.absent(),
-    required DateTime ricevutaIl,
-    this.aggiornatoIl = const Value.absent(),
-  }) : messaggioId = Value(messaggioId),
-       mittenteId = Value(mittenteId),
-       nome = Value(nome),
-       scheda = Value(scheda),
-       ricevutaIl = Value(ricevutaIl);
-  static Insertable<SchedaRicevuta> custom({
-    Expression<int>? id,
-    Expression<int>? messaggioId,
-    Expression<int>? mittenteId,
-    Expression<String>? nome,
-    Expression<String>? scheda,
-    Expression<String>? origineId,
-    Expression<DateTime>? ricevutaIl,
-    Expression<DateTime>? aggiornatoIl,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (messaggioId != null) 'messaggio_id': messaggioId,
-      if (mittenteId != null) 'mittente_id': mittenteId,
-      if (nome != null) 'nome': nome,
-      if (scheda != null) 'scheda': scheda,
-      if (origineId != null) 'origine_id': origineId,
-      if (ricevutaIl != null) 'ricevuta_il': ricevutaIl,
-      if (aggiornatoIl != null) 'aggiornato_il': aggiornatoIl,
-    });
-  }
-
-  SchedeRicevuteCompanion copyWith({
-    Value<int>? id,
-    Value<int>? messaggioId,
-    Value<int>? mittenteId,
-    Value<String>? nome,
-    Value<String>? scheda,
-    Value<String?>? origineId,
-    Value<DateTime>? ricevutaIl,
-    Value<DateTime?>? aggiornatoIl,
-  }) {
-    return SchedeRicevuteCompanion(
-      id: id ?? this.id,
-      messaggioId: messaggioId ?? this.messaggioId,
-      mittenteId: mittenteId ?? this.mittenteId,
-      nome: nome ?? this.nome,
-      scheda: scheda ?? this.scheda,
-      origineId: origineId ?? this.origineId,
-      ricevutaIl: ricevutaIl ?? this.ricevutaIl,
-      aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (messaggioId.present) {
-      map['messaggio_id'] = Variable<int>(messaggioId.value);
-    }
-    if (mittenteId.present) {
-      map['mittente_id'] = Variable<int>(mittenteId.value);
-    }
-    if (nome.present) {
-      map['nome'] = Variable<String>(nome.value);
-    }
-    if (scheda.present) {
-      map['scheda'] = Variable<String>(scheda.value);
-    }
-    if (origineId.present) {
-      map['origine_id'] = Variable<String>(origineId.value);
-    }
-    if (ricevutaIl.present) {
-      map['ricevuta_il'] = Variable<DateTime>(ricevutaIl.value);
-    }
-    if (aggiornatoIl.present) {
-      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SchedeRicevuteCompanion(')
-          ..write('id: $id, ')
-          ..write('messaggioId: $messaggioId, ')
-          ..write('mittenteId: $mittenteId, ')
-          ..write('nome: $nome, ')
-          ..write('scheda: $scheda, ')
-          ..write('origineId: $origineId, ')
-          ..write('ricevutaIl: $ricevutaIl, ')
-          ..write('aggiornatoIl: $aggiornatoIl')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $PianiRicevutiTable extends PianiRicevuti
     with TableInfo<$PianiRicevutiTable, PianoRicevuto> {
   @override
@@ -5489,8 +4961,12 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
     'id',
     aliasedName,
     false,
+    hasAutoIncrement: true,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
   );
   static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
   @override
@@ -5534,8 +5010,50 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _origineMeta = const VerificationMeta(
+    'origine',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, nome, scheda, aggiornataIl, mia];
+  late final GeneratedColumn<String> origine = GeneratedColumn<String>(
+    'origine',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idOrigineMeta = const VerificationMeta(
+    'idOrigine',
+  );
+  @override
+  late final GeneratedColumn<int> idOrigine = GeneratedColumn<int>(
+    'id_origine',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _origineIdStabileMeta = const VerificationMeta(
+    'origineIdStabile',
+  );
+  @override
+  late final GeneratedColumn<String> origineIdStabile = GeneratedColumn<String>(
+    'origine_id_stabile',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nome,
+    scheda,
+    aggiornataIl,
+    mia,
+    origine,
+    idOrigine,
+    origineIdStabile,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5584,11 +5102,38 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
         mia.isAcceptableOrUnknown(data['mia']!, _miaMeta),
       );
     }
+    if (data.containsKey('origine')) {
+      context.handle(
+        _origineMeta,
+        origine.isAcceptableOrUnknown(data['origine']!, _origineMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_origineMeta);
+    }
+    if (data.containsKey('id_origine')) {
+      context.handle(
+        _idOrigineMeta,
+        idOrigine.isAcceptableOrUnknown(data['id_origine']!, _idOrigineMeta),
+      );
+    }
+    if (data.containsKey('origine_id_stabile')) {
+      context.handle(
+        _origineIdStabileMeta,
+        origineIdStabile.isAcceptableOrUnknown(
+          data['origine_id_stabile']!,
+          _origineIdStabileMeta,
+        ),
+      );
+    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {origine, idOrigine},
+  ];
   @override
   SchedaSulTelefono map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -5613,6 +5158,18 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
         DriftSqlType.bool,
         data['${effectivePrefix}mia'],
       )!,
+      origine: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine'],
+      )!,
+      idOrigine: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_origine'],
+      ),
+      origineIdStabile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine_id_stabile'],
+      ),
     );
   }
 
@@ -5624,11 +5181,18 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
 
 class SchedaSulTelefono extends DataClass
     implements Insertable<SchedaSulTelefono> {
-  /// L'id della scheda.
+  /// L'id della scheda **su questo telefono**.
   ///
-  /// 💡 **Positivo** per quelle scese dal server o arrivate dal trainer,
-  /// **negativo** per quelle scritte qui: due spazi che non possono collidere,
-  /// e il segno dice da dove viene senza una colonna in più.
+  /// ⛔ Qui c'era il trucco degli id firmati — positivi per quelle del server,
+  /// negativi per quelle scritte qui — che serviva a tenere separati due spazi
+  /// di id. 💡 Con una tabella sola non c'è niente da tenere separato, e un id
+  /// firmato è una convenzione che prima o poi qualcuno viola: da dove viene
+  /// una scheda lo dice `origine`, che è un dato, non un segno.
+  ///
+  /// ⚠️ **Gli id già assegnati non cambiano**: la migrazione ricopia le righe
+  /// così come sono, perché `AllenamentiDaOrologio.schedaAssegnata` punta qui —
+  /// rinumerarli vorrebbe dire spostare in silenzio gli allenamenti già fatti
+  /// su schede diverse da quelle vere.
   final int id;
 
   /// Il nome, per non dover aprire il JSON a ogni riga di un elenco.
@@ -5646,12 +5210,43 @@ class SchedaSulTelefono extends DataClass
   /// serve una versione nuova **la rimanda lui** — è la decisione del 24/08, ed
   /// è il motivo per cui non c'è nessuna sincronizzazione da nessuna parte.
   final bool mia;
+
+  /// Da dove viene: `'chat'`, `'server'` o `'mia'`.
+  ///
+  /// 🚨 **Serve a non confondere due id che si somigliano.** Il numero in
+  /// `idOrigine` è un id di messaggio per le schede della chat e un id di
+  /// scheda per quelle scese dal server: sono due numerazioni diverse, e senza
+  /// questa colonna il messaggio 8 e la scheda 8 sarebbero la stessa riga.
+  final String origine;
+
+  /// Il numero che identifica la scheda **là da dove viene**.
+  ///
+  /// 💡 `messaggioId` per la chat, l'id del server per le altre. ⚠️ `null` per
+  /// quelle scritte qui, che non vengono da nessuna parte — e i `NULL` in
+  /// SQLite non collidono fra loro, quindi la chiave unica qui sotto non
+  /// impedisce di scriversene quante se ne vuole.
+  final int? idOrigine;
+
+  /// 🚨 **L'identità stabile della scheda** — D15.
+  ///
+  /// È ciò che permette di riconoscere che una scheda arrivata è la **versione
+  /// nuova** di una che c'è già, e di sostituirla invece di affiancarla. È
+  /// anche ciò che si ricorda quando la si butta, perché non torni da sola al
+  /// messaggio successivo.
+  ///
+  /// ⚠️ **Nullable**: le buste `v1` non ce l'hanno, e chi arriva senza cade sul
+  /// comportamento vecchio — una riga per messaggio — che è corretto, solo meno
+  /// furbo.
+  final String? origineIdStabile;
   const SchedaSulTelefono({
     required this.id,
     required this.nome,
     required this.scheda,
     required this.aggiornataIl,
     required this.mia,
+    required this.origine,
+    this.idOrigine,
+    this.origineIdStabile,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5661,6 +5256,13 @@ class SchedaSulTelefono extends DataClass
     map['scheda'] = Variable<String>(scheda);
     map['aggiornata_il'] = Variable<DateTime>(aggiornataIl);
     map['mia'] = Variable<bool>(mia);
+    map['origine'] = Variable<String>(origine);
+    if (!nullToAbsent || idOrigine != null) {
+      map['id_origine'] = Variable<int>(idOrigine);
+    }
+    if (!nullToAbsent || origineIdStabile != null) {
+      map['origine_id_stabile'] = Variable<String>(origineIdStabile);
+    }
     return map;
   }
 
@@ -5671,6 +5273,13 @@ class SchedaSulTelefono extends DataClass
       scheda: Value(scheda),
       aggiornataIl: Value(aggiornataIl),
       mia: Value(mia),
+      origine: Value(origine),
+      idOrigine: idOrigine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idOrigine),
+      origineIdStabile: origineIdStabile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(origineIdStabile),
     );
   }
 
@@ -5685,6 +5294,9 @@ class SchedaSulTelefono extends DataClass
       scheda: serializer.fromJson<String>(json['scheda']),
       aggiornataIl: serializer.fromJson<DateTime>(json['aggiornataIl']),
       mia: serializer.fromJson<bool>(json['mia']),
+      origine: serializer.fromJson<String>(json['origine']),
+      idOrigine: serializer.fromJson<int?>(json['idOrigine']),
+      origineIdStabile: serializer.fromJson<String?>(json['origineIdStabile']),
     );
   }
   @override
@@ -5696,6 +5308,9 @@ class SchedaSulTelefono extends DataClass
       'scheda': serializer.toJson<String>(scheda),
       'aggiornataIl': serializer.toJson<DateTime>(aggiornataIl),
       'mia': serializer.toJson<bool>(mia),
+      'origine': serializer.toJson<String>(origine),
+      'idOrigine': serializer.toJson<int?>(idOrigine),
+      'origineIdStabile': serializer.toJson<String?>(origineIdStabile),
     };
   }
 
@@ -5705,12 +5320,20 @@ class SchedaSulTelefono extends DataClass
     String? scheda,
     DateTime? aggiornataIl,
     bool? mia,
+    String? origine,
+    Value<int?> idOrigine = const Value.absent(),
+    Value<String?> origineIdStabile = const Value.absent(),
   }) => SchedaSulTelefono(
     id: id ?? this.id,
     nome: nome ?? this.nome,
     scheda: scheda ?? this.scheda,
     aggiornataIl: aggiornataIl ?? this.aggiornataIl,
     mia: mia ?? this.mia,
+    origine: origine ?? this.origine,
+    idOrigine: idOrigine.present ? idOrigine.value : this.idOrigine,
+    origineIdStabile: origineIdStabile.present
+        ? origineIdStabile.value
+        : this.origineIdStabile,
   );
   SchedaSulTelefono copyWithCompanion(SchedeSulTelefonoCompanion data) {
     return SchedaSulTelefono(
@@ -5721,6 +5344,11 @@ class SchedaSulTelefono extends DataClass
           ? data.aggiornataIl.value
           : this.aggiornataIl,
       mia: data.mia.present ? data.mia.value : this.mia,
+      origine: data.origine.present ? data.origine.value : this.origine,
+      idOrigine: data.idOrigine.present ? data.idOrigine.value : this.idOrigine,
+      origineIdStabile: data.origineIdStabile.present
+          ? data.origineIdStabile.value
+          : this.origineIdStabile,
     );
   }
 
@@ -5731,13 +5359,25 @@ class SchedaSulTelefono extends DataClass
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
           ..write('aggiornataIl: $aggiornataIl, ')
-          ..write('mia: $mia')
+          ..write('mia: $mia, ')
+          ..write('origine: $origine, ')
+          ..write('idOrigine: $idOrigine, ')
+          ..write('origineIdStabile: $origineIdStabile')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, nome, scheda, aggiornataIl, mia);
+  int get hashCode => Object.hash(
+    id,
+    nome,
+    scheda,
+    aggiornataIl,
+    mia,
+    origine,
+    idOrigine,
+    origineIdStabile,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5746,7 +5386,10 @@ class SchedaSulTelefono extends DataClass
           other.nome == this.nome &&
           other.scheda == this.scheda &&
           other.aggiornataIl == this.aggiornataIl &&
-          other.mia == this.mia);
+          other.mia == this.mia &&
+          other.origine == this.origine &&
+          other.idOrigine == this.idOrigine &&
+          other.origineIdStabile == this.origineIdStabile);
 }
 
 class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
@@ -5755,12 +5398,18 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
   final Value<String> scheda;
   final Value<DateTime> aggiornataIl;
   final Value<bool> mia;
+  final Value<String> origine;
+  final Value<int?> idOrigine;
+  final Value<String?> origineIdStabile;
   const SchedeSulTelefonoCompanion({
     this.id = const Value.absent(),
     this.nome = const Value.absent(),
     this.scheda = const Value.absent(),
     this.aggiornataIl = const Value.absent(),
     this.mia = const Value.absent(),
+    this.origine = const Value.absent(),
+    this.idOrigine = const Value.absent(),
+    this.origineIdStabile = const Value.absent(),
   });
   SchedeSulTelefonoCompanion.insert({
     this.id = const Value.absent(),
@@ -5768,15 +5417,22 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     required String scheda,
     required DateTime aggiornataIl,
     this.mia = const Value.absent(),
+    required String origine,
+    this.idOrigine = const Value.absent(),
+    this.origineIdStabile = const Value.absent(),
   }) : nome = Value(nome),
        scheda = Value(scheda),
-       aggiornataIl = Value(aggiornataIl);
+       aggiornataIl = Value(aggiornataIl),
+       origine = Value(origine);
   static Insertable<SchedaSulTelefono> custom({
     Expression<int>? id,
     Expression<String>? nome,
     Expression<String>? scheda,
     Expression<DateTime>? aggiornataIl,
     Expression<bool>? mia,
+    Expression<String>? origine,
+    Expression<int>? idOrigine,
+    Expression<String>? origineIdStabile,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5784,6 +5440,9 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
       if (scheda != null) 'scheda': scheda,
       if (aggiornataIl != null) 'aggiornata_il': aggiornataIl,
       if (mia != null) 'mia': mia,
+      if (origine != null) 'origine': origine,
+      if (idOrigine != null) 'id_origine': idOrigine,
+      if (origineIdStabile != null) 'origine_id_stabile': origineIdStabile,
     });
   }
 
@@ -5793,6 +5452,9 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     Value<String>? scheda,
     Value<DateTime>? aggiornataIl,
     Value<bool>? mia,
+    Value<String>? origine,
+    Value<int?>? idOrigine,
+    Value<String?>? origineIdStabile,
   }) {
     return SchedeSulTelefonoCompanion(
       id: id ?? this.id,
@@ -5800,6 +5462,9 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
       scheda: scheda ?? this.scheda,
       aggiornataIl: aggiornataIl ?? this.aggiornataIl,
       mia: mia ?? this.mia,
+      origine: origine ?? this.origine,
+      idOrigine: idOrigine ?? this.idOrigine,
+      origineIdStabile: origineIdStabile ?? this.origineIdStabile,
     );
   }
 
@@ -5821,6 +5486,15 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     if (mia.present) {
       map['mia'] = Variable<bool>(mia.value);
     }
+    if (origine.present) {
+      map['origine'] = Variable<String>(origine.value);
+    }
+    if (idOrigine.present) {
+      map['id_origine'] = Variable<int>(idOrigine.value);
+    }
+    if (origineIdStabile.present) {
+      map['origine_id_stabile'] = Variable<String>(origineIdStabile.value);
+    }
     return map;
   }
 
@@ -5831,7 +5505,10 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
           ..write('aggiornataIl: $aggiornataIl, ')
-          ..write('mia: $mia')
+          ..write('mia: $mia, ')
+          ..write('origine: $origine, ')
+          ..write('idOrigine: $idOrigine, ')
+          ..write('origineIdStabile: $origineIdStabile')
           ..write(')'))
         .toString();
   }
@@ -5844,7 +5521,6 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   late final $CampioniSonnoTable campioniSonno = $CampioniSonnoTable(this);
   late final $MisureCorpoTable misureCorpo = $MisureCorpoTable(this);
   late final $FotoProgressiTable fotoProgressi = $FotoProgressiTable(this);
-  late final $SchedeRicevuteTable schedeRicevute = $SchedeRicevuteTable(this);
   late final $PianiRicevutiTable pianiRicevuti = $PianiRicevutiTable(this);
   late final $ContenutiRifiutatiTable contenutiRifiutati =
       $ContenutiRifiutatiTable(this);
@@ -5868,7 +5544,6 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     campioniSonno,
     misureCorpo,
     fotoProgressi,
-    schedeRicevute,
     pianiRicevuti,
     contenutiRifiutati,
     allenamentiDaOrologio,
@@ -6786,271 +6461,6 @@ typedef $$FotoProgressiTableProcessedTableManager =
         BaseReferences<_$ArchivioSalute, $FotoProgressiTable, FotoProgresso>,
       ),
       FotoProgresso,
-      PrefetchHooks Function()
-    >;
-typedef $$SchedeRicevuteTableCreateCompanionBuilder =
-    SchedeRicevuteCompanion Function({
-      Value<int> id,
-      required int messaggioId,
-      required int mittenteId,
-      required String nome,
-      required String scheda,
-      Value<String?> origineId,
-      required DateTime ricevutaIl,
-      Value<DateTime?> aggiornatoIl,
-    });
-typedef $$SchedeRicevuteTableUpdateCompanionBuilder =
-    SchedeRicevuteCompanion Function({
-      Value<int> id,
-      Value<int> messaggioId,
-      Value<int> mittenteId,
-      Value<String> nome,
-      Value<String> scheda,
-      Value<String?> origineId,
-      Value<DateTime> ricevutaIl,
-      Value<DateTime?> aggiornatoIl,
-    });
-
-class $$SchedeRicevuteTableFilterComposer
-    extends Composer<_$ArchivioSalute, $SchedeRicevuteTable> {
-  $$SchedeRicevuteTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get messaggioId => $composableBuilder(
-    column: $table.messaggioId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get mittenteId => $composableBuilder(
-    column: $table.mittenteId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get nome => $composableBuilder(
-    column: $table.nome,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get scheda => $composableBuilder(
-    column: $table.scheda,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get origineId => $composableBuilder(
-    column: $table.origineId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get ricevutaIl => $composableBuilder(
-    column: $table.ricevutaIl,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get aggiornatoIl => $composableBuilder(
-    column: $table.aggiornatoIl,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$SchedeRicevuteTableOrderingComposer
-    extends Composer<_$ArchivioSalute, $SchedeRicevuteTable> {
-  $$SchedeRicevuteTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get messaggioId => $composableBuilder(
-    column: $table.messaggioId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get mittenteId => $composableBuilder(
-    column: $table.mittenteId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get nome => $composableBuilder(
-    column: $table.nome,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get scheda => $composableBuilder(
-    column: $table.scheda,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get origineId => $composableBuilder(
-    column: $table.origineId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get ricevutaIl => $composableBuilder(
-    column: $table.ricevutaIl,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get aggiornatoIl => $composableBuilder(
-    column: $table.aggiornatoIl,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$SchedeRicevuteTableAnnotationComposer
-    extends Composer<_$ArchivioSalute, $SchedeRicevuteTable> {
-  $$SchedeRicevuteTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get messaggioId => $composableBuilder(
-    column: $table.messaggioId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get mittenteId => $composableBuilder(
-    column: $table.mittenteId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get nome =>
-      $composableBuilder(column: $table.nome, builder: (column) => column);
-
-  GeneratedColumn<String> get scheda =>
-      $composableBuilder(column: $table.scheda, builder: (column) => column);
-
-  GeneratedColumn<String> get origineId =>
-      $composableBuilder(column: $table.origineId, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get ricevutaIl => $composableBuilder(
-    column: $table.ricevutaIl,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get aggiornatoIl => $composableBuilder(
-    column: $table.aggiornatoIl,
-    builder: (column) => column,
-  );
-}
-
-class $$SchedeRicevuteTableTableManager
-    extends
-        RootTableManager<
-          _$ArchivioSalute,
-          $SchedeRicevuteTable,
-          SchedaRicevuta,
-          $$SchedeRicevuteTableFilterComposer,
-          $$SchedeRicevuteTableOrderingComposer,
-          $$SchedeRicevuteTableAnnotationComposer,
-          $$SchedeRicevuteTableCreateCompanionBuilder,
-          $$SchedeRicevuteTableUpdateCompanionBuilder,
-          (
-            SchedaRicevuta,
-            BaseReferences<
-              _$ArchivioSalute,
-              $SchedeRicevuteTable,
-              SchedaRicevuta
-            >,
-          ),
-          SchedaRicevuta,
-          PrefetchHooks Function()
-        > {
-  $$SchedeRicevuteTableTableManager(
-    _$ArchivioSalute db,
-    $SchedeRicevuteTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SchedeRicevuteTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SchedeRicevuteTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SchedeRicevuteTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> messaggioId = const Value.absent(),
-                Value<int> mittenteId = const Value.absent(),
-                Value<String> nome = const Value.absent(),
-                Value<String> scheda = const Value.absent(),
-                Value<String?> origineId = const Value.absent(),
-                Value<DateTime> ricevutaIl = const Value.absent(),
-                Value<DateTime?> aggiornatoIl = const Value.absent(),
-              }) => SchedeRicevuteCompanion(
-                id: id,
-                messaggioId: messaggioId,
-                mittenteId: mittenteId,
-                nome: nome,
-                scheda: scheda,
-                origineId: origineId,
-                ricevutaIl: ricevutaIl,
-                aggiornatoIl: aggiornatoIl,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int messaggioId,
-                required int mittenteId,
-                required String nome,
-                required String scheda,
-                Value<String?> origineId = const Value.absent(),
-                required DateTime ricevutaIl,
-                Value<DateTime?> aggiornatoIl = const Value.absent(),
-              }) => SchedeRicevuteCompanion.insert(
-                id: id,
-                messaggioId: messaggioId,
-                mittenteId: mittenteId,
-                nome: nome,
-                scheda: scheda,
-                origineId: origineId,
-                ricevutaIl: ricevutaIl,
-                aggiornatoIl: aggiornatoIl,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$SchedeRicevuteTableProcessedTableManager =
-    ProcessedTableManager<
-      _$ArchivioSalute,
-      $SchedeRicevuteTable,
-      SchedaRicevuta,
-      $$SchedeRicevuteTableFilterComposer,
-      $$SchedeRicevuteTableOrderingComposer,
-      $$SchedeRicevuteTableAnnotationComposer,
-      $$SchedeRicevuteTableCreateCompanionBuilder,
-      $$SchedeRicevuteTableUpdateCompanionBuilder,
-      (
-        SchedaRicevuta,
-        BaseReferences<_$ArchivioSalute, $SchedeRicevuteTable, SchedaRicevuta>,
-      ),
-      SchedaRicevuta,
       PrefetchHooks Function()
     >;
 typedef $$PianiRicevutiTableCreateCompanionBuilder =
@@ -8895,6 +8305,9 @@ typedef $$SchedeSulTelefonoTableCreateCompanionBuilder =
       required String scheda,
       required DateTime aggiornataIl,
       Value<bool> mia,
+      required String origine,
+      Value<int?> idOrigine,
+      Value<String?> origineIdStabile,
     });
 typedef $$SchedeSulTelefonoTableUpdateCompanionBuilder =
     SchedeSulTelefonoCompanion Function({
@@ -8903,6 +8316,9 @@ typedef $$SchedeSulTelefonoTableUpdateCompanionBuilder =
       Value<String> scheda,
       Value<DateTime> aggiornataIl,
       Value<bool> mia,
+      Value<String> origine,
+      Value<int?> idOrigine,
+      Value<String?> origineIdStabile,
     });
 
 class $$SchedeSulTelefonoTableFilterComposer
@@ -8936,6 +8352,21 @@ class $$SchedeSulTelefonoTableFilterComposer
 
   ColumnFilters<bool> get mia => $composableBuilder(
     column: $table.mia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origine => $composableBuilder(
+    column: $table.origine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idOrigine => $composableBuilder(
+    column: $table.idOrigine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origineIdStabile => $composableBuilder(
+    column: $table.origineIdStabile,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8973,6 +8404,21 @@ class $$SchedeSulTelefonoTableOrderingComposer
     column: $table.mia,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get origine => $composableBuilder(
+    column: $table.origine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idOrigine => $composableBuilder(
+    column: $table.idOrigine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origineIdStabile => $composableBuilder(
+    column: $table.origineIdStabile,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SchedeSulTelefonoTableAnnotationComposer
@@ -9000,6 +8446,17 @@ class $$SchedeSulTelefonoTableAnnotationComposer
 
   GeneratedColumn<bool> get mia =>
       $composableBuilder(column: $table.mia, builder: (column) => column);
+
+  GeneratedColumn<String> get origine =>
+      $composableBuilder(column: $table.origine, builder: (column) => column);
+
+  GeneratedColumn<int> get idOrigine =>
+      $composableBuilder(column: $table.idOrigine, builder: (column) => column);
+
+  GeneratedColumn<String> get origineIdStabile => $composableBuilder(
+    column: $table.origineIdStabile,
+    builder: (column) => column,
+  );
 }
 
 class $$SchedeSulTelefonoTableTableManager
@@ -9047,12 +8504,18 @@ class $$SchedeSulTelefonoTableTableManager
                 Value<String> scheda = const Value.absent(),
                 Value<DateTime> aggiornataIl = const Value.absent(),
                 Value<bool> mia = const Value.absent(),
+                Value<String> origine = const Value.absent(),
+                Value<int?> idOrigine = const Value.absent(),
+                Value<String?> origineIdStabile = const Value.absent(),
               }) => SchedeSulTelefonoCompanion(
                 id: id,
                 nome: nome,
                 scheda: scheda,
                 aggiornataIl: aggiornataIl,
                 mia: mia,
+                origine: origine,
+                idOrigine: idOrigine,
+                origineIdStabile: origineIdStabile,
               ),
           createCompanionCallback:
               ({
@@ -9061,12 +8524,18 @@ class $$SchedeSulTelefonoTableTableManager
                 required String scheda,
                 required DateTime aggiornataIl,
                 Value<bool> mia = const Value.absent(),
+                required String origine,
+                Value<int?> idOrigine = const Value.absent(),
+                Value<String?> origineIdStabile = const Value.absent(),
               }) => SchedeSulTelefonoCompanion.insert(
                 id: id,
                 nome: nome,
                 scheda: scheda,
                 aggiornataIl: aggiornataIl,
                 mia: mia,
+                origine: origine,
+                idOrigine: idOrigine,
+                origineIdStabile: origineIdStabile,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -9109,8 +8578,6 @@ class $ArchivioSaluteManager {
       $$MisureCorpoTableTableManager(_db, _db.misureCorpo);
   $$FotoProgressiTableTableManager get fotoProgressi =>
       $$FotoProgressiTableTableManager(_db, _db.fotoProgressi);
-  $$SchedeRicevuteTableTableManager get schedeRicevute =>
-      $$SchedeRicevuteTableTableManager(_db, _db.schedeRicevute);
   $$PianiRicevutiTableTableManager get pianiRicevuti =>
       $$PianiRicevutiTableTableManager(_db, _db.pianiRicevuti);
   $$ContenutiRifiutatiTableTableManager get contenutiRifiutati =>

@@ -6,6 +6,7 @@ import '../../core/crypto/contenuto_messaggio.dart';
 import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
+import 'training_controller.dart' show revisioneSchedeProvider;
 
 /// Le schede arrivate dal trainer via chat — S7.4.
 ///
@@ -15,16 +16,18 @@ import '../health/health_controller.dart';
 /// resta sul server — è il patrimonio della palestra e non parla di nessuno —
 /// ma il legame fra la persona e il programma non ci arriva mai.
 
-/// Si incrementa per far rileggere l'elenco dopo un'importazione.
-final revisioneSchedeProvider = StateProvider<int>((ref) => 0);
-
-final schedeRicevuteProvider = FutureProvider.autoDispose<List<SchedaRicevuta>>(
-  (ref) async {
-    ref.watch(revisioneSchedeProvider);
-
-    return ref.watch(archivioSaluteProvider).schede();
-  },
-);
+/*
+ * ══ 🗃️ E L'ELENCO NON È PIÙ QUI — 3b-B.17.6, 25/08/2026 ═════════════════
+ *
+ * ⛔ Qui c'erano `revisioneSchedeProvider` e `schedeRicevuteProvider`. Il primo
+ * era **omonimo** di quello di `training_controller.dart` e non lo stesso: chi
+ * importava una scheda dalla chat incrementava un contatore che l'elenco delle
+ * schede non guardava — e la scheda appena aggiunta non compariva.
+ *
+ * 💡 Le schede si leggono da `schedeUniteProvider`, e la revisione è **una**.
+ * ⚠️ Due provider con lo stesso nome in due file non danno nessun errore finché
+ * non li importa lo stesso file: sembrano la stessa cosa, e non lo sono.
+ */
 
 /// Se una scheda arrivata in un certo messaggio è già stata aggiunta.
 ///
@@ -55,12 +58,10 @@ class AzioniSchede {
   /// «aggiungi» sullo stesso messaggio invece non deve produrre due copie.
   Future<void> importa({
     required int messaggioId,
-    required int mittenteId,
     required ContenutoScheda contenuto,
   }) async {
-    await _archivio.salvaScheda(
+    await _archivio.salvaSchedaDallaChat(
       messaggioId: messaggioId,
-      mittenteId: mittenteId,
       nome: contenuto.titolo,
       scheda: json.encode(contenuto.scheda),
       origineId: contenuto.origineId,
@@ -70,7 +71,7 @@ class AzioniSchede {
   }
 
   Future<void> butta(int id) async {
-    await _archivio.dimenticaScheda(id);
+    await _archivio.cancellaScheda(id);
 
     _ref.read(revisioneSchedeProvider.notifier).state++;
   }

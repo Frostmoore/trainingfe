@@ -104,7 +104,18 @@ class ContenutoScheda extends ContenutoMessaggio {
 
   final Map<String, dynamic> scheda;
 
-  String get titolo => scheda['title']?.toString() ?? 'Scheda';
+  /// 🚨 **`name` per primo** — corretto il 25/08/2026.
+  ///
+  /// ⛔ Qui si leggeva **solo** `title`, che nella busta non c'è: la scheda
+  /// arriva dal server con la forma di `WorkoutPlanController::dettaglio()`, e
+  /// lì il nome sta in `name`. Il risultato era che **ogni** scheda ricevuta si
+  /// chiamava «Scheda» — e finché stavano in una tabella a parte che nessuno
+  /// mostrava, non si vedeva.
+  ///
+  /// ⚠️ `title` resta accettato per le buste vecchie. È lo stesso difetto già
+  /// corretto su `ContenutoPianoAlimentare`, e la stessa cura.
+  String get titolo =>
+      scheda['name']?.toString() ?? scheda['title']?.toString() ?? 'Scheda';
 
   int get numeroEsercizi => (scheda['exercises'] as List?)?.length ?? 0;
 

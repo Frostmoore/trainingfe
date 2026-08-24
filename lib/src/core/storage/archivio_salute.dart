@@ -33,7 +33,6 @@ part 'archivio_salute.g.dart';
     CampioniSonno,
     MisureCorpo,
     FotoProgressi,
-    SchedeRicevute,
     PianiRicevuti,
     ContenutiRifiutati,
     AllenamentiDaOrologio,
@@ -49,8 +48,16 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// Per i test: un archivio in memoria, che non tocca il disco.
   ArchivioSalute.inMemoria() : super(NativeDatabase.memory());
 
+  /// Per i test: un archivio **su un database che c'è già**.
+  ///
+  /// 🚨 Serve a provare le **migrazioni**, e non c'è altro modo di provarle:
+  /// `inMemoria()` parte sempre da vuoto, cioè dall'unico caso in cui
+  /// `onUpgrade` non gira mai. ⚠️ È lo scenario di chi aggiorna l'app con i
+  /// dati dentro — cioè di tutti tranne noi.
+  ArchivioSalute.su(super.e);
+
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,8 +68,28 @@ class ArchivioSalute extends _$ArchivioSalute {
       // v2 → v3 (S5.3): e le foto dei progressi con loro.
       if (da < 3) await m.createTable(fotoProgressi);
 
-      // v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
-      if (da < 4) await m.createTable(schedeRicevute);
+      /*
+       * v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
+       *
+       * ⛔ **La tabella non esiste più**: la v15 l'ha fusa dentro
+       * `schedeSulTelefono`. Ma questo passo deve restare **eseguibile**, e con
+       * l'SQL scritto a mano invece di `m.createTable`: chi aggiorna da una
+       * versione anteriore alla 15 passa di qui, e il passo che fonde legge da
+       * questa tabella. 🚨 Cancellare i passi vecchi perché «tanto la tabella
+       * non c'è più» vuol dire che chi non ha ancora aggiornato non arriva
+       * **mai** alla v15 — l'aggiornamento gli esplode a metà strada.
+       */
+      if (da < 4) {
+        await customStatement(
+          'CREATE TABLE IF NOT EXISTS schede_ricevute ('
+          'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          'messaggio_id INTEGER NOT NULL UNIQUE, '
+          'mittente_id INTEGER NOT NULL, '
+          'nome TEXT NOT NULL, '
+          'scheda TEXT NOT NULL, '
+          'ricevuta_il INTEGER NOT NULL)',
+        );
+      }
 
       // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
       if (da < 5) await _riaccreditaLeNotti();
@@ -79,8 +106,13 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 6) {
         await m.createTable(pianiRicevuti);
         await m.createTable(contenutiRifiutati);
-        await m.addColumn(schedeRicevute, schedeRicevute.origineId);
-        await m.addColumn(schedeRicevute, schedeRicevute.aggiornatoIl);
+        // ⚠️ A mano, per la stessa ragione del passo `da < 4` qui sopra.
+        await customStatement(
+          'ALTER TABLE schede_ricevute ADD COLUMN origine_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE schede_ricevute ADD COLUMN aggiornato_il INTEGER',
+        );
       }
 
       /*
@@ -217,6 +249,64 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 14) {
         await m.deleteTable('schede_sul_telefono');
         await m.createTable(schedeSulTelefono);
+      }
+
+      /*
+       * ══ 🗃️ v14 → v15 (3b-B.17.6, 25/08/2026): UN ARCHIVIO SOLO ═══════════
+       *
+       * 📌 *«Che vuol dire stanno in una seconda tabella locale? Uniamole»*.
+       *
+       * ⛔ **Non è un riordino estetico.** Le schede della chat stavano in
+       * `SchedeRicevute` e quelle scese dal server in `SchedeSulTelefono`, ma
+       * l'elenco delle schede ne leggeva **una sola**: una scheda ricevuta dal
+       * trainer via chat non compariva fra le proprie, e non si poteva né
+       * allenarcisi né assegnarla a un allenamento del polso. Due posti per la
+       * stessa cosa è esattamente come è cominciato il disastro del 24/08.
+       *
+       * ⚠️ **Si migra invece di droppare**, e la differenza conta: le schede
+       * scese dal server non tornerebbero da sole. L'importazione di
+       * `PortaGiuLeSchede` gira **una volta per telefono** e il suo segno sta in
+       * `LocalCache`, che una migrazione del database non vede — buttare qui le
+       * righe vorrebbe dire perdere Giorno 1, 2 e 3 per sempre.
+       *
+       * 💡 `alterTable` ricrea la tabella dalla definizione Dart e ricopia i
+       * dati: è così che `id` diventa `autoIncrement` senza perdere gli id già
+       * assegnati, a cui punta `AllenamentiDaOrologio.schedaAssegnata`.
+       */
+      if (da < 15) {
+        await m.alterTable(
+          TableMigration(
+            schedeSulTelefono,
+            newColumns: [schedeSulTelefono.origine],
+            columnTransformer: {
+              // 💡 Il segno dell'id diceva già da dove veniva: qui diventa una
+              // colonna, che lo dice ad alta voce.
+              schedeSulTelefono.origine: const CustomExpression<String>(
+                "CASE WHEN mia THEN 'mia' ELSE 'server' END",
+              ),
+              schedeSulTelefono.idOrigine: const CustomExpression<int>(
+                'CASE WHEN id > 0 THEN id ELSE NULL END',
+              ),
+              schedeSulTelefono.origineIdStabile:
+                  const CustomExpression<String>('NULL'),
+            },
+          ),
+        );
+
+        /*
+         * ⚠️ **`ricevuta_il` se non è mai stata corretta**: `aggiornato_il` è
+         * nullable, e una scheda mai ricorretta dal trainer ce l'ha a `NULL`.
+         * Senza il `COALESCE` finirebbe in cima all'elenco (o in fondo) a
+         * seconda di come SQLite ordina i nulli — cioè a caso.
+         */
+        await customStatement(
+          'INSERT INTO schede_sul_telefono '
+          '(nome, scheda, aggiornata_il, mia, origine, id_origine, origine_id_stabile) '
+          "SELECT nome, scheda, COALESCE(aggiornato_il, ricevuta_il), 0, 'chat', "
+          'messaggio_id, origine_id FROM schede_ricevute',
+        );
+
+        await m.deleteTable('schede_ricevute');
       }
     },
   );
@@ -1039,8 +1129,27 @@ class ArchivioSalute extends _$ArchivioSalute {
       b.deleteAll(campioniSonno);
       b.deleteAll(misureCorpo);
       b.deleteAll(fotoProgressi);
-      b.deleteAll(schedeRicevute);
+      b.deleteAll(schedeSulTelefono);
       b.deleteAll(pianiRicevuti);
+
+      /*
+       * ══ 🚨 ANCHE GLI ALLENAMENTI — corretto il 25/08/2026 ═══════════════
+       *
+       * ⛔ Queste quattro righe **mancavano**, e non è un dettaglio: `svuota()`
+       * gira quando entra un'altra persona su questo telefono e quando si
+       * cancella l'account. Chi arrivava dopo si trovava lo storico completo di
+       * chi c'era prima — quando si allenava, per quanto, con che carichi.
+       *
+       * ⚠️ La causa è quella già vista due volte ieri: **un elenco scritto a
+       * mano che deve contenere tutto**. Le tabelle di FASE 11 sono arrivate
+       * dopo, e nessuno è tornato ad aggiungerle qui. Chi ne crea una nuova
+       * deve passare **anche** di qui — a differenza del backup, che le enumera
+       * da solo.
+       */
+      b.deleteAll(seduteAllenamento);
+      b.deleteAll(serieDelleSedute);
+      b.deleteAll(bruciateDichiarate);
+      b.deleteAll(allenamentiDaOrologio);
       /*
        * ⚠️ **Anche i rifiutati.** Sono una decisione di **questa** persona: chi
        * arriva dopo su questo telefono non deve ereditare i piani che qualcun
@@ -1062,65 +1171,83 @@ class ArchivioSalute extends _$ArchivioSalute {
     schedeSulTelefono,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  /// Scrive una scheda: nuova o aggiornata, è lo stesso.
+  /// Una scheda scesa dal server, cercata **col suo id di là** — o `null`.
+  ///
+  /// ⚠️ Non è `laScheda()`: quello vuole l'id di **qui**. Serve
+  /// all'importazione, che ha in mano l'id del server e deve sapere se quella
+  /// scheda è già arrivata.
+  Future<SchedaSulTelefono?> laSchedaDalServer(int idServer) =>
+      (select(schedeSulTelefono)..where(
+            (t) => t.origine.equals('server') & t.idOrigine.equals(idServer),
+          ))
+          .getSingleOrNull();
+
+  /// Aggiunge una scheda, e ne restituisce l'id **su questo telefono**.
+  ///
+  /// 💡 L'id lo dà il database (`autoIncrement`) e non chi chiama: era l'ultimo
+  /// pezzo che costringeva a sapere «da dove viene» per calcolare un numero.
+  Future<int> aggiungiScheda({
+    required String nome,
+    required String scheda,
+    required bool mia,
+    required String origine,
+    int? idOrigine,
+    String? origineIdStabile,
+    DateTime? quando,
+  }) => into(schedeSulTelefono).insert(
+    SchedeSulTelefonoCompanion.insert(
+      nome: nome,
+      scheda: scheda,
+      aggiornataIl: quando ?? DateTime.now(),
+      mia: Value(mia),
+      origine: origine,
+      idOrigine: Value(idOrigine),
+      origineIdStabile: Value(origineIdStabile),
+    ),
+  );
+
+  /// Riscrive una scheda che c'è già.
   ///
   /// 🚨 **Si chiama a ogni modifica, non a fine allenamento.** Il salvataggio in
   /// blocco alla fine è ciò che il 24/08 ha reso possibile perdere due esercizi
   /// con un clic: una modifica scritta subito non ha un momento in cui può
   /// sparire.
-  Future<void> scriviScheda({
+  ///
+  /// ⚠️ `origine` e `idOrigine` **non si toccano**: modificare una scheda non
+  /// cambia da dove è arrivata.
+  Future<void> aggiornaScheda({
     required int id,
     required String nome,
     required String scheda,
-    required bool mia,
     DateTime? quando,
-  }) => into(schedeSulTelefono).insertOnConflictUpdate(
-    SchedeSulTelefonoCompanion.insert(
-      id: Value(id),
-      nome: nome,
-      scheda: scheda,
-      aggiornataIl: quando ?? DateTime.now(),
-      mia: Value(mia),
+  }) => (update(schedeSulTelefono)..where((t) => t.id.equals(id))).write(
+    SchedeSulTelefonoCompanion(
+      nome: Value(nome),
+      scheda: Value(scheda),
+      aggiornataIl: Value(quando ?? DateTime.now()),
     ),
   );
 
-  /// Il prossimo id per una scheda scritta **qui**.
-  ///
-  /// 💡 Negativo, e sotto il minimo già usato: gli id del server sono positivi,
-  /// quindi i due spazi non si toccano mai. ⚠️ Non si usa l'orologio: due
-  /// schede create nello stesso secondo avrebbero lo stesso id.
-  Future<int> prossimoIdLocale() async {
-    final minimo =
-        await (selectOnly(schedeSulTelefono)
-              ..addColumns([schedeSulTelefono.id.min()]))
-            .map((r) => r.read(schedeSulTelefono.id.min()))
-            .getSingleOrNull();
-
-    return (minimo == null || minimo >= 0) ? -1 : minimo - 1;
-  }
-
-  /// Butta una scheda.
-  ///
-  /// 📌 *«se serve una nuova scheda il trainer la rimanda e l'utente cancella la
-  /// vecchia e usa la nuova»*: cancellare è un'azione normale, non un incidente.
-  Future<int> cancellaScheda(int id) =>
-      (delete(schedeSulTelefono)..where((t) => t.id.equals(id))).go();
-
-  // ───────────────── le schede ricevute dal trainer (S7.4) ─────────────────
-
   /// Salva una scheda arrivata via chat.
   ///
-  /// 🚨 **La chiave è l'id del messaggio, non quello della scheda.** Lo stesso
-  /// modello può arrivare due volte — il trainer lo rimanda dopo averlo
-  /// corretto — e sono **due schede diverse** nella vita di chi le riceve: la
-  /// vecchia va tenuta finché non la si butta, o sparirebbe lo storico di cosa
-  /// si stava facendo il mese scorso.
+  /// ══ 🚨 LE TRE PROTEZIONI, E PERCHÉ CI SONO TUTTE E TRE ═══════════════════
   ///
-  /// ⚠️ Toccare due volte «aggiungi» sullo stesso messaggio invece non deve
-  /// produrre due copie: da qui `insertOrIgnore` sull'unique di `messaggioId`.
-  Future<bool> salvaScheda({
+  /// | Cosa | Senza |
+  /// |---|---|
+  /// | ⛔ salta quelle **rifiutate** | una scheda buttata ricompare da sola al messaggio dopo, e si ributta. Per sempre |
+  /// | ⚠️ salta quelle **fuori ordine** | la versione vecchia che arriva per seconda sovrascrive quella corretta |
+  /// | 💡 `insertOrIgnore` | toccare due volte «aggiungi» fa due copie della stessa scheda |
+  ///
+  /// ⚠️ **`messaggioId` e non l'id della scheda**: lo stesso modello può
+  /// arrivare due volte — il trainer lo rimanda dopo averlo corretto — e sono
+  /// **due schede diverse** nella vita di chi le riceve. La vecchia va tenuta
+  /// finché non la si butta, o sparirebbe lo storico di cosa si stava facendo il
+  /// mese scorso.
+  ///
+  /// 📌 `false` vuol dire «non l'ho salvata», ed è **una risposta normale**: la
+  /// chat non deve dire niente a nessuno.
+  Future<bool> salvaSchedaDallaChat({
     required int messaggioId,
-    required int mittenteId,
     required String nome,
     required String scheda,
     String? origineId,
@@ -1128,24 +1255,31 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (origineId != null && await eRifiutato(origineId)) return false;
 
     if (origineId != null) {
-      final esistente = await (select(
-        schedeRicevute,
-      )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
+      final esistente =
+          await (select(schedeSulTelefono)..where(
+                (t) =>
+                    t.origine.equals('chat') &
+                    t.origineIdStabile.equals(origineId),
+              ))
+              .getSingleOrNull();
 
       if (esistente != null) {
-        // ⚠️ Fuori ordine: una versione piu' vecchia che arriva dopo non
-        // sovrascrive quella buona. Vedi `salvaPiano()`.
-        if (esistente.messaggioId >= messaggioId) return false;
+        /*
+         * ⚠️ **Fuori ordine**: una versione più vecchia che arriva dopo non
+         * sovrascrive quella buona. Vedi `salvaPiano()`. 🚨 Il confronto è fra
+         * id di messaggio e non fra date: le date le mette chi manda, e due
+         * telefoni con l'orologio storto basterebbero a invertire l'ordine.
+         */
+        if ((esistente.idOrigine ?? 0) >= messaggioId) return false;
 
         await (update(
-          schedeRicevute,
+          schedeSulTelefono,
         )..where((t) => t.id.equals(esistente.id))).write(
-          SchedeRicevuteCompanion(
-            messaggioId: Value(messaggioId),
-            mittenteId: Value(mittenteId),
+          SchedeSulTelefonoCompanion(
+            idOrigine: Value(messaggioId),
             nome: Value(nome),
             scheda: Value(scheda),
-            aggiornatoIl: Value(DateTime.now()),
+            aggiornataIl: Value(DateTime.now()),
           ),
         );
 
@@ -1153,14 +1287,14 @@ class ArchivioSalute extends _$ArchivioSalute {
       }
     }
 
-    await into(schedeRicevute).insert(
-      SchedeRicevuteCompanion.insert(
-        messaggioId: messaggioId,
-        mittenteId: mittenteId,
+    await into(schedeSulTelefono).insert(
+      SchedeSulTelefonoCompanion.insert(
         nome: nome,
         scheda: scheda,
-        origineId: Value(origineId),
-        ricevutaIl: DateTime.now(),
+        aggiornataIl: DateTime.now(),
+        origine: 'chat',
+        idOrigine: Value(messaggioId),
+        origineIdStabile: Value(origineId),
       ),
       mode: InsertMode.insertOrIgnore,
     );
@@ -1168,38 +1302,42 @@ class ArchivioSalute extends _$ArchivioSalute {
     return true;
   }
 
-  Future<List<SchedaRicevuta>> schede() {
-    return (select(
-      schedeRicevute,
-    )..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)])).get();
-  }
-
   /// C'è già? Serve alla chat per dire «aggiunta» invece di «aggiungi».
+  ///
+  /// 💡 Senza, l'unico modo di sapere se si è già premuto il pulsante è provare
+  /// — e riprovare su un messaggio vecchio è la cosa più naturale del mondo.
   Future<bool> schedaGiaSalvata(int messaggioId) async {
-    final riga = await (select(
-      schedeRicevute,
-    )..where((t) => t.messaggioId.equals(messaggioId))).getSingleOrNull();
+    final riga =
+        await (select(schedeSulTelefono)..where(
+              (t) => t.origine.equals('chat') & t.idOrigine.equals(messaggioId),
+            ))
+            .getSingleOrNull();
 
     return riga != null;
   }
 
-  /// Butta una scheda, e **ricorda che e' stata buttata** — G8.10.
-  Future<void> dimenticaScheda(int id) async {
-    final riga = await (select(
-      schedeRicevute,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  /// Butta una scheda, e **ricorda che è stata buttata** — G8.10.
+  ///
+  /// 📌 *«se serve una nuova scheda il trainer la rimanda e l'utente cancella la
+  /// vecchia e usa la nuova»*: cancellare è un'azione normale, non un incidente.
+  ///
+  /// 🚨 **Il ricordo non è un dettaglio.** Senza, il salvataggio automatico
+  /// della chat la rimetterebbe in archivio al messaggio successivo, e chi
+  /// l'aveva buttata la ributterebbe. Per sempre.
+  Future<int> cancellaScheda(int id) async {
+    final riga = await laScheda(id);
 
-    if (riga?.origineId != null) {
+    if (riga?.origineIdStabile != null) {
       await into(contenutiRifiutati).insert(
         ContenutiRifiutatiCompanion.insert(
-          origineId: riga!.origineId!,
+          origineId: riga!.origineIdStabile!,
           rifiutatoIl: DateTime.now(),
         ),
         mode: InsertMode.insertOrIgnore,
       );
     }
 
-    await (delete(schedeRicevute)..where((t) => t.id.equals(id))).go();
+    return (delete(schedeSulTelefono)..where((t) => t.id.equals(id))).go();
   }
 
   // ───────────────── i piani alimentari ricevuti (G8) ─────────────────
@@ -1771,15 +1909,32 @@ class ContenutiRifiutati extends Table {
 /// a far convivere due copie della stessa scheda. 💡 Di copie ce n'è **una**:
 /// quelle colonne non hanno più niente da dire, e sono sparite.
 ///
+/// ══ 🗃️ E SONO UNA TABELLA SOLA — 3b-B.17.6, 25/08/2026 ═══════════════════
+///
+/// 📌 *«Che vuol dire stanno in una seconda tabella locale? Uniamole»*.
+///
+/// ⛔ Le schede arrivate in chat vivevano in `SchedeRicevute`, e l'elenco delle
+/// schede leggeva **solo questa**: una scheda mandata dal trainer non compariva
+/// fra le proprie e non ci si poteva allenare. 💡 Adesso la provenienza è una
+/// **colonna** (`origine`), non una tabella: chi legge le schede legge un posto
+/// solo, e non può dimenticarsi il secondo.
+///
 /// ⚠️ Nel backup ci finisce **da sola**: `esportaPerBackup()` enumera
 /// `allTables`, non un elenco scritto a mano.
 class SchedeSulTelefono extends Table {
-  /// L'id della scheda.
+  /// L'id della scheda **su questo telefono**.
   ///
-  /// 💡 **Positivo** per quelle scese dal server o arrivate dal trainer,
-  /// **negativo** per quelle scritte qui: due spazi che non possono collidere,
-  /// e il segno dice da dove viene senza una colonna in più.
-  IntColumn get id => integer()();
+  /// ⛔ Qui c'era il trucco degli id firmati — positivi per quelle del server,
+  /// negativi per quelle scritte qui — che serviva a tenere separati due spazi
+  /// di id. 💡 Con una tabella sola non c'è niente da tenere separato, e un id
+  /// firmato è una convenzione che prima o poi qualcuno viola: da dove viene
+  /// una scheda lo dice `origine`, che è un dato, non un segno.
+  ///
+  /// ⚠️ **Gli id già assegnati non cambiano**: la migrazione ricopia le righe
+  /// così come sono, perché `AllenamentiDaOrologio.schedaAssegnata` punta qui —
+  /// rinumerarli vorrebbe dire spostare in silenzio gli allenamenti già fatti
+  /// su schede diverse da quelle vere.
+  IntColumn get id => integer().autoIncrement()();
 
   /// Il nome, per non dover aprire il JSON a ogni riga di un elenco.
   TextColumn get nome => text()();
@@ -1797,36 +1952,42 @@ class SchedeSulTelefono extends Table {
   /// è il motivo per cui non c'è nessuna sincronizzazione da nessuna parte.
   BoolColumn get mia => boolean().withDefault(const Constant(false))();
 
-  @override
-  Set<Column<Object>> get primaryKey => {id};
-}
-
-@DataClassName('SchedaRicevuta')
-class SchedeRicevute extends Table {
-  IntColumn get id => integer().autoIncrement()();
-
-  /// 🚨 **L'id del messaggio, unico.** È ciò che impedisce che toccare due
-  /// volte «aggiungi» produca due copie della stessa scheda.
+  /// Da dove viene: `'chat'`, `'server'` o `'mia'`.
   ///
-  /// ⚠️ Non è l'id della *scheda*: lo stesso modello può arrivare due volte —
-  /// il trainer lo rimanda dopo averlo corretto — e sono **due schede diverse**
-  /// nella vita di chi le riceve.
-  IntColumn get messaggioId => integer().unique()();
+  /// 🚨 **Serve a non confondere due id che si somigliano.** Il numero in
+  /// `idOrigine` è un id di messaggio per le schede della chat e un id di
+  /// scheda per quelle scese dal server: sono due numerazioni diverse, e senza
+  /// questa colonna il messaggio 8 e la scheda 8 sarebbero la stessa riga.
+  TextColumn get origine => text()();
 
-  IntColumn get mittenteId => integer()();
+  /// Il numero che identifica la scheda **là da dove viene**.
+  ///
+  /// 💡 `messaggioId` per la chat, l'id del server per le altre. ⚠️ `null` per
+  /// quelle scritte qui, che non vengono da nessuna parte — e i `NULL` in
+  /// SQLite non collidono fra loro, quindi la chiave unica qui sotto non
+  /// impedisce di scriversene quante se ne vuole.
+  IntColumn get idOrigine => integer().nullable()();
 
-  /// Il nome, estratto per poterlo mostrare senza aprire il JSON a ogni riga.
-  TextColumn get nome => text()();
+  /// 🚨 **L'identità stabile della scheda** — D15.
+  ///
+  /// È ciò che permette di riconoscere che una scheda arrivata è la **versione
+  /// nuova** di una che c'è già, e di sostituirla invece di affiancarla. È
+  /// anche ciò che si ricorda quando la si butta, perché non torni da sola al
+  /// messaggio successivo.
+  ///
+  /// ⚠️ **Nullable**: le buste `v1` non ce l'hanno, e chi arriva senza cade sul
+  /// comportamento vecchio — una riga per messaggio — che è corretto, solo meno
+  /// furbo.
+  TextColumn get origineIdStabile => text().nullable()();
 
-  /// La scheda intera, serializzata.
-  TextColumn get scheda => text()();
-
-  /// 🆕 G8 — l'identita' stabile (D15). Vedi `PianiRicevuti.origineId`.
-  TextColumn get origineId => text().nullable()();
-
-  DateTimeColumn get ricevutaIl => dateTime()();
-
-  DateTimeColumn get aggiornatoIl => dateTime().nullable()();
+  /// ⚠️ **Toccare due volte «aggiungi» non deve fare due copie.** È l'unico che
+  /// regge `insertOrIgnore` in `salvaSchedaDallaChat()`: prima stava sulla sola
+  /// colonna `messaggioId`, e adesso che nella stessa tabella convivono id di
+  /// messaggi e id di schede deve comprendere anche la provenienza.
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {origine, idOrigine},
+  ];
 }
 
 /// Gli allenamenti che ha registrato l'orologio — FASE 1.8.

@@ -174,25 +174,23 @@ void main() {
     });
 
     test('vale anche per le schede', () async {
-      await archivio.salvaScheda(
+      await archivio.salvaSchedaDallaChat(
         messaggioId: 1,
-        mittenteId: 9,
         nome: 'Full body',
         scheda: '{}',
         origineId: 'XYZ',
       );
 
-      await archivio.dimenticaScheda((await archivio.schede()).first.id);
+      await archivio.cancellaScheda((await archivio.tutteLeSchede()).first.id);
 
-      await archivio.salvaScheda(
+      await archivio.salvaSchedaDallaChat(
         messaggioId: 2,
-        mittenteId: 9,
         nome: 'Full body',
         scheda: '{}',
         origineId: 'XYZ',
       );
 
-      expect(await archivio.schede(), isEmpty);
+      expect(await archivio.tutteLeSchede(), isEmpty);
     });
   });
 
@@ -205,16 +203,15 @@ void main() {
         piano: '{}',
         origineId: 'ABC',
       );
-      await archivio.salvaScheda(
+      await archivio.salvaSchedaDallaChat(
         messaggioId: 2,
-        mittenteId: 9,
         nome: 'Scheda',
         scheda: '{}',
         origineId: 'XYZ',
       );
 
       expect((await archivio.piani()).length, 1);
-      expect((await archivio.schede()).length, 1);
+      expect((await archivio.tutteLeSchede()).length, 1);
 
       /*
        * 🚨 **`svuota()` si chiama in due soli casi** (§27.1 dell'atlante app):
@@ -230,7 +227,7 @@ void main() {
       await archivio.svuota();
 
       expect(await archivio.piani(), isEmpty);
-      expect(await archivio.schede(), isEmpty);
+      expect(await archivio.tutteLeSchede(), isEmpty);
     });
 
     test('svuotando si azzerano anche i rifiutati', () async {

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import 'porta_giu_le_schede.dart';
-import 'schede_ricevute_controller.dart';
 
 /// Una scheda assegnata — A5.1.
 class WorkoutPlan {
@@ -159,9 +158,6 @@ final revisioneSchedeProvider = StateProvider<int>((ref) => 0);
 
 /// Il dettaglio di una scheda, con gli esercizi.
 ///
-/// ⚠️ **Id negativo = scheda ricevuta in chat**, che vive nell'archivio locale.
-/// Vedi `schedeUniteProvider` per il perché del segno.
-///
 /// ══ 🚨 DAL TELEFONO, NON DALLA RETE — 3b-B.16.9, 24/08/2026 ══════════════
 ///
 /// 📌 *«tutto deve stare sul telefono … perché potrei non avere rete quando mi
@@ -172,32 +168,24 @@ final revisioneSchedeProvider = StateProvider<int>((ref) => 0);
 /// affatto. In una palestra interrata è la differenza fra un'app che funziona e
 /// una che no.
 ///
-/// 💡 Adesso legge la copia locale, che `SincronizzaLeSchede` tiene aggiornata
-/// all'apertura dell'app. ⚠️ La rete resta come **ripiego**, per la scheda che
-/// il telefono non ha ancora — e quello che arriva si scrive subito in locale,
-/// così la volta dopo c'è.
+/// ⛔ **E qui c'era un secondo ramo, per gli id negativi**, che andava a pescare
+/// nell'altro archivio locale — quello delle schede della chat. 💡 Dal 25/08 di
+/// archivi ce n'è **uno**: un id è un id, e si cerca in un posto solo.
 final planDetailProvider = FutureProvider.autoDispose.family<WorkoutPlan, int>((
   ref,
   id,
 ) async {
-  if (id > 0) {
-    final locale = await ref.watch(archivioSaluteProvider).laScheda(id);
+  final locale = await ref.watch(archivioSaluteProvider).laScheda(id);
 
-    if (locale != null) {
-      return WorkoutPlan.fromJson(
-        (json.decode(locale.scheda) as Map).cast<String, dynamic>(),
-      );
-    }
-  }
-
-  if (id < 0) {
-    final locali = await ref.watch(schedeRicevuteProvider.future);
-    final riga = locali.firstWhere((r) => -r.id == id);
-
+  if (locale != null) {
     return WorkoutPlan.fromJson({
-      ...(json.decode(riga.scheda) as Map).cast<String, dynamic>(),
-      'id': id,
-      'editable': false,
+      ...(json.decode(locale.scheda) as Map).cast<String, dynamic>(),
+      // ⚠️ **L'id e il nome li comanda la riga, non il JSON dentro.** Quello
+      // di una scheda arrivata in chat è l'id che aveva sul telefono del
+      // trainer, e non vuol dire niente qui.
+      'id': locale.id,
+      'name': locale.nome,
+      'editable': locale.mia,
     });
   }
 
@@ -239,14 +227,23 @@ class PlanActions {
     String? notes,
     required List<Map<String, dynamic>> exercises,
   }) async {
-    final id = await _archivio.prossimoIdLocale();
-
-    await _archivio.scriviScheda(
-      id: id,
+    /*
+     * 💡 **L'id lo dà il database.** Qui si calcolava a mano — il minimo già
+     * usato meno uno, per stare nei negativi e non pestare gli id del server —
+     * e adesso non serve più: la tabella è una sola, e `autoIncrement` non può
+     * sbagliare il conto.
+     *
+     * ⚠️ **Nel JSON l'id non si scrive**, ed è di proposito: chi rilegge la
+     * scheda prende `id`, `name` e `editable` dalla **riga**, non da dentro la
+     * busta. Scriverlo qui vorrebbe dire tenerne due d'accordo per sempre —
+     * e per le schede arrivate in chat quello dentro è addirittura l'id che
+     * avevano sul telefono di chi le ha mandate.
+     */
+    final id = await _archivio.aggiungiScheda(
       nome: name,
       mia: true,
+      origine: 'mia',
       scheda: json.encode({
-        'id': id,
         'name': name,
         'notes': notes,
         'editable': true,
@@ -281,10 +278,9 @@ class PlanActions {
 
     if (exercises != null) scheda['exercises'] = exercises;
 
-    await _archivio.scriviScheda(
+    await _archivio.aggiornaScheda(
       id: id,
       nome: name,
-      mia: vecchia.mia,
       scheda: json.encode(scheda),
     );
 

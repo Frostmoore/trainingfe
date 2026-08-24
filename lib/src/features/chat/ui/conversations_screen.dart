@@ -1151,7 +1151,6 @@ class _SchedaInChat extends ConsumerWidget {
                         .read(azioniSchedeProvider)
                         .importa(
                           messaggioId: messaggio.id,
-                          mittenteId: messaggio.senderId,
                           contenuto: contenuto,
                         ),
                     child: const Text('Aggiungi alle mie schede'),

@@ -61,9 +61,9 @@ final storicoUnificatoProvider = FutureProvider.autoDispose<List<VoceStorico>>((
    * chi ha solo quelle — cioè il caso normale — l'elenco era **sempre vuoto**:
    * *«mi dice sempre che non ho schede disponibili»*.
    *
-   * 💡 `schedeUniteProvider` le tiene già insieme, e firma gli id: **negativo**
-   * per quelle locali, **positivo** per quelle del server. La stessa
-   * convenzione vale per `schedaAssegnata`, quindi una mappa sola basta.
+   * 💡 `schedeUniteProvider` le tiene già insieme — e dal 25/08 «insieme» vuol
+   * dire **una tabella sola**, non due elenchi accostati con gli id firmati.
+   * `schedaAssegnata` contiene quello stesso id, quindi una mappa sola basta.
    */
   final nomi = await ref
       .watch(schedeUniteProvider.future)

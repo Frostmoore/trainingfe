@@ -13,7 +13,7 @@ import '../../core/crypto/servizio_chiavi.dart';
 import '../../core/media/archivio_foto.dart';
 import '../../core/providers.dart';
 import '../health/health_controller.dart';
-import '../training/schede_ricevute_controller.dart';
+import '../training/training_controller.dart' show revisioneSchedeProvider;
 import 'data/allegato_di_chat.dart';
 
 /// L'altra persona non ha ancora pubblicato una chiave.
@@ -413,9 +413,8 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     try {
       switch (c) {
         case ContenutoScheda():
-          await archivio.salvaScheda(
+          await archivio.salvaSchedaDallaChat(
             messaggioId: messaggioId,
-            mittenteId: mittente,
             nome: c.titolo,
             scheda: json.encode(c.scheda),
             origineId: c.origineId,

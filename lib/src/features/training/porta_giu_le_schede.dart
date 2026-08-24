@@ -74,19 +74,28 @@ class PortaGiuLeSchede {
       final dati = (riga as Map).cast<String, dynamic>();
       final id = (dati['id'] as num).toInt();
 
-      // 💡 Quella che c'è già non si tocca: potrebbe averla modificata.
-      if (await archivio.laScheda(id) != null) continue;
+      /*
+       * 💡 Quella che c'è già non si tocca: potrebbe averla modificata.
+       *
+       * ⚠️ **Si cerca per id del SERVER, non per id di qui** — 25/08. Da quando
+       * la tabella è una sola gli id li dà il telefono, e l'id 3 del server non
+       * è la riga 3 dell'archivio: cercare con `laScheda(id)` risponderebbe
+       * «c'è già» guardando una scheda che non c'entra niente.
+       */
+      if (await archivio.laSchedaDalServer(id) != null) continue;
 
       try {
         final dettaglio = await api.get<Map<String, dynamic>>(
           '/workout-plans/$id',
         );
 
-        await archivio.scriviScheda(
-          id: id,
+        await archivio.aggiungiScheda(
           nome: dettaglio['name']?.toString() ?? 'Scheda',
           scheda: jsonEncode(dettaglio),
           mia: dettaglio['editable'] == true,
+          origine: 'server',
+          idOrigine: id,
+          origineIdStabile: dettaglio['origine_id']?.toString(),
         );
 
         quante++;

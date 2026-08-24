@@ -113,10 +113,15 @@ void main() {
   }
 
   /// La scheda com'è arrivata l'ultima volta che c'era campo.
-  Future<void> laSchedaEGiaSulTelefono() => archivio.scriviScheda(
-    id: 8,
+  ///
+  /// ⚠️ **Restituisce l'id invece di fissarlo a 8** — 25/08. Da quando la
+  /// tabella è una sola l'id lo dà il database, e un test che se lo scrive da
+  /// solo proverebbe solo che il numero che ha inventato coincide.
+  Future<int> laSchedaEGiaSulTelefono() => archivio.aggiungiScheda(
     nome: 'Giorno 1',
     mia: true,
+    origine: 'server',
+    idOrigine: 8,
     scheda: jsonEncode({
       'id': 8,
       'name': 'Giorno 1',
@@ -142,10 +147,10 @@ void main() {
   /// ⛔ **La scheda si apre lo stesso.** Era il primo muro: senza campo il
   /// player non riusciva nemmeno a sapere che esercizi doveva mostrare.
   test('senza rete la scheda si apre lo stesso', () async {
-    await laSchedaEGiaSulTelefono();
+    final id = await laSchedaEGiaSulTelefono();
     staccaLaRete();
 
-    final piano = await contenitore.read(planDetailProvider(8).future);
+    final piano = await contenitore.read(planDetailProvider(id).future);
 
     expect(piano.name, 'Giorno 1');
     expect(piano.exercises.length, 2);
@@ -243,12 +248,12 @@ void main() {
   test(
     'e la scheda resta sul telefono anche se il server non risponde',
     () async {
-      await laSchedaEGiaSulTelefono();
+      final id = await laSchedaEGiaSulTelefono();
       staccaLaRete();
 
-      await contenitore.read(planDetailProvider(8).future);
+      await contenitore.read(planDetailProvider(id).future);
 
-      expect(await archivio.laScheda(8), isNotNull);
+      expect(await archivio.laScheda(id), isNotNull);
     },
   );
 }

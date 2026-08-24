@@ -536,11 +536,15 @@ class _Numeri extends StatelessWidget {
                       valore: numeri.sessioni,
 
                       /*
-                       * 💡 Il passo del cilindro esce dall'altezza disponibile,
-                       * non da un numero scritto qui: cinque posizioni — due
-                       * vicini sopra, due sotto, e quello buono.
+                       * 💡 Il passo esce dalla **larghezza** disponibile, non da
+                       * un numero scritto qui: cinque posizioni — due vicini a
+                       * sinistra, due a destra, e quello buono in mezzo.
+                       *
+                       * ⚠️ È anche il motivo per cui questo riquadro è un
+                       * rettangolo largo e non un quadrato: il nastro scorre in
+                       * orizzontale, e lo spazio che gli serve è quello.
                        */
-                      altezzaCifra: vincoli.maxHeight / 5,
+                      passo: vincoli.maxWidth / 5,
                       stile: tema.textTheme.displayLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: tema.colorScheme.tertiary,

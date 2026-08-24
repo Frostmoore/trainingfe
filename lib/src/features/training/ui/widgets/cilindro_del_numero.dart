@@ -1,15 +1,29 @@
-/// Il numero che arriva girando, come un cilindro — 3b-B.14, 24/08/2026.
+/// Il numero che arriva scorrendo, come un cilindro — 3b-B.14, 24/08/2026.
 ///
 /// 📌 Il committente: *«si deve vedere tipo "cilindro" con vicino altri due o
 /// tre numeri, e quando appare deve fare tipo l'animazione di un cilindro che si
-/// ferma lì con un po' di bezier (diciamo tipo elastico)»*.
+/// ferma lì con un po' di bezier (diciamo tipo elastico)»* e poi, correggendo:
+/// *«il cilindro deve scorrere in **orizzontale**, per quello ho detto rettangolo
+/// bianco»*.
+///
+/// ══ ⚠️ ORIZZONTALE, E IL RETTANGOLO ERA LA SPECIFICA ══════════════════════
+///
+/// 🚨 **Al primo tentativo scorreva in verticale**, e la forma del contenitore
+/// diceva già che era sbagliato: un cilindro verticale sta bene in un quadrato o
+/// in una finestra alta e stretta, e chiedere un **rettangolo largo** vuol dire
+/// che i vicini stanno a destra e a sinistra. ⛔ La richiesta conteneva la
+/// risposta e non l'ho letta.
+///
+/// 💡 I numeri più bassi stanno **a sinistra**, i più alti a destra: il nastro
+/// scorre verso sinistra e quello buono **arriva da destra**, come un contatore
+/// che sale. Al contrario sembrerebbe che il conteggio scenda.
 ///
 /// ══ 💡 PERCHÉ I VICINI SONO IL PEZZO CHE CONTA ════════════════════════════
 ///
 /// 🚨 Senza i numeri accanto, un numero che si ferma è solo un numero che
 /// compare: l'animazione non si capirebbe da dove viene. ⛔ Sono i vicini
-/// sbiaditi sopra e sotto a dire **che cosa è quell'oggetto** — un cilindro che
-/// gira — e quindi a far leggere il movimento come un arresto invece che come un
+/// sbiaditi ai lati a dire **che cosa è quell'oggetto** — un nastro che scorre —
+/// e quindi a far leggere il movimento come un arresto invece che come un
 /// effetto decorativo.
 ///
 /// ── ⚠️ L'elastico deve sforare, o non è un elastico ───────────────────────
@@ -18,15 +32,11 @@
 /// che fa sembrare l'oggetto pesante, e il motivo per cui la richiesta diceva
 /// *«tipo elastico»* e non «una dissolvenza».
 ///
-/// 💡 Sfora **verso il basso**, cioè scoprendo i numeri più bassi: parte da
-/// sotto e sale, come una slot che rallenta. Partire da sopra farebbe *scendere*
-/// il conteggio, che per un numero di sessioni è il verso sbagliato.
-///
 /// ── ⛔ E chi le animazioni le ha spente ───────────────────────────────────
 ///
 /// 🚨 `MediaQuery.disableAnimationsOf` non è un dettaglio di accessibilità da
 /// spuntare: chi lo attiva spesso lo fa perché il movimento gli dà **fastidio
-/// fisico**. Lì il numero c'è e basta, senza giro e senza rimbalzo.
+/// fisico**. Lì il numero c'è e basta, senza scorrimento e senza rimbalzo.
 library;
 
 import 'package:flutter/material.dart';
@@ -34,7 +44,7 @@ import 'package:flutter/material.dart';
 class CilindroDelNumero extends StatefulWidget {
   const CilindroDelNumero({
     required this.valore,
-    required this.altezzaCifra,
+    required this.passo,
     this.stile,
     this.stileVicini,
     super.key,
@@ -42,24 +52,24 @@ class CilindroDelNumero extends StatefulWidget {
 
   final int valore;
 
-  /// Quanto è alta una cifra: è il passo del cilindro.
-  final double altezzaCifra;
+  /// Quanto è **larga** una posizione: è il passo del nastro.
+  final double passo;
 
   final TextStyle? stile;
   final TextStyle? stileVicini;
 
-  /// Quanti numeri si vedono **sopra e sotto** quello buono.
+  /// Quanti numeri si vedono **a destra e a sinistra** di quello buono.
   ///
   /// 📌 *«con vicino altri due o tre numeri»*: due per parte, quindi quattro in
   /// tutto. ⚠️ Tre per parte a questa dimensione escono dal rettangolo, e un
   /// cilindro che sborda sembra un difetto di disegno.
   static const quantiVicini = 2;
 
-  /// Da quanto più in basso parte il giro.
+  /// Da quanto più indietro parte lo scorrimento.
   ///
-  /// ⚠️ Sei e non venti: un cilindro che gira mezzo secondo è un'animazione,
-  /// uno che gira due secondi è un'attesa. ⛔ E qui non si sta caricando niente
-  /// — il numero si sa già.
+  /// ⚠️ Sei e non venti: un nastro che scorre mezzo secondo è un'animazione,
+  /// uno che scorre due secondi è un'attesa. ⛔ E qui non si sta caricando
+  /// niente — il numero si sa già.
   static const daQuantoParte = 6;
 
   @override
@@ -91,7 +101,7 @@ class _CilindroDelNumeroState extends State<CilindroDelNumero>
     super.didUpdateWidget(vecchio);
 
     /*
-     * 💡 Il cilindro rigira **solo se il numero cambia davvero**. ⛔ Rifarlo a
+     * 💡 Il nastro riparte **solo se il numero cambia davvero**. ⛔ Rifarlo a
      * ogni ridisegno vorrebbe dire un'animazione che riparte quando si scorre la
      * pagina o cambia un'altra card: fastidiosa, e per giunta senza motivo.
      */
@@ -110,8 +120,6 @@ class _CilindroDelNumeroState extends State<CilindroDelNumero>
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    const vicini = CilindroDelNumero.quantiVicini;
-    final altezza = widget.altezzaCifra * (vicini * 2 + 1);
 
     final stile =
         widget.stile ??
@@ -123,48 +131,42 @@ class _CilindroDelNumeroState extends State<CilindroDelNumero>
 
     // ⛔ Chi ha spento le animazioni vede il numero e basta.
     if (MediaQuery.disableAnimationsOf(context)) {
-      return SizedBox(
-        height: altezza,
-        child: Center(
-          child: FittedBox(child: Text('${widget.valore}', style: stile)),
-        ),
+      return Center(
+        child: FittedBox(child: Text('${widget.valore}', style: stile)),
       );
     }
 
-    return SizedBox(
-      height: altezza,
+    /*
+     * ⚠️ **`ClipRect` è obbligatorio**: senza, i numeri dello scorrimento escono
+     * dal rettangolo bianco e si vedono correre sopra le pasticche e il grafico.
+     */
+    return ClipRect(
+      child: AnimatedBuilder(
+        animation: _dove,
+        builder: (context, _) {
+          final centro = _dove.value;
+          const vicini = CilindroDelNumero.quantiVicini;
+          final primo = (centro - vicini).floor();
+          final ultimo = (centro + vicini).ceil();
 
-      /*
-       * ⚠️ **`ClipRect` è obbligatorio**: senza, i numeri del giro escono dal
-       * rettangolo bianco e si vedono correre sopra il titolo della card.
-       */
-      child: ClipRect(
-        child: AnimatedBuilder(
-          animation: _dove,
-          builder: (context, _) {
-            final centro = _dove.value;
-            final primo = (centro - vicini).floor();
-            final ultimo = (centro + vicini).ceil();
-
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                for (var n = primo; n <= ultimo; n++)
-                  /*
-                   * ⛔ Niente numeri negativi: un cilindro che passa da «-2»
-                   * mentre sale verso «3» racconta una cosa che non esiste.
-                   */
-                  if (n >= 0)
-                    _Cifra(
-                      numero: n,
-                      scarto: n - centro,
-                      altezzaCifra: widget.altezzaCifra,
-                      stile: (n == widget.valore ? stile : stileVicini),
-                    ),
-              ],
-            );
-          },
-        ),
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              for (var n = primo; n <= ultimo; n++)
+                /*
+                 * ⛔ Niente numeri negativi: un nastro che passa da «-2» mentre
+                 * scorre verso «3» racconta una cosa che non esiste.
+                 */
+                if (n >= 0)
+                  _Cifra(
+                    numero: n,
+                    scarto: n - centro,
+                    passo: widget.passo,
+                    stile: (n == widget.valore ? stile : stileVicini),
+                  ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -174,16 +176,16 @@ class _Cifra extends StatelessWidget {
   const _Cifra({
     required this.numero,
     required this.scarto,
-    required this.altezzaCifra,
+    required this.passo,
     required this.stile,
   });
 
   final int numero;
 
-  /// Quanto dista dal centro, in cifre. Negativo = sopra.
+  /// Quanto dista dal centro, in posizioni. Negativo = a sinistra.
   final double scarto;
 
-  final double altezzaCifra;
+  final double passo;
   final TextStyle? stile;
 
   @override
@@ -199,13 +201,14 @@ class _Cifra extends StatelessWidget {
     final quanto = (1 - distanza / 2.2).clamp(0.0, 1.0);
 
     return Transform.translate(
-      offset: Offset(0, -scarto * altezzaCifra),
+      // ⚠️ Sull'asse X: è la riga che rende orizzontale tutto il resto.
+      offset: Offset(scarto * passo, 0),
       child: Opacity(
         opacity: 0.06 + quanto * 0.94,
         child: Transform.scale(
           scale: 0.45 + quanto * 0.55,
           child: SizedBox(
-            height: altezzaCifra,
+            width: passo,
             child: FittedBox(child: Text('$numero', style: stile)),
           ),
         ),

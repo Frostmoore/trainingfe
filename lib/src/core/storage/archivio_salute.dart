@@ -57,7 +57,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -322,6 +322,19 @@ class ArchivioSalute extends _$ArchivioSalute {
        */
       if (da < 16) {
         await m.addColumn(allenamentiDaOrologio, allenamentiDaOrologio.tipoScelto);
+      }
+
+      /*
+       * 📸 v16 → v17 (3b-B.20.8): la foto di un allenamento del polso.
+       *
+       * 📌 *«Anche nella schermata di allenamento con orologio devo poter
+       * aggiungere una foto»*.
+       *
+       * 🚨 Una colonna **nuova**, non `sessioneId` con un id negativo: gli id
+       * firmati sono la convenzione che B.17.6 ha appena tolto dalle schede.
+       */
+      if (da < 17) {
+        await m.addColumn(fotoProgressi, fotoProgressi.allenamentoOrologioId);
       }
     },
   );
@@ -1118,6 +1131,14 @@ class ArchivioSalute extends _$ArchivioSalute {
         .get();
   }
 
+  /// Le foto di un allenamento visto solo dall'orologio — 3b-B.20.8.
+  Future<List<FotoProgresso>> fotoDellAllenamentoDaOrologio(int id) {
+    return (select(fotoProgressi)
+          ..where((t) => t.allenamentoOrologioId.equals(id))
+          ..orderBy([(t) => OrderingTerm.desc(t.scattataIl)]))
+        .get();
+  }
+
   Future<FotoProgresso?> foto(int id) =>
       (select(fotoProgressi)..where((t) => t.id.equals(id))).getSingleOrNull();
 
@@ -1827,6 +1848,22 @@ class FotoProgressi extends Table {
   /// La sessione di allenamento a cui è legata, se è una foto di fine
   /// allenamento (era `type = 'workout'` sul server).
   IntColumn get sessioneId => integer().nullable()();
+
+  /// La foto di un allenamento visto **solo dall'orologio** — 3b-B.20.8.
+  ///
+  /// 📌 *«Anche nella schermata di allenamento con orologio devo poter
+  /// aggiungere una foto»*.
+  ///
+  /// 🚨 **Una colonna nuova e non `sessioneId` con un id negativo.** Gli id
+  /// firmati sono la convenzione che B.17.6 ha appena tolto dalle schede, e
+  /// rimetterla qui vorrebbe dire ripagare lo stesso prezzo: una riga in cui il
+  /// **segno** di un numero cambia a quale tabella punta è una riga che prima o
+  /// poi qualcuno legge sbagliata, senza nessun errore.
+  ///
+  /// ⚠️ Le due colonne non sono mai piene insieme: una foto appartiene a una
+  /// seduta **o** a un allenamento del polso. Ed entrambe possono essere vuote —
+  /// è la foto di progressi che non sta su nessun allenamento.
+  IntColumn get allenamentoOrologioId => integer().nullable()();
 }
 
 /// I minuti di un campione.

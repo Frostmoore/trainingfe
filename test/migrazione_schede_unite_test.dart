@@ -92,6 +92,21 @@ void main() {
       'staccato INTEGER NOT NULL DEFAULT 0)',
     );
 
+    /*
+     * 📸 E le foto, che il passo v16 → v17 tocca. ⚠️ **È già successo una volta
+     * il giorno stesso**: la nota qui sopra è stata scritta aggiungendo il
+     * passo v16, e il passo v17 l'ha ripagata subito. Chi ne aggiunge un altro
+     * lo scoprirà allo stesso modo, e la lista qui sotto è il posto dove
+     * rimediare.
+     */
+    await esegui(
+      'CREATE TABLE foto_progressi ('
+      'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+      'percorso TEXT NOT NULL, '
+      'scattata_il INTEGER NOT NULL, '
+      'sessione_id INTEGER)',
+    );
+
     // La scheda scesa dal server: id positivo, non è mia.
     await esegui(
       "INSERT INTO schede_sul_telefono VALUES (8, 'Giorno 1', '{}', 1000, 0)",

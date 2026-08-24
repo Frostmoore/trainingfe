@@ -4,16 +4,15 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
-import '../../progress/progress_controller.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
 import 'widgets/azioni_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_fatti.dart';
+import 'widgets/foto_dell_allenamento.dart';
 
 /// Il riepilogo di fine allenamento — G7.
 ///
@@ -136,7 +135,7 @@ class _Corpo extends ConsumerWidget {
         _Calorie(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
-        _Foto(sessione: sessione),
+        FotoDellAllenamento(sedutaId: sessione.id),
 
         const SizedBox(height: Gap.lg),
         Text('Cosa hai fatto', style: theme.textTheme.titleMedium),
@@ -372,125 +371,9 @@ class _CalorieState extends ConsumerState<_Calorie> {
   }
 }
 
-/// La foto della sessione: caricarla, e **vederla qui**.
-class _Foto extends ConsumerStatefulWidget {
-  const _Foto({required this.sessione});
-
-  final WorkoutSession sessione;
-
-  @override
-  ConsumerState<_Foto> createState() => _FotoState();
-}
-
-class _FotoState extends ConsumerState<_Foto> {
-  bool _inCorso = false;
-
-  Future<void> _carica({required bool daFotocamera}) async {
-    setState(() => _inCorso = true);
-
-    try {
-      await ref
-          .read(progressActionsProvider)
-          .upload(
-            context: context,
-            daFotocamera: daFotocamera,
-            workoutSessionId: widget.sessione.id,
-          );
-
-      // 🚨 Si ricarica la sessione, non solo la galleria: la foto va mostrata
-      // **qui**, e senza questo resterebbe una schermata che dice «caricata»
-      // senza far vedere niente.
-      // ⚠️ Non serve piu' invalidare la sessione: la foto non arriva da li'.
-      // `progressActionsProvider.upload()` incrementa gia' la revisione, e
-      // `fotoSessioneProvider` si ricalcola da solo.
-    } on Object catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _inCorso = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // 🚨 Le foto vengono dal TELEFONO — S5.3. `sessione.photos` arrivava dal
-    // server e da S5 non c'e' piu'.
-    final foto =
-        ref.watch(fotoSessioneProvider(widget.sessione.id)).valueOrNull ??
-        const [];
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.photo_camera_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: Gap.sm),
-                Text('Foto', style: theme.textTheme.titleMedium),
-              ],
-            ),
-
-            if (foto.isNotEmpty) ...[
-              const SizedBox(height: Gap.sm),
-              SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: foto.length,
-                  separatorBuilder: (context, i) =>
-                      const SizedBox(width: Gap.sm),
-                  itemBuilder: (context, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(Gap.radiusSm),
-                    // 💡 File locale da S5.3: niente token, niente 401 in
-                    // cache, niente `FotoProtetta`.
-                    child: FotoLocale(file: foto[i].file, width: 130),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: Gap.sm),
-            if (_inCorso)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: Gap.sm),
-                child: LinearProgressIndicator(),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _carica(daFotocamera: true),
-                      icon: const Icon(Icons.photo_camera_outlined),
-                      label: const Text('Scatta'),
-                    ),
-                  ),
-                  const SizedBox(width: Gap.sm),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _carica(daFotocamera: false),
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Galleria'),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// 💡 `_Foto` se n'è andata in `widgets/foto_dell_allenamento.dart`: la stessa
+// card deve stare anche sulla pagina di un allenamento del polso, e una card
+// privata dentro una schermata non ci poteva arrivare.
 
 class _Numero extends StatelessWidget {
   const _Numero({required this.valore, required this.etichetta});

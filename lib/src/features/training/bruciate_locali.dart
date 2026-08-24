@@ -1,9 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
+import '../profile/corpo_controller.dart';
 import 'data/calorie_allenamento.dart';
 import 'data/session_models.dart';
+import 'data/tipo_scelto.dart';
 import 'session_controller.dart';
+import 'storico_unificato_controller.dart';
 
 /// Le calorie bruciate con l'allenamento, **calcolate sul telefono** —
 /// FASE 11.5, 21/08/2026.
@@ -52,6 +56,53 @@ final bruciateLocaliProvider = FutureProvider.autoDispose
       final sedute = await ref.watch(sessionsProvider.future);
       final archivio = ref.watch(archivioSaluteProvider);
 
+      /*
+       * ══ 🔥 E GLI ALLENAMENTI DI CUI HAI DICHIARATO IL TIPO — B.20.7 ═══════
+       *
+       * 📌 *«se ci sono quelle che arrivano dall'orologio ok, se le inserisco a
+       * mano ok, ma se non faccio nessuna delle due cose non vedo proprio
+       * perché quelle stimate non dovrebbero entrare nel calcolo»*.
+       *
+       * ⛔ **Aveva ragione, e qui c'era un buco.** Le stime venivano **solo**
+       * dalle sedute registrate nell'app: una corsa vista solo dall'orologio,
+       * su cui avevi dichiarato «corsa», non produceva nessuna seduta — quindi
+       * non entrava da nessuna parte, e la giornata la contava zero.
+       *
+       * ⚠️ **Solo quelle senza calorie proprie.** Se l'orologio le ha misurate,
+       * quelle passano dalla loro strada (`kcalAttivePerGiorniProvider`) e
+       * sommare la formula qui le conterebbe due volte.
+       *
+       * 💡 Il peso è quello registrato; senza, il ripiego prudente.
+       */
+      final dalPolso = await ref
+          .watch(allenamentiDalPolsoProvider.future)
+          .catchError((Object _) => const <AllenamentoDaOrologio>[]);
+
+      final kg =
+          ref.watch(corpoOggiProvider).valueOrNull?.weightKg ??
+          CalorieAllenamento.pesoDiRipiego;
+
+      final stimateDalTipo = <String, int>{};
+
+      for (final a in dalPolso) {
+        if (a.nascosto) continue;
+        if (a.kcal != null && a.kcal! > 0) continue;
+
+        final sport = TipoScelto.per(a.tipoScelto);
+        if (sport == null) continue;
+
+        final kcal = CalorieAllenamento.formula(
+          durata: a.finitoIl.difference(a.iniziatoIl),
+          kg: kg,
+          metMedio: sport.met,
+        );
+
+        if (kcal <= 0) continue;
+
+        final g = _etichetta(a.iniziatoIl);
+        stimateDalTipo[g] = (stimateDalTipo[g] ?? 0) + kcal;
+      }
+
       final perGiorno = <String, List<WorkoutSession>>{};
 
       for (final s in sedute) {
@@ -70,9 +121,18 @@ final bruciateLocaliProvider = FutureProvider.autoDispose
 
         final aMano = await archivio.bruciateAManoDel(data);
 
+        /*
+         * ⚠️ **La dichiarazione a mano vince ancora su tutto.** Le stime dal
+         * tipo entrano fra le sedute, cioè **dentro** il ramo che `aMano`
+         * scavalca: chi ha scritto un numero l'ha scritto apposta, e una
+         * formula non lo sconfessa.
+         */
         final kcal = CalorieAllenamento.bruciateDelGiorno(
           aMano: aMano,
-          kcalDelleSedute: (perGiorno[g] ?? const []).map((s) => s.kcal ?? 0),
+          kcalDelleSedute: [
+            ...(perGiorno[g] ?? const []).map((s) => s.kcal ?? 0),
+            if (stimateDalTipo[g] != null) stimateDalTipo[g]!,
+          ],
         );
 
         if (kcal > 0) fuori[g] = kcal;

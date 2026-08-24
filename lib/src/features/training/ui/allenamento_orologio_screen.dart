@@ -38,6 +38,7 @@ import '../storico_unificato_controller.dart';
 import 'widgets/azioni_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_dalla_scheda.dart';
+import 'widgets/foto_dell_allenamento.dart';
 
 class AllenamentoOrologioScreen extends ConsumerWidget {
   const AllenamentoOrologioScreen({required this.id, super.key});
@@ -156,6 +157,21 @@ class _Dettaglio extends ConsumerWidget {
          * che è quella. ⛔ Inventare dei carichi per far tornare la somiglianza
          * darebbe una pagina che *sembra* informata.
          */
+        /*
+         * 📸 **E la foto, come su una seduta dell'app** — 3b-B.20.8.
+         *
+         * 📌 *«Anche nella schermata di allenamento con orologio devo poter
+         * aggiungere una foto»*.
+         *
+         * ⚠️ Si aggancia al **primo** tratto del gruppo: se l'orologio ha
+         * spezzato la corsa in tre, la foto è della corsa, e attaccarla al
+         * tratto che si è aperto per caso la farebbe sparire quando i tratti si
+         * raggruppano diversamente.
+         */
+        FotoDellAllenamento(allenamentoOrologioId: voce.dalPolso.first.id),
+
+        const SizedBox(height: Gap.md),
+
         EserciziDallaScheda(schedaId: voce.schedaId),
 
         const SizedBox(height: Gap.md),

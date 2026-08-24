@@ -1437,8 +1437,24 @@ class $FotoProgressiTable extends FotoProgressi
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _allenamentoOrologioIdMeta =
+      const VerificationMeta('allenamentoOrologioId');
   @override
-  List<GeneratedColumn> get $columns => [id, percorso, scattataIl, sessioneId];
+  late final GeneratedColumn<int> allenamentoOrologioId = GeneratedColumn<int>(
+    'allenamento_orologio_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    percorso,
+    scattataIl,
+    sessioneId,
+    allenamentoOrologioId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1476,6 +1492,15 @@ class $FotoProgressiTable extends FotoProgressi
         sessioneId.isAcceptableOrUnknown(data['sessione_id']!, _sessioneIdMeta),
       );
     }
+    if (data.containsKey('allenamento_orologio_id')) {
+      context.handle(
+        _allenamentoOrologioIdMeta,
+        allenamentoOrologioId.isAcceptableOrUnknown(
+          data['allenamento_orologio_id']!,
+          _allenamentoOrologioIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1501,6 +1526,10 @@ class $FotoProgressiTable extends FotoProgressi
         DriftSqlType.int,
         data['${effectivePrefix}sessione_id'],
       ),
+      allenamentoOrologioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}allenamento_orologio_id'],
+      ),
     );
   }
 
@@ -1525,11 +1554,28 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
   /// La sessione di allenamento a cui è legata, se è una foto di fine
   /// allenamento (era `type = 'workout'` sul server).
   final int? sessioneId;
+
+  /// La foto di un allenamento visto **solo dall'orologio** — 3b-B.20.8.
+  ///
+  /// 📌 *«Anche nella schermata di allenamento con orologio devo poter
+  /// aggiungere una foto»*.
+  ///
+  /// 🚨 **Una colonna nuova e non `sessioneId` con un id negativo.** Gli id
+  /// firmati sono la convenzione che B.17.6 ha appena tolto dalle schede, e
+  /// rimetterla qui vorrebbe dire ripagare lo stesso prezzo: una riga in cui il
+  /// **segno** di un numero cambia a quale tabella punta è una riga che prima o
+  /// poi qualcuno legge sbagliata, senza nessun errore.
+  ///
+  /// ⚠️ Le due colonne non sono mai piene insieme: una foto appartiene a una
+  /// seduta **o** a un allenamento del polso. Ed entrambe possono essere vuote —
+  /// è la foto di progressi che non sta su nessun allenamento.
+  final int? allenamentoOrologioId;
   const FotoProgresso({
     required this.id,
     required this.percorso,
     required this.scattataIl,
     this.sessioneId,
+    this.allenamentoOrologioId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1539,6 +1585,9 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
     map['scattata_il'] = Variable<DateTime>(scattataIl);
     if (!nullToAbsent || sessioneId != null) {
       map['sessione_id'] = Variable<int>(sessioneId);
+    }
+    if (!nullToAbsent || allenamentoOrologioId != null) {
+      map['allenamento_orologio_id'] = Variable<int>(allenamentoOrologioId);
     }
     return map;
   }
@@ -1551,6 +1600,9 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
       sessioneId: sessioneId == null && nullToAbsent
           ? const Value.absent()
           : Value(sessioneId),
+      allenamentoOrologioId: allenamentoOrologioId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(allenamentoOrologioId),
     );
   }
 
@@ -1564,6 +1616,9 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
       percorso: serializer.fromJson<String>(json['percorso']),
       scattataIl: serializer.fromJson<DateTime>(json['scattataIl']),
       sessioneId: serializer.fromJson<int?>(json['sessioneId']),
+      allenamentoOrologioId: serializer.fromJson<int?>(
+        json['allenamentoOrologioId'],
+      ),
     );
   }
   @override
@@ -1574,6 +1629,7 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
       'percorso': serializer.toJson<String>(percorso),
       'scattataIl': serializer.toJson<DateTime>(scattataIl),
       'sessioneId': serializer.toJson<int?>(sessioneId),
+      'allenamentoOrologioId': serializer.toJson<int?>(allenamentoOrologioId),
     };
   }
 
@@ -1582,11 +1638,15 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
     String? percorso,
     DateTime? scattataIl,
     Value<int?> sessioneId = const Value.absent(),
+    Value<int?> allenamentoOrologioId = const Value.absent(),
   }) => FotoProgresso(
     id: id ?? this.id,
     percorso: percorso ?? this.percorso,
     scattataIl: scattataIl ?? this.scattataIl,
     sessioneId: sessioneId.present ? sessioneId.value : this.sessioneId,
+    allenamentoOrologioId: allenamentoOrologioId.present
+        ? allenamentoOrologioId.value
+        : this.allenamentoOrologioId,
   );
   FotoProgresso copyWithCompanion(FotoProgressiCompanion data) {
     return FotoProgresso(
@@ -1598,6 +1658,9 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
       sessioneId: data.sessioneId.present
           ? data.sessioneId.value
           : this.sessioneId,
+      allenamentoOrologioId: data.allenamentoOrologioId.present
+          ? data.allenamentoOrologioId.value
+          : this.allenamentoOrologioId,
     );
   }
 
@@ -1607,13 +1670,15 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
           ..write('id: $id, ')
           ..write('percorso: $percorso, ')
           ..write('scattataIl: $scattataIl, ')
-          ..write('sessioneId: $sessioneId')
+          ..write('sessioneId: $sessioneId, ')
+          ..write('allenamentoOrologioId: $allenamentoOrologioId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, percorso, scattataIl, sessioneId);
+  int get hashCode =>
+      Object.hash(id, percorso, scattataIl, sessioneId, allenamentoOrologioId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1621,7 +1686,8 @@ class FotoProgresso extends DataClass implements Insertable<FotoProgresso> {
           other.id == this.id &&
           other.percorso == this.percorso &&
           other.scattataIl == this.scattataIl &&
-          other.sessioneId == this.sessioneId);
+          other.sessioneId == this.sessioneId &&
+          other.allenamentoOrologioId == this.allenamentoOrologioId);
 }
 
 class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
@@ -1629,17 +1695,20 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
   final Value<String> percorso;
   final Value<DateTime> scattataIl;
   final Value<int?> sessioneId;
+  final Value<int?> allenamentoOrologioId;
   const FotoProgressiCompanion({
     this.id = const Value.absent(),
     this.percorso = const Value.absent(),
     this.scattataIl = const Value.absent(),
     this.sessioneId = const Value.absent(),
+    this.allenamentoOrologioId = const Value.absent(),
   });
   FotoProgressiCompanion.insert({
     this.id = const Value.absent(),
     required String percorso,
     required DateTime scattataIl,
     this.sessioneId = const Value.absent(),
+    this.allenamentoOrologioId = const Value.absent(),
   }) : percorso = Value(percorso),
        scattataIl = Value(scattataIl);
   static Insertable<FotoProgresso> custom({
@@ -1647,12 +1716,15 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
     Expression<String>? percorso,
     Expression<DateTime>? scattataIl,
     Expression<int>? sessioneId,
+    Expression<int>? allenamentoOrologioId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (percorso != null) 'percorso': percorso,
       if (scattataIl != null) 'scattata_il': scattataIl,
       if (sessioneId != null) 'sessione_id': sessioneId,
+      if (allenamentoOrologioId != null)
+        'allenamento_orologio_id': allenamentoOrologioId,
     });
   }
 
@@ -1661,12 +1733,15 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
     Value<String>? percorso,
     Value<DateTime>? scattataIl,
     Value<int?>? sessioneId,
+    Value<int?>? allenamentoOrologioId,
   }) {
     return FotoProgressiCompanion(
       id: id ?? this.id,
       percorso: percorso ?? this.percorso,
       scattataIl: scattataIl ?? this.scattataIl,
       sessioneId: sessioneId ?? this.sessioneId,
+      allenamentoOrologioId:
+          allenamentoOrologioId ?? this.allenamentoOrologioId,
     );
   }
 
@@ -1685,6 +1760,11 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
     if (sessioneId.present) {
       map['sessione_id'] = Variable<int>(sessioneId.value);
     }
+    if (allenamentoOrologioId.present) {
+      map['allenamento_orologio_id'] = Variable<int>(
+        allenamentoOrologioId.value,
+      );
+    }
     return map;
   }
 
@@ -1694,7 +1774,8 @@ class FotoProgressiCompanion extends UpdateCompanion<FotoProgresso> {
           ..write('id: $id, ')
           ..write('percorso: $percorso, ')
           ..write('scattataIl: $scattataIl, ')
-          ..write('sessioneId: $sessioneId')
+          ..write('sessioneId: $sessioneId, ')
+          ..write('allenamentoOrologioId: $allenamentoOrologioId')
           ..write(')'))
         .toString();
   }
@@ -6362,6 +6443,7 @@ typedef $$FotoProgressiTableCreateCompanionBuilder =
       required String percorso,
       required DateTime scattataIl,
       Value<int?> sessioneId,
+      Value<int?> allenamentoOrologioId,
     });
 typedef $$FotoProgressiTableUpdateCompanionBuilder =
     FotoProgressiCompanion Function({
@@ -6369,6 +6451,7 @@ typedef $$FotoProgressiTableUpdateCompanionBuilder =
       Value<String> percorso,
       Value<DateTime> scattataIl,
       Value<int?> sessioneId,
+      Value<int?> allenamentoOrologioId,
     });
 
 class $$FotoProgressiTableFilterComposer
@@ -6397,6 +6480,11 @@ class $$FotoProgressiTableFilterComposer
 
   ColumnFilters<int> get sessioneId => $composableBuilder(
     column: $table.sessioneId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get allenamentoOrologioId => $composableBuilder(
+    column: $table.allenamentoOrologioId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6429,6 +6517,11 @@ class $$FotoProgressiTableOrderingComposer
     column: $table.sessioneId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get allenamentoOrologioId => $composableBuilder(
+    column: $table.allenamentoOrologioId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FotoProgressiTableAnnotationComposer
@@ -6453,6 +6546,11 @@ class $$FotoProgressiTableAnnotationComposer
 
   GeneratedColumn<int> get sessioneId => $composableBuilder(
     column: $table.sessioneId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get allenamentoOrologioId => $composableBuilder(
+    column: $table.allenamentoOrologioId,
     builder: (column) => column,
   );
 }
@@ -6498,11 +6596,13 @@ class $$FotoProgressiTableTableManager
                 Value<String> percorso = const Value.absent(),
                 Value<DateTime> scattataIl = const Value.absent(),
                 Value<int?> sessioneId = const Value.absent(),
+                Value<int?> allenamentoOrologioId = const Value.absent(),
               }) => FotoProgressiCompanion(
                 id: id,
                 percorso: percorso,
                 scattataIl: scattataIl,
                 sessioneId: sessioneId,
+                allenamentoOrologioId: allenamentoOrologioId,
               ),
           createCompanionCallback:
               ({
@@ -6510,11 +6610,13 @@ class $$FotoProgressiTableTableManager
                 required String percorso,
                 required DateTime scattataIl,
                 Value<int?> sessioneId = const Value.absent(),
+                Value<int?> allenamentoOrologioId = const Value.absent(),
               }) => FotoProgressiCompanion.insert(
                 id: id,
                 percorso: percorso,
                 scattataIl: scattataIl,
                 sessioneId: sessioneId,
+                allenamentoOrologioId: allenamentoOrologioId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

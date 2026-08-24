@@ -63,6 +63,31 @@ final progressPhotosProvider = FutureProvider.autoDispose<List<ProgressPhoto>>((
 });
 
 /// Le foto di una sessione di allenamento.
+/// Le foto di un allenamento visto **solo dall'orologio** — 3b-B.20.8.
+///
+/// 💡 Gemello di [fotoSessioneProvider], e separato per la stessa ragione per
+/// cui le colonne sono due: i due id vengono da tabelle diverse, e un provider
+/// solo dovrebbe sapere quale delle due gli è stata passata.
+final fotoAllenamentoOrologioProvider = FutureProvider.autoDispose
+    .family<List<ProgressPhoto>, int>((ref, allenamentoId) async {
+      ref.watch(revisioneFotoProvider);
+
+      final righe = await ref
+          .watch(archivioSaluteProvider)
+          .fotoDellAllenamentoDaOrologio(allenamentoId);
+
+      return Future.wait(
+        righe.map(
+          (r) async => ProgressPhoto(
+            id: r.id,
+            file: await _fileDi(r.percorso),
+            takenOn: r.scattataIl,
+            workoutSessionId: r.sessioneId,
+          ),
+        ),
+      );
+    });
+
 final fotoSessioneProvider = FutureProvider.autoDispose
     .family<List<ProgressPhoto>, int>((ref, sessioneId) async {
       ref.watch(revisioneFotoProvider);
@@ -106,6 +131,13 @@ class ProgressActions {
     required BuildContext context,
     required bool daFotocamera,
     int? workoutSessionId,
+
+    /// 🆕 3b-B.20.8 — la foto di un allenamento visto solo dall'orologio.
+    ///
+    /// ⚠️ **Mai insieme a [workoutSessionId]**: una foto appartiene a una
+    /// seduta o a un allenamento del polso, e le due colonne dell'archivio non
+    /// sono mai piene tutte e due.
+    int? allenamentoOrologioId,
   }) async {
     /*
      * 🚨 **Dal canale unico** — N11.4.
@@ -137,6 +169,7 @@ class ProgressActions {
             percorso: scelta.relativo,
             scattataIl: DateTime.now(),
             sessioneId: Value(workoutSessionId),
+            allenamentoOrologioId: Value(allenamentoOrologioId),
           ),
         );
 

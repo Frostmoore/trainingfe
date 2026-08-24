@@ -375,3 +375,135 @@ final quantoSeiAllenatoProvider = Provider<int>((ref) {
 
   return quantoSeiAllenato(voci: voci, adesso: DateTime.now());
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🚨 UN NUMERO NUDO NON È UN'INFORMAZIONE — B.13, 24/08/2026
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 📌 Il committente, guardando «8» a schermo: *«quanto sei allenato non si
+// capisce, 8 non significa un cazzo. O ci metti una barra … o ci metti qualche
+// termine di paragone, sennò 8 è come dire "di che colore è il cielo?" "42"»*.
+//
+// ⛔ **Aveva ragione, ed è un difetto di questa applicazione, non di lui.** Il
+// numero era giusto e non diceva niente: senza una scala, «8» non distingue
+// «hai appena cominciato» da «sei un atleta» — e chi lo legge non ha modo di
+// capirlo. È lo stesso difetto del dato che *sembra informato*, visto
+// dall'altro lato: qui l'informazione c'è e non arriva.
+
+/// Dove sta la barra quando è piena.
+///
+/// 💡 **Sessanta, e non è un numero tondo scelto a caso**: è il valore che
+/// tiene chi si allena **tutti i giorni** con sedute da 500 kcal
+/// (`7 × 500 / 7 / 10 = 50`), più un margine. ⚠️ Oltre la barra resta piena: chi
+/// sta lì non ha bisogno di questa card per sapere come sta.
+const double formaMassima = 60;
+
+/// Le fasce di «quanto sei allenato», con il limite superiore di ciascuna.
+///
+/// ══ 🚨 DA DOVE VENGONO QUESTI QUATTRO NUMERI ═══════════════════════════════
+///
+/// ⛔ **Non dalle tabelle che si trovano in giro.** La scala del CTL che usano
+/// TrainingPeaks e simili è in **TSS**, che si calcola dalla frequenza cardiaca:
+/// «sotto 40 = principiante» è vero *in quelle unità*, e qui le unità sono le
+/// calorie. Copiare quelle soglie sarebbe stata una precisione finta — un numero
+/// autorevole applicato alla cosa sbagliata.
+///
+/// 💡 **Sono ricavate dalla nostra stessa formula.** A regime il valore tende al
+/// carico medio giornaliero, quindi con sedute da 500 kcal:
+///
+/// | Sedute a settimana | Valore a regime |
+/// |---|---|
+/// | 1 | ~7 |
+/// | 2 | ~14 |
+/// | 3 | ~21 |
+/// | 4-5 | ~29-36 |
+/// | 6-7 | ~43-50 |
+///
+/// ⚠️ Le soglie sono messe **fra** questi gradini, non sopra: 10 sta fra una e
+/// due sedute, 25 fra tre e quattro, 45 fra sei e sette.
+enum FasciaDellaForma {
+  poco('Poco allenato', 10),
+  costante('Costante', 25),
+  allenato('Allenato', 45),
+  atleta('Molto allenato', formaMassima);
+
+  const FasciaDellaForma(this.etichetta, this.finoA);
+
+  final String etichetta;
+  final double finoA;
+
+  static FasciaDellaForma di(int forma) =>
+      values.firstWhere((f) => forma < f.finoA, orElse: () => atleta);
+}
+
+/// Quanto sei allenato, con tutto quello che serve a **capirlo**.
+class Forma {
+  const Forma({required this.valore, required this.kcalMediaPerSeduta});
+
+  /// Il numero: la media mobile esponenziale a 42 giorni.
+  final int valore;
+
+  /// Quante calorie sono valse **le tue** sedute delle ultime sei settimane.
+  ///
+  /// ⚠️ `null` quando non ce n'è nessuna con le calorie: allora il paragone non
+  /// si fa. ⛔ Inventare una seduta media da 500 kcal per poter scrivere una
+  /// frase sarebbe un paragone con una persona che non esiste.
+  final int? kcalMediaPerSeduta;
+
+  FasciaDellaForma get fascia => FasciaDellaForma.di(valore);
+
+  double get frazione => (valore / formaMassima).clamp(0.0, 1.0);
+
+  /// ══ 💡 IL TERMINE DI PARAGONE, E PERCHÉ È QUESTO ═══════════════════════
+  ///
+  /// 📌 *«o ci metti qualche termine di paragone»*.
+  ///
+  /// 🚨 **Quante sedute a settimana come le tue tengono questo valore.** A
+  /// regime il valore tende al carico medio giornaliero, quindi basta
+  /// rovesciare la formula: `sedute = valore × 7 × 10 / kcal per seduta`.
+  ///
+  /// ⚠️ **Con le TUE calorie, non con una media inventata.** Un paragone fatto
+  /// su «una seduta tipo da 500 kcal» direbbe a chi fa sedute da mille che si
+  /// allena il doppio di quanto si allena. Il paragone serve a capirsi, e per
+  /// capirsi deve parlare della persona che legge.
+  double? get seduteASettimana {
+    final k = kcalMediaPerSeduta;
+
+    if (k == null || k <= 0) return null;
+
+    return valore * 7 * kcalPerPunto / k;
+  }
+}
+
+/// La forma di oggi, con la seduta media delle ultime sei settimane.
+Forma laForma({required Iterable<VoceStorico> voci, required DateTime adesso}) {
+  final oggi = DateTime(adesso.year, adesso.month, adesso.day);
+  final da = oggi.subtract(const Duration(days: giorniDellaForma - 1));
+
+  var somma = 0;
+  var quante = 0;
+
+  for (final v in voci) {
+    final k = v.kcal;
+
+    if (k == null || k <= 0) continue;
+
+    final giorno = DateTime(v.quando.year, v.quando.month, v.quando.day);
+
+    if (giorno.isBefore(da) || giorno.isAfter(oggi)) continue;
+
+    somma += k;
+    quante++;
+  }
+
+  return Forma(
+    valore: quantoSeiAllenato(voci: voci, adesso: adesso),
+    kcalMediaPerSeduta: quante == 0 ? null : (somma / quante).round(),
+  );
+}
+
+final formaProvider = Provider<Forma>((ref) {
+  final voci = ref.watch(storicoUnificatoProvider).valueOrNull ?? const [];
+
+  return laForma(voci: voci, adesso: DateTime.now());
+});

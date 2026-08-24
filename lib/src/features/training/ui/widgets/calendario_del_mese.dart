@@ -63,7 +63,7 @@ class CalendarioDelMese extends ConsumerWidget {
     final oggiSecco = DateTime(oggi.year, oggi.month, oggi.day);
 
     final costanza = ref.watch(costanzaDelMeseProvider(mese));
-    final forma = ref.watch(quantoSeiAllenatoProvider);
+    final forma = ref.watch(formaProvider);
 
     return Card(
       /*
@@ -155,50 +155,60 @@ class CalendarioDelMese extends ConsumerWidget {
   }
 }
 
-/// I due numeri sopra il calendario — B.12.
+/// I due numeri sopra il calendario — B.12, con le barre da B.13.
 ///
 /// 📌 *«sulla parte superiore ci dovrebbe essere un valore percentuale che
 /// indica la mia costanza … Inoltre, dovrebbe esserci un numero che mi dice
-/// quanto sono allenato»*.
+/// quanto sono allenato»* e poi, vedendoli a schermo: *«quanto sei allenato non
+/// si capisce, 8 non significa un cazzo. O ci metti una barra … o ci metti
+/// qualche termine di paragone»*.
 ///
-/// ⚠️ **Due misure diverse, e la differenza va detta**: la costanza parla del
-/// **mese che stai guardando**, la forma parla di **adesso** e guarda indietro
-/// sei settimane. ⛔ Metterle vicine senza spiegarlo farebbe credere che siano
-/// due facce dello stesso periodo — e navigando a marzo la seconda non
-/// cambierebbe, che sembrerebbe un difetto.
+/// ══ ⛔ UN NUMERO NUDO NON È UN'INFORMAZIONE ═══════════════════════════════
+///
+/// 🚨 Il numero era **giusto** e non diceva niente: senza una scala, «8» non
+/// distingue «hai appena cominciato» da «sei un atleta». ⚠️ È il difetto del
+/// dato che *sembra informato* visto dall'altro lato — qui l'informazione c'è
+/// e **non arriva**.
+///
+/// ── ⚠️ Uno sotto l'altro, non affiancati ─────────────────────────────────
+///
+/// ⛔ Erano due colonne mezze e mezze: una barra larga metà schermo con sotto
+/// una frase di paragone non ci sta, e a carattere grande andava a capo tre
+/// volte. 💡 In colonna ognuna ha tutta la larghezza, che è quello che serve a
+/// una barra per essere leggibile.
 class _Testata extends StatelessWidget {
   const _Testata({required this.costanza, required this.forma});
 
   final Costanza costanza;
-  final int forma;
+  final Forma forma;
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Expanded(
-        child: _Misura(
-          etichetta: 'Costanza',
-          valore: costanza.siPuoDire ? '${costanza.percentuale}%' : '—',
+      _Misura(
+        etichetta: 'Costanza',
 
-          /*
-           * ⛔ **Con meno di due settimane finite si scrive un trattino**, non
-           * uno zero: «0%» direbbe che sei incostante, quando la verità è che
-           * non si sa ancora. È la stessa regola del «0 km».
-           */
-          sotto: costanza.siPuoDire
-              ? _comeVaLaCostanza(costanza)
-              : 'ancora presto per dirlo',
-        ),
+        /*
+         * ⛔ **Con meno di due settimane finite si scrive un trattino**, non
+         * uno zero: «0%» direbbe che sei incostante, quando la verità è che non
+         * si sa ancora. È la stessa regola del «0 km».
+         */
+        valore: costanza.siPuoDire ? '${costanza.percentuale}%' : '—',
+        sotto: costanza.siPuoDire
+            ? _comeVaLaCostanza(costanza)
+            : 'ancora presto — servono due settimane finite',
+        frazione: costanza.siPuoDire ? costanza.valore : null,
       ),
 
-      const SizedBox(height: 34, child: VerticalDivider(width: Gap.md)),
+      const SizedBox(height: Gap.sm),
 
-      Expanded(
-        child: _Misura(
-          etichetta: 'Quanto sei allenato',
-          valore: '$forma',
-          sotto: 'ultime sei settimane',
-        ),
+      _Misura(
+        etichetta: 'Quanto sei allenato',
+        valore: '${forma.valore}',
+        sotto: _comeVaLaForma(forma),
+        frazione: forma.frazione,
+        fasce: FasciaDellaForma.values,
       ),
     ],
   );
@@ -217,45 +227,95 @@ class _Testata extends StatelessWidget {
 
     return peggiore.first.$2;
   }
+
+  /// ══ 💡 IL TERMINE DI PARAGONE ═══════════════════════════════════════════
+  ///
+  /// 🚨 **Quante sedute a settimana come le tue tengono questo valore**, non un
+  /// aggettivo e basta. ⚠️ È calcolato **con le calorie delle tue sedute**: un
+  /// paragone su una «seduta tipo» inventata direbbe a chi fa sedute da mille
+  /// kcal che si allena il doppio di quanto si allena.
+  ///
+  /// ⛔ E se di calorie non ce ne sono, il paragone **non si fa**: resta la
+  /// fascia, che è vera lo stesso.
+  static String _comeVaLaForma(Forma f) {
+    final sedute = f.seduteASettimana;
+
+    if (sedute == null || sedute < 0.25) return f.fascia.etichetta;
+
+    final quante = sedute < 1.75
+        ? sedute.toStringAsFixed(1).replaceAll('.', ',')
+        : sedute.round().toString();
+
+    /*
+     * ⚠️ **Il singolare vale solo per l'uno esatto.** In italiano «0,9 seduta»
+     * non si dice: mezzo, 0,9 e 1,5 vogliono tutti il plurale. Visto a schermo
+     * il 24/08 — scritto giusto in logica e sbagliato in italiano, che è un
+     * difetto che nessun test di numeri prende.
+     */
+    final parola = quante == '1' ? 'seduta' : 'sedute';
+
+    return '${f.fascia.etichetta} — come $quante $parola a settimana';
+  }
 }
 
+/// Un'etichetta, un numero e una barra.
 class _Misura extends StatelessWidget {
   const _Misura({
     required this.etichetta,
     required this.valore,
     required this.sotto,
+    required this.frazione,
+    this.fasce = const [],
   });
 
   final String etichetta;
   final String valore;
   final String sotto;
 
+  /// Quanto è piena la barra, da 0 a 1. `null` = non si sa, e non si disegna.
+  final double? frazione;
+
+  /// Le fasce da segnare sulla barra, se ce ne sono.
+  final List<FasciaDellaForma> fasce;
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          etichetta,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: tema.textTheme.labelSmall?.copyWith(
-            color: tema.colorScheme.onSurfaceVariant,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                etichetta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tema.textTheme.labelMedium?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Text(
+              valore,
+              style: tema.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: tema.colorScheme.primary,
+                height: 1,
+              ),
+            ),
+          ],
         ),
-        Text(
-          valore,
-          style: tema.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: tema.colorScheme.primary,
-            height: 1.1,
-          ),
-        ),
+
+        const SizedBox(height: 4),
+
+        if (frazione != null) _Barra(frazione: frazione!, fasce: fasce),
+
+        const SizedBox(height: 2),
+
         Text(
           sotto,
-          textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: tema.textTheme.labelSmall?.copyWith(
@@ -263,6 +323,76 @@ class _Misura extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// La barra, con le tacche delle fasce quando ce ne sono.
+///
+/// ⚠️ **Le tacche stanno sulla barra, non sotto in una riga di parole.** Quattro
+/// etichette («Poco allenato», «Costante», «Allenato», «Molto allenato») sotto
+/// una barra larga trecento punti non ci starebbero mai, e a carattere grande
+/// nemmeno la metà: il nome della fascia in cui sei sta **nella frase sotto**,
+/// dove c'è spazio per scriverlo per intero.
+class _Barra extends StatelessWidget {
+  const _Barra({required this.frazione, required this.fasce});
+
+  final double frazione;
+  final List<FasciaDellaForma> fasce;
+
+  static const _alta = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, vincoli) => SizedBox(
+        height: _alta,
+        child: Stack(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: tema.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const SizedBox(width: double.infinity, height: _alta),
+            ),
+
+            /*
+             * ⚠️ **Un minimo visibile anche a zero.** Una barra vuota e una
+             * barra che non c'è si somigliano troppo, e la seconda vuol dire
+             * un'altra cosa — «non si sa».
+             */
+            FractionallySizedBox(
+              widthFactor: frazione.clamp(0.03, 1.0),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: tema.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const SizedBox(height: _alta),
+              ),
+            ),
+
+            /*
+             * 💡 Le tacche: dove finisce ogni fascia. ⛔ L'ultima non si segna —
+             * è il fondo della barra, e una tacca sul bordo sembra un difetto di
+             * disegno invece che un'informazione.
+             */
+            for (final f in fasce)
+              if (f.finoA < formaMassima)
+                Positioned(
+                  left: (vincoli.maxWidth * f.finoA / formaMassima) - 1,
+                  child: Container(
+                    width: 2,
+                    height: _alta,
+                    color: tema.colorScheme.surface.withValues(alpha: 0.85),
+                  ),
+                ),
+          ],
+        ),
+      ),
     );
   }
 }

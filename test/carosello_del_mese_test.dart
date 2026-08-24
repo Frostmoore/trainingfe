@@ -733,7 +733,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('ancora presto per dirlo'), findsOneWidget);
+      expect(find.textContaining('ancora presto'), findsOneWidget);
       expect(find.text('—'), findsOneWidget);
       expect(find.text('0%'), findsNothing);
     });

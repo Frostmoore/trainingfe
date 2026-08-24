@@ -249,6 +249,86 @@ void main() {
       );
     });
 
+    /// ══ 🚨 UN NUMERO NUDO NON È UN'INFORMAZIONE — B.13 ═════════════════════
+    ///
+    /// 📌 Il committente, guardando «8» a schermo: *«8 non significa un cazzo …
+    /// è come dire "di che colore è il cielo?" "42"»*.
+    ///
+    /// 💡 Il paragone è **quante sedute come le tue** tengono quel valore, ed è
+    /// la formula rovesciata: `sedute = valore × 7 × 10 / kcal per seduta`.
+    /// Sei settimane a 500 kcal al giorno danno 43, e 43 × 70 / 500 ≈ 6: cioè
+    /// **sei sedute a settimana**, che è esattamente quello che si sta facendo.
+    test('il paragone dice quante sedute a settimana valgono quel numero', () {
+      final voci = [
+        for (var g = 0; g < giorniDellaForma; g++)
+          allenamento(
+            adesso.subtract(Duration(days: g)).copyWith(hour: 18),
+            kcal: 500,
+          ),
+      ];
+
+      final f = laForma(voci: voci, adesso: adesso);
+
+      expect(f.valore, 43);
+      expect(f.kcalMediaPerSeduta, 500);
+      expect(f.seduteASettimana, closeTo(6, 0.3));
+    });
+
+    /// ⛔ **Con le TUE calorie, non con una seduta tipo inventata.** Chi fa
+    /// sedute da mille kcal si allena **la metà delle volte** di chi le fa da
+    /// cinquecento, a parità di valore: un paragone su una media fissa gli
+    /// direbbe il doppio, ed è proprio il numero che sta cercando di capire.
+    test('e usa le calorie vere, non una seduta media inventata', () {
+      List<VoceStorico> ogniDue(int kcal) => [
+        for (var g = 0; g < giorniDellaForma; g += 2)
+          allenamento(
+            adesso.subtract(Duration(days: g)).copyWith(hour: 18),
+            kcal: kcal,
+          ),
+      ];
+
+      final leggere = laForma(voci: ogniDue(500), adesso: adesso);
+      final pesanti = laForma(voci: ogniDue(1000), adesso: adesso);
+
+      expect(pesanti.valore, greaterThan(leggere.valore));
+
+      // 💡 Stesso numero di sedute: il paragone deve dire la stessa cosa.
+      expect(pesanti.seduteASettimana, closeTo(leggere.seduteASettimana!, 0.2));
+    });
+
+    /// ⛔ **Senza calorie il paragone non si fa**, e non si inventa una seduta
+    /// media per poter scrivere una frase: sarebbe un paragone con una persona
+    /// che non esiste. La fascia resta, ed è vera lo stesso.
+    test('senza calorie resta la fascia e sparisce il paragone', () {
+      final f = laForma(
+        voci: [allenamento(adesso.subtract(const Duration(days: 1)))],
+        adesso: adesso,
+      );
+
+      expect(f.kcalMediaPerSeduta, isNull);
+      expect(f.seduteASettimana, isNull);
+      expect(f.fascia, FasciaDellaForma.poco);
+    });
+
+    /// ⚠️ Le fasce non si sovrappongono e non lasciano buchi: un valore
+    /// qualunque cade in **una** sola.
+    test('le fasce coprono tutto senza buchi', () {
+      expect(FasciaDellaForma.di(0), FasciaDellaForma.poco);
+      expect(FasciaDellaForma.di(9), FasciaDellaForma.poco);
+      expect(FasciaDellaForma.di(10), FasciaDellaForma.costante);
+      expect(FasciaDellaForma.di(24), FasciaDellaForma.costante);
+      expect(FasciaDellaForma.di(25), FasciaDellaForma.allenato);
+      expect(FasciaDellaForma.di(44), FasciaDellaForma.allenato);
+      expect(FasciaDellaForma.di(45), FasciaDellaForma.atleta);
+      expect(FasciaDellaForma.di(500), FasciaDellaForma.atleta);
+    });
+
+    /// ⛔ E la barra non esce mai dal suo binario, nemmeno per un maratoneta.
+    test('la barra si ferma a piena', () {
+      expect(const Forma(valore: 500, kcalMediaPerSeduta: 500).frazione, 1.0);
+      expect(const Forma(valore: 0, kcalMediaPerSeduta: null).frazione, 0.0);
+    });
+
     /// ⛔ Quello che è successo **prima** delle sei settimane non entra: è la
     /// finestra della formula, e allargarla di nascosto vorrebbe dire un numero
     /// che dice «allenato» a chi non tocca un bilanciere da mesi.

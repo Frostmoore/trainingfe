@@ -355,53 +355,91 @@ class _Numeri extends StatelessWidget {
         ),
     ];
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '${numeri.sessioni}',
+    return Column(
+      children: [
+        /*
+         * ══ 🚨 IL NUMERO STA NEL QUADRATO, COME LA STELLA — B.13 ═══════════
+         *
+         * 📌 *«è tutto troppo piccolo, sembra vuota. Quindi o metti il numero di
+         * sessioni dentro un grande quadrato bianco, scritto più grande e di un
+         * altro colore»*.
+         *
+         * ⛔ Il difetto era **l'altezza condivisa**: la card più esigente — la
+         * stella, col quadrato e la spiegazione — decide per tutte e tre, e qui
+         * restavano tre righe di contenuto in trecento punti. Centrate, e quindi
+         * circondate di vuoto da tutte le parti.
+         *
+         * 💡 Lo stesso quadrato della stella riempie lo spazio **e** rende le
+         * tre card una famiglia: figura, stella e numero occupano tutte la
+         * stessa forma, e scorrendo non salta niente.
+         */
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(Gap.radiusSm),
+                border: Border.all(
+                  color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /*
+                     * ⚠️ **`FittedBox` e non una dimensione scelta a mano**: il
+                     * numero può essere «3» o «31», e un `fontSize` fisso
+                     * andrebbe bene per uno dei due. Qui il numero è grande
+                     * quanto il quadrato concede, sempre.
+                     */
+                    FittedBox(
+                      child: Text(
+                        '${numeri.sessioni}',
+                        style: tema.textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
 
-            /*
-             * 💡 `displayMedium` e non un `fontSize` scritto a mano: così cresce
-             * con il carattere di sistema come tutto il resto. ⚠️ `height: 1`
-             * toglie l'interlinea che a questa dimensione lascerebbe un buco
-             * visibile fra il numero e la sua parola.
-             */
-            style: tema.textTheme.displayMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: tema.colorScheme.primary,
-              height: 1,
+                          // 💡 *«di un altro colore»*: `tertiary` è l'accento
+                          // della palestra, quello decorativo — è il colore che
+                          // esiste apposta per queste cose.
+                          color: tema.colorScheme.tertiary,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      numeri.sessioni == 1 ? 'sessione' : 'sessioni',
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          Text(
-            numeri.sessioni == 1 ? 'sessione' : 'sessioni',
-            style: tema.textTheme.titleSmall?.copyWith(
-              color: tema.colorScheme.onSurfaceVariant,
-            ),
-          ),
+        ),
 
-          if (pasticche.isNotEmpty) ...[
-            const SizedBox(height: Gap.sm),
+        const SizedBox(height: Gap.xs),
 
-            /*
-             * 🚨 **`Wrap` e non `Row`**: tre pasticche con numeri a quattro
-             * cifre non ci stanno in riga su un telefono stretto, e una `Row`
-             * non lo direbbe con un errore — lo direbbe con la striscia gialla
-             * di overflow addosso al committente.
-             */
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: Gap.xs,
-              runSpacing: Gap.xs,
-              children: [
-                for (final (icona, testo) in pasticche)
-                  _Pasticca(icona: icona, testo: testo),
-              ],
-            ),
+        /*
+         * 🚨 **`Wrap` e non `Row`**: tre pasticche con numeri a quattro cifre
+         * non ci stanno in riga su un telefono stretto, e una `Row` non lo
+         * direbbe con un errore — lo direbbe con la striscia gialla di overflow
+         * addosso a chi guarda.
+         */
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: Gap.xs,
+          runSpacing: Gap.xs,
+          children: [
+            for (final (icona, testo) in pasticche)
+              _Pasticca(icona: icona, testo: testo),
           ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 

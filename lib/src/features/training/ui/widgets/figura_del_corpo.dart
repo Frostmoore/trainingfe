@@ -112,12 +112,48 @@ class FiguraDelCorpo extends ConsumerWidget {
       children: [
         for (final davanti in [true, if (mostraDietro) false])
           Expanded(
-            child: _UnaFigura(
-              nome: '${quale.cartella}_${davanti ? 'davanti' : 'dietro'}',
-              intensita: intensita,
-              davanti: davanti,
-              spento: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
-              acceso: tema.colorScheme.error,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    /*
+                     * ⚠️ **Un po' d'aria fra le due figure.** Viste a schermo il
+                     * 24/08 si **toccavano**: la mano destra del davanti finiva
+                     * addosso alla mano sinistra del dietro, e sembravano un
+                     * corpo solo con quattro braccia.
+                     */
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _UnaFigura(
+                      nome:
+                          '${quale.cartella}_${davanti ? 'davanti' : 'dietro'}',
+                      intensita: intensita,
+                      davanti: davanti,
+                      spento: tema.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.45,
+                      ),
+                      acceso: tema.colorScheme.error,
+                    ),
+                  ),
+                ),
+
+                /*
+                 * 🚨 **Chi guarda deve sapere quale sta guardando.** Nel disegno
+                 * a rettangoli l'etichetta c'era, e con l'immagine anatomica
+                 * serve **di più**: davanti e dietro di un corpo stilizzato si
+                 * distinguono a colpo d'occhio, due sagome anatomiche in
+                 * miniatura molto meno.
+                 *
+                 * ⛔ E senza, una zona rossa sulla schiena si potrebbe leggere
+                 * come una sull'addome.
+                 */
+                if (mostraDietro)
+                  Text(
+                    davanti ? 'davanti' : 'dietro',
+                    style: tema.textTheme.labelSmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ),
           ),
       ],

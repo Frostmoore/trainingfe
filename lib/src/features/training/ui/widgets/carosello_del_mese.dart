@@ -43,11 +43,53 @@ import 'stella_dei_muscoli.dart';
 /// e i pochi numeri hanno spazio di sovrappiù.
 const double altezzaCarosello = 232;
 
-class CaroselloDelMese extends ConsumerWidget {
+/// L'aria fra l'intestazione e la prima card — 3b-B.7.
+///
+/// 📌 *«le cards a carosello … sono troppo attaccate all'header, ci va qualche
+/// pixel di margine»*.
+const double ariaSopraIlCarosello = Gap.md;
+
+/// La riga dei puntini sotto le card.
+///
+/// 🚨 **Non è un vezzo, è la conseguenza della larghezza piena.** Prima si
+/// vedeva **spuntare** la card accanto, e quello diceva da solo «ce n'è
+/// un'altra». ⛔ A tutta pagina quel segnale sparisce: senza i puntini, due card
+/// su tre diventano invisibili a chi non prova a trascinare.
+const double _altezzaPuntini = 18;
+
+/// La chiave dell'i-esimo puntino, per i test.
+///
+/// 💡 Senza, contarli vorrebbe dire cercare `AnimatedContainer` — che nella
+/// card ci può stare per mille altri motivi. Un test che conta la cosa
+/// sbagliata passa lo stesso, ed è il peggio dei due mondi.
+@visibleForTesting
+ValueKey<String> chiavePuntino(int i) => ValueKey('carosello.puntino.$i');
+
+class CaroselloDelMese extends ConsumerStatefulWidget {
   const CaroselloDelMese({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CaroselloDelMese> createState() => _CaroselloDelMeseState();
+}
+
+class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
+  /*
+   * ⛔ **Il controller vive quanto il widget, non quanto una `build`.**
+   * Crearlo dentro `build` lo rifarebbe a ogni ridisegno: la pagina tornerebbe
+   * alla prima ogni volta che cambia un numero, e il vecchio non verrebbe mai
+   * chiuso.
+   */
+  final _pagine = PageController();
+  int _pagina = 0;
+
+  @override
+  void dispose() {
+    _pagine.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     /*
      * 💡 Il mese lo decide la **settimana scelta**: navigando indietro fino a
      * luglio, il blocco in cima parla di luglio. ⛔ Un carosello fermo sul mese
@@ -69,28 +111,83 @@ class CaroselloDelMese extends ConsumerWidget {
 
     final titolo = DateFormat('MMMM y', 'it').format(mese);
 
-    return SizedBox(
-      height: altezzaCarosello,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+    final card = [
+      _Card(
+        titolo: 'Cosa hai allenato',
+        sottotitolo: titolo,
+        child: FiguraDelCorpo(intensita: intensita),
+      ),
+      _Card(
+        titolo: 'I gruppi muscolari',
+        sottotitolo: titolo,
+        child: StellaDeiMuscoli(intensita: intensita),
+      ),
+      _Card(
+        titolo: 'Il mese in numeri',
+        sottotitolo: titolo,
+        child: _Numeri(numeri: numeri),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: ariaSopraIlCarosello),
+      child: Column(
         children: [
-          _Card(
-            titolo: 'Cosa hai allenato',
-            sottotitolo: titolo,
-            child: FiguraDelCorpo(intensita: intensita),
+          SizedBox(
+            height: altezzaCarosello,
+
+            /*
+             * 🚨 **`PageView` e non `ListView`**: 📌 *«dovrebbero essere larghe
+             * tutta la pagina e scorrere una per una»*. ⛔ Una lista orizzontale
+             * si ferma dove la lasci, e con card a tutta pagina vuol dire
+             * restare quasi sempre **a cavallo di due**, con mezza figura di
+             * qua e mezza stella di là. Qui lo scatto è garantito dal widget,
+             * non da noi.
+             */
+            child: PageView(
+              controller: _pagine,
+              onPageChanged: (i) => setState(() => _pagina = i),
+              children: card,
+            ),
           ),
-          _Card(
-            titolo: 'I gruppi muscolari',
-            sottotitolo: titolo,
-            child: StellaDeiMuscoli(intensita: intensita),
-          ),
-          _Card(
-            titolo: 'Il mese in numeri',
-            sottotitolo: titolo,
-            child: _Numeri(numeri: numeri),
+          SizedBox(
+            height: _altezzaPuntini,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < card.length; i++)
+                  _Puntino(key: chiavePuntino(i), acceso: i == _pagina),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Puntino extends StatelessWidget {
+  const _Puntino({required this.acceso, super.key});
+
+  final bool acceso;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      width: acceso ? 18 : 6,
+      height: 6,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3),
+
+        // ⚠️ Lo spento non è trasparente: su una scheda chiara sparirebbe, e
+        // resterebbe un puntino solo — cioè l'informazione sbagliata.
+        color: acceso
+            ? tema.colorScheme.primary
+            : tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
       ),
     );
   }
@@ -107,46 +204,45 @@ class _Card extends StatelessWidget {
   final String sottotitolo;
   final Widget child;
 
-  /// ⚠️ Un po' meno della larghezza dello schermo, di proposito: si deve
-  /// **vedere** che ce n'è un'altra accanto, o nessuno scorre.
-  static const larghezza = 250.0;
-
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
 
-    return SizedBox(
-      width: larghezza,
-      child: Card(
-        margin: const EdgeInsets.only(right: Gap.sm),
-        child: Padding(
-          padding: const EdgeInsets.all(Gap.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                titolo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tema.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+    /*
+     * 💡 **La larghezza non è più un numero nostro**: la decide la pagina, e la
+     * card ci sta dentro con lo stesso margine laterale del resto della
+     * schermata. ⚠️ Il `250` di prima serviva a far spuntare la card accanto;
+     * adesso quel compito ce l'hanno i puntini.
+     */
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: Gap.md),
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              titolo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tema.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-              Text(
-                sottotitolo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tema.textTheme.labelSmall?.copyWith(
-                  color: tema.colorScheme.onSurfaceVariant,
-                ),
+            ),
+            Text(
+              sottotitolo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tema.textTheme.labelSmall?.copyWith(
+                color: tema.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: Gap.xs),
+            ),
+            const SizedBox(height: Gap.xs),
 
-              // 🚨 `Expanded`: il contenuto prende quello che resta, qualunque
-              // sia. È la riga che fa funzionare l'altezza unica.
-              Expanded(child: child),
-            ],
-          ),
+            // 🚨 `Expanded`: il contenuto prende quello che resta, qualunque
+            // sia. È la riga che fa funzionare l'altezza unica.
+            Expanded(child: child),
+          ],
         ),
       ),
     );

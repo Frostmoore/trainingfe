@@ -12,6 +12,7 @@
 /// direbbero cose diverse nella stessa schermata, una accanto all'altra.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/catalogo_esercizi.dart';
@@ -41,7 +42,7 @@ import 'storico_unificato_controller.dart';
 class MuscoliDelTipo {
   const MuscoliDelTipo._();
 
-  static const _mappa = <String, List<GruppoMuscolare>>{
+  static final _mappa = <String, List<GruppoMuscolare>>{
     // ── Correre e camminare ─────────────────────────────────────────────
     'RUNNING': _gambe,
     'RUNNING_TREADMILL': _gambe,
@@ -138,20 +139,34 @@ class MuscoliDelTipo {
   /// informata. Chi la guardava concludeva «le braccia non le alleno», che è
   /// una cosa **falsa** detta con l'aria di saperla.
   ///
-  /// 💡 Adesso ci sono tutte le zone, con lo stesso peso. ⚠️ Non è precisione —
-  /// l'orologio non sa cosa hai fatto — ma è **onesto**: «pesi» vuol dire tutto
-  /// il corpo, e nessuna zona viene esclusa da una scelta che nessuno ha preso.
-  static const _tuttoIlCorpo = [
-    GruppoMuscolare.petto,
-    GruppoMuscolare.schiena,
-    GruppoMuscolare.spalle,
-    GruppoMuscolare.bicipiti,
-    GruppoMuscolare.tricipiti,
-    GruppoMuscolare.addome,
-    GruppoMuscolare.quadricipiti,
-    GruppoMuscolare.femorali,
-    GruppoMuscolare.glutei,
-  ];
+  /// ── 🚨 E IL 24/08, POCHE ORE DOPO, LO STESSO DIFETTO — B.8 ──────────────
+  ///
+  /// 📌 *«nell'app non vedo l'uomo aggiornato con i polpacci»*.
+  ///
+  /// ⛔ **Aveva ragione un'altra volta, e per la stessa ragione.** La correzione
+  /// dei bicipiti aveva **riscritto la lista a mano**, portandola da cinque
+  /// gruppi a nove: dentro c'erano le braccia, ma **polpacci e avambracci no**.
+  /// E il commento qui sopra diceva *«adesso ci sono tutte le zone»*, che era
+  /// falso — cioè la trappola dell'atlante sbagliato, dentro il codice.
+  ///
+  /// 🚨 **Il difetto vero non era la riga mancante: era che fosse una lista.**
+  /// Un elenco scritto a mano che deve contenere *tutto* è una promessa che
+  /// nessuno mantiene: si sbaglia la prima volta, si sbaglia correggendola, e
+  /// si sbaglierà al prossimo gruppo che entra nell'enum. ⚠️ E non dà **nessun**
+  /// errore: quella zona semplicemente non si accende mai.
+  ///
+  /// 💡 Quindi «tutto il corpo» adesso **non è un elenco: è l'enum**. Le uniche
+  /// escluse sono quelle che un muscolo non lo sono (`cardio`, `full_body`), e
+  /// lo dicono da sole. ⚠️ Non è precisione — l'orologio non sa cosa hai fatto —
+  /// ma è **onesto**: «pesi» vuol dire tutto il corpo, e nessuna zona resta
+  /// fuori per una scelta che nessuno ha preso.
+  static final List<GruppoMuscolare> _tuttoIlCorpo = GruppoMuscolare.values
+      .where((g) => g.eUnMuscolo)
+      .toList(growable: false);
+
+  /// Quello che «pesi» colora, per i test.
+  @visibleForTesting
+  static List<GruppoMuscolare> get tuttoIlCorpo => _tuttoIlCorpo;
 
   static List<GruppoMuscolare> di(String codice) =>
       _mappa[codice.toUpperCase()] ?? const [];

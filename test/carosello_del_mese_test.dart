@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
+import 'package:training_companion/src/core/theme/app_theme.dart';
 import 'package:training_companion/src/features/achievements/achievement.dart';
 import 'package:training_companion/src/features/achievements/ui/carosello_achievements.dart';
 import 'package:training_companion/src/features/profile/data/profile_models.dart';
@@ -121,6 +122,53 @@ void main() {
        */
       expect(corsa[GruppoMuscolare.addome], 1.0);
       expect(corsa[GruppoMuscolare.quadricipiti], lessThan(1.0));
+    });
+
+    /// ══ 🚨 IL TEST CHE IMPEDISCE AL DIFETTO DI TORNARE UNA TERZA VOLTA ═════
+    ///
+    /// ⛔ Due volte in un giorno, lo stesso errore: prima *«non mi ha segnato i
+    /// bicipiti»* (l'elenco ne aveva cinque), poi i **polpacci** (l'elenco
+    /// corretto ne aveva nove, e mancavano polpacci e avambracci).
+    ///
+    /// 🚨 **Il difetto non era la riga mancante: era che fosse un elenco.** Una
+    /// lista scritta a mano che deve contenere *tutto* si sbaglia la prima
+    /// volta, si sbaglia correggendola, e si sbaglierà al prossimo gruppo che
+    /// entra nell'enum — **senza dare nessun errore**: quella zona semplicemente
+    /// non si accende mai.
+    test('«pesi» colora tutto il corpo, e tutto vuol dire tutto', () {
+      final tutti = GruppoMuscolare.values.where((g) => g.eUnMuscolo).toSet();
+
+      expect(
+        MuscoliDelTipo.tuttoIlCorpo.toSet(),
+        tutti,
+        reason: 'Un allenamento di pesi lascia fuori una zona del corpo.',
+      );
+
+      /// ⚠️ E il contrario: `cardio` e `full_body` non sono zone, e colorarle
+      /// vorrebbe dire una parte del corpo accesa da una cosa che non è un
+      /// muscolo.
+      expect(MuscoliDelTipo.tuttoIlCorpo.every((g) => g.eUnMuscolo), isTrue);
+    });
+
+    /// 💡 E la prova dal lato di chi guarda: un allenamento di pesi visto
+    /// dall'orologio deve accendere **anche** i polpacci, che sono la zona su
+    /// cui il difetto si è visto.
+    test('un allenamento di pesi dall orologio accende anche i polpacci', () {
+      final i = intensitaDeiMuscoli(
+        voci: [
+          VoceStorico(
+            sedute: const [],
+            dalPolso: [
+              orologio(id: 1, tipo: 'STRENGTH_TRAINING', quando: lunedi),
+            ],
+          ),
+        ],
+        catalogo: CatalogoEsercizi.vuoto,
+      );
+
+      expect(i[GruppoMuscolare.polpacci], greaterThan(0));
+      expect(i[GruppoMuscolare.avambracci], greaterThan(0));
+      expect(i[GruppoMuscolare.bicipiti], greaterThan(0));
     });
 
     test('senza niente non colora niente', () {
@@ -395,22 +443,115 @@ void main() {
     ///
     /// ⛔ Lasciarla al contenuto vuol dire che scorrendo il carosello **salta**,
     /// e salta in modo diverso a seconda di quanti numeri ha quel mese.
+    ///
+    /// ⚠️ **Da B.7 le card non sono più tutte in scena insieme**: un `PageView`
+    /// costruisce quella che si vede. Quindi si misura scorrendo, una per una —
+    /// che è anche il modo in cui il difetto si vedrebbe davvero.
     testWidgets('le tre card hanno la stessa altezza', (tester) async {
       await tester.pumpWidget(
-        attorno(const CaroselloDelMese(), [unaCorsa], w: 900),
+        attorno(const CaroselloDelMese(), [unaCorsa], w: 360),
       );
       await tester.pumpAndSettle();
 
-      final card = find.byType(Card);
-      final quante = card.evaluate().length;
+      final altezze = <double>{};
 
-      expect(quante, 3, reason: 'Le card del carosello non sono tre.');
+      for (var i = 0; i < 3; i++) {
+        altezze.add(tester.getSize(find.byType(Card).first).height);
 
-      final altezze = {
-        for (var i = 0; i < quante; i++) tester.getSize(card.at(i)).height,
-      };
+        if (i < 2) {
+          await tester.fling(
+            find.byType(PageView),
+            const Offset(-400, 0),
+            1000,
+          );
+          await tester.pumpAndSettle();
+        }
+      }
 
       expect(altezze.length, 1, reason: 'Le card hanno altezze diverse.');
+    });
+
+    /// 📌 *«dovrebbero essere larghe tutta la pagina»* — B.7.
+    ///
+    /// ⚠️ **Due misure e non una**, perché sono due cose diverse: la *pagina*
+    /// occupa tutta la larghezza (è quello che fa scorrere una card alla volta),
+    /// e la *superficie* della card sta dentro con lo stesso margine laterale
+    /// del resto della schermata. ⛔ Una card larga «quasi tutto» con un margine
+    /// suo sarebbe disallineata da tutto il contenuto sotto, e si vedrebbe.
+    ///
+    /// 💡 `getSize` su una `Card` **comprende il margine**: la superficie vera è
+    /// il `Material` che ci sta dentro. Misurare la `Card` e aspettarsi 328
+    /// dava 360 — il test sbagliato, non il widget.
+    testWidgets('la card è larga quanto la pagina, meno i margini', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        attorno(const CaroselloDelMese(), [unaCorsa], w: 360),
+      );
+      await tester.pumpAndSettle();
+
+      final card = find.byType(Card).first;
+
+      expect(tester.getSize(card).width, 360);
+      expect(
+        tester
+            .getSize(
+              find.descendant(of: card, matching: find.byType(Material)).first,
+            )
+            .width,
+        360 - Gap.md * 2,
+      );
+    });
+
+    /// 📌 *«e scorrere una per una»* — B.7.
+    ///
+    /// ══ 🚨 È LA RAGIONE PER CUI NON È PIÙ UNA `ListView` ═══════════════════
+    ///
+    /// ⛔ Una lista orizzontale si ferma **dove la lasci**. Con card strette non
+    /// si notava; a tutta pagina vuol dire restare quasi sempre a cavallo di
+    /// due, con mezza figura di qua e mezza stella di là.
+    ///
+    /// 💡 Si provano **tutti e due** gli esiti, perché la garanzia è che finisca
+    /// sempre su un numero intero: un trascinamento corto **deve** tornare
+    /// indietro (e va bene così), uno lungo deve arrivare alla seconda. Quello
+    /// che non deve mai succedere è restare in mezzo.
+    testWidgets('e si ferma sempre su una card, mai a metà', (tester) async {
+      await tester.pumpWidget(
+        attorno(const CaroselloDelMese(), [unaCorsa], w: 360),
+      );
+      await tester.pumpAndSettle();
+
+      double? dove() =>
+          tester.widget<PageView>(find.byType(PageView)).controller?.page;
+
+      // Un terzo di schermo: non basta, e torna dov'era.
+      await tester.drag(find.byType(PageView), const Offset(-120, 0));
+      await tester.pumpAndSettle();
+
+      expect(dove(), 0.0, reason: 'È rimasto fra due card.');
+
+      // Oltre metà: passa alla seconda, e ci si ferma esatto.
+      await tester.drag(find.byType(PageView), const Offset(-260, 0));
+      await tester.pumpAndSettle();
+
+      expect(dove(), 1.0, reason: 'Non è arrivato in fondo alla seconda.');
+    });
+
+    /// 🚨 **I puntini non sono un vezzo.** Prima si vedeva spuntare la card
+    /// accanto, e quello diceva da solo che ce n'era un'altra. ⛔ A tutta pagina
+    /// quel segnale sparisce: senza, due card su tre restano invisibili a chi
+    /// non prova a trascinare.
+    testWidgets('e dice quante ce ne sono', (tester) async {
+      await tester.pumpWidget(
+        attorno(const CaroselloDelMese(), [unaCorsa], w: 360),
+      );
+      await tester.pumpAndSettle();
+
+      for (var i = 0; i < 3; i++) {
+        expect(find.byKey(chiavePuntino(i)), findsOneWidget);
+      }
+
+      expect(find.byKey(chiavePuntino(3)), findsNothing);
     });
 
     /// ⛔ Un mese senza allenamenti non mostra tre card vuote: sarebbero tre

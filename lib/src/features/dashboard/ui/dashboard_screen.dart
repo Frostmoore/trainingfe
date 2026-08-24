@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
+import '../../achievements/ui/carosello_achievements.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
@@ -73,6 +74,23 @@ class DashboardScreen extends ConsumerWidget {
               _Blocchi(
                 children: [
                   CaloriesCard(riepilogo: r),
+
+                  /*
+                   * 🏅 **Le medaglie, sopra il consiglio** — 3b-A.8.3.
+                   *
+                   * 📌 Il committente: *«nella pagina oggi deve stare sopra al
+                   * consiglio del giorno (deve mostrare TUTTI gli
+                   * achievements)»*.
+                   *
+                   * ⚠️ `ambito: null` vuol dire **tutte**, ed è l'unica delle
+                   * tre schermate che le vuole così: qui si guarda la giornata
+                   * intera, non una sezione.
+                   *
+                   * ⏳ Finché FASE 12 non esiste non disegna niente — e
+                   * `_Blocchi` scarta i `null`, ma questo non è `null`: è un
+                   * widget che decide da sé di sparire (`SizedBox.shrink`).
+                   */
+                  const CaroselloAchievements(ambito: null),
 
                   /*
                    * 🚨 **La card non sparisce mai** — 20/08/2026.

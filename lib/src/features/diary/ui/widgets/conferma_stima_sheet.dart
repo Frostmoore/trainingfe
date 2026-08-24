@@ -575,6 +575,31 @@ class _RigaVoceState extends State<_RigaVoce> {
         subtitle: Text(
           [
             v.quantita,
+
+            /*
+             * ══ 🚨 SI DEVE VEDERE CHE LA PORZIONE È STIMATA — 3b-A.10 ═══════
+             *
+             * 📌 Il committente: *«se non ho scritto la quantità, mi deve
+             * inserire la quantità normale di una porzione di quell'alimento»*.
+             *
+             * 💡 **La quantità la stimava già**: il prompt dice da sempre di
+             * mettere la porzione media italiana e `declared: false`. ⛔ Quello
+             * che mancava è la **seconda metà**: si vedeva solo con la
+             * confidenza bassa, quindi «una banana» → 120 g arrivava muta, e
+             * quei 120 g sembravano dichiarati da chi ha scritto.
+             *
+             * 🚨 È la lezione di O.D.20: **un numero inventato che sembra
+             * dichiarato è peggio di nessun numero**. Chi non sa che è una
+             * stima non la corregge, e il totale del giorno diventa falso senza
+             * che nessuno abbia sbagliato niente.
+             *
+             * ⚠️ Si dice **solo quando è falso il contrario**: `dichiarata ==
+             * false`. Un `null` — una voce vecchia, un percorso che non lo
+             * manda — non si etichetta: non si sa, e inventare l'etichetta
+             * sarebbe lo stesso errore al contrario.
+             */
+            if (v.dichiarata == false) 'porzione stimata',
+
             if (v.kcal != null) '${v.kcal!.round()} kcal',
             // 💡 Lo stato si mostra solo quando dice qualcosa: «non applicabile»
             // su uno yogurt e' rumore.
@@ -614,7 +639,18 @@ class _RigaVoceState extends State<_RigaVoce> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: _campo(_qty, 'Quantità', v.unita ?? 'g')),
+                    Expanded(
+                      child: _campo(
+                        _qty,
+                        // 💡 Anche l'etichetta del campo lo dice: chi apre la
+                        // riga per correggere è proprio chi deve sapere che quel
+                        // numero non l'ha scritto lui.
+                        v.dichiarata == false
+                            ? 'Quantità (stimata)'
+                            : 'Quantità',
+                        v.unita ?? 'g',
+                      ),
+                    ),
                     const SizedBox(width: Gap.sm),
                     Expanded(
                       child: _campo(_kcal, 'Calorie', 'kcal', chiave: 'kcal'),

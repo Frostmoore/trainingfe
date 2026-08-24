@@ -9,6 +9,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../achievements/achievement.dart';
+import '../../achievements/ui/carosello_achievements.dart';
 import '../data/diary_models.dart';
 import '../diary_controller.dart';
 import '../pasti_chiusi.dart';
@@ -100,6 +102,25 @@ class DiaryScreen extends ConsumerWidget {
                */
               const StimaRitrovata(),
               MacroSummary(day: day),
+
+              /*
+               * 🏅 **Le medaglie, sotto la card delle calorie** — 3b-A.8.4.
+               *
+               * 📌 Il committente: *«nella pagina diario deve stare subito
+               * sotto alla card delle calorie (deve mostrare gli achievements
+               * relativi all'alimentazione)»*.
+               *
+               * ⛔ **Solo l'alimentazione**: qui una medaglia sui chili
+               * sollevati sarebbe fuori posto, e la sezione smetterebbe di
+               * voler dire qualcosa.
+               *
+               * ⏳ Finché FASE 12 non esiste non disegna niente, nemmeno lo
+               * spazio.
+               */
+              const CaroselloAchievements(
+                ambito: AmbitoAchievement.alimentazione,
+              ),
+
               const SizedBox(height: Gap.md),
               for (final pasto in day.meals) _Pasto(pasto: pasto),
             ],

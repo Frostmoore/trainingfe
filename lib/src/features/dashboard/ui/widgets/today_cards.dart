@@ -948,10 +948,17 @@ class GrigliaAllenamenti extends StatelessWidget {
 
 /// Un allenamento in un quadrato.
 ///
-/// ⛔ **Quello che viene solo dall'orologio non si apre**, e non è una
-/// dimenticanza: una pagina di dettaglio esiste per le sedute registrate
-/// nell'app, che hanno gli esercizi dentro. 💡 Chi tocca una corsa finisce sullo
-/// storico, dove quella riga c'è per intero.
+/// 🆕 **Anche quello che viene solo dall'orologio si apre** — 3b-A.9,
+/// 24/08/2026.
+///
+/// ⛔ Qui c'era scritto il contrario, e con una motivazione: *«una pagina di
+/// dettaglio esiste per le sedute registrate nell'app»*, quindi una corsa
+/// portava allo storico. ⚠️ Era una scelta, e il committente l'ha **rovesciata**:
+/// *«Gli allenamenti con l'orologio e basta devono comunque avere una pagina
+/// loro»*.
+///
+/// 💡 Adesso una corsa apre `AllenamentoOrologioScreen`, con i km, il ritmo e i
+/// muscoli che ha mosso.
 ///
 /// ⚠️ **Il nome non ci sta, e non si perde**: in settanta pixel «Spinte
 /// verticali e trazioni» diventa «Spinte…», che non dice niente più
@@ -1008,7 +1015,17 @@ class QuadratoAllenamento extends StatelessWidget {
             // «allenamento in corso» una seduta di tre giorni fa non ha senso,
             // e rischia di sporcarla con dati di oggi.
             onTap: seduta == null
-                ? () => context.push(AppRoutes.history)
+                ? () {
+                    // ⚠️ Senza nemmeno una riga dell'orologio non c'è niente da
+                    // aprire: si ripiega sullo storico, dov'è comunque elencato.
+                    final dalPolso = voce.dalPolso.firstOrNull;
+
+                    context.push(
+                      dalPolso == null
+                          ? AppRoutes.history
+                          : AppRoutes.dallOrologio(dalPolso.id),
+                    );
+                  }
                 : () => context.push(
                     seduta.isOpen
                         ? AppRoutes.player(seduta.id)

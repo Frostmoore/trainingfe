@@ -33,6 +33,7 @@ import '../../features/progress/ui/progress_screen.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
+import '../../features/training/ui/allenamento_orologio_screen.dart';
 import '../../features/training/ui/compositore_scheda.dart';
 import '../../features/training/ui/history_screen.dart';
 import '../../features/training/ui/mie_schede_screen.dart';
@@ -187,6 +188,14 @@ class AppRoutes {
   /// del router, go_router continuerebbe a credere che la rotta corrente sia il
   /// player, e «Fine» riporterebbe su una sessione ormai chiusa.
   static String riepilogo(int sessionId) => '/allenamento/$sessionId/riepilogo';
+
+  /// La pagina di un allenamento visto **solo dall'orologio** — 3b-A.9.
+  ///
+  /// ⚠️ Percorso diverso da `/allenamento/:id`, e non è pignoleria: quello
+  /// vuole l'id di una **seduta** del player, questo l'id di una riga
+  /// dell'archivio del telefono. Due numerazioni diverse sullo stesso percorso
+  /// aprirebbero la pagina sbagliata senza dare nessun errore.
+  static String dallOrologio(int id) => '/allenamento/orologio/$id';
   static String planEdit(int planId) => '/schede/$planId/modifica';
   static String day(String date) => '/giorno/$date';
 
@@ -526,6 +535,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/giorno/:date',
         builder: (_, state) => DayScreen(date: state.pathParameters['date']!),
+      ),
+      /*
+       * 🆕 3b-A.9 — e **prima** di `/allenamento/:id`, come `storico`: go_router
+       * prova le rotte in ordine, e `:id` intercetterebbe anche «orologio»
+       * facendo fallire `int.parse`.
+       */
+      GoRoute(
+        path: '/allenamento/orologio/:id',
+        builder: (_, state) => AllenamentoOrologioScreen(
+          id: int.parse(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/allenamento/:id/riepilogo',

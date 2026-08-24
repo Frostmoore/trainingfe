@@ -10,6 +10,8 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../achievements/achievement.dart';
+import '../../achievements/ui/carosello_achievements.dart';
 import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
 import '../data/storico_unificato.dart';
@@ -18,6 +20,8 @@ import '../settimana_scelta.dart';
 import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
 import 'widgets/barra_settimana.dart';
+import 'widgets/calendario_del_mese.dart';
+import 'widgets/carosello_del_mese.dart';
 
 /// Lo storico degli allenamenti — C10.
 ///
@@ -116,8 +120,6 @@ class _LaSettimana extends ConsumerWidget {
 
     final delle = tutte.where((v) => lunediDi(v.quando) == inizio).toList();
 
-    if (delle.isEmpty) return _SettimanaVuota(tutte: tutte);
-
     /*
      * ══ 🚨 DUE PER RIGA È UNA DIVISIONE, NON UNA LARGHEZZA — 3b-A.5.1 ══════
      *
@@ -139,28 +141,68 @@ class _LaSettimana extends ConsumerWidget {
      * overflow. Qui la foto è proporzionale e il **testo ha un'altezza fissa**,
      * che è quello che serve perché ci stia sempre.
      */
+    /*
+     * ══ 🚨 UNA LISTA SOLA, NON UNA PILA DI LISTE — 3b-A.6/A.7 ═════════════
+     *
+     * ⛔ Sopra la griglia adesso stanno il carosello del mese, il calendario e
+     * le medaglie. Metterli in una `Column` con dentro una griglia che scorre
+     * darebbe **due scorrimenti annidati**: il carosello resterebbe fermo in
+     * cima e la griglia scorrerebbe in una finestrella.
+     *
+     * 💡 `CustomScrollView`: un solo scorrimento, e i pezzi sono sliver. È
+     * anche l'unico modo perché il calendario scompaia scorrendo, invece di
+     * rubare metà schermo a chi guarda gli allenamenti.
+     */
     return LayoutBuilder(
       builder: (context, vincoli) {
         final larghezzaCella = (vincoli.maxWidth - Gap.md * 2 - Gap.sm) / 2;
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(Gap.md),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: Gap.sm,
-            mainAxisSpacing: Gap.sm,
-            mainAxisExtent:
-                larghezzaCella * _CardAllenamento.rapportoFoto +
-                _CardAllenamento.altezzaTestoIn(context),
-          ),
-          itemCount: delle.length,
-          /*
-           * 💡 Una card sola, che si adatta. Fino al 20/08 erano due classi e
-           * uno `switch`: con i gruppi la distinzione non è più «da dove viene»
-           * ma «contiene una seduta o no», e una proprietà non merita due
-           * gerarchie.
-           */
-          itemBuilder: (context, i) => _CardAllenamento(voce: delle[i]),
+        return CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(child: CaroselloDelMese()),
+            const SliverToBoxAdapter(child: CalendarioDelMese()),
+
+            /*
+             * 📌 *«sotto al calendario ci deve essere una sezione con un
+             * carosello di cards per gli achievements relativi agli
+             * allenamenti»*. ⏳ Finché FASE 12 non esiste non disegna niente.
+             */
+            const SliverToBoxAdapter(
+              child: CaroselloAchievements(
+                ambito: AmbitoAchievement.allenamento,
+                titolo: 'I tuoi traguardi',
+              ),
+            ),
+
+            if (delle.isEmpty)
+              SliverToBoxAdapter(child: _SettimanaVuota(tutte: tutte))
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(Gap.md),
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: Gap.sm,
+                    mainAxisSpacing: Gap.sm,
+                    mainAxisExtent:
+                        larghezzaCella * _CardAllenamento.rapportoFoto +
+                        _CardAllenamento.altezzaTestoIn(context),
+                  ),
+                  itemCount: delle.length,
+                  /*
+                   * 💡 Una card sola, che si adatta. Fino al 20/08 erano due
+                   * classi e uno `switch`: con i gruppi la distinzione non è
+                   * più «da dove viene» ma «contiene una seduta o no», e una
+                   * proprietà non merita due gerarchie.
+                   */
+                  itemBuilder: (context, i) => _CardAllenamento(voce: delle[i]),
+                ),
+              ),
+
+            // ⚠️ Un po' d'aria in fondo: sotto c'è il pulsante flottante
+            // «Inizia allenamento», e l'ultima card ci finirebbe sotto.
+            const SliverToBoxAdapter(child: SizedBox(height: 88)),
+          ],
         );
       },
     );
@@ -189,11 +231,14 @@ class _SettimanaVuota extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (tutte.isEmpty) {
-      return const EmptyState(
-        icon: Icons.fitness_center_rounded,
-        title: 'Nessun allenamento',
-        message:
-            'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: Gap.xl),
+        child: EmptyState(
+          icon: Icons.fitness_center_rounded,
+          title: 'Nessun allenamento',
+          message:
+              'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
+        ),
       );
     }
 
@@ -204,27 +249,32 @@ class _SettimanaVuota extends ConsumerWidget {
     final inizio = ref.watch(settimanaSceltaProvider);
     final eFuturo = ultimo.quando.isBefore(inizio);
 
-    return ListView(
+    // ⚠️ Una `Column` e non una `ListView`: adesso vive dentro un
+    // `CustomScrollView`, che lo scorrimento ce l'ha già.
+    return Padding(
       padding: const EdgeInsets.all(Gap.md),
-      children: [
-        const SizedBox(height: Gap.xl),
-        EmptyState(
-          icon: Icons.event_busy_rounded,
-          title: 'Niente in questa settimana',
-          message: eFuturo
-              ? 'L\'ultimo allenamento è del '
-                    '${DateFormat('d MMMM', 'it').format(ultimo.quando)}.'
-              : 'Ci sono allenamenti in altre settimane.',
-        ),
-        Center(
-          child: TextButton.icon(
-            onPressed: () =>
-                ref.read(settimanaSceltaProvider.notifier).vaiA(ultimo.quando),
-            icon: const Icon(Icons.history_rounded, size: 18),
-            label: const Text('Vai all\'ultimo allenamento'),
+      child: Column(
+        children: [
+          const SizedBox(height: Gap.xl),
+          EmptyState(
+            icon: Icons.event_busy_rounded,
+            title: 'Niente in questa settimana',
+            message: eFuturo
+                ? 'L\'ultimo allenamento è del '
+                      '${DateFormat('d MMMM', 'it').format(ultimo.quando)}.'
+                : 'Ci sono allenamenti in altre settimane.',
           ),
-        ),
-      ],
+          Center(
+            child: TextButton.icon(
+              onPressed: () => ref
+                  .read(settimanaSceltaProvider.notifier)
+                  .vaiA(ultimo.quando),
+              icon: const Icon(Icons.history_rounded, size: 18),
+              label: const Text('Vai all\'ultimo allenamento'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -237,6 +287,13 @@ class _SettimanaVuota extends ConsumerWidget {
 /// polso. Con i gruppi la distinzione non è più «da dove viene» — una riga può
 /// contenerli **entrambi, più volte** — ma «contiene una seduta o no», e una
 /// proprietà non merita due gerarchie.
+/// Il contrassegno con cui i test riconoscono un rettangolo dello storico.
+///
+/// 🚨 **Pubblico e fuori dalla classe**, che è privata: un test non può
+/// nominare `_CardAllenamento`, e senza questo dovrebbe cercare `Card` — che da
+/// A.6 prende anche le tre del carosello.
+const chiaveCardAllenamento = Key('card-allenamento');
+
 class _CardAllenamento extends ConsumerWidget {
   const _CardAllenamento({required this.voce});
 
@@ -277,6 +334,16 @@ class _CardAllenamento extends ConsumerWidget {
     final seduta = voce.seduta;
 
     return Card(
+      /*
+       * 🚨 **Un contrassegno, e serve ai test.** Da quando sopra la griglia
+       * c'è il carosello del mese, `find.byType(Card)` prende anche quelle: il
+       * test che misura «due per riga» contava cinque card e falliva su un
+       * difetto che non esisteva.
+       *
+       * ⚠️ La stessa chiave su tutte va bene: non sono mai fratelle dentro lo
+       * stesso genitore — ognuna è l'unica figlia della sua cella.
+       */
+      key: chiaveCardAllenamento,
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -498,7 +565,27 @@ class _CardAllenamento extends ConsumerWidget {
   /// esercizi, e una schermata di dettaglio vuota è peggio di nessuna schermata.
   void _apri(BuildContext context) {
     final seduta = voce.seduta;
-    if (seduta == null) return;
+
+    /*
+     * 🆕 **Anche quelli dell'orologio hanno una pagina** — 3b-A.9, 24/08/2026.
+     *
+     * ⛔ Qui c'era `if (seduta == null) return;`: toccare una corsa non faceva
+     * **niente**. Era una scelta scritta, non una dimenticanza — e il
+     * committente l'ha rovesciata: *«Gli allenamenti con l'orologio e basta
+     * devono comunque avere una pagina loro»*.
+     *
+     * 🚨 Una card che si tocca e non risponde è peggio di una che non si tocca:
+     * chi prova due volte pensa che l'app si sia bloccata.
+     */
+    if (seduta == null) {
+      final dalPolso = voce.dalPolso.firstOrNull;
+
+      if (dalPolso == null) return;
+
+      context.push(AppRoutes.dallOrologio(dalPolso.id));
+
+      return;
+    }
 
     context.push(
       seduta.isOpen

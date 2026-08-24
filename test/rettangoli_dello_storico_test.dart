@@ -81,13 +81,18 @@ void main() {
   testWidgets('due card stanno sulla stessa riga', (tester) async {
     await disegna(tester, [voce(0), voce(1)]);
 
-    final card = tester.widgetList<Card>(find.byType(Card)).toList();
+    /*
+     * ⚠️ **Per chiave e non per tipo.** Da 3b-A.6 sopra la griglia c'è il
+     * carosello del mese, che di `Card` ne ha tre: contarle tutte faceva
+     * fallire questo test su un difetto che non esiste.
+     */
+    final quante = find.byKey(chiaveCardAllenamento).evaluate().length;
 
-    expect(card.length, 2, reason: 'Le card disegnate non sono due.');
+    expect(quante, 2, reason: 'I rettangoli disegnati non sono due.');
 
     final righe = {
-      for (var i = 0; i < card.length; i++)
-        tester.getTopLeft(find.byType(Card).at(i)).dy,
+      for (var i = 0; i < quante; i++)
+        tester.getTopLeft(find.byKey(chiaveCardAllenamento).at(i)).dy,
     };
 
     expect(
@@ -101,10 +106,10 @@ void main() {
   testWidgets('e quattro card fanno due righe, non tre', (tester) async {
     await disegna(tester, [voce(0), voce(1), voce(2), voce(3)]);
 
-    final quante = find.byType(Card).evaluate().length;
+    final quante = find.byKey(chiaveCardAllenamento).evaluate().length;
     final righe = {
       for (var i = 0; i < quante; i++)
-        tester.getTopLeft(find.byType(Card).at(i)).dy,
+        tester.getTopLeft(find.byKey(chiaveCardAllenamento).at(i)).dy,
     };
 
     expect(righe.length, 2);
@@ -115,10 +120,10 @@ void main() {
   testWidgets('restano due per riga anche a 280 px', (tester) async {
     await disegna(tester, [voce(0), voce(1)], larghezza: 280);
 
-    final quante = find.byType(Card).evaluate().length;
+    final quante = find.byKey(chiaveCardAllenamento).evaluate().length;
     final righe = {
       for (var i = 0; i < quante; i++)
-        tester.getTopLeft(find.byType(Card).at(i)).dy,
+        tester.getTopLeft(find.byKey(chiaveCardAllenamento).at(i)).dy,
     };
 
     expect(righe.length, 1);

@@ -62,7 +62,8 @@ class CalendarioDelMese extends ConsumerWidget {
     final oggiSecco = DateTime(oggi.year, oggi.month, oggi.day);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, 0),
+      // ⚠️ Un po' d'aria sopra: attaccato al carosello sembrava la sua coda.
+      padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -94,6 +95,24 @@ class CalendarioDelMese extends ConsumerWidget {
             crossAxisCount: 7,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+
+            /*
+             * ══ 🚨 LE CELLE SONO BASSE, NON QUADRATE ═══════════════════════
+             *
+             * ⛔ `GridView.count` fa celle **quadrate** di serie, e con sette
+             * colonne su un telefono la cella è larga ottanta punti: sei righe
+             * da ottanta sono **mezzo schermo** per un calendario che deve
+             * essere «semplice». Visto a schermo il 24/08: il calendario
+             * scacciava gli allenamenti sotto il bordo.
+             *
+             * ⚠️ E c'era un secondo danno, meno ovvio: con la cella alta, il
+             * puntino finiva lontano dal suo numero e **sembrava appartenere
+             * alla riga sotto**. Un dato giusto, letto sbagliato.
+             *
+             * 💡 Un'altezza fissa — numero, due punti di aria, puntino — e
+             * scalata con il carattere, come le card dello storico.
+             */
+            mainAxisExtent: MediaQuery.textScalerOf(context).scale(34),
             children: [
               for (var i = 0; i < vuotePrima; i++) const SizedBox.shrink(),
               for (var g = 1; g <= giorniNelMese; g++)

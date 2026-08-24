@@ -53,22 +53,40 @@ enum GruppoMuscolare {
   spalle('shoulders', 'Spalle'),
   bicipiti('biceps', 'Bicipiti'),
   tricipiti('triceps', 'Tricipiti'),
-  avambracci('forearms', 'Avambracci'),
+  avambracci('forearms', 'Avambracci', 'Avambr.'),
   addome('abs', 'Addome'),
   glutei('glutes', 'Glutei'),
-  quadricipiti('quads', 'Quadricipiti'),
+  quadricipiti('quads', 'Quadricipiti', 'Quadric.'),
   femorali('hamstrings', 'Femorali'),
   polpacci('calves', 'Polpacci'),
-  totale('full_body', 'Tutto il corpo'),
+  totale('full_body', 'Tutto il corpo', 'Tutto'),
   cardio('cardio', 'Cardio');
 
-  const GruppoMuscolare(this.valore, this.etichetta);
+  const GruppoMuscolare(this.valore, this.etichetta, [String? breve])
+    : _breve = breve;
 
   /// Il valore che viaggia nel JSON. 🚨 Deve restare uguale a quello del server.
   final String valore;
 
   /// Come si chiama in italiano, per chi lo legge.
   final String etichetta;
+
+  final String? _breve;
+
+  /// La forma corta, dove lo spazio è contato — 24/08/2026.
+  ///
+  /// ══ 🚨 SERVE AL GRAFICO A STELLA, E L'HA CHIESTO LO SCHERMO ═══════════
+  ///
+  /// ⛔ Undici parole intere attorno a un cerchio dentro una card da 250 px non
+  /// ci stanno: **«Addome» e «Avambracci» si sovrapponevano**, e le due
+  /// etichette in basso diventavano una macchia illeggibile. Visto sul telefono
+  /// del committente il 24/08 — nessun test lo prendeva, perché non è uno sforo:
+  /// è testo che si accavalla dentro un `Canvas`.
+  ///
+  /// 💡 **Solo tre voci ce l'hanno diversa**, e le altre ricadono sull'intera:
+  /// abbreviare «Petto» non serve a nessuno, e un elenco parallelo di undici
+  /// stringhe sarebbe una seconda verità da tenere allineata.
+  String get etichettaBreve => _breve ?? etichetta;
 
   static GruppoMuscolare? da(Object? valore) {
     if (valore == null) return null;

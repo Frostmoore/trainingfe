@@ -251,6 +251,32 @@ void main() {
       );
     });
 
+    /// ══ 🚨 LE ETICHETTE SI ACCAVALLAVANO, E NESSUN TEST LO VEDEVA ═══════
+    ///
+    /// ⛔ Sul telefono del committente, il 24/08, «Addome» e «Avambracci» si
+    /// sovrapponevano in fondo alla stella: undici parole intere attorno a un
+    /// cerchio dentro una card da 250 px non ci stanno.
+    ///
+    /// ⚠️ **Non è uno sforo**: è testo disegnato dentro un `Canvas`, quindi
+    /// nessun `RenderFlex overflowed`, nessuna striscia gialla, niente. L'unica
+    /// cosa che lo prende è l'occhio — o una guardia sulla **lunghezza**, che è
+    /// quello che questo test fa.
+    ///
+    /// 💡 Nove caratteri è la misura che ci sta: «Tricipiti» è il più lungo dei
+    /// nomi che restano interi.
+    test('nessuna etichetta è troppo lunga per starci', () {
+      final troppoLunghe = StellaDeiMuscoli.assi
+          .where((g) => g.etichettaBreve.length > 9)
+          .map((g) => g.etichettaBreve)
+          .toList();
+
+      expect(
+        troppoLunghe,
+        isEmpty,
+        reason: 'Queste si accavallerebbero con la vicina nella stella.',
+      );
+    });
+
     testWidgets('si disegna anche tutta a zero', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

@@ -123,44 +123,44 @@ class _Zona {
 /// zone del corpo (`GruppoMuscolare.eUnMuscolo`).
 const _zone = <GruppoMuscolare, _Zona>{
   GruppoMuscolare.spalle: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.14, 0.150, 0.31, 0.215),
-    Rect.fromLTRB(0.69, 0.150, 0.86, 0.215),
+    Rect.fromLTRB(0.195, 0.168, 0.320, 0.240),
+    Rect.fromLTRB(0.680, 0.168, 0.805, 0.240),
   ]),
   GruppoMuscolare.petto: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.31, 0.170, 0.69, 0.260),
+    Rect.fromLTRB(0.320, 0.200, 0.680, 0.290),
   ]),
   GruppoMuscolare.schiena: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.30, 0.165, 0.70, 0.320),
+    Rect.fromLTRB(0.310, 0.195, 0.690, 0.360),
   ]),
   GruppoMuscolare.addome: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.35, 0.270, 0.65, 0.400),
+    Rect.fromLTRB(0.355, 0.300, 0.645, 0.420),
   ]),
   GruppoMuscolare.bicipiti: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.12, 0.225, 0.27, 0.320),
-    Rect.fromLTRB(0.73, 0.225, 0.88, 0.320),
+    Rect.fromLTRB(0.155, 0.250, 0.280, 0.340),
+    Rect.fromLTRB(0.720, 0.250, 0.845, 0.340),
   ]),
   GruppoMuscolare.tricipiti: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.12, 0.225, 0.27, 0.320),
-    Rect.fromLTRB(0.73, 0.225, 0.88, 0.320),
+    Rect.fromLTRB(0.155, 0.250, 0.280, 0.340),
+    Rect.fromLTRB(0.720, 0.250, 0.845, 0.340),
   ]),
   GruppoMuscolare.avambracci: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.10, 0.330, 0.24, 0.430),
-    Rect.fromLTRB(0.76, 0.330, 0.90, 0.430),
+    Rect.fromLTRB(0.155, 0.352, 0.280, 0.440),
+    Rect.fromLTRB(0.720, 0.352, 0.845, 0.440),
   ]),
   GruppoMuscolare.glutei: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.33, 0.400, 0.67, 0.480),
+    Rect.fromLTRB(0.330, 0.400, 0.670, 0.495),
   ]),
   GruppoMuscolare.quadricipiti: _Zona(_Lato.davanti, [
-    Rect.fromLTRB(0.32, 0.420, 0.47, 0.640),
-    Rect.fromLTRB(0.53, 0.420, 0.68, 0.640),
+    Rect.fromLTRB(0.330, 0.470, 0.470, 0.650),
+    Rect.fromLTRB(0.530, 0.470, 0.670, 0.650),
   ]),
   GruppoMuscolare.femorali: _Zona(_Lato.dietro, [
-    Rect.fromLTRB(0.32, 0.480, 0.47, 0.660),
-    Rect.fromLTRB(0.53, 0.480, 0.68, 0.660),
+    Rect.fromLTRB(0.330, 0.505, 0.470, 0.665),
+    Rect.fromLTRB(0.530, 0.505, 0.670, 0.665),
   ]),
   GruppoMuscolare.polpacci: _Zona(_Lato.entrambi, [
-    Rect.fromLTRB(0.33, 0.690, 0.46, 0.860),
-    Rect.fromLTRB(0.54, 0.690, 0.67, 0.860),
+    Rect.fromLTRB(0.335, 0.700, 0.465, 0.865),
+    Rect.fromLTRB(0.535, 0.700, 0.665, 0.865),
   ]),
 };
 
@@ -185,22 +185,44 @@ class _PittoreDelCorpo extends CustomPainter {
       ..color = spento
       ..style = PaintingStyle.fill;
 
-    // ── La testa, che non è un muscolo ma senza sembra un manichino ──────
-    canvas.drawOval(
-      _r(const Rect.fromLTRB(0.42, 0.020, 0.58, 0.130), size),
+    /*
+     * ══ 🚨 LE PARTI SI SOVRAPPONGONO, O È UN LEGO ═════════════════════════
+     *
+     * ⛔ Al primo giro testa, braccia, tronco e gambe erano quattro rettangoli
+     * **staccati**, con dei buchi in mezzo. Visto a schermo il 24/08: sembrava
+     * un manichino smontato, non un corpo.
+     *
+     * 💡 Adesso ogni pezzo entra dentro il vicino di qualche punto — il collo
+     * nel tronco, le braccia nelle spalle, le gambe nel bacino — e i raggi sono
+     * grandi. ⚠️ Resta **stilizzata**, e va bene: deve rispondere a «quali zone
+     * ho allenato», non insegnare anatomia.
+     */
+    // Il collo, che è quello che teneva staccata la testa.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        _r(const Rect.fromLTRB(0.455, 0.100, 0.545, 0.185), size),
+        const Radius.circular(6),
+      ),
       sagoma,
     );
 
-    // ── Il corpo di sfondo: braccia, tronco, gambe ───────────────────────
-    for (final r in const [
-      Rect.fromLTRB(0.30, 0.150, 0.70, 0.480), // tronco
-      Rect.fromLTRB(0.10, 0.150, 0.28, 0.440), // braccio sinistro
-      Rect.fromLTRB(0.72, 0.150, 0.90, 0.440), // braccio destro
-      Rect.fromLTRB(0.31, 0.420, 0.48, 0.880), // gamba sinistra
-      Rect.fromLTRB(0.52, 0.420, 0.69, 0.880), // gamba destra
+    canvas.drawOval(
+      _r(const Rect.fromLTRB(0.415, 0.015, 0.585, 0.125), size),
+      sagoma,
+    );
+
+    for (final (r, raggio) in const [
+      // Le spalle: più larghe del tronco, e sono loro a raccordare le braccia.
+      (Rect.fromLTRB(0.185, 0.155, 0.815, 0.245), 26.0),
+      (Rect.fromLTRB(0.285, 0.165, 0.715, 0.430), 20.0), // torace
+      (Rect.fromLTRB(0.315, 0.380, 0.685, 0.510), 18.0), // bacino
+      (Rect.fromLTRB(0.145, 0.180, 0.290, 0.450), 20.0), // braccio sinistro
+      (Rect.fromLTRB(0.710, 0.180, 0.855, 0.450), 20.0), // braccio destro
+      (Rect.fromLTRB(0.320, 0.450, 0.480, 0.890), 22.0), // gamba sinistra
+      (Rect.fromLTRB(0.520, 0.450, 0.680, 0.890), 22.0), // gamba destra
     ]) {
       canvas.drawRRect(
-        RRect.fromRectAndRadius(_r(r, size), const Radius.circular(12)),
+        RRect.fromRectAndRadius(_r(r, size), Radius.circular(raggio)),
         sagoma,
       );
     }
@@ -243,20 +265,25 @@ class _PittoreDelCorpo extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
+    /*
+     * ⚠️ **Il contorno si disegna solo sul perimetro esterno**, cioè testa,
+     * braccia e gambe. ⛔ Ripassarlo su tronco e bacino disegnerebbe le linee
+     * **dentro** la figura, e le sovrapposizioni che tengono insieme il corpo
+     * tornerebbero a vedersi come cuciture.
+     */
     canvas.drawOval(
-      _r(const Rect.fromLTRB(0.42, 0.020, 0.58, 0.130), size),
+      _r(const Rect.fromLTRB(0.415, 0.015, 0.585, 0.125), size),
       bordo,
     );
 
-    for (final r in const [
-      Rect.fromLTRB(0.30, 0.150, 0.70, 0.480),
-      Rect.fromLTRB(0.10, 0.150, 0.28, 0.440),
-      Rect.fromLTRB(0.72, 0.150, 0.90, 0.440),
-      Rect.fromLTRB(0.31, 0.420, 0.48, 0.880),
-      Rect.fromLTRB(0.52, 0.420, 0.69, 0.880),
+    for (final (r, raggio) in const [
+      (Rect.fromLTRB(0.145, 0.180, 0.290, 0.450), 20.0),
+      (Rect.fromLTRB(0.710, 0.180, 0.855, 0.450), 20.0),
+      (Rect.fromLTRB(0.320, 0.450, 0.480, 0.890), 22.0),
+      (Rect.fromLTRB(0.520, 0.450, 0.680, 0.890), 22.0),
     ]) {
       canvas.drawRRect(
-        RRect.fromRectAndRadius(_r(r, size), const Radius.circular(12)),
+        RRect.fromRectAndRadius(_r(r, size), Radius.circular(raggio)),
         bordo,
       );
     }

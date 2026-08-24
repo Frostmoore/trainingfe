@@ -52,7 +52,9 @@ class StellaDeiMuscoli extends StatelessWidget {
     return CustomPaint(
       painter: _PittoreDellaStella(
         valori: [for (final g in assi) intensita[g] ?? 0],
-        etichette: [for (final g in assi) g.etichetta],
+        // ⚠️ **La forma corta**: undici parole intere attorno a un cerchio
+        // piccolo si accavallano — «Addome» e «Avambracci» lo facevano.
+        etichette: [for (final g in assi) g.etichettaBreve],
         linea: tema.colorScheme.outlineVariant,
         area: tema.colorScheme.error,
         testo: tema.colorScheme.onSurfaceVariant,
@@ -61,6 +63,13 @@ class StellaDeiMuscoli extends StatelessWidget {
     );
   }
 }
+
+/// Quanto spazio serve alle parole attorno al grafico.
+///
+/// ⚠️ È mezza etichetta per lato più un margine: le etichette sono **centrate**
+/// sul vertice, quindi ne sporge metà.
+const double _larghezzaEtichetta = 58;
+const double _spazioEtichette = _larghezzaEtichetta / 2 + 6;
 
 class _PittoreDellaStella extends CustomPainter {
   const _PittoreDellaStella({
@@ -82,13 +91,20 @@ class _PittoreDellaStella extends CustomPainter {
     final centro = Offset(size.width / 2, size.height / 2);
 
     /*
-     * ⚠️ **Il raggio lascia posto alle etichette**, e la misura non è a
-     * sentimento: undici parole attorno a un cerchio hanno bisogno di circa un
-     * quarto del lato più corto. 🚨 Senza questo margine «Quadricipiti» esce
-     * dalla card su uno schermo stretto — ed è il difetto che ha convinto a non
-     * usare `fl_chart`.
+     * ══ 🚨 IL RAGGIO SI CALCOLA DALLE ETICHETTE, NON A OCCHIO ═════════════
+     *
+     * ⛔ Al primo giro era `min(w,h)/2 * 0.62`, cioè una frazione scelta a
+     * sentimento. **Sullo schermo del committente la stella usciva dalla
+     * card**: metà delle etichette di destra erano tagliate dal bordo, e il
+     * grafico era illeggibile.
+     *
+     * 🚨 Una frazione non può funzionare, perché le etichette **non scalano**
+     * con la card: «Quadricipiti» è largo uguale su una card da 250 px e su una
+     * da 400. 💡 Quindi si toglie prima lo spazio che serve a loro, e il raggio
+     * è quello che resta.
      */
-    final raggio = math.min(size.width, size.height) / 2 * 0.62;
+    final meta = math.min(size.width, size.height) / 2;
+    final raggio = math.max(meta - _spazioEtichette, meta * 0.25);
 
     final n = valori.length;
 
@@ -153,7 +169,7 @@ class _PittoreDellaStella extends CustomPainter {
 
     // ── Le etichette ─────────────────────────────────────────────────────
     for (var i = 0; i < n; i++) {
-      final dove = punto(i, 1.28);
+      final dove = punto(i, 1.16);
 
       final p =
           (ui.ParagraphBuilder(
@@ -162,9 +178,19 @@ class _PittoreDellaStella extends CustomPainter {
                 ..pushStyle(ui.TextStyle(color: testo))
                 ..addText(etichette[i]))
               .build()
-            ..layout(const ui.ParagraphConstraints(width: 64));
+            ..layout(const ui.ParagraphConstraints(width: _larghezzaEtichetta));
 
-      canvas.drawParagraph(p, Offset(dove.dx - 32, dove.dy - p.height / 2));
+      /*
+       * 🚨 **E comunque si tengono dentro il riquadro.** Il raggio lascia lo
+       * spazio giusto per la parola più lunga, ma una parola più lunga di
+       * quella prevista uscirebbe lo stesso: `clamp` è la rete sotto, e costa
+       * una riga.
+       */
+      final x = (dove.dx - _larghezzaEtichetta / 2)
+          .clamp(0.0, math.max(0.0, size.width - _larghezzaEtichetta))
+          .toDouble();
+
+      canvas.drawParagraph(p, Offset(x, dove.dy - p.height / 2));
     }
   }
 

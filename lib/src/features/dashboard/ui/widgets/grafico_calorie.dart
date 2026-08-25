@@ -9,6 +9,8 @@ import '../../../health/health_controller.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../dashboard_controller.dart';
+import '../../riassunto_settimana.dart';
+import '../../saldo_calorico.dart';
 
 /// Le calorie del periodo, **due linee attorno a una linea di base** —
 /// 3b-O.9, 21/08/2026, ridisegnato il 22/08.
@@ -124,7 +126,19 @@ class GraficoCalorie extends ConsumerWidget {
     final target = (n?.haTarget ?? false)
         ? n!.targetKcal
         : locale?.kcal.toDouble();
-    final consumo = locale?.tdee;
+
+    /*
+     * ══ 🚨 IL BMR, NON IL TDEE — 3b-F, 26/08/2026 ═══════════════════════════
+     *
+     * ⛔ Qui si passava `locale?.tdee`, e il riquadro del dito faceva
+     * `assunte − TDEE − attive`: **il movimento contato due volte**, perché il
+     * TDEE è già `BMR × fattore di attività`.
+     *
+     * 💡 Il saldo vero si fa sul **basale** più le attive **misurate**, che è
+     * esattamente quello che la barra della prima card mostra da 3b-B.19 — e la
+     * trappola stava scritta in cima a quel file. Vedi `saldo_calorico.dart`.
+     */
+    final bmr = locale?.bmr;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -186,7 +200,7 @@ class GraficoCalorie extends ConsumerWidget {
                   daHealth: daHealth,
                   locali: locali,
                   target: target,
-                  consumo: consumo,
+                  bmr: bmr,
                   finestra: finestra,
                 ),
               ),
@@ -204,7 +218,7 @@ class _Corpo extends ConsumerWidget {
     required this.daHealth,
     required this.locali,
     required this.target,
-    required this.consumo,
+    required this.bmr,
     required this.finestra,
   });
 
@@ -212,7 +226,10 @@ class _Corpo extends ConsumerWidget {
   final Map<String, int> daHealth;
   final Map<String, int> locali;
   final double? target;
-  final double? consumo;
+
+  /// Il metabolismo basale: quello che si brucia **stando fermi**.
+  final double? bmr;
+
   final CaloriesWindow finestra;
 
   @override
@@ -280,7 +297,7 @@ class _Corpo extends ConsumerWidget {
           SizedBox(
             height: 190,
             child: LineChart(
-              _dati(context, serie, daHealth, locali, target!, consumo),
+              _dati(context, serie, daHealth, locali, target!, bmr),
             ),
           ),
 
@@ -342,7 +359,105 @@ class _Corpo extends ConsumerWidget {
             );
           },
         ),
+
+        _MediaDelSaldo(
+          serie: serie,
+          daHealth: daHealth,
+          locali: locali,
+          bmr: bmr,
+        ),
       ],
+    );
+  }
+}
+
+/// 📌 *«in fondo a quella card mettici le calorie medie di deficit o surplus di
+/// questa settimana»*.
+///
+/// ══ 🚨 E' IL NUMERO CHE DICE SE LA DIREZIONE E' GIUSTA ════════════════════
+///
+/// 💡 Il grafico mostra i **giorni**, e i giorni oscillano: uno sopra, uno sotto,
+/// e a occhio non si capisce dove si sta andando. ⚠️ La media di un periodo è
+/// l'unica cosa che risponde alla domanda vera — *sto dimagrendo o no* — e
+/// accanto ci sta la traduzione in grammi, perche' «−340 kcal al giorno» non
+/// dice niente a nessuno finche' non diventa peso.
+///
+/// ⛔ **Non compare quando non c'e' niente da dire**: senza profilo manca il
+/// basale, e senza giorni completi con diario non c'e' media. E' la regola di
+/// tutta la pagina — una voce senza dati sparisce, perche' uno zero afferma
+/// qualcosa e un'assenza no.
+class _MediaDelSaldo extends StatelessWidget {
+  const _MediaDelSaldo({
+    required this.serie,
+    required this.daHealth,
+    required this.locali,
+    required this.bmr,
+  });
+
+  final Series serie;
+  final Map<String, int> daHealth;
+  final Map<String, int> locali;
+  final double? bmr;
+
+  @override
+  Widget build(BuildContext context) {
+    final kcal = bmr;
+
+    if (kcal == null) return const SizedBox.shrink();
+
+    final medio = saldoMedioDelPeriodo(
+      giorni: [for (final d in serie.dates) DateTime.tryParse(d) ?? DateTime(0)],
+      assunte: serie.consumed,
+      attive: [
+        for (var i = 0; i < serie.dates.length; i++)
+          bruciateDi(serie, i, daHealth, locali),
+      ],
+      bmr: kcal,
+      adesso: DateTime.now(),
+    );
+
+    if (medio == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final quanto = medio.kcalAlGiorno.abs().round();
+
+    /*
+     * 💡 **In grammi a settimana, non in chili**: su una settimana i chili sono
+     * uno zero virgola qualcosa, e uno «0,3 kg» si legge come «niente». ⚠️ La
+     * costante e' quella di Wishnofsky (7.700 kcal per chilo) e sta in un posto
+     * solo — con l'avvertenza che le sta accanto da 3b-O.7.4: e' una stima
+     * grossolana, non una misura.
+     */
+    final grammi = (quanto * 7 / RiassuntoSettimana.kcalPerChilo * 1000).round();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.xs),
+      child: Column(
+        children: [
+          Text(
+            medio.deficit
+                ? 'In media $quanto kcal di deficit al giorno'
+                : 'In media $quanto kcal di surplus al giorno',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: medio.deficit
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            // 🚨 Il contesto della media e' parte della media: su quanti giorni
+            // e' calcolata cambia quanto vale, e senza dirlo si legge come se
+            // fosse su tutti.
+            'sui ${medio.giorni} '
+            '${medio.giorni == 1 ? 'giorno completo' : 'giorni completi'} '
+            'con diario · circa $grammi g a settimana',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -382,7 +497,7 @@ LineChartData _dati(
   Map<String, int> daHealth,
   Map<String, int> locali,
   double target,
-  double? consumo,
+  double? bmr,
 ) {
   final theme = Theme.of(context);
 
@@ -487,7 +602,7 @@ LineChartData _dati(
       ],
     ),
 
-    lineTouchData: _tocco(context, s, daHealth, locali, consumo),
+    lineTouchData: _tocco(context, s, daHealth, locali, bmr),
   );
 }
 
@@ -504,7 +619,7 @@ LineTouchData _tocco(
   Series s,
   Map<String, int> daHealth,
   Map<String, int> locali,
-  double? consumo,
+  double? bmr,
 ) {
   final theme = Theme.of(context);
 
@@ -528,14 +643,7 @@ LineTouchData _tocco(
           if (indice > 0)
             null
           else
-            _vocePerIlDito(
-              theme,
-              s,
-              punto.x.toInt(),
-              daHealth,
-              locali,
-              consumo,
-            ),
+            _vocePerIlDito(theme, s, punto.x.toInt(), daHealth, locali, bmr),
       ],
     ),
   );
@@ -543,21 +651,24 @@ LineTouchData _tocco(
 
 /// Il testo dentro il riquadro del dito.
 ///
-/// 🚨 Il saldo è `(assunte − consumo) − bruciate`: positivo vuol dire surplus —
+/// 🚨 Il saldo è `assunte − (basale + attive)`: positivo vuol dire surplus —
 /// si è mangiato più di quanto si è speso — negativo deficit.
+///
+/// ⛔ **Non era così, ed era sbagliato**: si toglievano il TDEE **e** le attive,
+/// cioè il movimento due volte. Vedi `saldo_calorico.dart`.
 LineTooltipItem? _vocePerIlDito(
   ThemeData theme,
   Series s,
   int i,
   Map<String, int> daHealth,
   Map<String, int> locali,
-  double? consumo,
+  double? bmr,
 ) {
   final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-  final bruciate = bruciateDi(s, i, daHealth, locali);
+  final attive = bruciateDi(s, i, daHealth, locali);
   final giorno = i < s.labels.length ? s.labels[i] : '';
 
-  if (consumo == null || assunte <= 0) {
+  if (bmr == null || assunte <= 0) {
     return LineTooltipItem(
       '$giorno · nessun dato',
       theme.textTheme.labelSmall!.copyWith(
@@ -566,7 +677,25 @@ LineTooltipItem? _vocePerIlDito(
     );
   }
 
-  final saldo = (assunte - consumo) - bruciate;
+  final data = i < s.dates.length ? DateTime.tryParse(s.dates[i]) : null;
+  final adesso = DateTime.now();
+
+  /*
+   * ⚠️ **Su oggi il basale si ferma all'ora che è.** Le calorie assunte sono
+   * quelle di finora: confrontarle con ventiquattro ore di basale dichiara un
+   * deficit che è soltanto la giornata non ancora finita.
+   */
+  final basale = basaleDelGiorno(
+    bmr: bmr,
+    giorno: data ?? adesso,
+    adesso: adesso,
+  );
+
+  final saldo = saldoDelGiorno(
+    assunte: assunte,
+    basale: basale,
+    attive: attive,
+  );
 
   return LineTooltipItem(
     '$giorno\n'

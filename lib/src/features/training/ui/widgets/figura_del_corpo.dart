@@ -199,32 +199,36 @@ class FiguraDelCorpo extends ConsumerWidget {
                       intensita: intensita,
                       davanti: davanti,
                       /*
-                       * ══ 🚨 LO SPENTO VIENE DAL TEMA, ED E' IL PUNTO ═══════
+                       * ══ 🚨 IL CORPO E' BIANCO SUL SCURO — 3b-D.13 ═════════
                        *
-                       * `onSurfaceVariant` e' **chiaro** in tema scuro e
-                       * **scuro** in tema chiaro: il corpo non allenato si
-                       * vede sempre, qualunque sia il fondo del riquadro.
+                       * 📌 *«l'uomo deve restare bianco, e' lo sfondo che deve
+                       * essere grigio»*, guardando lo screenshot.
                        *
-                       * ⛔ **L'avevo bloccato su un grigio scuro fisso** (3b-D.13)
-                       * ragionando che la figura stesse sempre dentro un
-                       * riquadro chiaro. 🚨 Poi il riquadro chiaro se n'e'
-                       * andato — segue il tema come tutti gli altri — e con un
-                       * grigio scuro fisso su un fondo scuro **la figura
-                       * sarebbe sparita del tutto**.
+                       * ⛔ Era `onSurfaceVariant` **al 45%**: su un fondo grigio
+                       * scuro veniva fuori un corpo **grigio medio**, appena
+                       * piu' chiaro del fondo. Non spariva — si **confondeva**,
+                       * che a schermo e' la stessa cosa.
                        *
-                       * 💡 La lezione: era **questa riga** a rendere l'uomo
-                       * «strano» col tema scuro fin dall'inizio, non il fondo.
-                       * Il fondo bianco lo mascherava per forza bruta, e per
-                       * tre giri ho curato il sintomo.
+                       * 💡 Il PNG e' una sagoma **bianca**: rimetterla bianca e'
+                       * tornare a com'e' disegnata, e i solchi fra i muscoli —
+                       * che nel PNG sono trasparenti — lasciano vedere il fondo
+                       * grigio, disegnando l'anatomia da soli.
                        *
-                       * ⚠️ Chi tocca il colore del riquadro
-                       * (`RiquadroBianco`) deve guardare **anche qui**: sono la
-                       * stessa decisione presa in due file, e vanno letti
-                       * insieme.
+                       * ⚠️ **In tema chiaro resta scuro**, e non e' una
+                       * simmetria: li' il riquadro e' bianco, e un corpo bianco
+                       * su bianco non ci sarebbe proprio.
+                       *
+                       * 🚨 La regola vera, sotto tutte e due: **il corpo fa
+                       * contrasto col riquadro**. Chi tocca il colore del
+                       * riquadro (`RiquadroBianco`) deve guardare anche qui —
+                       * e' la stessa decisione presa in due file, e in tre giri
+                       * l'ho sbagliata cambiandone uno solo per volta.
                        */
-                      spento: tema.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.45,
-                      ),
+                      spento: tema.brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.88)
+                          : tema.colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.55,
+                            ),
                     ),
                   ),
                 ),

@@ -10,11 +10,14 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/ui/progress_screen.dart';
+import '../data/catalogo_esercizi.dart';
 import '../data/limiti_delle_schede.dart';
+import '../muscoli_allenati.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
 import 'widgets/barra_settimana.dart';
+import 'widgets/scelta_tipo_scheda.dart';
 
 /// La sezione Allenamento — A5.1, riorganizzata in G6.
 ///
@@ -202,7 +205,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                   'Il tuo trainer non te ne ha ancora assegnata una, '
                   'ma puoi scrivertene una tu.',
               action: FilledButton.icon(
-                onPressed: () => context.push(AppRoutes.planNew),
+                onPressed: () => nuovaScheda(context),
                 icon: const Icon(Icons.add_rounded),
                 label: const Text('Crea una scheda'),
               ),
@@ -229,7 +232,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                     const SizedBox(height: Gap.md),
                 itemBuilder: (context, index) => index == elenco.length
                     ? OutlinedButton.icon(
-                        onPressed: () => context.push(AppRoutes.planNew),
+                        onPressed: () => nuovaScheda(context),
                         icon: const Icon(Icons.add_rounded),
                         label: const Text('Nuova scheda'),
                       )
@@ -379,13 +382,28 @@ class _SchedaCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      /*
+                       * ══ 🎫 SINGLE O MULTI, SEMPRE — 3b-D.9.1 ═════════════
+                       *
+                       * 📌 *«Le schede devono indicare chiaramente se sono
+                       * single-day o multi-day»*.
+                       *
+                       * ⛔ Prima i giorni comparivano **solo** sopra l'uno, e
+                       * l'assenza doveva valere «un giorno». 🚨 Un'assenza non
+                       * si legge: chi guarda un elenco misto vede alcune schede
+                       * con «3 giorni» e altre senza niente, e non sa se le
+                       * seconde sono a giorno unico o se il dato manca.
+                       */
                       Text(
-                        '${scheda.exercisesCount} esercizi'
-                        '${scheda.giorni > 1 ? ' · ${scheda.giorni} giorni' : ''}',
+                        '${scheda.exercisesCount} esercizi · '
+                        '${scheda.giorni} '
+                        '${scheda.giorni == 1 ? 'giorno' : 'giorni'}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
+
+                      _MuscoliDellaCard(scheda: scheda),
 
                       // 🔒 Il perché, sotto il nome: senza, una card spenta si
                       // legge come un guasto.
@@ -410,6 +428,57 @@ class _SchedaCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// I due o tre gruppi più coinvolti da una scheda — 3b-D.9.2.
+///
+/// 📌 *«e indicare brevemente i muscoli più coinvolti»*.
+///
+/// ══ ⚠️ SE NON SI SA, NON SI SCRIVE ════════════════════════════════════════
+///
+/// 🚨 I muscoli li sa il **catalogo**, non la scheda: se gli esercizi sono
+/// scritti a mano con nomi che il catalogo non conosce, qui non compare niente.
+/// ⛔ Meglio muto che sbagliato — tre pasticche indovinate su una scheda che
+/// allena altro sono peggio di nessuna pasticca.
+///
+/// 💡 È anche il motivo per cui scegliere l'esercizio dall'elenco mentre si
+/// scrive (3b-D.4) conviene: da lì in poi la scheda si racconta da sola.
+class _MuscoliDellaCard extends ConsumerWidget {
+  const _MuscoliDellaCard({required this.scheda});
+
+  final WorkoutPlan scheda;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalogo = ref.watch(catalogoEserciziProvider).valueOrNull;
+
+    if (catalogo == null || scheda.exercises.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final pesi = pesiDellaScheda(scheda, catalogo);
+
+    if (pesi.isEmpty) return const SizedBox.shrink();
+
+    final ordinati = pesi.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final tema = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        // ⚠️ **Tre e non tutti**: in una riga di elenco l'elenco completo
+        // diventa una frase da leggere, e questa va colta di sfuggita.
+        ordinati.take(3).map((e) => e.key.etichetta).join(' · '),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: tema.textTheme.labelSmall?.copyWith(
+          color: tema.colorScheme.primary,
         ),
       ),
     );
@@ -657,4 +726,27 @@ class _AvviaAllenamento extends ConsumerWidget {
       }
     }
   }
+}
+
+/// Apre la creazione di una scheda, **dopo** aver chiesto che forma avra' —
+/// 3b-D.2.
+///
+/// ══ 🚨 LA DOMANDA STA QUI E NON DENTRO L'EDITOR ═══════════════════════════
+///
+/// 📌 *«Prima di entrare nella vera interfaccia di creazione scheda mi deve
+/// chiedere se voglio una scheda single-day o multi-day»*.
+///
+/// ⚠️ Chiederlo dentro — un interruttore in cima al modulo — vorrebbe dire che
+/// chi non e' abbonato scrive tre esercizi e **poi** scopre che quella forma non
+/// puo' averla. 💡 Un limite incontrato prima di lavorare e' una regola; lo
+/// stesso limite incontrato dopo e' lavoro buttato.
+///
+/// 🚨 Chi chiude il foglio senza scegliere **non entra**: un editor che si apre
+/// lo stesso renderebbe la domanda una formalita' da saltare.
+Future<void> nuovaScheda(BuildContext context) async {
+  final tipo = await chiediIlTipoDiScheda(context);
+
+  if (tipo == null || !context.mounted) return;
+
+  await context.push(AppRoutes.planNew, extra: tipo);
 }

@@ -188,7 +188,7 @@ void main() {
 
   group('le decisioni sul tipo', () {
     test(
-      '🚨 nel backup entrano progressi, chat e piani, e nessun altro',
+      '🚨 nel backup entrano progressi, chat, piani ed esercizi, e nessun altro',
       () async {
         /*
        * 🚨 **Questo test si rompe apposta quando si aggiunge un tipo.**
@@ -198,15 +198,22 @@ void main() {
        * *«ogni volta che abbiamo un nuovo dato o un nuovo file, questo deve
        * comunque finire in qualche modo nel backup»*.
        *
-       * 💡 Ha gia' funzionato una volta: aggiungendo `piani` (N20) e' diventato
-       * rosso, e la risposta e' stata **si', ci va** — un piano importato lo si
-       * e' fatto fare da un professionista e si e' pagato, quindi perderlo
-       * cambiando telefono sarebbe come perdere una ricetta medica.
+       * 💡 Ha gia' funzionato **due volte**:
+       *
+       * 1. `piani` (N20) — un piano importato lo si e' fatto fare da un
+       *    professionista e si e' pagato: perderlo cambiando telefono sarebbe
+       *    come perdere una ricetta medica. **Ci va.**
+       * 2. `esercizi` (3b-D.3.3) — la foto che qualcuno mette su un esercizio
+       *    della propria scheda. ⚠️ Somiglia ad `alimenti`, che invece e' una
+       *    cache: la differenza e' che quelle **si riscaricano dal server** e
+       *    questa no. Spesso e' la foto della macchina in *quella* palestra,
+       *    con il sedile all'altezza giusta. **Ci va.**
        */
         expect(TipoFoto.daSalvare.map((t) => t.name).toSet(), {
           'progressi',
           'chat',
           'piani',
+          'esercizi',
         });
       },
     );

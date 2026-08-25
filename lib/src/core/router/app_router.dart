@@ -41,6 +41,7 @@ import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
 import '../../features/training/ui/player_screen.dart';
 import '../../features/training/ui/session_summary_screen.dart';
+import '../../features/training/ui/widgets/scelta_tipo_scheda.dart';
 
 /// Le rotte dell'app — A1.5.
 ///
@@ -525,7 +526,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.planNew,
-        builder: (_, _) => const PlanEditorScreen(),
+
+        // 🆕 3b-D.2: il tipo (un giorno / più giorni) lo si sceglie **prima**
+        // di entrare, e arriva da `extra`. ⚠️ `null` = si è arrivati qui senza
+        // passare dalla domanda, e vale «un giorno».
+        builder: (_, state) =>
+            PlanEditorScreen(tipo: state.extra as TipoDiScheda?),
       ),
       GoRoute(
         path: '/schede/:id/modifica',

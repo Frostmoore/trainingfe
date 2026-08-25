@@ -47,6 +47,24 @@ enum MotivoBlocco {
 /// Quante ne può usare chi non è abbonato.
 const quanteSenzaAbbonamento = 3;
 
+/// Se questa persona **non ha limiti** sulle schede.
+///
+/// ══ 🚨 UNA REGOLA SOLA, IN UN POSTO SOLO — 3b-D.2.3 ═══════════════════════
+///
+/// 💡 La usano [schedeBloccate] **e** la domanda «single o multi-day?» prima di
+/// creare una scheda. ⛔ Copiarla nel foglio sarebbe stata la **terza** stesura
+/// della stessa condizione — e le prime due le ho già sbagliate tutte e due
+/// (una volta unendo i due flag, una volta leggendo l'`o` come un `e`).
+///
+/// 🚨 **Ne basta UNA**: chi è abbonato **o** chi ha l'AI illimitata. Averle
+/// tutte e due va bene lo stesso.
+///
+/// ⚠️ **`!= false` e non `== true`**: `null` vuol dire «non lo so» — il profilo
+/// non è ancora arrivato, o la rete non va — e un flag che non c'è **non deve
+/// chiudere fuori nessuno**.
+bool senzaLimiti({required bool? abbonato, required bool? illimitata}) =>
+    illimitata != false || abbonato != false;
+
 /// Quali schede sono bloccate, e perché.
 ///
 /// ══ 🚨 DUE CONDIZIONI DIVERSE, E NON VANNO CONFUSE ════════════════════════
@@ -98,9 +116,7 @@ Map<int, MotivoBlocco> schedeBloccate({
    * deve chiudere fuori nessuno — vale come una porta aperta, non come una
    * chiusa.
    */
-  final senzaLimiti = illimitata != false || abbonato != false;
-
-  if (senzaLimiti) return const {};
+  if (senzaLimiti(abbonato: abbonato, illimitata: illimitata)) return const {};
 
   final bloccate = <int, MotivoBlocco>{};
 

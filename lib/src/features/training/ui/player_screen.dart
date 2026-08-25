@@ -114,6 +114,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               seriePreviste: _seriePreviste(riga.prescription),
               restSec: riga.restSec ?? 90,
               targetWeight: riga.targetWeight,
+
+              /*
+               * ══ 🆕 LE RIGHE DELLA SCHEDA — 3b-D.8 ═══════════════════════
+               *
+               * 📌 *«ogni serie deve avere Ripetizioni, Peso (o niente o Iso.)
+               * e Recupero»* — e se lo dice la scheda, il player deve
+               * ubbidirle riga per riga invece di ripetere lo stesso numero.
+               *
+               * ⛔ **Nessun ramo «se e' vecchia»**: `PlanExercise.serie` e'
+               * gia' passata dall'adattatore, quindi qui arrivano righe anche
+               * da una scheda scritta un mese fa.
+               */
+              previste: riga.serie,
               notes: riga.notes,
               imageUrl: riga.imageUrl,
               rows: const [],
@@ -222,8 +235,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           // intervallo — cioe' quasi sempre — il campo restava vuoto e le
           // ripetizioni andavano riscritte a ogni serie. Si prende il primo
           // numero: da «8-12» si parte da 8, da «cedimento» non si parte.
-          reps: perNumero[i]?.reps ?? _primoNumero(riga.reps),
-          weight: perNumero[i]?.weight ?? riga.targetWeight,
+          /*
+           * 🆕 3b-D.8 — **la riga i-esima della scheda**, quando c'e'.
+           *
+           * 💡 Cosi' «12 a 40, 10 a 45, 8 a 50» arriva nel player gia' scritto,
+           * e chi si allena conferma invece di ricopiare. ⚠️ Il ripiego resta
+           * la prescrizione riassunta, per gli esercizi aggiunti al volo.
+           */
+          reps:
+              perNumero[i]?.reps ??
+              riga.previsteAl(i)?.ripetizioni ??
+              _primoNumero(riga.reps),
+          weight:
+              perNumero[i]?.weight ??
+              riga.previsteAl(i)?.peso ??
+              riga.targetWeight,
           done: perNumero.containsKey(i),
         ),
     ];
@@ -284,7 +310,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           await requestNotificationPermission();
         }
 
-        await _riposo.avvia(esercizio.restSec);
+        /*
+         * ══ ⏱️ IL RECUPERO E' DELLA RIGA, NON DELL'ESERCIZIO — 3b-D.8.2 ════
+         *
+         * 💡 Novanta secondi fra le prime serie e due minuti prima dell'ultima
+         * e' come sono scritte le schede vere. ⚠️ Il ripiego e' il recupero
+         * dell'esercizio, che e' quello che si sapeva prima di oggi.
+         */
+        await _riposo.avvia(
+          esercizio.previsteAl(riga.setNumber)?.recuperoSec ??
+              esercizio.restSec,
+        );
       }
     } on Object catch (error) {
       // 🚨 Si torna indietro sulla spunta. Lasciarla verde su una serie che il

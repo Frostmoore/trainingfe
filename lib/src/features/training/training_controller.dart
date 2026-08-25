@@ -7,6 +7,7 @@ import '../auth/auth_controller.dart';
 import '../dashboard/gettoni_controller.dart';
 import '../health/health_controller.dart';
 import 'data/limiti_delle_schede.dart';
+import 'data/serie_prevista.dart';
 import 'porta_giu_le_schede.dart';
 
 /// Una scheda assegnata — A5.1.
@@ -87,6 +88,7 @@ class PlanExercise {
     required this.id,
     required this.name,
     required this.prescription,
+    required this.serie,
     this.exerciseId,
     this.restSec,
     this.targetWeight,
@@ -111,6 +113,20 @@ class PlanExercise {
     restSec: (j['rest_sec'] as num?)?.toInt(),
     targetWeight: (j['target_weight'] as num?)?.toDouble(),
     notes: j['notes']?.toString(),
+
+    /*
+     * ══ 🆕 LE SERIE, RIGA PER RIGA — 3b-D.1 ════════════════════════════════
+     *
+     * 🚨 **Qui passa TUTTO**: le schede scritte con l'editor nuovo, quelle
+     * scritte prima, e quelle che arrivano dal server — che dal server
+     * continuano ad arrivare nel formato vecchio, perche' `plan_exercises` le
+     * serie riga per riga non le ha.
+     *
+     * 💡 `serieDellEsercizio` le espande, quindi da qui in giu' **nessuno deve
+     * sapere che sono esistiti due formati**: il player, la card dei numeri e
+     * l'editor leggono tutti delle righe.
+     */
+    serie: serieDellEsercizio(j),
   );
 
   final int id;
@@ -123,6 +139,13 @@ class PlanExercise {
   /// volta sola.
   final int? exerciseId;
   final String prescription;
+
+  /// Le serie previste, **una per riga** — 3b-D.1.
+  ///
+  /// 💡 Su una scheda scritta prima di oggi sono l'espansione di
+  /// `sets × prescription`: la scheda diceva gia' questo, in un modo piu'
+  /// povero. ⚠️ Non e' mai vuota — vedi `serieDellEsercizio`.
+  final List<SeriePrevista> serie;
   final int? restSec;
   final double? targetWeight;
   final String? notes;
@@ -300,6 +323,7 @@ class PlanActions {
     required String name,
     String? notes,
     required List<Map<String, dynamic>> exercises,
+    List<List<Map<String, dynamic>>>? giorni,
   }) async {
     /*
      * 💡 **L'id lo dà il database.** Qui si calcolava a mano — il minimo già
@@ -322,6 +346,7 @@ class PlanActions {
         'notes': notes,
         'editable': true,
         'exercises': exercises,
+        ...giorniInJson(giorni),
       }),
     );
 
@@ -335,11 +360,36 @@ class PlanActions {
   /// ⚠️ **`exercises` assente vuol dire «non toccare gli esercizi»**: rinominare
   /// una scheda non deve costringere a rimandare tutte le righe — ed è anche la
   /// guardia che impedisce a una rinomina di svuotarla.
+  /// I giorni, nel formato che il resto dell'app già legge — 3b-D.7.
+  ///
+  /// ══ 🚨 `days` E' LA CHIAVE CHE DECIDE SE UNA SCHEDA E' MULTI-GIORNO ══════
+  ///
+  /// 💡 La leggono già `WorkoutPlan.giorni` (che alimenta il limite dei non
+  /// abbonati, 3b-C.6) e `SchedaAllenamento.fromJson`. ⛔ Inventare qui una
+  /// chiave nuova vorrebbe dire una scheda a cinque giorni che al limite ne
+  /// risulta uno — cioè il limite aggirato senza che nessuno se ne accorga.
+  ///
+  /// ⚠️ **`exercises` resta scritto anche quando ci sono i giorni**, ed è il
+  /// primo: una versione dell'app che i giorni non li conosce apre comunque la
+  /// scheda e ci trova dentro il giorno 1, invece di una lista vuota.
+  static Map<String, dynamic> giorniInJson(
+    List<List<Map<String, dynamic>>>? giorni,
+  ) {
+    if (giorni == null || giorni.length < 2) return const {};
+
+    return {
+      'days': [
+        for (final g in giorni) {'exercises': g},
+      ],
+    };
+  }
+
   Future<void> update({
     required int id,
     required String name,
     String? notes,
     List<Map<String, dynamic>>? exercises,
+    List<List<Map<String, dynamic>>>? giorni,
   }) async {
     final vecchia = await _archivio.laScheda(id);
 
@@ -351,6 +401,23 @@ class PlanActions {
     scheda['notes'] = notes;
 
     if (exercises != null) scheda['exercises'] = exercises;
+
+    if (exercises != null) {
+      final giorniScritti = giorniInJson(giorni);
+
+      /*
+       * ⚠️ **Da più giorni a uno solo, la chiave va TOLTA.** Lasciarla vuota o
+       * con un giorno solo terrebbe la scheda «multi-day» per chi legge
+       * `days`, e — visto che le multi-day sono quelle bloccate senza
+       * abbonamento (3b-C.6) — una scheda ridotta a un giorno resterebbe
+       * bloccata senza un motivo visibile.
+       */
+      if (giorniScritti.isEmpty) {
+        scheda.remove('days');
+      } else {
+        scheda.addAll(giorniScritti);
+      }
+    }
 
     await _archivio.aggiornaScheda(
       id: id,

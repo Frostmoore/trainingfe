@@ -4,6 +4,7 @@ library;
 import '../../../core/storage/archivio_salute.dart';
 import 'calorie_allenamento.dart';
 import 'gruppo_muscolare.dart';
+import 'serie_prevista.dart';
 
 class WorkoutSession {
   const WorkoutSession({
@@ -210,6 +211,7 @@ class PlayerExercise {
     this.notes,
     this.imageUrl,
     this.muscoli,
+    this.previste = const [],
   });
 
   int? exerciseId;
@@ -251,7 +253,24 @@ class PlayerExercise {
   /// L'illustrazione dell'esercizio — C23. Viene dalla scheda e resta anche
   /// per gli esercizi aggiunti al volo, che semplicemente non ne hanno una.
   String? imageUrl;
+
+  /// Le serie **come le prescrive la scheda**, una per riga — 3b-D.8.
+  ///
+  /// ⚠️ Vuota per un esercizio aggiunto al volo: li' non c'e' nessuna
+  /// prescrizione, e `previsteAl` risponde `null` come deve.
+  List<SeriePrevista> previste;
+
   List<PlayerSet> rows;
+
+  /// La riga prevista per la serie numero [numero] (1-based).
+  ///
+  /// 🚨 **`null` quando la scheda non arriva fin li'**, e succede spesso: il
+  /// player aggiunge righe quando se ne fanno piu' di quelle previste. ⛔ Cadere
+  /// sull'ultima riga prevista direbbe «riposa 120 secondi» a una quinta serie
+  /// che la scheda non contempla — un numero inventato con l'aria di essere
+  /// prescritto.
+  SeriePrevista? previsteAl(int numero) =>
+      numero >= 1 && numero <= previste.length ? previste[numero - 1] : null;
 
   /// Vero quando ogni serie prevista è stata registrata.
   bool get completo => rows.isNotEmpty && rows.every((r) => r.done);

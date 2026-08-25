@@ -52,6 +52,24 @@ enum TipoFoto {
     accettaDocumenti: true,
   ),
 
+  /// L'immagine che qualcuno mette su un esercizio della propria scheda —
+  /// 3b-D.3, 25/08/2026.
+  ///
+  /// ── 🚨 La domanda del backup, fatta PRIMA di scrivere il resto ────────
+  ///
+  /// *«ogni volta che abbiamo un nuovo dato o un nuovo file o qualsiasi altra
+  /// cosa, questo deve comunque finire in qualche modo nel backup»* — il
+  /// committente.
+  ///
+  /// 💡 **Ci va, e non era scontato**: somiglia a `alimenti`, che è una cache
+  /// perché quelle immagini **si riscaricano dal server**. ⛔ Queste no: se le
+  /// è fatte chi ha scritto la scheda, spesso è la foto della macchina in
+  /// **quella** palestra con il sedile all'altezza giusta. Perderla cambiando
+  /// telefono vorrebbe dire non poterla rifare.
+  ///
+  /// ⚠️ Quindi `permanente` **e** `nelBackup`, come le foto dei progressi.
+  esercizi(cartella: 'esercizi', permanente: true, nelBackup: true),
+
   /// La foto del piatto mandata al modello.
   ///
   /// 🚨 **Vive dallo scatto alla conferma, e poi muore.** Serve a una cosa

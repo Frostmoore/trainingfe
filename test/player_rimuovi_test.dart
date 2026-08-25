@@ -69,6 +69,11 @@ void main() {
     name: nome,
     prescription: '4 × 15',
     restSec: 60,
+
+    // 🆕 3b-D.1: le righe delle serie. ⚠️ Qui si costruisce a mano quello che
+    // `PlanExercise.fromJson` ricava da solo — vuota va benissimo, questo test
+    // guarda la rimozione di un esercizio e non i numeri.
+    serie: const [],
   );
 
   /// Tre esercizi, come nella scheda vera: quello di mezzo è il bersaglio.

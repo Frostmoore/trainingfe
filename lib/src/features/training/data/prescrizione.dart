@@ -34,12 +34,6 @@ class Prescrizione {
 
     final pezzi = testo.toLowerCase().split(RegExp('[×x]'));
 
-    int? primoNumero(String s) {
-      final m = RegExp(r'\d+').firstMatch(s);
-
-      return m == null ? null : int.tryParse(m.group(0)!);
-    }
-
     final serie = primoNumero(pezzi.first);
 
     // 💡 `'4 × cedimento'` ha le serie e non le ripetizioni, ed è un caso vero:
@@ -47,6 +41,29 @@ class Prescrizione {
     final ripetizioni = pezzi.length > 1 ? primoNumero(pezzi[1]) : null;
 
     return Prescrizione(serie: serie, ripetizioni: ripetizioni);
+  }
+
+  /// Il primo numero scritto in un pezzo di prescrizione. `'8-12'` → **8**.
+  ///
+  /// ══ ⚠️ PUBBLICA DA 3b-D.1, E PER UNA RAGIONE ══════════════════════════
+  ///
+  /// 🚨 **`reps` e `prescription` non sono la stessa cosa**, e si somigliano
+  /// abbastanza da ingannare: il server manda `prescription` **intera**
+  /// (`'4 × 12'`), mentre il formato locale tiene `sets` in un campo e `reps`
+  /// nell'altro — lì `'12'` sono **le ripetizioni**, non le serie.
+  ///
+  /// ⛔ Passare `'12'` a [leggi] risponde «dodici serie», che è il contrario di
+  /// quello che c'è scritto. È successo davvero, e l'ha trovato un test di
+  /// 3b-D.1 al primo colpo.
+  ///
+  /// 💡 Chi ha un campo che contiene **solo** le ripetizioni usa questa, e la
+  /// regola del numero più basso resta scritta in un posto solo.
+  static int? primoNumero(String? s) {
+    if (s == null) return null;
+
+    final m = RegExp(r'\d+').firstMatch(s);
+
+    return m == null ? null : int.tryParse(m.group(0)!);
   }
 
   final int? serie;

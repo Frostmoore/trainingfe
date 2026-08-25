@@ -1,24 +1,57 @@
+/// Scrivere una scheda — C11, rifatta in 3b-D (25/08/2026).
+///
+/// ══ 🚨 COSA E' CAMBIATO, E PERCHE' NON ERA SOLO INTERFACCIA ═══════════════
+///
+/// ⛔ Fino a ieri un esercizio aveva **una** prescrizione e **un** peso validi
+/// per tutte le serie. Il committente ha chiesto *«ogni serie deve avere
+/// Ripetizioni, Peso (o niente o Iso.) e Recupero»*, e quella è una modifica al
+/// **dato**, non alla schermata: adesso una serie è una riga.
+///
+/// 💡 Il modello sta in `data/serie_prevista.dart` e lo stato di scrittura in
+/// `data/scheda_in_scrittura.dart` — qui dentro c'è solo la disposizione.
+///
+/// ── ⚠️ E le schede già scritte si aprono lo stesso ───────────────────────
+///
+/// 📌 *«è fondamentale che funzioni tutto correttamente e che le schede già
+/// esistenti ricalchino questa nuova impostazione»*.
+///
+/// 🚨 Ci pensa `serieDellEsercizio()`: una scheda vecchia — o una appena
+/// arrivata dal trainer, che dal server arriva **ancora** nel formato vecchio —
+/// si apre qui già in righe. ⛔ **Non c'è nessun ramo «se è vecchia»** in questa
+/// schermata, ed è voluto: quel ramo è il posto in cui i difetti si nascondono.
+///
+/// ── 🚨 Ci si arriva solo per le schede proprie ───────────────────────────
+///
+/// Quelle del trainer hanno `editable = false` e l'app non mostra il pulsante.
+library;
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../health/health_controller.dart';
+import '../data/catalogo_esercizi.dart';
 import '../data/gruppo_muscolare.dart';
+import '../data/scheda_in_scrittura.dart';
 import '../training_controller.dart';
-import 'widgets/scelta_muscoli.dart';
+import 'widgets/card_esercizio_scrittura.dart';
+import 'widgets/muscoli_della_scheda.dart';
+import 'widgets/scelta_tipo_scheda.dart';
 
-/// L'editor delle schede — C11.
-///
-/// 🚨 Ci si arriva **solo per le schede proprie**: quelle del trainer hanno
-/// `editable = false` e l'app non mostra il pulsante. Il server rifiuterebbe
-/// comunque con `plan_not_editable`, ma un pulsante che porta a un errore è
-/// peggio di un pulsante assente.
 class PlanEditorScreen extends ConsumerStatefulWidget {
-  const PlanEditorScreen({this.planId, super.key});
+  const PlanEditorScreen({this.planId, this.tipo, super.key});
 
   /// `null` = scheda nuova.
   final int? planId;
+
+  /// Quanti giorni avrà, deciso **prima** di entrare — 3b-D.2.
+  ///
+  /// ⚠️ `null` su una scheda che esiste già: il tipo lo dicono i suoi giorni.
+  final TipoDiScheda? tipo;
 
   @override
   ConsumerState<PlanEditorScreen> createState() => _PlanEditorScreenState();
@@ -27,22 +60,82 @@ class PlanEditorScreen extends ConsumerStatefulWidget {
 class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   final _nome = TextEditingController();
   final _note = TextEditingController();
-  final _righe = <_RigaEditor>[];
 
+  /// I giorni, ognuno con i suoi esercizi. Una scheda a giorno unico ne ha uno.
+  ///
+  /// 💡 **Anche il caso semplice è una lista di uno**, e non due strade
+  /// diverse: la scheda a un giorno è la multi-day senza la barra sopra, ed è
+  /// esattamente quello che ha chiesto il committente — *«IDENTICA a quella
+  /// single day con una differenza»*.
+  final _giorni = <List<EsercizioInScrittura>>[];
+
+  int _giorno = 0;
   bool _pronto = false;
   bool _inCorso = false;
   String? _errore;
+
+  bool get _piuGiorni =>
+      widget.tipo == TipoDiScheda.piuGiorni || _giorni.length > 1;
 
   @override
   void initState() {
     super.initState();
 
     if (widget.planId == null) {
-      _righe.add(_RigaEditor());
+      _giorni.add([EsercizioInScrittura()]);
       _pronto = true;
     } else {
       _carica();
     }
+  }
+
+  Future<void> _carica() async {
+    final scheda = await ref.read(planDetailProvider(widget.planId!).future);
+
+    _nome.text = scheda.name;
+    _note.text = scheda.notes ?? '';
+
+    final grezza = await ref.read(archivioSaluteProvider).laScheda(
+      widget.planId!,
+    );
+
+    /*
+     * ⚠️ **Si rilegge il JSON grezzo e non `PlanExercise`.** Il modello
+     * dell'app tiene la prescrizione gia' formattata e perde le righe: qui
+     * serve il dato com'e' scritto, che e' l'unico posto in cui le serie
+     * vivono per intero.
+     */
+    final busta = grezza == null
+        ? const <String, dynamic>{}
+        : (json.decode(grezza.scheda) as Map).cast<String, dynamic>();
+
+    final giorni = busta['days'] as List?;
+
+    setState(() {
+      if (giorni != null && giorni.isNotEmpty) {
+        for (final g in giorni) {
+          final esercizi = ((g as Map)['exercises'] as List?) ?? const [];
+
+          _giorni.add([
+            for (final e in esercizi)
+              EsercizioInScrittura.da((e as Map).cast<String, dynamic>()),
+          ]);
+        }
+      } else {
+        _giorni.add([
+          for (final e in (busta['exercises'] as List?) ?? const [])
+            EsercizioInScrittura.da((e as Map).cast<String, dynamic>()),
+        ]);
+      }
+
+      for (final g in _giorni) {
+        if (g.isEmpty) g.add(EsercizioInScrittura());
+      }
+
+      if (_giorni.isEmpty) _giorni.add([EsercizioInScrittura()]);
+
+      _pronto = true;
+    });
   }
 
   @override
@@ -50,48 +143,13 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     _nome.dispose();
     _note.dispose();
 
-    for (final r in _righe) {
-      r.dispose();
+    for (final giorno in _giorni) {
+      for (final e in giorno) {
+        e.dispose();
+      }
     }
 
     super.dispose();
-  }
-
-  Future<void> _carica() async {
-    try {
-      final piano = await ref.read(planDetailProvider(widget.planId!).future);
-
-      _nome.text = piano.name;
-      _note.text = piano.notes ?? '';
-
-      for (final e in piano.exercises) {
-        _righe.add(
-          _RigaEditor(
-            nome: e.name,
-            serie: _serieDa(e.prescription),
-            reps: _repsDa(e.prescription),
-            riposo: e.restSec,
-            peso: e.targetWeight,
-            note: e.notes,
-          ),
-        );
-      }
-
-      if (_righe.isEmpty) _righe.add(_RigaEditor());
-    } on Object catch (error) {
-      _errore = ApiClient.unwrapError(error).message;
-    } finally {
-      if (mounted) setState(() => _pronto = true);
-    }
-  }
-
-  static int? _serieDa(String prescrizione) =>
-      int.tryParse(prescrizione.split('×').first.trim());
-
-  static String? _repsDa(String prescrizione) {
-    final parti = prescrizione.split('×');
-
-    return parti.length > 1 ? parti.last.trim() : null;
   }
 
   Future<void> _salva() async {
@@ -106,28 +164,37 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       _errore = null;
     });
 
-    // Le righe senza nome si scartano qui: l'editor ne tiene volentieri una
-    // vuota in fondo, pronta da compilare, e non deve bloccare il salvataggio.
-    final esercizi = _righe
-        .where((r) => r.nome.text.trim().isNotEmpty)
-        .map((r) => r.toJson())
-        .toList();
+    // Gli esercizi senza nome si scartano: l'editor ne tiene volentieri uno
+    // vuoto in fondo, pronto da compilare, e non deve bloccare il salvataggio.
+    List<Map<String, dynamic>> scritti(List<EsercizioInScrittura> giorno) => [
+      for (final e in giorno)
+        if (e.nome.text.trim().isNotEmpty) e.versoIlDato(),
+    ];
 
     try {
       final azioni = ref.read(planActionsProvider);
 
+      final nome = _nome.text.trim();
+      final note = _note.text.trim().isEmpty ? null : _note.text.trim();
+
       if (widget.planId == null) {
         await azioni.create(
-          name: _nome.text.trim(),
-          notes: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          exercises: esercizi,
+          name: nome,
+          notes: note,
+          exercises: scritti(_giorni.first),
+          giorni: _piuGiorni
+              ? [for (final g in _giorni) scritti(g)]
+              : null,
         );
       } else {
         await azioni.update(
           id: widget.planId!,
-          name: _nome.text.trim(),
-          notes: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          exercises: esercizi,
+          name: nome,
+          notes: note,
+          exercises: scritti(_giorni.first),
+          giorni: _piuGiorni
+              ? [for (final g in _giorni) scritti(g)]
+              : null,
         );
       }
 
@@ -146,7 +213,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final theme = Theme.of(context);
+    final tema = Theme.of(context);
+    final esercizi = _giorni[_giorno];
 
     return Scaffold(
       appBar: IntestazioneApp(
@@ -171,48 +239,61 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             decoration: const InputDecoration(labelText: 'Note (facoltative)'),
           ),
 
-          const SizedBox(height: Gap.lg),
-          Text('Esercizi', style: theme.textTheme.titleMedium),
-          const SizedBox(height: Gap.sm),
+          if (_piuGiorni) ...[
+            const SizedBox(height: Gap.md),
+            _BarraDeiGiorni(
+              quanti: _giorni.length,
+              scelto: _giorno,
+              onScegli: (i) => setState(() => _giorno = i),
+              onAggiungi: _giorni.length < giorniMassimi
+                  ? () => setState(() {
+                      _giorni.add([EsercizioInScrittura()]);
+                      _giorno = _giorni.length - 1;
+                    })
+                  : null,
+            ),
+          ],
 
-          // `ReorderableListView` dentro una `ListView` richiede
-          // `shrinkWrap`: l'ordine degli esercizi è parte della prescrizione,
-          // non una casualità, quindi dev'essere modificabile.
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            // ⚠️ `onReorderItem` e non `onReorder`: il secondo è deprecato
-            // proprio perché costringeva a correggere a mano l'indice
-            // (`a > da ? a - 1 : a`), e quella correzione dimenticata sposta
-            // l'esercizio di una posizione sbagliata solo trascinando verso il
-            // basso — un difetto che si nota tardi.
-            onReorderItem: (da, a) =>
-                setState(() => _righe.insert(a, _righe.removeAt(da))),
-            children: [
-              for (var i = 0; i < _righe.length; i++)
-                _CardRiga(
-                  key: ValueKey(_righe[i]),
-                  indice: i,
-                  riga: _righe[i],
-                  onRimuovi: () => setState(() {
-                    _righe.removeAt(i).dispose();
-                    if (_righe.isEmpty) _righe.add(_RigaEditor());
-                  }),
-                  onCambio: () => setState(() {}),
-                ),
-            ],
-          ),
+          const SizedBox(height: Gap.lg),
+
+          for (var i = 0; i < esercizi.length; i++)
+            CardEsercizioScrittura(
+              key: ObjectKey(esercizi[i]),
+              esercizio: esercizi[i],
+              numero: i + 1,
+              onCambio: () => setState(() {}),
+              onRimuovi: () => setState(() {
+                esercizi.removeAt(i).dispose();
+
+                // ⛔ Mai zero: una scheda senza righe non si puo' scrivere.
+                if (esercizi.isEmpty) esercizi.add(EsercizioInScrittura());
+              }),
+            ),
 
           OutlinedButton.icon(
-            onPressed: () => setState(() => _righe.add(_RigaEditor())),
+            onPressed: () =>
+                setState(() => esercizi.add(EsercizioInScrittura())),
             icon: const Icon(Icons.add_rounded),
             label: const Text('Aggiungi esercizio'),
           ),
 
+          const SizedBox(height: Gap.lg),
+
+          /*
+           * ══ 🧍 LA FIGURA, MENTRE SI SCRIVE — 3b-D.6 ═══════════════════════
+           *
+           * 📌 *«In fondo alla scheda, ci deve essere la card con l'uomo e i
+           * muscoli allenati e il grafico a stella (le stesse dello storico e
+           * dell'esercizio individuale)»*.
+           *
+           * 💡 «Le stesse» alla lettera: **gli stessi widget**, non una copia.
+           * Due figure che divergono sono peggio di una figura sola.
+           */
+          MuscoliDellaScheda(giorni: _giorni),
+
           if (_errore != null) ...[
             const SizedBox(height: Gap.md),
-            Text(_errore!, style: TextStyle(color: theme.colorScheme.error)),
+            Text(_errore!, style: TextStyle(color: tema.colorScheme.error)),
           ],
 
           const SizedBox(height: Gap.lg),
@@ -233,189 +314,105 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   }
 }
 
-/// Lo stato di una riga dell'editor.
-class _RigaEditor {
-  _RigaEditor({
-    String? nome,
-    int? serie,
-    String? reps,
-    int? riposo,
-    double? peso,
-    String? note,
-  }) : nome = TextEditingController(text: nome ?? ''),
-       serie = TextEditingController(text: (serie ?? 3).toString()),
-       // 🚨 Le ripetizioni sono una STRINGA: «8-12», «cedimento», «max»,
-       // «10+10» sono prescrizioni legittime. Un campo numerico qui
-       // renderebbe impossibile scrivere metà delle schede vere.
-       reps = TextEditingController(text: reps ?? '8-12'),
-       riposo = TextEditingController(text: (riposo ?? 90).toString()),
-       peso = TextEditingController(text: peso?.toString() ?? ''),
-       note = TextEditingController(text: note ?? '');
+/// 📌 *«con la possibilità di aggiungere giorni max 7»*.
+const giorniMassimi = 7;
 
-  final TextEditingController nome;
+class _BarraDeiGiorni extends StatelessWidget {
+  const _BarraDeiGiorni({
+    required this.quanti,
+    required this.scelto,
+    required this.onScegli,
+    required this.onAggiungi,
+  });
 
-  /// Che muscoli allena, se qualcuno l'ha detto — 3b-A.3.4, 23/08/2026.
-  ///
-  /// 🚨 `null` vuol dire **«nessuno l'ha deciso»** e non si manda niente;
-  /// un elenco vuoto vuol dire **«questo esercizio isola»** e si manda. ⛔ Le
-  /// due cose confuse riempirebbero la libreria di esercizi che *dichiarano*
-  /// di non avere secondari — la stessa nota sta su `EsercizioDellaScheda`.
-  MuscoliScelti? muscoli;
+  final int quanti;
+  final int scelto;
+  final ValueChanged<int> onScegli;
+  final VoidCallback? onAggiungi;
 
-  final TextEditingController serie;
-  final TextEditingController reps;
-  final TextEditingController riposo;
-  final TextEditingController peso;
-  final TextEditingController note;
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (var i = 0; i < quanti; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: Gap.xs),
+              child: ChoiceChip(
+                label: Text('Giorno ${i + 1}'),
+                selected: i == scelto,
+                onSelected: (_) => onScegli(i),
+              ),
+            ),
 
-  Map<String, dynamic> toJson() => {
-    'name': nome.text.trim(),
-    'sets': int.tryParse(serie.text.trim()),
-    'reps': reps.text.trim().isEmpty ? null : reps.text.trim(),
-    'rest_sec': int.tryParse(riposo.text.trim()),
-    'target_weight': double.tryParse(peso.text.trim().replaceAll(',', '.')),
-    'notes': note.text.trim().isEmpty ? null : note.text.trim(),
-
-    // 🚨 Solo se qualcuno ha risposto: vedi `muscoliInJson`.
-    ...muscoliInJson(muscoli),
-  };
-
-  void dispose() {
-    nome.dispose();
-    serie.dispose();
-    reps.dispose();
-    riposo.dispose();
-    peso.dispose();
-    note.dispose();
+          // ⚠️ Sparisce al settimo invece di restare spento: un pulsante grigio
+          // fa chiedere perche', e la risposta non sta a schermo.
+          if (onAggiungi != null)
+            ActionChip(
+              avatar: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Giorno'),
+              onPressed: onAggiungi,
+            ),
+        ],
+      ),
+    );
   }
 }
 
-class _CardRiga extends StatelessWidget {
-  const _CardRiga({
-    required this.indice,
-    required this.riga,
-    required this.onRimuovi,
-    required this.onCambio,
-    super.key,
-  });
+/// La card con la figura e la stella, sui muscoli di quello che si sta
+/// scrivendo — 3b-D.6.
+class MuscoliDellaScheda extends ConsumerWidget {
+  const MuscoliDellaScheda({required this.giorni, super.key});
 
-  final int indice;
-  final _RigaEditor riga;
-  final VoidCallback onRimuovi;
-  final VoidCallback onCambio;
+  final List<List<EsercizioInScrittura>> giorni;
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: Gap.sm),
-    child: Padding(
-      padding: const EdgeInsets.all(Gap.md),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              ReorderableDragStartListener(
-                index: indice,
-                child: const Padding(
-                  padding: EdgeInsets.only(right: Gap.sm),
-                  child: Icon(Icons.drag_handle_rounded),
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: riga.nome,
-                  decoration: const InputDecoration(
-                    hintText: 'Nome esercizio',
-                    isDense: true,
-                    border: InputBorder.none,
-                  ),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton(
-                onPressed: onRimuovi,
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalogo =
+        ref.watch(catalogoEserciziProvider).valueOrNull ?? CatalogoEsercizi.vuoto;
 
-          /*
-           * 🆕 I muscoli — 3b-A.3.4.
-           *
-           * ⚠️ **Si legge dal controller, non da uno stato copiato**: il nome
-           * cambia mentre si scrive, e la riga deve accorgersi quando smette di
-           * corrispondere a un esercizio del catalogo. 💡 `AnimatedBuilder` sul
-           * controller e' il modo piu' economico per ricostruire solo questa
-           * riga a ogni tasto, invece di tutta la scheda.
-           */
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AnimatedBuilder(
-              animation: riga.nome,
-              builder: (context, _) => RigaMuscoli(
-                nome: riga.nome.text,
-                muscoli: riga.muscoli,
-                onScelti: (scelti) {
-                  riga.muscoli = scelti;
-                  onCambio();
-                },
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: riga.serie,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'serie',
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: riga.reps,
-                  decoration: const InputDecoration(
-                    labelText: 'ripetizioni',
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: TextField(
-                  controller: riga.riposo,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'rec. s',
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: TextField(
-                  controller: riga.peso,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'kg',
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          TextField(
-            controller: riga.note,
-            decoration: const InputDecoration(labelText: 'note', isDense: true),
-          ),
-        ],
-      ),
-    ),
-  );
+    final pesi = <GruppoMuscolare, double>{};
+
+    for (final giorno in giorni) {
+      for (final e in giorno) {
+        if (e.nome.text.trim().isEmpty) continue;
+
+        /*
+         * 💡 Prima per id — l'identita' vera, quella che arriva scegliendo
+         * dall'elenco — e per nome solo come ripiego. E' la stessa precedenza
+         * di `pesiDellaScheda`.
+         */
+        final dal =
+            catalogo.perId(e.exerciseId) ??
+            catalogo.perNome(e.nome.text.trim());
+
+        final primario = dal?.primario ?? e.muscoli?.primario;
+        final secondari = dal?.secondari ?? e.muscoli?.secondari ?? const [];
+
+        if (primario != null) {
+          pesi[primario] = (pesi[primario] ?? 0) + 1;
+        }
+
+        for (final s in secondari) {
+          pesi[s] = (pesi[s] ?? 0) + 0.5;
+        }
+      }
+    }
+
+    /*
+     * ⚠️ **Muta finche' non si sa niente.** Una figura tutta spenta sotto una
+     * scheda vuota sembra un difetto; qui non c'e' proprio finche' non c'e'
+     * qualcosa da dire.
+     */
+    if (pesi.isEmpty) return const SizedBox.shrink();
+
+    final massimo = pesi.values.reduce((a, b) => a > b ? a : b);
+
+    final intensita = {
+      for (final voce in pesi.entries) voce.key: voce.value / massimo,
+    };
+
+    return MuscoliInCard(intensita: intensita);
+  }
 }

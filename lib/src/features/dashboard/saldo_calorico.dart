@@ -1,72 +1,67 @@
 /// Il saldo calorico di un giorno, e la media di un periodo — 3b-F, 26/08/2026.
 ///
-/// ══ 📌 LA SEGNALAZIONE ════════════════════════════════════════════════════
+/// ══ 📌 LA SEGNALAZIONE, E LA CORREZIONE ALLA CORREZIONE ═══════════════════
 ///
-/// *«nella card delle calorie in fondo alla schermata oggi, non capisco che
-/// calcoli vengono fatti … se passo il dito sull'ultimo giorno mi dice che sono
-/// sotto di 570 kcal. Le calorie effettivamente consumate sono 2259 e quelle
-/// bruciate 2403 (secondo la prima card delle calorie), quindi non capisco bene
-/// cosa stia succedendo»*.
+/// *«se passo il dito sull'ultimo giorno mi dice che sono sotto di 570 kcal. Le
+/// calorie effettivamente consumate sono 2259 e quelle bruciate 2403»*.
 ///
-/// ══ 🚨 AVEVA RAGIONE: IL MOVIMENTO SI CONTAVA DUE VOLTE ═══════════════════
+/// ⛔ **La prima risposta era sbagliata, e l'ha corretta il committente**: avevo
+/// chiamato «doppio conteggio» la somma `TDEE + allenamento`, e ho fatto il
+/// saldo sul **BMR**. 📌 La sua obiezione: *«il TDEE è il consumo ad attività
+/// praticamente 0 (1.2) … riguarda la vita quotidiana di un uomo che sta seduto
+/// al pc a lavorare e magari si fa una passeggiata la sera dopo cena, non ha
+/// nulla a che vedere con gli allenamenti»*.
 ///
-/// ⛔ Il riquadro del dito calcolava `assunte − TDEE − attive`.
+/// ══ 🚨 CHI HA RAGIONE, E PERCHE' DIPENDE DAL LIVELLO SCELTO ═══════════════
 ///
-/// 🚨 **Il TDEE è `BMR × fattore di attività`** (1.2 sedentario, 1.55 attivo…):
-/// dentro c'è **già** una previsione di quanto ti muovi in un giorno. Togliergli
-/// sopra le calorie attive **misurate** conta lo stesso movimento due volte —
-/// una prevista e una vera.
+/// Il PAL della letteratura è **`TEE / BMR`**: per definizione contiene *tutto*,
+/// allenamenti compresi. Quello che distingue i gradini è **quanto** sport
+/// contengono, ed è scritto nelle loro descrizioni standard:
 ///
-/// ⚠️ **E la trappola era già scritta**, in cima a `barra_del_consumo.dart`:
-/// *«Mappare il TDEE sull'ora conterebbe due volte il movimento»*. La barra la
-/// evitava, il grafico ci è cascato — 💡 due schermate della stessa pagina, e la
-/// regola scritta in una sola delle due.
-///
-/// ── 🔢 I conti della segnalazione, che tornano esatti ─────────────────────
-///
-/// | | Formula | Valore |
+/// | Fattore | Descrizione standard | Gli allenamenti |
 /// |---|---|---|
-/// | la prima card | `BMR fino a adesso + attive` | 2403 |
-/// | il riquadro del dito | `assunte − TDEE − attive` | −570 |
-/// | quello che si aspettava | `assunte − bruciate` | −144 |
+/// | **1.2** | *sedentario, poco o nessun esercizio* | ⛔ **non ci sono** |
+/// | 1.375 | esercizio leggero 1-3 giorni a settimana | ✅ dentro |
+/// | 1.55 | esercizio moderato 3-5 giorni | ✅ dentro |
+/// | 1.725 | esercizio intenso 6-7 giorni | ✅ dentro |
+/// | 1.9 | due sedute al giorno, o lavoro fisico | ✅ dentro |
 ///
-/// 🚨 Lo scarto fra i due — **426 kcal** — non è un caso: è esattamente
-/// `TDEE − (BMR fino a adesso)`, cioè **il margine di attività già dentro il
-/// TDEE** più il basale che il giorno non ha ancora bruciato.
+/// 💡 Quindi **su 1.2 il committente ha ragione**: il suo TDEE descrive la vita
+/// da scrivania, e le calorie dell'allenamento vanno **sommate**. È il metodo
+/// additivo, lo stesso che usa MyFitnessPal, ed è **più preciso giorno per
+/// giorno** — il PAL spalma gli allenamenti sulla settimana, quindi sottostima
+/// i giorni in cui ci si allena e sovrastima quelli di riposo.
 ///
-/// ── ⚠️ E c'era un secondo scarto, più piccolo e più insidioso ─────────────
-///
-/// ⛔ Il riquadro confrontava le assunte **di adesso** con il TDEE **di tutta la
-/// giornata**: alle sei del pomeriggio dichiarava un deficit che era solo la
-/// giornata non ancora finita. 💡 Su un giorno passato è giusto usare il basale
-/// intero; su oggi va mappato sull'ora, come fa la barra.
+/// ⛔ **Ma vale solo su 1.2.** Chi sceglie «moderato (3-4 allenamenti)» ha già
+/// dichiarato quegli allenamenti dentro il fattore: sommargli sopra quelli
+/// misurati li conta due volte. ⏳ Sta nel piano come decisione aperta.
 library;
 
 import 'package:flutter/foundation.dart';
 
 import 'ui/widgets/barra_del_consumo.dart';
 
-/// Quanto si è mangiato oltre quello che si è **davvero** bruciato.
+/// Quanto si è mangiato oltre quello che si è **davvero** speso.
 ///
 /// 💡 Positivo = surplus, negativo = deficit.
 ///
-/// ⚠️ `basale` va passato **già mappato sull'ora** per il giorno in corso — vedi
-/// [basaleFinora] — e intero per i giorni passati. 🚨 Non si mappa qui dentro:
-/// questa funzione non sa che giorno sta guardando, e indovinarlo è esattamente
-/// il modo in cui nascono i due conteggi diversi che si stanno correggendo.
+/// ⚠️ `consumo` è il **TDEE**, cioè la vita quotidiana, e va passato **già
+/// mappato sull'ora** per il giorno in corso — vedi [consumoFinora]. 🚨 Non si
+/// mappa qui dentro: questa funzione non sa che giorno sta guardando, e
+/// indovinarlo è il modo in cui nascono due conteggi diversi per la stessa cosa.
 double saldoDelGiorno({
   required double assunte,
-  required double basale,
-  required double attive,
-}) => assunte - (basale + attive);
+  required double consumo,
+  required double allenamento,
+}) => assunte - (consumo + allenamento);
 
-/// Il basale di un giorno: intero se è passato, fino a **adesso** se è oggi.
+/// Il consumo di un giorno: intero se è passato, fino a **adesso** se è oggi.
 ///
 /// 🚨 **Il confronto dev'essere fra grandezze dello stesso momento.** Le calorie
-/// assunte oggi sono quelle di finora; metterle contro il basale di ventiquattro
-/// ore dichiara un deficit che è soltanto la giornata non ancora finita.
-double basaleDelGiorno({
-  required double bmr,
+/// assunte oggi sono quelle di finora; metterle contro ventiquattro ore di
+/// consumo dichiara un deficit che è soltanto la giornata non ancora finita.
+double consumoDelGiorno({
+  required double tdee,
   required DateTime giorno,
   required DateTime adesso,
 }) {
@@ -75,7 +70,7 @@ double basaleDelGiorno({
       giorno.month == adesso.month &&
       giorno.day == adesso.day;
 
-  return eOggi ? basaleFinora(bmr: bmr, adesso: adesso) : bmr;
+  return eOggi ? consumoFinora(kcalDelGiorno: tdee, adesso: adesso) : tdee;
 }
 
 /// La media dei saldi di un periodo.
@@ -98,10 +93,22 @@ class SaldoMedio {
 
 /// Il saldo medio di un periodo, **sui soli giorni completi e con diario**.
 ///
+/// ══ ⚠️ IL CONFRONTO E' COL CONSUMO, NON CON L'OBIETTIVO ═══════════════════
+///
+/// 🚨 «Deficit» e «surplus» vogliono dire *rispetto a quanto spendi*, non
+/// rispetto a quanto ti eri ripromesso. ⛔ Chi ha un obiettivo di dimagrimento
+/// del 20% e lo centra ogni giorno è a **zero** rispetto all'obiettivo e a
+/// **−20%** rispetto al consumo: il secondo numero è quello che diventa peso, ed
+/// è quello che la parola «deficit» promette a chi la legge.
+///
+/// 💡 Il riquadro del dito invece parla dell'**obiettivo**, perché quella è la
+/// linea di base del grafico. ⚠️ Sono due domande diverse, e le risposte portano
+/// scritto a cosa si riferiscono.
+///
 /// ══ ⛔ DUE GIORNI NON ENTRANO, E SONO DUE REGOLE DIVERSE ══════════════════
 ///
 /// 1. 🚨 **Un giorno senza diario si salta, non vale zero.** Con `assunte = 0` il
-///    saldo sarebbe `−(basale + attive)`, cioè un digiuno completo: su tre
+///    saldo sarebbe `−(consumo + allenamento)`, cioè un digiuno completo: su tre
 ///    giorni saltati fanno una media da fame che non è successa. ⚠️ È la stessa
 ///    regola di `pesoDalSaldo`, e lì è già costata una discussione.
 /// 2. ⛔ **Oggi non entra**, perché non è finito. Un pomeriggio a metà entra in
@@ -114,8 +121,8 @@ class SaldoMedio {
 SaldoMedio? saldoMedioDelPeriodo({
   required List<DateTime> giorni,
   required List<double> assunte,
-  required List<double> attive,
-  required double bmr,
+  required List<double> allenamento,
+  required double tdee,
   required DateTime adesso,
 }) {
   var totale = 0.0;
@@ -136,8 +143,8 @@ SaldoMedio? saldoMedioDelPeriodo({
 
     totale += saldoDelGiorno(
       assunte: mangiate,
-      basale: bmr,
-      attive: i < attive.length ? attive[i] : 0.0,
+      consumo: tdee,
+      allenamento: i < allenamento.length ? allenamento[i] : 0.0,
     );
 
     contati++;

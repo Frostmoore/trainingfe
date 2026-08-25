@@ -46,7 +46,10 @@ void main() {
   /// La stessa scheda **dopo un allenamento**: riscritta dal player.
   Map<String, dynamic> dopoUnAllenamento(Map<String, dynamic> scheda) =>
       schedaConGliEsercizi(scheda, [
-        for (final e in eserciziDellAllenamento(scheda: scheda, fatte: const []))
+        for (final e in eserciziDellAllenamento(
+          scheda: scheda,
+          fatte: const [],
+        ))
           e.versoIlDato(),
       ]);
 

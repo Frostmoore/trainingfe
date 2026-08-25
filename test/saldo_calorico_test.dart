@@ -11,56 +11,65 @@ import 'package:training_companion/src/features/dashboard/saldo_calorico.dart';
 ///
 /// ══ 🚨 COSA DIFENDE QUESTO FILE ═══════════════════════════════════════════
 ///
-/// ⛔ Il difetto era `assunte − TDEE − attive`: il **TDEE è già
-/// `BMR × fattore di attività`**, quindi togliergli sopra le calorie attive
-/// misurate conta lo stesso movimento due volte.
+/// ⛔ Il difetto era che il riquadro del dito mescolava **due riferimenti**:
+/// toglieva il TDEE (la vita quotidiana) **e** le calorie dell'allenamento, e
+/// per giunta confrontava le assunte di adesso con ventiquattro ore di consumo.
+///
+/// 💡 Adesso ci sono due numeri con due riferimenti **dichiarati**:
+/// il dito parla dell'**obiettivo**, la media parla del **consumo**.
 ///
 /// ⚠️ **Nessun test poteva accorgersene**, e il motivo va detto: il numero
 /// restava **plausibile**. −570 invece di −144 è un deficit credibile, di quelli
-/// che si guardano e si accettano — e intanto ogni giorno dichiarava 426 kcal di
-/// dimagrimento che non erano successe.
+/// che si guardano e si accettano. 🚨 E non c'era niente da provare: la formula
+/// viveva dentro il costruttore di un tooltip di `fl_chart`.
 void main() {
   group('🔢 il saldo di un giorno', () {
-    /// 🚨 **I numeri della segnalazione**, con il basale intero: 2259 mangiate,
-    /// 1760 di basale, 717 attive → 2403 bruciate davvero, −144 di saldo.
-    test('è mangiate meno bruciate, e basta', () {
+    /// 🚨 **I numeri della segnalazione**: 2259 mangiate, 1686 di vita
+    /// quotidiana maturata, 717 di allenamento → 2403 spese davvero, e un saldo
+    /// di **−144**, che è quello che il committente si aspettava.
+    test('è mangiate meno spese, e basta', () {
       expect(
-        saldoDelGiorno(assunte: 2259, basale: 1686, attive: 717),
+        saldoDelGiorno(assunte: 2259, consumo: 1686, allenamento: 717),
         closeTo(-144, 1),
       );
     });
 
     test('un surplus è positivo', () {
-      expect(saldoDelGiorno(assunte: 2600, basale: 1700, attive: 300), 600);
+      expect(
+        saldoDelGiorno(assunte: 2600, consumo: 1700, allenamento: 300),
+        600,
+      );
     });
 
-    /// ⚠️ Chi non si è mosso ha comunque bruciato il basale: **non è zero**.
-    test('e senza movimento resta il basale', () {
-      expect(saldoDelGiorno(assunte: 2000, basale: 1700, attive: 0), 300);
+    /// ⚠️ Chi non si è allenato ha comunque speso la sua giornata: **non è
+    /// zero**. È il punto su cui il committente ha corretto la prima
+    /// risposta — il TDEE su 1.2 è la vita da scrivania, e si brucia comunque.
+    test('e senza allenamento resta la vita quotidiana', () {
+      expect(saldoDelGiorno(assunte: 2000, consumo: 1700, allenamento: 0), 300);
     });
   });
 
-  group('🕐 il basale del giorno', () {
+  group('🕐 il consumo del giorno', () {
     final adesso = DateTime(2026, 8, 26, 18);
 
     /// 🚨 **Su oggi si ferma all'ora che è.** Le calorie assunte sono quelle di
-    /// finora: confrontarle con ventiquattro ore di basale dichiara un deficit
+    /// finora: confrontarle con ventiquattro ore di consumo dichiara un deficit
     /// che è soltanto la giornata non ancora finita.
     test('oggi si ferma all\'ora che è', () {
-      final basale = basaleDelGiorno(
-        bmr: 2400,
+      final consumo = consumoDelGiorno(
+        tdee: 2400,
         giorno: DateTime(2026, 8, 26),
         adesso: adesso,
       );
 
       // Alle 18:00 sono passate 18 ore su 24: tre quarti.
-      expect(basale, closeTo(1800, 1));
+      expect(consumo, closeTo(1800, 1));
     });
 
     test('e su un giorno passato è intero', () {
       expect(
-        basaleDelGiorno(
-          bmr: 2400,
+        consumoDelGiorno(
+          tdee: 2400,
           giorno: DateTime(2026, 8, 25),
           adesso: adesso,
         ),
@@ -72,8 +81,8 @@ void main() {
     /// che conta è **il giorno**, non l'uguaglianza fra due `DateTime`.
     test('e «oggi» è il giorno, non l\'istante', () {
       expect(
-        basaleDelGiorno(
-          bmr: 2400,
+        consumoDelGiorno(
+          tdee: 2400,
           giorno: DateTime(2026, 8, 26, 3, 17),
           adesso: adesso,
         ),
@@ -84,20 +93,23 @@ void main() {
 
   group('📊 la media del periodo', () {
     List<DateTime> giorniFinoA(DateTime ultimo, int quanti) => [
-      for (var i = quanti - 1; i >= 0; i--)
-        ultimo.subtract(Duration(days: i)),
+      for (var i = quanti - 1; i >= 0; i--) ultimo.subtract(Duration(days: i)),
     ];
 
     final adesso = DateTime(2026, 8, 26, 18);
     final giorni = giorniFinoA(DateTime(2026, 8, 26), 4);
 
+    /// ⚠️ **La media è rispetto al CONSUMO**, non all'obiettivo: «deficit» vuol
+    /// dire *rispetto a quanto spendi*, ed è quello che diventa peso. 💡 Il
+    /// riquadro del dito parla invece dell'obiettivo, e ognuno dei due porta
+    /// scritto a cosa si riferisce.
     test('è la media dei saldi dei giorni completi', () {
       final medio = saldoMedioDelPeriodo(
         // 23, 24, 25 completi · 26 è oggi
         giorni: giorni,
         assunte: const [2000, 2000, 2000, 2000],
-        attive: const [0, 0, 0, 0],
-        bmr: 2200,
+        allenamento: const [0, 0, 0, 0],
+        tdee: 2200,
         adesso: adesso,
       );
 
@@ -114,8 +126,8 @@ void main() {
       final conOggiEnorme = saldoMedioDelPeriodo(
         giorni: giorni,
         assunte: const [2000, 2000, 2000, 9999],
-        attive: const [0, 0, 0, 0],
-        bmr: 2200,
+        allenamento: const [0, 0, 0, 0],
+        tdee: 2200,
         adesso: adesso,
       );
 
@@ -130,8 +142,8 @@ void main() {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
         assunte: const [2000, 0, 2000, 2000],
-        attive: const [0, 0, 0, 0],
-        bmr: 2200,
+        allenamento: const [0, 0, 0, 0],
+        tdee: 2200,
         adesso: adesso,
       );
 
@@ -147,8 +159,8 @@ void main() {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
         assunte: const [2500, 2500, 2500, 0],
-        attive: const [300, 300, 300, 0],
-        bmr: 2200,
+        allenamento: const [300, 300, 300, 0],
+        tdee: 2200,
         adesso: adesso,
       );
 
@@ -162,8 +174,8 @@ void main() {
         saldoMedioDelPeriodo(
           giorni: [DateTime(2026, 8, 26)],
           assunte: const [1500],
-          attive: const [0],
-          bmr: 2200,
+          allenamento: const [0],
+          tdee: 2200,
           adesso: adesso,
         ),
         isNull,
@@ -175,8 +187,8 @@ void main() {
         saldoMedioDelPeriodo(
           giorni: giorni,
           assunte: const [0, 0, 0, 0],
-          attive: const [0, 0, 0, 0],
-          bmr: 2200,
+          allenamento: const [0, 0, 0, 0],
+          tdee: 2200,
           adesso: adesso,
         ),
         isNull,
@@ -189,8 +201,8 @@ void main() {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
         assunte: const [2000, 2000],
-        attive: const [],
-        bmr: 2200,
+        allenamento: const [],
+        tdee: 2200,
         adesso: adesso,
       );
 

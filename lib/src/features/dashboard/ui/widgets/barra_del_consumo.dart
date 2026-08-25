@@ -11,21 +11,32 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// Le calorie bruciate **solo per essere vivo**, da mezzanotte a adesso.
+/// Quanto di una quantità giornaliera è già maturato, da mezzanotte a adesso.
 ///
-/// ══ 🚨 SI MAPPA IL BASALE, NON IL TDEE ════════════════════════════════════
+/// ══ 🚨 SI MAPPA IL TDEE, E LA RAGIONE E' CAMBIATA IL 26/08 ════════════════
 ///
-/// ⛔ **Mappare il TDEE sull'ora conterebbe due volte il movimento.** Il TDEE è
-/// `BMR × fattore di attività` (1.2 sedentario, 1.55 attivo…): dentro c'è già
-/// una previsione di quanto ti muovi in un giorno normale. Sommargli sopra le
-/// calorie attive **misurate** vorrebbe dire contare lo stesso movimento due
-/// volte — una prevista e una vera.
+/// ⛔ **Qui si mappava il BMR**, con scritto accanto che mappare il TDEE avrebbe
+/// contato due volte il movimento. 📌 Il committente ha corretto la premessa:
+/// *«il TDEE è il consumo ad attività praticamente 0 (1.2) … riguarda la vita
+/// quotidiana di un uomo che sta seduto al pc a lavorare e magari si fa una
+/// passeggiata la sera dopo cena, non ha nulla a che vedere con gli
+/// allenamenti»*.
 ///
-/// 💡 Quindi: la parte «sono vivo» è il **BMR**, che è davvero ciò che si brucia
-/// stando fermi, e le attive sono quelle vere. La loro somma è quanto hai
-/// bruciato **davvero** finora. ⚠️ E il TDEE resta il **fondo** della barra: è
-/// la previsione della giornata intera, quindi arrivarci vuol dire «ti sei
-/// mosso quanto previsto», superarlo vuol dire «di più».
+/// 💡 **Ed è vero sul gradino che ha scelto lui.** Nella letteratura il PAL è
+/// `TEE / BMR` e contiene tutto, ma **1.2 è descritto come «poco o nessun
+/// esercizio»**: chi lo sceglie sta dichiarando la vita *senza* allenamenti.
+/// Lì il metodo giusto è additivo — vita quotidiana **più** allenamento
+/// misurato — ed è anche più preciso giorno per giorno, perché il PAL spalma gli
+/// allenamenti sulla settimana.
+///
+/// ⛔ **Dal gradino 1.375 in su non è più vero**: «1-2 allenamenti a settimana»
+/// li ha già dentro, e sommarli li conta due volte. ⏳ Decisione aperta nel
+/// piano, 3b-F.5.
+///
+/// ⚠️ Quindi la barra adesso è: **vita quotidiana** (TDEE fino a adesso) +
+/// **allenamento** (misurato). Il fondo resta il TDEE della giornata intera:
+/// arrivarci vuol dire «giornata normale», superarlo vuol dire «ti sei
+/// allenato».
 ///
 /// ══ 🚨 E LA FRAZIONE È SULLE 24 ORE, NON SULLA GIORNATA SVEGLIA ═══════════
 ///
@@ -40,8 +51,10 @@ import 'package:flutter/material.dart';
 ///
 /// ⚠️ Sono due quantità diverse che si somigliano, ed è esattamente il tipo di
 /// cosa che qualcuno un giorno «uniforma». Non sono la stessa cosa.
-double basaleFinora({required double bmr, required DateTime adesso}) =>
-    bmr * (adesso.hour * 60 + adesso.minute) / (24 * 60);
+double consumoFinora({
+  required double kcalDelGiorno,
+  required DateTime adesso,
+}) => kcalDelGiorno * (adesso.hour * 60 + adesso.minute) / (24 * 60);
 
 /// La barra: **una sola**, con dentro due colori.
 ///
@@ -50,20 +63,21 @@ double basaleFinora({required double bmr, required DateTime adesso}) =>
 /// il consumo è.
 class BarraDelConsumo extends StatelessWidget {
   const BarraDelConsumo({
-    required this.basale,
-    required this.attive,
+    required this.quotidiano,
+    required this.allenamento,
     required this.tdee,
     super.key,
   });
 
-  /// Il basale **già mappato sull'ora**: vedi [basaleFinora].
-  final double basale;
+  /// La vita quotidiana **già mappata sull'ora**: vedi [consumoFinora].
+  final double quotidiano;
 
-  /// Le calorie attive di oggi — dall'orologio, o dalla stima degli
-  /// allenamenti. ⚠️ Sono quelle **sopra** il basale, quindi non lo ripetono.
-  final double attive;
+  /// Le calorie dell'**allenamento** — dall'orologio, o dalla stima delle
+  /// sedute. ⚠️ Sono quelle **sopra** la vita quotidiana, quindi non la
+  /// ripetono.
+  final double allenamento;
 
-  /// Il fondo della barra: la previsione della giornata intera.
+  /// Il fondo della barra: il TDEE della giornata intera.
   final double tdee;
 
   /// 🚨 **Il colore del fuoco, ed è scritto a mano di proposito.**
@@ -95,8 +109,8 @@ class BarraDelConsumo extends StatelessWidget {
         double fin(double kcal) =>
             tdee <= 0 ? 0 : (kcal / tdee).clamp(0.0, 1.0) * larghezza;
 
-        final finBasale = fin(basale);
-        final finTotale = fin(basale + attive);
+        final finQuotidiano = fin(quotidiano);
+        final finTotale = fin(quotidiano + allenamento);
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(6),
@@ -114,17 +128,17 @@ class BarraDelConsumo extends StatelessWidget {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: finBasale,
+                  width: finQuotidiano,
                   child: ColoredBox(color: theme.colorScheme.primary),
                 ),
-                // 💡 Parte **dove finisce il basale**: è quello che «nella
-                // stessa barra» vuol dire — le attive si aggiungono, non si
-                // sovrappongono.
+                // 💡 Parte **dove finisce la vita quotidiana**: è quello che
+                // «nella stessa barra» vuol dire — l'allenamento si aggiunge,
+                // non si sovrappone.
                 Positioned(
-                  left: finBasale,
+                  left: finQuotidiano,
                   top: 0,
                   bottom: 0,
-                  width: (finTotale - finBasale).clamp(0.0, larghezza),
+                  width: (finTotale - finQuotidiano).clamp(0.0, larghezza),
                   child: const ColoredBox(color: fuoco),
                 ),
               ],
@@ -143,13 +157,13 @@ class BarraDelConsumo extends StatelessWidget {
 /// deve poter sapere quale pezzo è quale, o si inventa una risposta.
 class LegendaDelConsumo extends StatelessWidget {
   const LegendaDelConsumo({
-    required this.basale,
-    required this.attive,
+    required this.quotidiano,
+    required this.allenamento,
     super.key,
   });
 
-  final double basale;
-  final double attive;
+  final double quotidiano;
+  final double allenamento;
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +186,17 @@ class LegendaDelConsumo extends StatelessWidget {
       spacing: 12,
       runSpacing: 2,
       children: [
-        voce(theme.colorScheme.primary, 'a riposo ${basale.round()}'),
-        voce(BarraDelConsumo.fuoco, 'in movimento ${attive.round()}'),
+        /*
+         * ⚠️ **«vita quotidiana» e non «a riposo»**, ed è il cambio che conta
+         * più del numero: quel segmento adesso è il TDEE, cioè il lavoro alla
+         * scrivania e la passeggiata dopo cena — non il metabolismo di uno che
+         * sta fermo. Chiamarlo «a riposo» direbbe una cosa falsa.
+         */
+        voce(
+          theme.colorScheme.primary,
+          'vita quotidiana ${quotidiano.round()}',
+        ),
+        voce(BarraDelConsumo.fuoco, 'allenamento ${allenamento.round()}'),
       ],
     );
   }

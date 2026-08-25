@@ -50,9 +50,7 @@ void main() {
   Future<void> monta(WidgetTester tester, Brightness tema) => tester.pumpWidget(
     MaterialApp(
       theme: ThemeData(brightness: tema),
-      home: const Scaffold(
-        body: RiquadroBianco(child: SizedBox(height: 40)),
-      ),
+      home: const Scaffold(body: RiquadroBianco(child: SizedBox(height: 40))),
     ),
   );
 
@@ -64,7 +62,9 @@ void main() {
 
   /// ⛔ **Niente eccezione per la figura.** Un riquadro chiaro dentro una
   /// schermata scura è una lampada, e non serve: il corpo si tinge col tema.
-  testWidgets('🌙 in tema scuro è SCURO, appena sopra il fondo', (tester) async {
+  testWidgets('🌙 in tema scuro è SCURO, appena sopra il fondo', (
+    tester,
+  ) async {
     await monta(tester, Brightness.dark);
 
     final colore = fondoDi(tester)!;
@@ -78,7 +78,8 @@ void main() {
     expect(
       colore.computeLuminance(),
       lessThan(0.5),
-      reason: '«più chiara dello sfondo» vuol dire un tono sopra il fondo '
+      reason:
+          '«più chiara dello sfondo» vuol dire un tono sopra il fondo '
           'scuro, non un fondo chiaro',
     );
   });

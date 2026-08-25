@@ -22,12 +22,7 @@ void main() {
     required String nome,
     required List<SeriePrevista> serie,
     int? id,
-  }) => PlanExercise(
-    id: id ?? 1,
-    name: nome,
-    prescription: '',
-    serie: serie,
-  );
+  }) => PlanExercise(id: id ?? 1, name: nome, prescription: '', serie: serie);
 
   WorkoutPlan scheda(List<PlanExercise> esercizi) => WorkoutPlan(
     id: 1,
@@ -65,48 +60,48 @@ void main() {
 
     /// ⚠️ **Il cambio postazione si conta fra gli esercizi, non prima del
     /// primo**: chi comincia è già dov'è. Due esercizi = un cambio solo.
-    test('e un minuto per cambiare postazione, fra un esercizio e l\'altro', () {
-      final uno = stimaDellaScheda(
-        scheda: scheda([
-          esercizio(
-            nome: 'Squat',
-            serie: const [SeriePrevista(ripetizioni: 10)],
-          ),
-        ]),
-        catalogo: CatalogoEsercizi.vuoto,
-        kg: 80,
-      );
+    test(
+      'e un minuto per cambiare postazione, fra un esercizio e l\'altro',
+      () {
+        final uno = stimaDellaScheda(
+          scheda: scheda([
+            esercizio(
+              nome: 'Squat',
+              serie: const [SeriePrevista(ripetizioni: 10)],
+            ),
+          ]),
+          catalogo: CatalogoEsercizi.vuoto,
+          kg: 80,
+        );
 
-      final due = stimaDellaScheda(
-        scheda: scheda([
-          esercizio(
-            nome: 'Squat',
-            serie: const [SeriePrevista(ripetizioni: 10)],
-          ),
-          esercizio(
-            id: 2,
-            nome: 'Panca',
-            serie: const [SeriePrevista(ripetizioni: 10)],
-          ),
-        ]),
-        catalogo: CatalogoEsercizi.vuoto,
-        kg: 80,
-      );
+        final due = stimaDellaScheda(
+          scheda: scheda([
+            esercizio(
+              nome: 'Squat',
+              serie: const [SeriePrevista(ripetizioni: 10)],
+            ),
+            esercizio(
+              id: 2,
+              nome: 'Panca',
+              serie: const [SeriePrevista(ripetizioni: 10)],
+            ),
+          ]),
+          catalogo: CatalogoEsercizi.vuoto,
+          kg: 80,
+        );
 
-      // 30 di lavoro; poi 30 + 60 (recupero di ripiego) + 60 (cambio) + 30.
-      expect(uno.durata.inSeconds, 30);
-      expect(due.durata.inSeconds, 180);
-    });
+        // 30 di lavoro; poi 30 + 60 (recupero di ripiego) + 60 (cambio) + 30.
+        expect(uno.durata.inSeconds, 30);
+        expect(due.durata.inSeconds, 180);
+      },
+    );
 
     /// 💡 L'isometria dice i secondi da sola: un plank da 45s vale 45s, non 45
     /// ripetizioni.
     test('e un plank vale i suoi secondi, non le sue ripetizioni', () {
       final s = stimaDellaScheda(
         scheda: scheda([
-          esercizio(
-            nome: 'Plank',
-            serie: const [SeriePrevista(isoSec: 45)],
-          ),
+          esercizio(nome: 'Plank', serie: const [SeriePrevista(isoSec: 45)]),
         ]),
         catalogo: CatalogoEsercizi.vuoto,
         kg: 80,

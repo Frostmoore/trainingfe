@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../diary/data/target_del_giorno.dart';
 import '../../../health/health_controller.dart';
+import '../../../profile/somma_bruciate.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../dashboard_controller.dart';
@@ -128,17 +130,22 @@ class GraficoCalorie extends ConsumerWidget {
         : locale?.kcal.toDouble();
 
     /*
-     * ══ 🚨 IL BMR, NON IL TDEE — 3b-F, 26/08/2026 ═══════════════════════════
+     * ══ 🚨 DUE NUMERI, DUE DOMANDE DIVERSE — 3b-F, 26/08/2026 ═══════════════
      *
-     * ⛔ Qui si passava `locale?.tdee`, e il riquadro del dito faceva
-     * `assunte − TDEE − attive`: **il movimento contato due volte**, perché il
-     * TDEE è già `BMR × fattore di attività`.
+     * 📌 *«il modo giusto di calcolare il grafico sotto è quello di mettere su 0
+     * l'obbiettivo, sopra le calorie consumate, sotto le calorie bruciate
+     * (dall'allenamento) e fare la sottrazione di queste cose. Lì il tdee non
+     * dovrebbe avere spazio»*.
      *
-     * 💡 Il saldo vero si fa sul **basale** più le attive **misurate**, che è
-     * esattamente quello che la barra della prima card mostra da 3b-B.19 — e la
-     * trappola stava scritta in cima a quel file. Vedi `saldo_calorico.dart`.
+     * 💡 Il **riquadro del dito** parla dell'obiettivo, che è la linea di base
+     * del grafico: rispondere lì con un'altra grandezza vorrebbe dire un numero
+     * che non c'entra con quello che si sta guardando.
+     *
+     * ⚠️ La **media in fondo** invece parla del consumo, e deve: «deficit» vuol
+     * dire *rispetto a quanto spendi*, non rispetto a quanto ti eri ripromesso —
+     * ed è quella che diventa peso.
      */
-    final bmr = locale?.bmr;
+    final tdee = locale?.tdee;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -200,7 +207,7 @@ class GraficoCalorie extends ConsumerWidget {
                   daHealth: daHealth,
                   locali: locali,
                   target: target,
-                  bmr: bmr,
+                  tdee: tdee,
                   finestra: finestra,
                 ),
               ),
@@ -218,7 +225,7 @@ class _Corpo extends ConsumerWidget {
     required this.daHealth,
     required this.locali,
     required this.target,
-    required this.bmr,
+    required this.tdee,
     required this.finestra,
   });
 
@@ -227,14 +234,39 @@ class _Corpo extends ConsumerWidget {
   final Map<String, int> locali;
   final double? target;
 
-  /// Il metabolismo basale: quello che si brucia **stando fermi**.
-  final double? bmr;
+  /// Il consumo della **vita quotidiana** — serve solo alla media in fondo.
+  final double? tdee;
 
   final CaloriesWindow finestra;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+
+    /*
+     * ══ 🚨 L'OBIETTIVO SI COMPONE QUI, E NON PIU' IN BASSO ══════════════════
+     *
+     * ⚠️ `TargetDelGiorno.scegli` va chiamato **dove il `ref` c'è**, con dentro
+     * `ref.watch(sommaLeBruciateProvider)` scritto per esteso. 🚨 Non è pedanteria:
+     * c'è una guardia in `impostazioni_riordinate_test.dart` che scandisce tutto
+     * `lib/` e fa fallire chi passa un valore fisso — perché quello **compila**,
+     * e sarebbe un'app che ignora l'interruttore in una sola delle schermate che
+     * mostrano l'obiettivo.
+     *
+     * 💡 Un obiettivo per giorno: le bruciate cambiano giorno per giorno, quindi
+     * l'obiettivo pure — ed è esattamente il numero contro cui il riquadro del
+     * dito confronta le assunte.
+     */
+    final obiettivi = <double>[
+      for (var i = 0; i < serie.dates.length; i++)
+        TargetDelGiorno.scegli(
+              dalServer: null,
+              locale: target,
+              bruciate: bruciateDi(serie, i, daHealth, locali).round(),
+              sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
+            ).kcal ??
+            (target ?? 0),
+    ];
 
     return Column(
       children: [
@@ -297,7 +329,7 @@ class _Corpo extends ConsumerWidget {
           SizedBox(
             height: 190,
             child: LineChart(
-              _dati(context, serie, daHealth, locali, target!, bmr),
+              _dati(context, serie, daHealth, locali, target!, obiettivi),
             ),
           ),
 
@@ -364,7 +396,7 @@ class _Corpo extends ConsumerWidget {
           serie: serie,
           daHealth: daHealth,
           locali: locali,
-          bmr: bmr,
+          tdee: tdee,
         ),
       ],
     );
@@ -391,28 +423,30 @@ class _MediaDelSaldo extends StatelessWidget {
     required this.serie,
     required this.daHealth,
     required this.locali,
-    required this.bmr,
+    required this.tdee,
   });
 
   final Series serie;
   final Map<String, int> daHealth;
   final Map<String, int> locali;
-  final double? bmr;
+  final double? tdee;
 
   @override
   Widget build(BuildContext context) {
-    final kcal = bmr;
+    final kcal = tdee;
 
     if (kcal == null) return const SizedBox.shrink();
 
     final medio = saldoMedioDelPeriodo(
-      giorni: [for (final d in serie.dates) DateTime.tryParse(d) ?? DateTime(0)],
+      giorni: [
+        for (final d in serie.dates) DateTime.tryParse(d) ?? DateTime(0),
+      ],
       assunte: serie.consumed,
-      attive: [
+      allenamento: [
         for (var i = 0; i < serie.dates.length; i++)
           bruciateDi(serie, i, daHealth, locali),
       ],
-      bmr: kcal,
+      tdee: kcal,
       adesso: DateTime.now(),
     );
 
@@ -428,7 +462,8 @@ class _MediaDelSaldo extends StatelessWidget {
      * solo — con l'avvertenza che le sta accanto da 3b-O.7.4: e' una stima
      * grossolana, non una misura.
      */
-    final grammi = (quanto * 7 / RiassuntoSettimana.kcalPerChilo * 1000).round();
+    final grammi = (quanto * 7 / RiassuntoSettimana.kcalPerChilo * 1000)
+        .round();
 
     return Padding(
       padding: const EdgeInsets.only(top: Gap.xs),
@@ -447,10 +482,18 @@ class _MediaDelSaldo extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            // 🚨 Il contesto della media e' parte della media: su quanti giorni
-            // e' calcolata cambia quanto vale, e senza dirlo si legge come se
-            // fosse su tutti.
-            'sui ${medio.giorni} '
+            /*
+             * 🚨 **Due cose che vanno dette insieme al numero.**
+             *
+             * ⚠️ Il contesto della media e' parte della media: su due giorni su
+             * sette non e' lo stesso numero che su sette.
+             *
+             * ⚠️ E **rispetto a cosa**: qui e' il consumo — «deficit» vuol dire
+             * *rispetto a quanto spendi*, non rispetto a quanto ti eri
+             * ripromesso. Il riquadro del dito invece parla dell'obiettivo, e
+             * senza scriverlo i due numeri sembrerebbero in contraddizione.
+             */
+            'rispetto al consumo, sui ${medio.giorni} '
             '${medio.giorni == 1 ? 'giorno completo' : 'giorni completi'} '
             'con diario · circa $grammi g a settimana',
             style: theme.textTheme.bodySmall,
@@ -497,7 +540,7 @@ LineChartData _dati(
   Map<String, int> daHealth,
   Map<String, int> locali,
   double target,
-  double? bmr,
+  List<double> obiettivi,
 ) {
   final theme = Theme.of(context);
 
@@ -602,25 +645,22 @@ LineChartData _dati(
       ],
     ),
 
-    lineTouchData: _tocco(context, s, daHealth, locali, bmr),
+    lineTouchData: _tocco(context, s, obiettivi),
   );
 }
 
 /// Il riquadro che compare col dito — 3b-O.9.4.
 ///
-/// 📌 *«Se ci passo il dito mi deve dire il risultato di calorie assunte oltre
-/// tdaa - calorie bruciate»*.
+/// 📌 Chiesto il 21/08 come *«calorie assunte oltre tdaa - calorie bruciate»*, e
+/// **ridefinito dal committente il 26/08**: *«mettere su 0 l'obbiettivo, sopra le
+/// calorie consumate, sotto le calorie bruciate (dall'allenamento) e fare la
+/// sottrazione di queste cose. Li' il tdee non dovrebbe avere spazio»*.
 ///
-/// ⚠️ **Nota di lessico**: il committente scrive «tdaa» e intende il **TDEE**,
-/// il consumo giornaliero totale. Nel codice si usa il nome vero, e a schermo la
-/// parola che si capisce senza sapere la sigla: «consumo».
-LineTouchData _tocco(
-  BuildContext context,
-  Series s,
-  Map<String, int> daHealth,
-  Map<String, int> locali,
-  double? bmr,
-) {
+/// 💡 Ed e' la lettura giusta: la linea di base del grafico **e'** l'obiettivo,
+/// quindi il numero che compare col dito deve parlare di quello. ⚠️ Il consumo
+/// non e' sparito: e' il riferimento della **media** in fondo alla card, dove
+/// «deficit» vuol dire davvero *rispetto a quanto spendi*.
+LineTouchData _tocco(BuildContext context, Series s, List<double> obiettivi) {
   final theme = Theme.of(context);
 
   return LineTouchData(
@@ -643,7 +683,7 @@ LineTouchData _tocco(
           if (indice > 0)
             null
           else
-            _vocePerIlDito(theme, s, punto.x.toInt(), daHealth, locali, bmr),
+            _vocePerIlDito(theme, s, punto.x.toInt(), obiettivi),
       ],
     ),
   );
@@ -651,24 +691,31 @@ LineTouchData _tocco(
 
 /// Il testo dentro il riquadro del dito.
 ///
-/// 🚨 Il saldo è `assunte − (basale + attive)`: positivo vuol dire surplus —
-/// si è mangiato più di quanto si è speso — negativo deficit.
+/// ══ 🚨 IL SALDO E' RISPETTO ALL'OBIETTIVO, E IL TDEE NON C'ENTRA ══════════
 ///
-/// ⛔ **Non era così, ed era sbagliato**: si toglievano il TDEE **e** le attive,
-/// cioè il movimento due volte. Vedi `saldo_calorico.dart`.
+/// 📌 *«mettere su 0 l'obbiettivo, sopra le calorie consumate, sotto le calorie
+/// bruciate (dall'allenamento) e fare la sottrazione di queste cose. Lì il tdee
+/// non dovrebbe avere spazio»*.
+///
+/// 💡 È la linea di base del grafico: rispondere col dito su un'altra grandezza
+/// vorrebbe dire un numero che non c'entra con quello che si sta guardando.
+///
+/// ⚠️ **L'obiettivo lo compone `TargetDelGiorno`**, non questa funzione:
+/// `obiettivo = target + allenamento` quando l'interruttore è acceso, e `target`
+/// e basta quando è spento. 🚨 Scrivere qui `assunte − target − allenamento`
+/// darebbe lo stesso numero **solo con l'interruttore acceso** — e a chi l'ha
+/// spento il grafico contraddirebbe la card sopra, che è il modo più rapido per
+/// far smettere di fidarsi di tutti e due.
 LineTooltipItem? _vocePerIlDito(
   ThemeData theme,
   Series s,
   int i,
-  Map<String, int> daHealth,
-  Map<String, int> locali,
-  double? bmr,
+  List<double> obiettivi,
 ) {
   final assunte = i < s.consumed.length ? s.consumed[i] : 0.0;
-  final attive = bruciateDi(s, i, daHealth, locali);
   final giorno = i < s.labels.length ? s.labels[i] : '';
 
-  if (bmr == null || assunte <= 0) {
+  if (assunte <= 0) {
     return LineTooltipItem(
       '$giorno · nessun dato',
       theme.textTheme.labelSmall!.copyWith(
@@ -677,30 +724,15 @@ LineTooltipItem? _vocePerIlDito(
     );
   }
 
-  final data = i < s.dates.length ? DateTime.tryParse(s.dates[i]) : null;
-  final adesso = DateTime.now();
-
-  /*
-   * ⚠️ **Su oggi il basale si ferma all'ora che è.** Le calorie assunte sono
-   * quelle di finora: confrontarle con ventiquattro ore di basale dichiara un
-   * deficit che è soltanto la giornata non ancora finita.
-   */
-  final basale = basaleDelGiorno(
-    bmr: bmr,
-    giorno: data ?? adesso,
-    adesso: adesso,
-  );
-
-  final saldo = saldoDelGiorno(
-    assunte: assunte,
-    basale: basale,
-    attive: attive,
-  );
+  final saldo = assunte - (i < obiettivi.length ? obiettivi[i] : 0);
 
   return LineTooltipItem(
     '$giorno\n'
     '${saldo > 0 ? '+' : ''}${saldo.round()} kcal '
-    '${saldo > 0 ? 'in più' : 'in meno'}',
+    '${saldo > 0 ? 'in più' : 'in meno'}\n'
+    // ⚠️ Si dice **rispetto a cosa**: senza, «−458» è un numero senza unità di
+    // misura. E la media qui sotto parla di un'altra cosa ancora.
+    'rispetto all\'obiettivo',
     theme.textTheme.labelMedium!.copyWith(
       color: theme.colorScheme.onInverseSurface,
       fontWeight: FontWeight.w700,

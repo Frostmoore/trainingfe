@@ -225,7 +225,10 @@ void main() {
 
       e.righe.add(e.rigaNuova());
 
-      expect(e.serieFatte, hasLength(EsercizioInScrittura.seriePredefinite + 1));
+      expect(
+        e.serieFatte,
+        hasLength(EsercizioInScrittura.seriePredefinite + 1),
+      );
     });
 
     test('un esercizio nuovo nasce con tre serie, come nell\'editor', () {
@@ -265,12 +268,9 @@ void main() {
         {'name': 'Panca inclinata'},
       ]);
 
-      expect(
-        ((rifatta['days'] as List).first as Map)['exercises'],
-        [
-          {'name': 'Panca inclinata'},
-        ],
-      );
+      expect(((rifatta['days'] as List).first as Map)['exercises'], [
+        {'name': 'Panca inclinata'},
+      ]);
       expect(rifatta['exercises'], [
         {'name': 'Panca inclinata'},
       ]);

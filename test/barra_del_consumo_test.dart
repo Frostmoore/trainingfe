@@ -2,28 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/dashboard/ui/widgets/barra_del_consumo.dart';
 
-/// La barra delle calorie bruciate — 3b-B.19, 25/08/2026.
+/// La barra delle calorie bruciate — 3b-B.19, corretta in 3b-F.
 ///
 /// 📌 *«vorrei sotto un'altra barra dove mi dice le calorie bruciate … le
 /// calorie che ho bruciato perché sono vivo del colore d'accento, e le calorie
 /// "attive" diciamo rosse … ma nella stessa barra»*.
+///
+/// ══ 🚨 IL 26/08 IL PRIMO SEGMENTO E' CAMBIATO ═════════════════════════════
+///
+/// ⛔ Era il **basale**, cioè quello che si brucia stando fermi. 📌 Il
+/// committente: *«la seconda barra della prima card non mi deve indicare
+/// l'obbiettivo ma il vero e proprio dispendio energetico della giornata»* —
+/// e sul suo gradino (1.2, «poco o nessun esercizio») il TDEE **è** la vita
+/// quotidiana, senza allenamenti.
+///
+/// 💡 Quindi adesso è **vita quotidiana + allenamento**, e la barra dice quanto
+/// si è speso davvero invece di un numero più basso del vero.
 void main() {
-  const bmr = 1800.0;
+  // ⚠️ Il TDEE della giornata intera: è quello che si mappa sull'ora.
+  const tdee = 1800.0;
 
   DateTime alle(int ora, [int minuti = 0]) =>
       DateTime(2026, 8, 25, ora, minuti);
 
   group('🕒 il basale si mappa sull\'ora', () {
     test('a mezzanotte non hai ancora bruciato niente', () {
-      expect(basaleFinora(bmr: bmr, adesso: alle(0)), 0);
+      expect(consumoFinora(kcalDelGiorno: tdee, adesso: alle(0)), 0);
     });
 
     test('a mezzogiorno ne hai bruciato metà', () {
-      expect(basaleFinora(bmr: bmr, adesso: alle(12)), 900);
+      expect(consumoFinora(kcalDelGiorno: tdee, adesso: alle(12)), 900);
     });
 
     test('e a fine giornata quasi tutto', () {
-      expect(basaleFinora(bmr: bmr, adesso: alle(23, 59)), closeTo(bmr, 2));
+      expect(
+        consumoFinora(kcalDelGiorno: tdee, adesso: alle(23, 59)),
+        closeTo(tdee, 2),
+      );
     });
 
     /// ⛔ **È il difetto che si sarebbe preso usando `dayProgressPct`**, che è
@@ -31,7 +46,7 @@ void main() {
     /// calorie ne hai già bruciate sei ore. La barra avrebbe detto «zero» a chi
     /// si sveglia presto.
     test('alle 6 del mattino NON è zero: un quarto è già andato', () {
-      expect(basaleFinora(bmr: bmr, adesso: alle(6)), bmr / 4);
+      expect(consumoFinora(kcalDelGiorno: tdee, adesso: alle(6)), tdee / 4);
     });
   });
 
@@ -39,8 +54,8 @@ void main() {
     /// Le larghezze dei due segmenti, in pixel, su una barra larga [larghezza].
     Future<({double riposo, double movimento})> segmenti(
       WidgetTester tester, {
-      required double basale,
-      required double attive,
+      required double quotidiano,
+      required double allenamento,
       required double tdee,
       double larghezza = 300,
     }) async {
@@ -56,8 +71,8 @@ void main() {
               child: SizedBox(
                 width: larghezza,
                 child: BarraDelConsumo(
-                  basale: basale,
-                  attive: attive,
+                  quotidiano: quotidiano,
+                  allenamento: allenamento,
                   tdee: tdee,
                 ),
               ),
@@ -80,7 +95,12 @@ void main() {
     testWidgets('il riposo è lungo quanto la sua quota di TDEE', (
       tester,
     ) async {
-      final s = await segmenti(tester, basale: 900, attive: 0, tdee: 1800);
+      final s = await segmenti(
+        tester,
+        quotidiano: 900,
+        allenamento: 0,
+        tdee: 1800,
+      );
 
       expect(s.riposo, 150, reason: 'metà di una barra da 300');
       expect(s.movimento, 0);
@@ -89,7 +109,12 @@ void main() {
     /// 📌 *«ma nella stessa barra»*: il movimento **si aggiunge** al riposo, non
     /// gli si sovrappone e non sta in una barra sua.
     testWidgets('e il movimento parte dove finisce il riposo', (tester) async {
-      final s = await segmenti(tester, basale: 900, attive: 300, tdee: 1800);
+      final s = await segmenti(
+        tester,
+        quotidiano: 900,
+        allenamento: 300,
+        tdee: 1800,
+      );
 
       expect(s.riposo, 150);
       expect(s.movimento, 50, reason: '300 kcal su 1800 di un\'asta da 300px');
@@ -101,7 +126,12 @@ void main() {
     testWidgets('chi supera il TDEE riempie la barra, non la sfonda', (
       tester,
     ) async {
-      final s = await segmenti(tester, basale: 900, attive: 3000, tdee: 1800);
+      final s = await segmenti(
+        tester,
+        quotidiano: 900,
+        allenamento: 3000,
+        tdee: 1800,
+      );
 
       expect(s.riposo + s.movimento, 300);
     });
@@ -109,7 +139,12 @@ void main() {
     /// 🚨 E il riposo non si mangia lo spazio del movimento: se da solo copre
     /// già tutto, il movimento resta a zero invece di uscire dalla barra.
     testWidgets('e nemmeno il solo riposo la sfonda', (tester) async {
-      final s = await segmenti(tester, basale: 5000, attive: 500, tdee: 1800);
+      final s = await segmenti(
+        tester,
+        quotidiano: 5000,
+        allenamento: 500,
+        tdee: 1800,
+      );
 
       expect(s.riposo, 300);
       expect(s.movimento, 0);
@@ -118,7 +153,12 @@ void main() {
     /// ⚠️ Un TDEE a zero vuol dire profilo incompleto: si disegna una barra
     /// vuota, **non** una divisione per zero.
     testWidgets('senza TDEE non esplode', (tester) async {
-      final s = await segmenti(tester, basale: 900, attive: 100, tdee: 0);
+      final s = await segmenti(
+        tester,
+        quotidiano: 900,
+        allenamento: 100,
+        tdee: 0,
+      );
 
       expect(s.riposo, 0);
       expect(s.movimento, 0);
@@ -130,13 +170,13 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: LegendaDelConsumo(basale: 1320.4, attive: 160.7),
+            body: LegendaDelConsumo(quotidiano: 1320.4, allenamento: 160.7),
           ),
         ),
       );
 
-      expect(find.text('a riposo 1320'), findsOneWidget);
-      expect(find.text('in movimento 161'), findsOneWidget);
+      expect(find.text('vita quotidiana 1320'), findsOneWidget);
+      expect(find.text('allenamento 161'), findsOneWidget);
     });
   });
 }

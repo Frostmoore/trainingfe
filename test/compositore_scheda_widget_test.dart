@@ -53,17 +53,15 @@ void main() {
     expect(find.text('Esercizio'), findsOneWidget);
   });
 
-  testWidgets(
-    'le serie sono righe, e a 328 px non sforano',
-    (tester) async {
-      tester.view.physicalSize = const Size(656, 1400);
-      tester.view.devicePixelRatio = 2.0;
-      addTearDown(tester.view.reset);
+  testWidgets('le serie sono righe, e a 328 px non sforano', (tester) async {
+    tester.view.physicalSize = const Size(656, 1400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(suUnoSchermoStretto(const CompositoreScheda()));
-      await tester.pump();
+    await tester.pumpWidget(suUnoSchermoStretto(const CompositoreScheda()));
+    await tester.pump();
 
-      /*
+    /*
        * ══ 🚨 QUESTO TEST DIFENDEVA IL LAYOUT DI PRIMA — 3b-D.11 ═══════════
        *
        * ⛔ Cercava «serie», «ripetizioni», «recupero (s)» e «kg»: i quattro
@@ -79,19 +77,18 @@ void main() {
        * 💡 Per questo il test resta al suo posto invece di essere cancellato
        * insieme ai campi: cambia **cosa** cerca, non **dove** guarda.
        */
-      expect(find.text('Serie'), findsWidgets);
-      expect(find.text('Rip.'), findsWidgets);
-      expect(find.text('Kg'), findsWidgets);
-      expect(find.text('Rec. s'), findsWidgets);
+    expect(find.text('Serie'), findsWidgets);
+    expect(find.text('Rip.'), findsWidgets);
+    expect(find.text('Kg'), findsWidgets);
+    expect(find.text('Rec. s'), findsWidgets);
 
-      // 📌 *«ogni esercizio deve partire di base con 3 serie»*.
-      expect(find.text('Aggiungi serie'), findsOneWidget);
+    // 📌 *«ogni esercizio deve partire di base con 3 serie»*.
+    expect(find.text('Aggiungi serie'), findsOneWidget);
 
-      // 🚨 `pumpWidget` non fallisce da solo su un overflow: l'eccezione
-      // finisce in `takeException()`, e va guardata esplicitamente.
-      expect(tester.takeException(), isNull);
-    },
-  );
+    // 🚨 `pumpWidget` non fallisce da solo su un overflow: l'eccezione
+    // finisce in `takeException()`, e va guardata esplicitamente.
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('il Rif. Allievo dice che resta sul server', (tester) async {
     tester.view.physicalSize = const Size(656, 1400);

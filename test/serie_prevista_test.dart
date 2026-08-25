@@ -116,18 +116,21 @@ void main() {
       expect(json['target_weight'], 40.0);
     });
 
-    test('e quando le ripetizioni non cambiano il riassunto è un numero solo', () {
-      final json = esercizioInJson(
-        nome: 'Curl',
-        carico: CaricoDellEsercizio.peso,
-        serie: const [
-          SeriePrevista(ripetizioni: 12),
-          SeriePrevista(ripetizioni: 12),
-        ],
-      );
+    test(
+      'e quando le ripetizioni non cambiano il riassunto è un numero solo',
+      () {
+        final json = esercizioInJson(
+          nome: 'Curl',
+          carico: CaricoDellEsercizio.peso,
+          serie: const [
+            SeriePrevista(ripetizioni: 12),
+            SeriePrevista(ripetizioni: 12),
+          ],
+        );
 
-      expect(json['reps'], '12');
-    });
+        expect(json['reps'], '12');
+      },
+    );
 
     /// ⚠️ Un esercizio a corpo libero non ha un «peso previsto» da riassumere:
     /// scriverne uno vorrebbe dire farlo comparire come carico in ogni conto.

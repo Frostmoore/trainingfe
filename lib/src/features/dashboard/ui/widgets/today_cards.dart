@@ -142,9 +142,20 @@ class CaloriesCard extends ConsumerWidget {
      * dell'orologio, a cavallo della mezzanotte, farebbe dire alla barra una
      * cosa impossibile.
      */
-    final basaleOra = stima == null
+    /*
+     * ══ 🚨 IL TDEE, NON IL BMR — 3b-F, 26/08/2026 ═══════════════════════════
+     *
+     * 📌 *«Dove si dovrebbe usare il tdee è proprio la seconda barra della prima
+     * card delle calorie, che non mi deve indicare l'obbiettivo ma il vero e
+     * proprio dispendio energetico della giornata»*.
+     *
+     * ⛔ Qui si mappava il **basale**, e la barra diceva un numero più basso del
+     * vero: il TDEE su 1.2 è la vita da scrivania, che si brucia comunque, e
+     * lasciarla fuori faceva sembrare che si spendesse quanto un uomo immobile.
+     */
+    final quotidianoOra = stima == null
         ? 0.0
-        : basaleFinora(bmr: stima.bmr, adesso: oggi);
+        : consumoFinora(kcalDelGiorno: stima.tdee, adesso: oggi);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -366,7 +377,7 @@ class CaloriesCard extends ConsumerWidget {
                     Text('Bruciate', style: theme.textTheme.labelLarge),
                     const Spacer(),
                     Text(
-                      '${(basaleOra + bruciate.kcal).round()}',
+                      '${(quotidianoOra + bruciate.kcal).round()}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -379,14 +390,14 @@ class CaloriesCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: Gap.xs),
                 BarraDelConsumo(
-                  basale: basaleOra,
-                  attive: bruciate.kcal.toDouble(),
+                  quotidiano: quotidianoOra,
+                  allenamento: bruciate.kcal.toDouble(),
                   tdee: stima.tdee,
                 ),
                 const SizedBox(height: Gap.xs),
                 LegendaDelConsumo(
-                  basale: basaleOra,
-                  attive: bruciate.kcal.toDouble(),
+                  quotidiano: quotidianoOra,
+                  allenamento: bruciate.kcal.toDouble(),
                 ),
               ],
             ],

@@ -61,9 +61,14 @@ const quanteSenzaAbbonamento = 3;
 /// silenzio, e nessun test se ne sarebbe accorto perché il test l'avrebbe
 /// scritta uguale.
 ///
-/// 💡 Adesso sono **due parametri**, e la regola è quella detta dal committente:
-/// *«un utente che **non** sia abbonato **o non** abbia l'ai illimitata»* → il
-/// limite scatta. Cioè servono **tutte e due** per non averlo.
+/// 💡 Adesso sono **due parametri**, e la regola è: *«chi è abbonato **o** chi ha
+/// AI illimitata»* non ha il limite. **Ne basta una.**
+///
+/// ⛔ **L'avevo letta al contrario**, come «servono tutte e due», e il risultato
+/// era che chi ha l'AI illimitata per un interruttore acceso a mano — senza
+/// abbonamento — si vedeva le schede bloccate lo stesso. 🚨 Le due condizioni
+/// sono **due porte d'ingresso allo stesso privilegio**, non due lucchetti sulla
+/// stessa porta.
 ///
 /// ══ ⚠️ E CIASCUNA, SE NON SI SA, NON BLOCCA ══════════════════════════════
 ///
@@ -82,7 +87,13 @@ Map<int, MotivoBlocco> schedeBloccate({
   required bool? abbonato,
   required bool? illimitata,
 }) {
-  final senzaLimiti = illimitata != false && abbonato != false;
+  /*
+   * 🚨 **Si blocca solo quando sono false TUTTE E DUE.** `!= false` e non
+   * `== true`: `null` vuol dire «non lo so», e un flag che non è arrivato non
+   * deve chiudere fuori nessuno — vale come una porta aperta, non come una
+   * chiusa.
+   */
+  final senzaLimiti = illimitata != false || abbonato != false;
 
   if (senzaLimiti) return const {};
 

@@ -49,26 +49,45 @@ void main() {
   /// presente, non una definizione: il giorno in cui si vendesse un pacchetto AI
   /// senza abbonamento, quella riga avrebbe sbagliato **in silenzio**.
   group('🔀 e sono due cose diverse', () {
-    /// 💡 La regola detta dal committente: *«non sia abbonato **o** non abbia
-    /// l'ai illimitata»* → servono **tutte e due** per non avere il limite.
-    test('la sola AI illimitata non basta', () {
+    /// 💡 La regola: *«chi e abbonato **o** chi ha AI illimitata»* non ha il
+    /// limite. ⛔ L'avevo letta al contrario — «servono tutte e due» — e chi ha
+    /// l'AI illimitata per un interruttore acceso a mano, senza abbonamento, si
+    /// vedeva le schede bloccate lo stesso.
+    ///
+    /// 🚨 Sono **due porte d'ingresso allo stesso privilegio**, non due
+    /// lucchetti sulla stessa porta.
+    test('la sola AI illimitata basta', () {
       expect(
         schedeBloccate(schede: cinque, illimitata: true, abbonato: false),
-        isNotEmpty,
+        isEmpty,
       );
     });
 
-    test('e nemmeno il solo abbonamento', () {
+    test('e basta anche il solo abbonamento', () {
       expect(
         schedeBloccate(schede: cinque, illimitata: false, abbonato: true),
-        isNotEmpty,
+        isEmpty,
       );
     });
 
-    test('servono tutte e due', () {
+    /// 📌 *«Abbonato e AI illimitata possono anche essere attivi insieme,
+    /// quindi anche in quel caso deve funzionare»*.
+    ///
+    /// 💡 Con un `or` viene da sé — ma **da sé non basta**: e' il caso di chi
+    /// paga *e* ha l'interruttore acceso, cioe' il piu' importante di tutti, e
+    /// un test che non c'e' non protegge da una riscrittura frettolosa.
+    test('e tutte e due insieme vanno benissimo', () {
       expect(
         schedeBloccate(schede: cinque, illimitata: true, abbonato: true),
         isEmpty,
+      );
+    });
+
+    /// ⛔ Il limite scatta **solo** quando mancano tutte e due.
+    test('e si blocca solo se mancano tutte e due', () {
+      expect(
+        schedeBloccate(schede: cinque, illimitata: false, abbonato: false),
+        isNotEmpty,
       );
     });
 
@@ -78,8 +97,8 @@ void main() {
     test('e quella che non si sa lascia decidere alla sorella', () {
       expect(
         schedeBloccate(schede: cinque, illimitata: false, abbonato: null),
-        isNotEmpty,
-        reason: 'oggi e questo il caso vero',
+        isEmpty,
+        reason: 'un flag che non e arrivato non chiude fuori nessuno',
       );
 
       expect(
@@ -93,7 +112,7 @@ void main() {
   group('🔒 chi non è abbonato ne usa tre', () {
     test('con tre schede non si blocca niente', () {
       expect(
-        schedeBloccate(schede: tre, illimitata: false, abbonato: true),
+        schedeBloccate(schede: tre, illimitata: false, abbonato: false),
         isEmpty,
       );
     });
@@ -104,7 +123,7 @@ void main() {
       final bloccate = schedeBloccate(
         schede: cinque,
         illimitata: false,
-        abbonato: true,
+        abbonato: false,
       );
 
       expect(bloccate.keys.toSet(), {4, 5});
@@ -117,7 +136,7 @@ void main() {
       final bloccate = schedeBloccate(
         schede: [scheda(1, giorni: 3)],
         illimitata: false,
-        abbonato: true,
+        abbonato: false,
       );
 
       expect(bloccate[1], MotivoBlocco.piuGiorni);
@@ -133,7 +152,7 @@ void main() {
       final bloccate = schedeBloccate(
         schede: [scheda(1, giorni: 4), scheda(2), scheda(3), scheda(4)],
         illimitata: false,
-        abbonato: true,
+        abbonato: false,
       );
 
       expect(bloccate[1], MotivoBlocco.piuGiorni);
@@ -155,7 +174,7 @@ void main() {
           scheda(3, giorni: 2),
         ],
         illimitata: false,
-        abbonato: true,
+        abbonato: false,
       );
 
       expect(bloccate.length, 3);

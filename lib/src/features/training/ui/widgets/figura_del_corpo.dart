@@ -199,26 +199,32 @@ class FiguraDelCorpo extends ConsumerWidget {
                       intensita: intensita,
                       davanti: davanti,
                       /*
-                       * ══ 🚨 LO SPENTO NON VIENE DAL TEMA — 3b-D.13 ═══════
+                       * ══ 🚨 LO SPENTO VIENE DAL TEMA, ED E' IL PUNTO ═══════
                        *
-                       * ⛔ Era `onSurfaceVariant` al 45%, e in **tema scuro**
-                       * quello e' un grigio **chiaro**: sopra un riquadro
-                       * chiaro il muscolo non allenato diventava quasi
-                       * invisibile. 💡 E' il vero motivo per cui la figura in
-                       * tema scuro sembrava «strana» — non il fondo, il corpo.
+                       * `onSurfaceVariant` e' **chiaro** in tema scuro e
+                       * **scuro** in tema chiaro: il corpo non allenato si
+                       * vede sempre, qualunque sia il fondo del riquadro.
                        *
-                       * 🚨 La figura sta **sempre** dentro un riquadro chiaro
-                       * (`RiquadroBianco(sempreChiaro: true)`, tutti e tre i
-                       * posti in cui compare): li' dentro il tema dell'app non
-                       * c'entra, e i colori devono essere quelli di una
-                       * superficie chiara — scuri sopra il chiaro, in tutti e
-                       * due i temi.
+                       * ⛔ **L'avevo bloccato su un grigio scuro fisso** (3b-D.13)
+                       * ragionando che la figura stesse sempre dentro un
+                       * riquadro chiaro. 🚨 Poi il riquadro chiaro se n'e'
+                       * andato — segue il tema come tutti gli altri — e con un
+                       * grigio scuro fisso su un fondo scuro **la figura
+                       * sarebbe sparita del tutto**.
                        *
-                       * ⚠️ Se un giorno la figura finisse fuori da quel
-                       * riquadro, questa riga andrebbe rifatta insieme al
-                       * fondo: sono la stessa decisione, presa in due file.
+                       * 💡 La lezione: era **questa riga** a rendere l'uomo
+                       * «strano» col tema scuro fin dall'inizio, non il fondo.
+                       * Il fondo bianco lo mascherava per forza bruta, e per
+                       * tre giri ho curato il sintomo.
+                       *
+                       * ⚠️ Chi tocca il colore del riquadro
+                       * (`RiquadroBianco`) deve guardare **anche qui**: sono la
+                       * stessa decisione presa in due file, e vanno letti
+                       * insieme.
                        */
-                      spento: const Color(0xFF3C3C3C).withValues(alpha: 0.45),
+                      spento: tema.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.45,
+                      ),
                     ),
                   ),
                 ),

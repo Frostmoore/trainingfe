@@ -146,7 +146,6 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
           children: [
             Expanded(
               child: RiquadroBianco(
-                sempreChiaro: true,
                 child: FiguraDelCorpo(intensita: intensita),
               ),
             ),
@@ -304,38 +303,9 @@ class CardDelCarosello extends StatelessWidget {
 /// devono avere **lo stesso** riquadro, o accostate si vede che sono due cose
 /// disegnate in momenti diversi.
 class RiquadroBianco extends StatelessWidget {
-  const RiquadroBianco({
-    required this.child,
-    this.sempreChiaro = false,
-    super.key,
-  });
+  const RiquadroBianco({required this.child, super.key});
 
   final Widget child;
-
-  /// 🚨 **Chiaro anche col tema scuro**, e serve a una cosa sola: la figura del
-  /// corpo.
-  ///
-  /// 📌 *«col tema scuro, l'uomo risulta strano, bisognerebbe mettergli lo
-  /// sfondo bianco»* e poi, vedendolo: *«se la facciamo bianca con tema scuro
-  /// ti brucia la retina. Facciamola semplicemente più chiara dello sfondo,
-  /// così è troppo bianco»*.
-  ///
-  /// ══ ⚠️ CHIARO, NON BIANCO — e le due richieste non si contraddicono ══════
-  ///
-  /// ⛔ Il PNG della figura è disegnato **per un fondo chiaro**: i solchi fra i
-  /// muscoli sono trasparenti e lasciano vedere il fondo, quindi su nero il
-  /// disegno si perde. Serve chiaro.
-  ///
-  /// 🚨 Ma **bianco pieno dentro una schermata scura è una lampada**, ed è la
-  /// stessa cosa che il committente aveva già detto degli altri riquadri.
-  /// 💡 Quello che serve è **lo stacco**, non il bianco: in tema scuro basta un
-  /// tono chiaro e spento — abbastanza da far leggere il disegno, non tanto da
-  /// abbagliare.
-  ///
-  /// ⚠️ Il nome della classe resta `RiquadroBianco` e in tema scuro non è
-  /// bianco niente: rinominarla vorrebbe dire toccare sei schermate per un
-  /// nome, e questo dartdoc lo dice in prima riga.
-  final bool sempreChiaro;
 
   @override
   Widget build(BuildContext context) {
@@ -345,36 +315,35 @@ class RiquadroBianco extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         /*
-         * ══ 🌗 IL FONDO SEGUE IL TEMA — 25/08/2026 ═══════════════════════════
+         * ══ 🌗 IL FONDO SEGUE IL TEMA, PER TUTTI — in tre puntate ══════════
          *
-         * ⛔ Qui c'era `Colors.white` e basta, con scritto che il committente
-         * aveva chiesto un riquadro **bianco**. Era vero, ed era vero **in tema
-         * chiaro**: guardandolo col tema scuro l'ha corretto — *«ti carbonizzano
-         * la retina»*.
+         * ⛔ **Prima**: `Colors.white` sempre, perche' il committente aveva
+         * chiesto un riquadro bianco. Era vero, ed era vero **in tema chiaro**.
          *
-         * 💡 Quello che aveva chiesto non era il colore: era **lo stacco** dal
-         * fondo della card. In chiaro lo stacco è il bianco, in scuro è un
-         * grigio più chiaro della card. La richiesta si rispetta cambiando il
-         * colore, non tenendolo.
+         * ⛔ **Poi** (3b-C.1): segue il tema — *«i quadrati bianchi ti
+         * carbonizzano la retina»* — **con la figura del corpo come eccezione
+         * bianca**, perche' il suo PNG e' disegnato per un fondo chiaro.
          *
-         * ⚠️ L'unica eccezione è [sempreChiaro], per la figura del corpo.
+         * ⛔ **Poi ancora** (3b-D.13): l'eccezione bianca abbagliava lo stesso,
+         * e allora era diventata «chiara ma non bianca». 🚨 **E anche quella era
+         * sbagliata**: *«adesso lo sfondo e' ancora bianco»*.
+         *
+         * ✅ **Adesso l'eccezione non c'e' piu'**, ed e' la risposta giusta:
+         * *«facciamola semplicemente piu' chiara dello sfondo»* vuol dire un
+         * tono **appena sopra il fondo scuro**, cioe' esattamente quello che
+         * fanno tutti gli altri riquadri.
+         *
+         * 💡 **La figura si vede lo stesso**, e il motivo e' in
+         * `figura_del_corpo.dart`: il corpo si tinge con un colore preso dal
+         * **tema**, quindi su un fondo scuro e' chiaro e su uno chiaro e'
+         * scuro. Era **quello** il difetto che rendeva l'uomo «strano» col tema
+         * scuro — non il fondo — e per tre giri l'ho curato dalla parte
+         * sbagliata.
+         *
+         * 🚨 Il nome `RiquadroBianco` resta e in tema scuro non e' bianco
+         * niente: rinominarlo vorrebbe dire toccare sei schermate per un nome.
          */
-        color: switch ((sempreChiaro, scuro)) {
-          // In tema chiaro il bianco e' lo stacco giusto, per tutti.
-          (_, false) => Colors.white,
-
-          /*
-           * 🚨 **La figura in tema scuro: chiara, non bianca.** Un tono spento
-           * che fa ancora leggere i solchi trasparenti del PNG senza fare da
-           * lampada. ⛔ Scritto a mano e non preso dal tema: `ColorScheme` in
-           * scuro non ha **nessun** tono chiaro — sono tutti fondi scuri — e
-           * prenderne uno vorrebbe dire tornare al disegno che sparisce.
-           */
-          (true, true) => const Color(0xFFDCD7D0),
-
-          // Tutti gli altri riquadri seguono il tema, come chiesto.
-          (false, true) => tema.colorScheme.surfaceContainerHighest,
-        },
+        color: scuro ? tema.colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(Gap.radiusSm),
         border: Border.all(
           color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),

@@ -20,7 +20,7 @@ publish_to: 'none'
 #
 # ⚠️ Lo controlla `strumenti/costruisci-apk.ps1`: una versione ferma a `1.0.0`
 # o un `versionCode` che non torna **fermano la build**.
-version: 9.26.0+92600
+version: 9.27.0+92700
 
 environment:
   sdk: ^3.12.2

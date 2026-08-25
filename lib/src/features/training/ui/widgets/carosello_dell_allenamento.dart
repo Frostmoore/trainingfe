@@ -35,9 +35,11 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../data/calorie_allenamento.dart';
 import '../../data/catalogo_esercizi.dart';
+import '../../data/prescrizione.dart';
 import '../../data/storico_unificato.dart';
 import '../../data/tipo_scelto.dart';
 import '../../muscoli_allenati.dart';
+import '../../training_controller.dart';
 import 'carosello_del_mese.dart';
 import 'figura_del_corpo.dart';
 
@@ -156,10 +158,20 @@ class _NumeriDellAllenamento extends ConsumerWidget {
 
   /// Il volume sollevato: ripetizioni × peso, su tutte le serie del gruppo.
   ///
-  /// ⚠️ `null` quando non c'è niente da sommare — un allenamento del polso, o
-  /// una seduta tutta a corpo libero. `0 kg` sarebbe una risposta sbagliata a
-  /// una domanda che non si può fare.
-  double? get _volume {
+  /// ══ 🚨 E SE LE SERIE NON CI SONO, LO DICE LA SCHEDA — 3b-C.5 ════════════
+  ///
+  /// 📌 *«se gli ho assegnato una scheda, vuol dire che in quell'allenamento ho
+  /// usato la scheda. Quindi va usata quella, anche per i pesi»*.
+  ///
+  /// ⛔ Prima un allenamento del polso dava sempre `null`, anche con una scheda
+  /// attaccata: la card mostrava «—» dove c'erano quattro serie da dodici a
+  /// quaranta chili scritte nero su bianco.
+  ///
+  /// ⚠️ **Le serie registrate vincono sulla scheda**, e non è la stessa regola
+  /// dei muscoli: lì la scheda dice *quali* esercizi, qui i carichi **veri**
+  /// sono un dato migliore di quelli previsti. 💡 Chi ha registrato le serie ha
+  /// fatto la fatica di dire cosa ha davvero sollevato.
+  double? _volumeCon(WorkoutPlan? scheda) {
     var totale = 0.0;
 
     for (final s in voce.sedute) {
@@ -168,14 +180,31 @@ class _NumeriDellAllenamento extends ConsumerWidget {
       }
     }
 
+    if (totale > 0) return totale;
+
+    if (scheda == null) return null;
+
+    for (final riga in scheda.exercises) {
+      totale +=
+          Prescrizione.leggi(riga.prescription).volumeCon(riga.targetWeight) ??
+          0;
+    }
+
     return totale == 0 ? null : totale;
   }
 
-  int get _serie {
+  /// Quante serie: quelle registrate, o quelle **previste** dalla scheda.
+  int _serieCon(WorkoutPlan? scheda) {
     var totale = 0;
 
     for (final s in voce.sedute) {
       totale += s.sets.length;
+    }
+
+    if (totale > 0 || scheda == null) return totale;
+
+    for (final riga in scheda.exercises) {
+      totale += Prescrizione.leggi(riga.prescription).serie ?? 0;
     }
 
     return totale;
@@ -195,7 +224,32 @@ class _NumeriDellAllenamento extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
     final metri = voce.distanzaMetri;
-    final volume = _volume;
+
+    /*
+     * 💡 La scheda associata, quando c'è: è quello che permette di dire i chili
+     * e le serie di un allenamento che l'orologio ha visto e basta.
+     * ⚠️ `valueOrNull` e non `await`: mentre carica si mostra quello che si sa,
+     * e i numeri della scheda compaiono un istante dopo. Una card che aspetta
+     * per riempirsi lampeggia a ogni apertura.
+     */
+    final scheda = voce.schedaId == null
+        ? null
+        : ref.watch(planDetailProvider(voce.schedaId!)).valueOrNull;
+
+    final volume = _volumeCon(scheda);
+    final serie = _serieCon(scheda);
+
+    /*
+     * 🚨 **Anche gli esercizi si contano dalla scheda.** Sono il numero che dice
+     * quanto era lunga la seduta in termini di lavoro, e su un allenamento del
+     * polso con una scheda attaccata si sanno esattamente.
+     */
+    final esercizi = voce.sedute.isEmpty
+        ? (scheda?.exercises.length ?? 0)
+        : {
+            for (final s in voce.sedute)
+              for (final serie in s.sets) serie.exerciseName,
+          }.length;
 
     /*
      * ══ 🔥 LE CALORIE STIMATE DAL TIPO CHE HAI DICHIARATO — 3b-B.20.5 ══════
@@ -245,7 +299,8 @@ class _NumeriDellAllenamento extends ConsumerWidget {
       if (kcal != null && kcal > 0)
         ('$kcal', kcalStimate ? 'kcal stimate' : 'kcal'),
       if (volume != null) (_kg(volume), 'kg sollevati'),
-      if (_serie > 0) ('$_serie', _serie == 1 ? 'serie' : 'serie fatte'),
+      if (esercizi > 0) ('$esercizi', esercizi == 1 ? 'esercizio' : 'esercizi'),
+      if (serie > 0) ('$serie', serie == 1 ? 'serie' : 'serie'),
       if (metri != null && metri > 0) (_distanza(metri), 'percorsi'),
       if (metri != null && metri >= 1000 && minuti > 0)
         (_ritmo(metri, minuti), 'al chilometro'),

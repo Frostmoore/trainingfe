@@ -156,9 +156,27 @@ Map<GruppoMuscolare, double> intensitaDeiMuscoli({
      * allenamento a cui aveva attaccato una scheda di pesi ha corretto proprio
      * quello, e la correzione più recente vince.
      */
-    final sport = TipoScelto.per(v.tipoDichiarato);
-
-    final pesi = sport?.muscoli ?? pesiDelleSchede[v.schedaId];
+    /*
+     * ══ 🚨 LA SCHEDA VINCE SUL TIPO — corretto il 25/08 ═══════════════════
+     *
+     * 📌 *«se gli ho assegnato una scheda, vuol dire che in quell'allenamento
+     * ho usato la scheda. Quindi va usata quella, anche per i pesi e per i
+     * muscoli coinvolti»*.
+     *
+     * ⛔ **Qui l'ordine era rovesciato, ed era un errore mio.** Il tipo
+     * dichiarato scavalcava la scheda: chi aveva assegnato «Giorno 1» e poi
+     * detto «era una seduta di pesi» si vedeva colorare il generico «tutto il
+     * corpo» invece dei muscoli veri di quella scheda.
+     *
+     * 💡 **Una scheda è più specifica di un'etichetta.** «Pesi» dice che hai
+     * usato dei pesi; «Giorno 1» dice quali esercizi hai fatto, e da quelli i
+     * muscoli si sanno uno per uno. ⚠️ Il tipo resta come **ripiego**, per gli
+     * allenamenti a cui una scheda non si può attaccare — una corsa, una
+     * nuotata.
+     */
+    final pesi =
+        pesiDelleSchede[v.schedaId] ??
+        TipoScelto.per(v.tipoDichiarato)?.muscoli;
 
     if (pesi == null || pesi.isEmpty) continue;
 

@@ -77,11 +77,16 @@ const quanteSenzaAbbonamento = 3;
 /// fuori dai propri allenamenti. Per questo sono `bool?`, e `null` vale «questa
 /// condizione lasciala stare».
 ///
-/// ⏳ **Oggi `abbonato` arriva sempre `null`**, perché il server non lo manda:
-/// `/me` non espone niente sull'abbonamento, e l'unica cosa che ci somiglia è lo
-/// stato del *tenant*, che è la palestra e non la persona. 🚨 Finché non c'è,
-/// blocca solo `illimitata` — ed è dichiarato qui invece che nascosto in un
-/// `?? true` da qualche parte.
+/// ✅ **E `abbonato` adesso arriva davvero** — 3b-C.8, 25/08/2026. Fino a
+/// quel giorno il server non lo mandava e qui c'era scritto che era sempre
+/// `null`: `PianoAttivo::eAbbonato()` ora lo espone in `/auth/me`, e
+/// `AppUser.abbonato` lo legge. ⚠️ **`null` resta un caso vero** — il profilo
+/// non è ancora arrivato, o la rete non va — e continua a valere «lasciala
+/// stare».
+///
+/// 🚨 **`AppUser` ripiega su `false`, non su `null`**: quando il profilo c'è ma
+/// il campo manca, l'assenza è una risposta e vale «non abbonato». Il `null` di
+/// qui è l'altra cosa: **il profilo non c'è affatto**.
 Map<int, MotivoBlocco> schedeBloccate({
   required List<WorkoutPlan> schede,
   required bool? abbonato,

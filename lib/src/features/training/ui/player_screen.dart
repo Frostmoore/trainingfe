@@ -71,10 +71,9 @@ import '../data/serie_prevista.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
-import 'widgets/card_esercizio_scrittura.dart';
+import 'widgets/card_esercizio_allenamento.dart';
 import 'widgets/rest_bar.dart';
 import 'widgets/scelta_muscoli.dart';
-import 'widgets/spunta_della_serie.dart';
 
 /// Il recupero di ripiego, quando la scheda non lo dice da nessuna parte.
 ///
@@ -228,7 +227,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     setState(() {});
 
     _scrittura?.cancel();
-    _scrittura = Timer(attesaPrimaDiScrivere, () => unawaited(_scriviLaScheda()));
+    _scrittura = Timer(
+      attesaPrimaDiScrivere,
+      () => unawaited(_scriviLaScheda()),
+    );
   }
 
   /// Ridisegna e scrive **subito**: per i gesti, che sono pochi e definitivi.
@@ -363,7 +365,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           await requestNotificationPermission();
         }
 
-        await _riposo.avvia(_recuperoDi(esercizio, indice) ?? recuperoDiRipiego);
+        await _riposo.avvia(
+          _recuperoDi(esercizio, indice) ?? recuperoDiRipiego,
+        );
       }
     } on Object catch (error) {
       // 🚨 Si torna indietro sulla spunta. Lasciarla piena su una serie che non
@@ -655,16 +659,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                        * appena aggiunti — e una chiave che collide è peggio di
                        * nessuna chiave.
                        */
-                      CardEsercizioScrittura(
+                      CardEsercizioAllenamento(
                         key: ObjectKey(_esercizi[i]),
                         esercizio: _esercizi[i],
                         numero: i + 1,
                         posizione: i,
-                        etichetta: _etichetta(i),
-                        codaDellaRiga: (riga) => SpuntaDellaSerie(
-                          fatta: _esercizi[i].serieFatte[riga].fatta,
-                          onTocco: () => _ok(_esercizi[i], riga),
-                        ),
+                        onSpunta: (riga) => _ok(_esercizi[i], riga),
                         onCambio: _cambiato,
                         onRimuovi: () => _rimuoviEsercizio(i),
                       ),
@@ -716,22 +716,5 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ],
       ),
     );
-  }
-
-  /// «Esercizio 2 · 1 di 3» — 3b-E.2.
-  ///
-  /// 💡 A che punto si è di **questo** esercizio è l'unica cosa che serve
-  /// sapere guardando il telefono da un metro, appoggiato sulla panca. ⚠️ Il
-  /// conteggio compare solo quando qualcosa è stato fatto: su un esercizio
-  /// intatto un «0 di 3» sarebbe rumore.
-  String _etichetta(int i) {
-    final e = _esercizi[i];
-    final fatte = e.quanteFatte;
-
-    if (fatte == 0) return 'Esercizio ${i + 1}';
-
-    return e.tuttoFatto
-        ? 'Esercizio ${i + 1} · fatto'
-        : 'Esercizio ${i + 1} · $fatte di ${e.righe.length}';
   }
 }

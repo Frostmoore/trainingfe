@@ -51,13 +51,11 @@ class SerieInAllenamento extends SerieInScrittura {
   /// [SerieInScrittura.da]: le righe di una scheda che esiste le ha scritte
   /// **una persona**, e l'autocompilazione non deve riscriverle correggendo la
   /// prima.
-  factory SerieInAllenamento.da(SeriePrevista s) =>
-      SerieInAllenamento(
-          ripetizioni: s.ripetizioni?.toString(),
-          carico: _numero(s.peso) ?? s.isoSec?.toString(),
-          recupero: s.recuperoSec?.toString(),
-        )
-        ..toccataAMano = true;
+  factory SerieInAllenamento.da(SeriePrevista s) => SerieInAllenamento(
+    ripetizioni: s.ripetizioni?.toString(),
+    carico: _numero(s.peso) ?? s.isoSec?.toString(),
+    recupero: s.recuperoSec?.toString(),
+  )..toccataAMano = true;
 
   static String? _numero(double? v) => v == null ? null : numeroPulito(v);
 
@@ -138,8 +136,9 @@ class EsercizioInAllenamento extends EsercizioInScrittura {
   ///
   /// ⚠️ Il `cast` è sicuro perché [rigaNuova] è l'unico modo in cui una riga
   /// entra in questa lista dopo la costruzione — ed è per questo che esiste.
-  List<SerieInAllenamento> get serieFatte =>
-      [for (final r in righe) r as SerieInAllenamento];
+  List<SerieInAllenamento> get serieFatte => [
+    for (final r in righe) r as SerieInAllenamento,
+  ];
 
   /// Quante ne sono state spuntate.
   int get quanteFatte => serieFatte.where((r) => r.fatta).length;

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  🚨 Il suono del recupero non deve essere buttato via — 3b-E.11, 26/08/2026.
+
+  ⛔ IL DIFETTO: la build di release passa da `minifyReleaseWithR8`, che toglie
+  le risorse che nessuno referenzia. `fine_recupero.wav` lo chiede
+  `RawResourceAndroidNotificationSound('fine_recupero')`, cioe' **per nome a
+  runtime**: nel codice compilato non c'e' nessun `R.raw.fine_recupero`, quindi
+  per lo shrinker quel file non lo usa nessuno.
+
+  🚨 Il risultato era peggio di un suono sbagliato: la risorsa non si risolveva,
+  la notifica di fine recupero **non partiva affatto**, e il `catch` silenzioso
+  del timer si mangiava l'errore. Niente in log, niente a schermo — solo un
+  recupero che finiva in silenzio.
+
+  💡 Le prove lo dicevano chiaro, e stanno negli intermedi di Gradle:
+     linked_resources_proto_format  → 444 voci, il wav c'e'
+     shrunk_resources_proto_format  → 292 voci, il wav non c'e' piu'
+
+  ⚠️ Chi aggiunge un altro suono deve aggiungerlo QUI, o sparira' allo stesso
+  modo. Il controllo automatico e' `memory/scripts/controlla-il-suono.py`.
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/fine_recupero" />

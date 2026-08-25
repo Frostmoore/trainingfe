@@ -126,7 +126,10 @@ class SeriePrevista {
   /// che qualcuno ha già scritto è il modo più veloce di far perdere un numero
   /// appena messo.
   bool get intatta =>
-      ripetizioni == null && peso == null && isoSec == null && recuperoSec == null;
+      ripetizioni == null &&
+      peso == null &&
+      isoSec == null &&
+      recuperoSec == null;
 
   SeriePrevista copyWith({
     int? ripetizioni,
@@ -148,6 +151,137 @@ class SeriePrevista {
     if (isoSec != null) 'iso_sec': isoSec,
     if (recuperoSec != null) 'rest_sec': recuperoSec,
   };
+}
+
+/// Le ripetizioni di un esercizio, riassunte: `'12'`, `'8-12'`, `null`.
+///
+/// ⚠️ **Il riassunto perde le differenze fra le serie, e va detto.** Dodici,
+/// dieci e otto diventano `'12-8'`: chi legge il formato vecchio sa il campo e
+/// il verso, non i gradini. È il prezzo dichiarato della compatibilità.
+String? ripetizioniRiassunte(List<SeriePrevista> serie) {
+  final conRipetizioni = serie
+      .map((s) => s.ripetizioni)
+      .whereType<int>()
+      .toList();
+
+  return switch (conRipetizioni.length) {
+    0 => null,
+    1 => '${conRipetizioni.first}',
+    _ =>
+      conRipetizioni.first == conRipetizioni.last
+          ? '${conRipetizioni.first}'
+          : '${conRipetizioni.first}-${conRipetizioni.last}',
+  };
+}
+
+/// La prescrizione come la scrive il server: `'4 × 12'`.
+///
+/// ══ 🚨 PERCHE' SI RICOSTRUISCE — 3b-E.12, 26/08/2026 ══════════════════════
+///
+/// ⛔ `prescription` è un campo **del server**, e `esercizioInJson` non lo
+/// scriveva: bastava salvare una scheda una volta — dall'editor, o adesso da un
+/// allenamento — perché sparisse per sempre.
+///
+/// 🚨 **E se ne accorgeva solo il ponte con l'orologio.** Un allenamento letto
+/// dal polso con una scheda attaccata prende da lì i **chili sollevati** e il
+/// **numero di serie** (`carosello_dell_allenamento`): senza prescrizione,
+/// volume `null` e zero serie — una card che diventa muta senza dire perché.
+///
+/// 💡 Si ricostruisce **in lettura** invece di migrare: le righe nel formato
+/// senza prescrizione continuano a nascere (l'editor, il player), quindi una
+/// migrazione una-tantum sarebbe passata ieri. È la stessa regola di 3b-D.1.
+String prescrizioneDalleSerie(List<SeriePrevista> serie) {
+  final ripetizioni = ripetizioniRiassunte(serie);
+
+  // ⚠️ «4» da solo è legittimo: `Prescrizione.leggi` lo capisce come «quattro
+  // serie, ripetizioni non dichiarate», ed è quello che si sa.
+  return ripetizioni == null
+      ? '${serie.length}'
+      : '${serie.length} × $ripetizioni';
+}
+
+/// I chili che un esercizio vale, **riga per riga**.
+///
+/// ══ 💡 PIU' PRECISO DELLA PRESCRIZIONE, E ADESSO SI PUO' ══════════════════
+///
+/// ⛔ Prima il volume si stimava rileggendo la stringa `'4 × 12'` e
+/// moltiplicando per un peso solo: una piramide 12×40, 10×45, 8×50 diventava
+/// `4 × 12 × 40`, cioè **1920 kg invece di 1330**. Quasi il 45% in più.
+///
+/// 🚨 Non era una svista: `PlanExercise` **non aveva** le serie separate, e
+/// leggere la stringa era l'unico modo. Da 3b-D.1 le ha, e quel motivo non
+/// c'è più.
+///
+/// ⚠️ `null` e non zero quando non c'è niente da contare: zero sarebbe una
+/// bugia precisa. Stessa regola di `Prescrizione.volumeCon`.
+double? volumeDelleSerie(
+  List<SeriePrevista> serie, {
+  required CaricoDellEsercizio carico,
+  double? ripiego,
+}) {
+  // ⛔ A corpo libero e in isometria non ci sono chili da sommare.
+  if (carico != CaricoDellEsercizio.peso) return null;
+
+  var totale = 0.0;
+
+  for (final s in serie) {
+    final ripetizioni = s.ripetizioni;
+    final peso = s.peso ?? ripiego;
+
+    if (ripetizioni == null || peso == null || peso <= 0) continue;
+
+    totale += ripetizioni * peso;
+  }
+
+  return totale > 0 ? totale : null;
+}
+
+/// Una serie **come si legge**: «12 rip · 40 kg · rec. 60s».
+///
+/// ══ ⚠️ SOLO QUELLO CHE C'E' ═══════════════════════════════════════════════
+///
+/// ⛔ Un «— kg» su un esercizio a corpo libero o uno «0 rip» su una serie a
+/// cedimento sono spazio riempito con niente, e insegnano a non leggere la
+/// riga.
+///
+/// 💡 **Una serie senza ripetizioni dichiarate esiste**: è quella che si fa
+/// fino a non poterne più. Lasciare la riga vuota la farebbe sembrare un errore
+/// di compilazione, quindi si scrive «a cedimento».
+///
+/// ══ 🚨 PERCHE' STA QUI E NON DENTRO UN WIDGET — 3b-E.10 ═══════════════════
+///
+/// La usano **due** schermate: la pagina della scheda (`EsercizioDellaScheda`,
+/// 3b-D.18) e l'allenamento a card chiusa (`CardEsercizioAllenamento`).
+/// ⛔ Due copie di questa formattazione sarebbero due modi diversi di scrivere
+/// la stessa serie nella stessa app — e la prima a divergere sarebbe stata
+/// quella dell'allenamento, che si guarda di fretta.
+String descrizioneDellaSerie(SeriePrevista serie, CaricoDellEsercizio carico) {
+  final pezzi = <String>[];
+
+  final secondi = serie.isoSec;
+  final ripetizioni = serie.ripetizioni;
+
+  if (carico == CaricoDellEsercizio.iso && secondi != null) {
+    pezzi.add('$secondi s');
+  } else if (ripetizioni != null) {
+    pezzi.add('$ripetizioni rip');
+  } else {
+    pezzi.add('a cedimento');
+  }
+
+  final peso = serie.peso;
+
+  if (carico == CaricoDellEsercizio.peso && peso != null) {
+    pezzi.add('${numeroPulito(peso)} kg');
+  }
+
+  if (carico == CaricoDellEsercizio.niente) pezzi.add('corpo libero');
+
+  final recupero = serie.recuperoSec;
+
+  if (recupero != null) pezzi.add('rec. ${recupero}s');
+
+  return pezzi.join(' · ');
 }
 
 /// Le serie di un esercizio, **da qualunque formato arrivi**.
@@ -233,24 +367,7 @@ Map<String, dynamic> esercizioInJson({
   String? immagine,
   Map<String, dynamic> muscoli = const {},
 }) {
-  final conRipetizioni = serie
-      .map((s) => s.ripetizioni)
-      .whereType<int>()
-      .toList();
-
-  /*
-   * ⚠️ **Il riassunto perde le differenze fra le serie, e va detto.** Dodici,
-   * dieci e otto diventano `'12-8'`: chi legge il formato vecchio sa il campo
-   * e il verso, non i gradini. E' il prezzo dichiarato della compatibilita'.
-   */
-  final reps = switch (conRipetizioni.length) {
-    0 => null,
-    1 => '${conRipetizioni.first}',
-    _ =>
-      conRipetizioni.first == conRipetizioni.last
-          ? '${conRipetizioni.first}'
-          : '${conRipetizioni.first}-${conRipetizioni.last}',
-  };
+  final reps = ripetizioniRiassunte(serie);
 
   return {
     'name': nome,
@@ -262,12 +379,20 @@ Map<String, dynamic> esercizioInJson({
     if (immagine != null && immagine.isNotEmpty) 'immagine': immagine,
 
     // ── ⏪ Il riassunto, per chi legge il formato vecchio ────────────────
+    /*
+     * 🆕 3b-E.12 — **anche `prescription`**, che mancava.
+     *
+     * ⚠️ Chi legge oggi se la ricostruisce da solo (`prescrizioneDalleSerie`),
+     * quindi qui serve per l'altro motivo dichiarato in cima: **un backup
+     * ripristinato su una versione precedente dell'app**, che quella
+     * ricostruzione non ce l'ha e resterebbe senza volume e senza serie.
+     */
+    'prescription': prescrizioneDalleSerie(serie),
     'sets': serie.length,
     'reps': ?reps,
     if (serie.any((s) => s.recuperoSec != null))
       'rest_sec': serie.firstWhere((s) => s.recuperoSec != null).recuperoSec,
-    if (carico == CaricoDellEsercizio.peso &&
-        serie.any((s) => s.peso != null))
+    if (carico == CaricoDellEsercizio.peso && serie.any((s) => s.peso != null))
       'target_weight': serie.firstWhere((s) => s.peso != null).peso,
 
     ...muscoli,

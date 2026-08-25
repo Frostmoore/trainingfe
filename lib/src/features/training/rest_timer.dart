@@ -228,9 +228,25 @@ class RestTimer extends ChangeNotifier {
           ),
         ),
       );
-    } on Object catch (_) {
-      // ⚠️ Senza permesso non si mostra niente: resta la vibrazione, e qui si
-      // ripiega sul suono di sistema — vedi la nota in `_concludi`.
+    } on Object catch (errore) {
+      /*
+       * ⚠️ Senza permesso non si mostra niente: resta la vibrazione, e qui si
+       * ripiega sul suono di sistema — vedi la nota in `_concludi`.
+       *
+       * ══ 🚨 MA IL SILENZIO SI PAGA, E L'HO PAGATO — 3b-E.11 ═══════════════
+       *
+       * ⛔ Questo `catch` era **muto**, e per un giorno intero si e' mangiato un
+       * difetto vero: `fine_recupero.wav` non finiva nell'APK (lo shrinker lo
+       * toglieva, vedi `res/raw/keep.xml`), la risorsa non si risolveva, e la
+       * notifica non partiva. 🚨 A schermo: un recupero che finisce in silenzio,
+       * senza **niente** da nessuna parte da cui cominciare a cercare.
+       *
+       * 💡 Adesso almeno lo dice. ⚠️ `debugPrint` e non un errore mostrato: il
+       * recupero deve funzionare comunque, e un permesso negato e' un caso
+       * normale, non un guasto.
+       */
+      debugPrint('recupero: avviso non partito — $errore');
+
       await _ripiegoDiSistema();
     }
   }

@@ -95,9 +95,9 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     _nome.text = scheda.name;
     _note.text = scheda.notes ?? '';
 
-    final grezza = await ref.read(archivioSaluteProvider).laScheda(
-      widget.planId!,
-    );
+    final grezza = await ref
+        .read(archivioSaluteProvider)
+        .laScheda(widget.planId!);
 
     /*
      * ⚠️ **Si rilegge il JSON grezzo e non `PlanExercise`.** Il modello
@@ -182,9 +182,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           name: nome,
           notes: note,
           exercises: scritti(_giorni.first),
-          giorni: _piuGiorni
-              ? [for (final g in _giorni) scritti(g)]
-              : null,
+          giorni: _piuGiorni ? [for (final g in _giorni) scritti(g)] : null,
         );
       } else {
         await azioni.update(
@@ -192,9 +190,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           name: nome,
           notes: note,
           exercises: scritti(_giorni.first),
-          giorni: _piuGiorni
-              ? [for (final g in _giorni) scritti(g)]
-              : null,
+          giorni: _piuGiorni ? [for (final g in _giorni) scritti(g)] : null,
         );
       }
 
@@ -401,7 +397,8 @@ class MuscoliDellaScheda extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogo =
-        ref.watch(catalogoEserciziProvider).valueOrNull ?? CatalogoEsercizi.vuoto;
+        ref.watch(catalogoEserciziProvider).valueOrNull ??
+        CatalogoEsercizi.vuoto;
 
     final pesi = <GruppoMuscolare, double>{};
 

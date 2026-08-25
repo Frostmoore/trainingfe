@@ -26,10 +26,35 @@ class WorkoutPlan {
   });
 
   factory WorkoutPlan.fromJson(Map<String, dynamic> j) => WorkoutPlan(
-    id: (j['id'] as num).toInt(),
+    /*
+     * ══ 🚨 UN CAST DURO SU UN DATO LOCALE, IL GEMELLO DI D.17 — 3b-E.12 ═════
+     *
+     * ⛔ Qui c'era `(j['id'] as num).toInt()`. ⚠️ Oggi non esplode **per
+     * fortuna**: chi legge una scheda dal telefono ci infila sempre l'id della
+     * riga (`planDetailProvider`, `schedeUniteProvider`), quindi la chiave c'e'
+     * sempre. 🚨 Ma e' esattamente la bomba che il 25/08 ha reso illeggibile
+     * tutta la pagina Schede, sulla classe accanto — e bastava un chiamante in
+     * piu' per rifarla.
+     *
+     * 💡 **Zero e non un errore**: e' un id che nessuno ha dichiarato. Chi
+     * naviga usa quello della riga, non questo.
+     */
+    id: (j['id'] as num?)?.toInt() ?? 0,
     name: j['name']?.toString() ?? '',
     notes: j['notes']?.toString(),
-    exercisesCount: (j['exercises_count'] as num?)?.toInt() ?? 0,
+    /*
+     * ══ 🚨 `exercises_count` E' UN CAMPO DEL SERVER — 3b-E.12 ══════════════
+     *
+     * ⛔ Le schede scritte sul telefono non ce l'hanno, e la pagina Schede
+     * diceva **«0 esercizi»** su tutto quello che l'iscritto si era scritto da
+     * solo. ⚠️ Non dava nessun errore: dava uno zero, che sembra un conto.
+     *
+     * 💡 Si conta la lista, che è il dato vero. Il campo del server resta il
+     * ripiego per l'elenco, dove gli esercizi non scendono.
+     */
+    exercisesCount:
+        (j['exercises_count'] as num?)?.toInt() ??
+        ((j['exercises'] as List?)?.length ?? 0),
     exercises: (j['exercises'] as List? ?? const [])
         .map((e) => PlanExercise.fromJson((e as Map).cast<String, dynamic>()))
         .toList(),
@@ -98,8 +123,11 @@ class PlanExercise {
     this.carico = CaricoDellEsercizio.peso,
   });
 
-  factory PlanExercise.fromJson(Map<String, dynamic> j) => PlanExercise(
-    /*
+  factory PlanExercise.fromJson(Map<String, dynamic> j) {
+    final serie = serieDellEsercizio(j);
+
+    return PlanExercise(
+      /*
      * ══ 🚨 SENZA ID SI LEGGE LO STESSO — 3b-D.17, 25/08/2026 ═══════════════
      *
      * 📌 *«Se modifico una scheda, quando clicco salva mi dà errore … Adesso la
@@ -121,8 +149,8 @@ class PlanExercise {
      * esercizio dentro una scheda è **il suo posto**, e per le righe scese dal
      * server prima di B.17 l'id continua a leggersi.
      */
-    id: (j['id'] as num?)?.toInt() ?? 0,
-    /*
+      id: (j['id'] as num?)?.toInt() ?? 0,
+      /*
      * ══ 🚨 IL NOME STA IN CIMA, E `exercise.name` E' IL RIPIEGO — 3b-D.17 ══
      *
      * ⛔ Qui si leggeva **solo** `exercise.name`, cioe' il nome che manda il
@@ -137,16 +165,16 @@ class PlanExercise {
      * 💡 Stesso ordine di `EsercizioDellaScheda.fromJson`: prima quello che
      * scrive chi ha compilato, poi quello del catalogo.
      */
-    name:
-        j['name']?.toString() ??
-        (j['exercise'] as Map?)?['name']?.toString() ??
-        'Esercizio',
+      name:
+          j['name']?.toString() ??
+          (j['exercise'] as Map?)?['name']?.toString() ??
+          'Esercizio',
 
-    /// ⚠️ **`id` è la riga della scheda, `exerciseId` è l'esercizio.** Due
-    /// numeri diversi che si somigliano: usare il primo per cercare nel
-    /// catalogo trova l'esercizio sbagliato — e non dà nessun errore, perché un
-    /// id qualunque nel catalogo di solito esiste.
-    /*
+      /// ⚠️ **`id` è la riga della scheda, `exerciseId` è l'esercizio.** Due
+      /// numeri diversi che si somigliano: usare il primo per cercare nel
+      /// catalogo trova l'esercizio sbagliato — e non dà nessun errore, perché un
+      /// id qualunque nel catalogo di solito esiste.
+      /*
      * ⚠️ **E anche l'aggancio al catalogo sta in due posti.** L'editor scrive
      * `exercise_id` (3b-D.4.2), il server annida `exercise.id`.
      *
@@ -154,19 +182,29 @@ class PlanExercise {
      * e il MET dalla stima, cioe' due schermate che diventano mute senza dire
      * perche'.
      */
-    exerciseId:
-        (j['exercise_id'] as num?)?.toInt() ??
-        ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
-    // 🚨 Arriva già formattata dal backend («3 × 8-12»): comporla qui
-    // significherebbe avere due formati diversi fra app e pannello per la
-    // stessa scheda.
-    prescription: j['prescription']?.toString() ?? '',
-    imageUrl: (j['exercise'] as Map?)?['image_url']?.toString(),
-    restSec: (j['rest_sec'] as num?)?.toInt(),
-    targetWeight: (j['target_weight'] as num?)?.toDouble(),
-    notes: j['notes']?.toString(),
+      exerciseId:
+          (j['exercise_id'] as num?)?.toInt() ??
+          ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
+      /*
+     * ══ 🚨 DAL SERVER SE C'E', RICOSTRUITA SE NON C'E' — 3b-E.12 ═══════════
+     *
+     * 💡 Dal backend arriva **già formattata** («3 × 8-12»), e quella comanda:
+     * comporla qui quando c'è vorrebbe dire due formati diversi fra app e
+     * pannello per la stessa scheda.
+     *
+     * ⛔ Ma una scheda salvata dall'app quel campo non ce l'ha — e da 3b-E il
+     * player la risalva **a ogni allenamento**. 🚨 Senza questa ricostruzione, il
+     * ponte con l'orologio perde i chili sollevati e il numero di serie di ogni
+     * scheda toccata anche una volta sola.
+     */
+      prescription:
+          j['prescription']?.toString() ?? prescrizioneDalleSerie(serie),
+      imageUrl: (j['exercise'] as Map?)?['image_url']?.toString(),
+      restSec: (j['rest_sec'] as num?)?.toInt(),
+      targetWeight: (j['target_weight'] as num?)?.toDouble(),
+      notes: j['notes']?.toString(),
 
-    /*
+      /*
      * ══ 🆕 LE SERIE, RIGA PER RIGA — 3b-D.1 ════════════════════════════════
      *
      * 🚨 **Qui passa TUTTO**: le schede scritte con l'editor nuovo, quelle
@@ -178,9 +216,9 @@ class PlanExercise {
      * sapere che sono esistiti due formati**: il player, la card dei numeri e
      * l'editor leggono tutti delle righe.
      */
-    serie: serieDellEsercizio(j),
+      serie: serie,
 
-    /*
+      /*
      * 🆕 3b-D.18 — la foto che ci ha messo chi ha scritto la scheda, e con che
      * cosa si carica l'esercizio.
      *
@@ -189,9 +227,10 @@ class PlanExercise {
      * esercizio a corpo libero. 🚨 Un campo scritto e mai riletto e' peggio di
      * un campo che non c'e': occupa spazio e fa credere che la funzione ci sia.
      */
-    immagine: j['immagine']?.toString(),
-    carico: CaricoDellEsercizio.da(j['carico']?.toString()),
-  );
+      immagine: j['immagine']?.toString(),
+      carico: CaricoDellEsercizio.da(j['carico']?.toString()),
+    );
+  }
 
   final int id;
   final String name;
@@ -228,6 +267,16 @@ class PlanExercise {
 
   /// Peso, niente, o isometria — 3b-D.1.
   final CaricoDellEsercizio carico;
+
+  /// I chili che questo esercizio vale, **riga per riga** — 3b-E.12.
+  ///
+  /// 💡 Vedi `volumeDelleSerie`: più preciso della prescrizione riletta, che su
+  /// una piramide sbagliava di quasi il 45%.
+  ///
+  /// ⚠️ `targetWeight` resta il ripiego per le righe che il peso non ce
+  /// l'hanno — succede sulle schede vecchie in cui stava solo nel riassunto.
+  double? get volume =>
+      volumeDelleSerie(serie, carico: carico, ripiego: targetWeight);
 }
 
 /// Le schede dell'iscritto, **dal telefono** — 3b-B.17, 24/08/2026.

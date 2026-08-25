@@ -35,7 +35,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../data/calorie_allenamento.dart';
 import '../../data/catalogo_esercizi.dart';
-import '../../data/prescrizione.dart';
 import '../../data/storico_unificato.dart';
 import '../../data/tipo_scelto.dart';
 import '../../muscoli_allenati.dart';
@@ -191,10 +190,19 @@ class _NumeriDellAllenamento extends ConsumerWidget {
 
     if (scheda == null) return null;
 
+    /*
+     * ══ 💡 LE RIGHE VERE, NON LA STRINGA — 3b-E.12 ══════════════════════════
+     *
+     * ⛔ Qui si rileggeva `'4 × 12'` e si moltiplicava per **un** peso: una
+     * piramide 12×40, 10×45, 8×50 diventava `4 × 12 × 40` = 1920 kg invece di
+     * 1330. Quasi il 45% in più, su un numero che si mostra come se fosse
+     * misurato.
+     *
+     * 🚨 Non era una svista: `PlanExercise` non aveva le serie separate e
+     * leggere la stringa era l'unico modo. Da 3b-D.1 le ha.
+     */
     for (final riga in scheda.exercises) {
-      totale +=
-          Prescrizione.leggi(riga.prescription).volumeCon(riga.targetWeight) ??
-          0;
+      totale += riga.volume ?? 0;
     }
 
     return totale == 0 ? null : totale;
@@ -210,8 +218,9 @@ class _NumeriDellAllenamento extends ConsumerWidget {
 
     if (totale > 0 || scheda == null) return totale;
 
+    // 💡 Le righe **sono** le serie previste: non c'è niente da rileggere.
     for (final riga in scheda.exercises) {
-      totale += Prescrizione.leggi(riga.prescription).serie ?? 0;
+      totale += riga.serie.length;
     }
 
     return totale;

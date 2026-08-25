@@ -120,7 +120,9 @@ StimaDellaScheda stimaDellaScheda({
       }
     }
 
-    met.add(catalogo.perId(riga.exerciseId)?.met ?? catalogo.perNome(riga.name)?.met);
+    met.add(
+      catalogo.perId(riga.exerciseId)?.met ?? catalogo.perNome(riga.name)?.met,
+    );
   }
 
   final durata = Duration(seconds: secondi.round());

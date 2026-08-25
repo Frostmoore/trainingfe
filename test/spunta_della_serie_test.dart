@@ -121,17 +121,27 @@ void main() {
   /// 🚨 È la differenza che si vede a schermo: prima l'esercizio aveva **un**
   /// peso e **un** recupero per tutte le serie, e una piramide non si poteva
   /// raccontare.
-  testWidgets('i campi arrivano già scritti, riga per riga', (tester) async {
+  ///
+  /// ⚠️ **A card chiusa ripetizioni e peso sono campi, il recupero e' testo**
+  /// (3b-E.10): il committente ha guardato la schermata e ha spostato il
+  /// confine due volte — prima via tutti i campi, poi *«ripetizioni e peso
+  /// devono poter essere modificate anche senza la matita»*.
+  testWidgets('ogni serie arriva scritta, riga per riga', (tester) async {
     await tester.pumpWidget(attorno());
     await tester.pumpAndSettle();
 
-    for (final valore in ['12', '40', '60', '10', '45', '90', '8', '50']) {
+    for (final numero in ['12', '40', '10', '45', '8', '50']) {
       expect(
-        find.text(valore),
-        findsWidgets,
-        reason: '$valore doveva essere già scritto in una riga',
+        find.widgetWithText(TextField, numero),
+        findsOneWidget,
+        reason: '$numero doveva essere scritto in un campo',
       );
     }
+
+    // ⏱️ Il recupero si legge e non si tocca.
+    expect(find.text('60s'), findsOneWidget);
+    expect(find.text('90s'), findsOneWidget);
+    expect(find.text('120s'), findsOneWidget);
   });
 
   /// ⚠️ **Si registra quello che c'è nella riga**, non quello che c'era nella
@@ -171,6 +181,10 @@ void main() {
     await tester.pumpWidget(attorno());
     await tester.pumpAndSettle();
 
+    // 🆕 3b-E.10: i campi vivono dentro la card aperta.
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+
     await tester.enterText(find.widgetWithText(TextField, '45'), '42.5');
     await tester.pumpAndSettle();
 
@@ -185,6 +199,10 @@ void main() {
   /// scheda»*.
   testWidgets('e il numero nuovo resta scritto nella scheda', (tester) async {
     await tester.pumpWidget(attorno());
+    await tester.pumpAndSettle();
+
+    // 🆕 3b-E.10: i campi vivono dentro la card aperta.
+    await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.widgetWithText(TextField, '45'), '42.5');
@@ -229,6 +247,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+
     // La prima riga se ne va: la terza diventa la seconda.
     await tester.drag(
       find.widgetWithText(TextField, '12').first,
@@ -267,7 +288,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esercizio 1 · 1 di 3'), findsOneWidget);
+    expect(find.text('1 di 3'), findsOneWidget);
   });
 }
 

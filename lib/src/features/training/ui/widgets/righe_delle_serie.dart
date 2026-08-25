@@ -127,15 +127,12 @@ class RigheDelleSerie extends StatelessWidget {
                * 💡 Adesso battere un tasto in una riga la dichiara **di chi
                * scrive**, e da li' in poi non si tocca piu'.
                */
-              onCambioRiga: i == 0
-                  ? () {
-                      esercizio.autocompila();
-                      onCambio();
-                    }
-                  : () {
-                      esercizio.righe[i].toccataAMano = true;
-                      onCambio();
-                    },
+              // 💡 La regola sta in `ConLeSerie.toccata`, in un posto solo:
+              // la usa anche la card chiusa dell'allenamento (3b-E.10).
+              onCambioRiga: () {
+                esercizio.toccata(i);
+                onCambio();
+              },
             ),
           ),
 
@@ -260,7 +257,7 @@ class _RigaSerie extends StatelessWidget {
           ),
 
           Expanded(
-            child: _Campo(
+            child: CampoDellaSerie(
               controller: riga.ripetizioni,
               etichetta: 'Rip.',
               onCambio: onCambioRiga,
@@ -277,7 +274,7 @@ class _RigaSerie extends StatelessWidget {
           if (carico != CaricoDellEsercizio.niente) ...[
             const SizedBox(width: Gap.xs),
             Expanded(
-              child: _Campo(
+              child: CampoDellaSerie(
                 controller: riga.carico,
                 etichetta: carico == CaricoDellEsercizio.iso ? 'Sec.' : 'Kg',
                 onCambio: onCambioRiga,
@@ -287,7 +284,7 @@ class _RigaSerie extends StatelessWidget {
 
           const SizedBox(width: Gap.xs),
           Expanded(
-            child: _Campo(
+            child: CampoDellaSerie(
               controller: riga.recupero,
               etichetta: 'Rec. s',
               onCambio: onCambioRiga,
@@ -316,15 +313,19 @@ class _RigaSerie extends StatelessWidget {
   }
 }
 
-/// Un campo numerico stretto.
-///
 /// 📌 *«I campi possono avere anche meno padding interno»* — ed e' quello che
 /// permette a tre campi e a un pulsante di stare su una riga sola di telefono.
-class _Campo extends StatelessWidget {
-  const _Campo({
+/// Un campo numerico stretto — **pubblico da 3b-E.10**.
+///
+/// 💡 Lo usa anche la card chiusa dell'allenamento, dove ripetizioni e peso si
+/// correggono senza aprire l'editor. ⚠️ Stesso widget e non una copia: e' quello
+/// gia' provato a **328 px**, la larghezza utile dello Xiaomi del committente.
+class CampoDellaSerie extends StatelessWidget {
+  const CampoDellaSerie({
     required this.controller,
     required this.etichetta,
     required this.onCambio,
+    super.key,
   });
 
   final TextEditingController controller;

@@ -23,15 +23,17 @@ library;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/media/archivio_foto.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/foto_locale.dart';
 import '../../../../core/ui/miniatura.dart';
+import '../../data/catalogo_esercizi.dart';
 import '../../data/serie_prevista.dart';
 import '../../training_controller.dart';
 
-class EsercizioDellaScheda extends StatelessWidget {
+class EsercizioDellaScheda extends ConsumerWidget {
   const EsercizioDellaScheda({required this.esercizio, super.key});
 
   static const _lato = 64.0;
@@ -39,8 +41,25 @@ class EsercizioDellaScheda extends StatelessWidget {
   final PlanExercise esercizio;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
+
+    /*
+     * ══ 💡 L'ILLUSTRAZIONE SI CHIEDE AL CATALOGO — 3b-E.12 ═══════════════════
+     *
+     * ⛔ Si leggeva da `esercizio.imageUrl`, cioe' da `exercise.image_url`: un
+     * campo che manda **il server** e che `esercizioInJson` non riscrive. 🚨 Alla
+     * prima scheda salvata dall'app — e da 3b-E succede a ogni allenamento —
+     * l'illustrazione spariva, senza nessun errore.
+     *
+     * 💡 L'id dell'esercizio ce l'abbiamo: si ricava. ⚠️ Copiarsi l'URL dentro la
+     * scheda sarebbe una seconda copia che invecchia, e che resterebbe attaccata
+     * a un esercizio anche dopo averlo rinominato.
+     */
+    final dalCatalogo = ref
+        .watch(catalogoEserciziProvider)
+        .valueOrNull
+        ?.perId(esercizio.exerciseId);
 
     return Card(
       margin: const EdgeInsets.only(bottom: Gap.sm),
@@ -49,7 +68,11 @@ class EsercizioDellaScheda extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Foto(esercizio: esercizio),
+            FotoDellEsercizio(
+              immagine: esercizio.immagine,
+              url: esercizio.imageUrl ?? dalCatalogo?.immagine,
+              etichetta: esercizio.name,
+            ),
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Column(
@@ -101,21 +124,35 @@ class EsercizioDellaScheda extends StatelessWidget {
 ///
 /// 💡 **Quella propria vince**: la foto della macchina di *quella* palestra,
 /// con il sedile all'altezza giusta, dice più di un'illustrazione generica.
-class _Foto extends StatelessWidget {
-  const _Foto({required this.esercizio});
+///
+/// ⚠️ **Pubblica e senza `PlanExercise` da 3b-E.10**: la usano la pagina della
+/// scheda e la card dell'allenamento a riposo. 🚨 Legandola a un modello, la
+/// seconda schermata avrebbe dovuto costruirsene uno finto — o farsi la sua
+/// copia della regola «la propria vince».
+class FotoDellEsercizio extends StatelessWidget {
+  const FotoDellEsercizio({
+    required this.immagine,
+    required this.url,
+    required this.etichetta,
+    this.lato = EsercizioDellaScheda._lato,
+    super.key,
+  });
 
-  final PlanExercise esercizio;
+  /// Il percorso **relativo** della foto propria (`foto/esercizi/…`).
+  final String? immagine;
+
+  /// L'illustrazione del catalogo, quando c'è.
+  final String? url;
+
+  final String etichetta;
+  final double lato;
 
   @override
   Widget build(BuildContext context) {
-    final relativo = esercizio.immagine;
+    final relativo = immagine;
 
     if (relativo == null || relativo.isEmpty) {
-      return Miniatura(
-        url: esercizio.imageUrl,
-        etichetta: esercizio.name,
-        lato: EsercizioDellaScheda._lato,
-      );
+      return Miniatura(url: url, etichetta: etichetta, lato: lato);
     }
 
     return ClipRRect(
@@ -131,18 +168,10 @@ class _Foto extends StatelessWidget {
            * indicatore che lampeggia a ogni ricostruzione sembra un difetto.
            */
           if (file == null) {
-            return Miniatura(
-              url: esercizio.imageUrl,
-              etichetta: esercizio.name,
-              lato: EsercizioDellaScheda._lato,
-            );
+            return Miniatura(url: url, etichetta: etichetta, lato: lato);
           }
 
-          return FotoLocale(
-            file: file,
-            width: EsercizioDellaScheda._lato,
-            height: EsercizioDellaScheda._lato,
-          );
+          return FotoLocale(file: file, width: lato, height: lato);
         },
       ),
     );
@@ -179,47 +208,12 @@ class _RigaLetta extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              _testo(),
+              descrizioneDellaSerie(serie, carico),
               style: tema.textTheme.bodyMedium,
             ),
           ),
         ],
       ),
     );
-  }
-
-  /// ⚠️ **Solo quello che c'è.** Un «— kg» su un esercizio a corpo libero o un
-  /// «0 rip» su una serie a cedimento sono spazio riempito con niente, e
-  /// insegnano a non leggere la riga.
-  String _testo() {
-    final pezzi = <String>[];
-
-    final secondi = serie.isoSec;
-    final ripetizioni = serie.ripetizioni;
-
-    if (carico == CaricoDellEsercizio.iso && secondi != null) {
-      pezzi.add('$secondi s');
-    } else if (ripetizioni != null) {
-      pezzi.add('$ripetizioni rip');
-    } else {
-      // 💡 Una serie senza ripetizioni dichiarate **esiste**: e' quella che si
-      // fa fino a non poterne piu'. Lasciare la riga vuota la farebbe sembrare
-      // un errore di compilazione.
-      pezzi.add('a cedimento');
-    }
-
-    final peso = serie.peso;
-
-    if (carico == CaricoDellEsercizio.peso && peso != null) {
-      pezzi.add('${numeroPulito(peso)} kg');
-    }
-
-    if (carico == CaricoDellEsercizio.niente) pezzi.add('corpo libero');
-
-    final recupero = serie.recuperoSec;
-
-    if (recupero != null) pezzi.add('rec. ${recupero}s');
-
-    return pezzi.join(' · ');
   }
 }

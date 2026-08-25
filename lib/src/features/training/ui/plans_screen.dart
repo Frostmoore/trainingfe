@@ -625,7 +625,8 @@ class _SchedaInNumeri extends ConsumerWidget {
     final tema = Theme.of(context);
 
     final catalogo =
-        ref.watch(catalogoEserciziProvider).valueOrNull ?? CatalogoEsercizi.vuoto;
+        ref.watch(catalogoEserciziProvider).valueOrNull ??
+        CatalogoEsercizi.vuoto;
 
     final stima = stimaDellaScheda(
       scheda: scheda,

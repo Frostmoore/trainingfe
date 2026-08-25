@@ -484,7 +484,6 @@ class _Esercizio extends StatelessWidget {
              */
             RigheDelleSerie(esercizio: esercizio, onCambio: onCambio),
 
-
             // 💡 Le note dell'esercizio: «fermo un secondo al petto» riguarda la
             // panca, non l'allenamento intero.
             TextFormField(

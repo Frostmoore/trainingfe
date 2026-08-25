@@ -45,6 +45,7 @@ class CardEsercizioScrittura extends ConsumerWidget {
     this.posizione,
     this.etichetta,
     this.codaDellaRiga,
+    this.azioni = const [],
     super.key,
   });
 
@@ -60,6 +61,13 @@ class CardEsercizioScrittura extends ConsumerWidget {
 
   /// La coda delle righe delle serie — vedi `RigheDelleSerie.coda`.
   final Widget Function(int indice)? codaDellaRiga;
+
+  /// Altri comandi in cima alla card, **prima** del cestino — 3b-E.10.
+  ///
+  /// 💡 Serve all'allenamento, che ci mette il «fatto» per richiudere la card.
+  /// ⚠️ Prima del cestino di proposito: il gesto distruttivo resta all'estremo,
+  /// dove si arriva apposta e non di sfuggita.
+  final List<Widget> azioni;
 
   /// L'indice nella lista, per la maniglia di trascinamento — 3b-D.12.
   ///
@@ -89,6 +97,7 @@ class CardEsercizioScrittura extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
+                ...azioni,
                 IconButton(
                   onPressed: onRimuovi,
                   icon: const Icon(Icons.delete_outline_rounded),
@@ -124,10 +133,7 @@ class CardEsercizioScrittura extends ConsumerWidget {
              * gia' tutto il catalogo in memoria, con la sua cache. 💡 Meglio che
              * per gli alimenti, che invece ci vanno.
              */
-            _NomeConElenco(
-              esercizio: esercizio,
-              onCambio: onCambio,
-            ),
+            _NomeConElenco(esercizio: esercizio, onCambio: onCambio),
 
             const SizedBox(height: Gap.sm),
 
@@ -155,10 +161,7 @@ class CardEsercizioScrittura extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ImmagineDellEsercizio(
-                  esercizio: esercizio,
-                  onCambio: onCambio,
-                ),
+                ImmagineDellEsercizio(esercizio: esercizio, onCambio: onCambio),
                 const SizedBox(width: Gap.md),
                 Expanded(
                   child: TextField(
@@ -285,7 +288,10 @@ class _NomeConElenco extends ConsumerWidget {
 }
 
 class _MuscoliDellEsercizio extends StatelessWidget {
-  const _MuscoliDellEsercizio({required this.esercizio, required this.onCambio});
+  const _MuscoliDellEsercizio({
+    required this.esercizio,
+    required this.onCambio,
+  });
 
   final EsercizioInScrittura esercizio;
   final VoidCallback onCambio;
@@ -306,8 +312,7 @@ class _MuscoliDellEsercizio extends StatelessWidget {
           context,
           nomeEsercizio: esercizio.nome.text.trim(),
           iniziali:
-              muscoli ??
-              const (primario: null, secondari: <GruppoMuscolare>[]),
+              muscoli ?? const (primario: null, secondari: <GruppoMuscolare>[]),
         );
 
         if (scelti == null) return;

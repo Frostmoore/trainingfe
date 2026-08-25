@@ -136,8 +136,11 @@ void main() {
     expect(find.text('Curl Invertito (Manubrio)'), findsOneWidget);
     expect(find.text('Bicipiti Martello (Manubrio)'), findsOneWidget);
 
-    // Il «rimuovi» del secondo esercizio.
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).at(1));
+    // 🆕 3b-E.10: il cestino sta dentro la card aperta.
+    await tester.tap(find.byIcon(Icons.edit_outlined).at(1));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
 
     expect(
@@ -167,7 +170,10 @@ void main() {
     await tester.pumpWidget(attorno());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Curl Invertito (Manubrio)'), findsOneWidget);
@@ -187,7 +193,10 @@ void main() {
 
     expect(await nomiSulTelefono(), hasLength(3));
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).at(1));
+    await tester.tap(find.byIcon(Icons.edit_outlined).at(1));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
 
     expect(await nomiSulTelefono(), [
@@ -203,7 +212,10 @@ void main() {
     await tester.pumpWidget(attorno());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).at(1));
+    await tester.tap(find.byIcon(Icons.edit_outlined).at(1));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Annulla'), findsOneWidget);
@@ -225,7 +237,10 @@ void main() {
     await tester.pumpWidget(attorno());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
 
     final r = await archivio.laScheda(schedaId);

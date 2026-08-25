@@ -58,6 +58,30 @@ mixin ConLeSerie {
   /// nel caso che si prova meno.
   SerieInScrittura rigaNuova() => SerieInScrittura();
 
+  /// Qualcuno ha battuto un tasto **nella riga numero [indice]** — 3b-E.10.
+  ///
+  /// ══ 🚨 PERCHE' STA QUI E NON NEL WIDGET ═══════════════════════════════════
+  ///
+  /// La regola e' sottile e vale **due righe di codice**: la prima riga
+  /// propaga verso il basso, tutte le altre si dichiarano «di chi scrive» e da
+  /// li' in poi non si toccano piu'.
+  ///
+  /// ⛔ Viveva dentro `RigheDelleSerie`, e andava bene finche' le righe si
+  /// compilavano in un posto solo. 💡 Da quando si compilano anche **dalla card
+  /// chiusa dell'allenamento** i posti sono due, e due copie di una regola
+  /// sottile divergono alla prima correzione — con il risultato che
+  /// l'autocompilazione funziona in una schermata e non nell'altra, senza
+  /// nessun errore.
+  void toccata(int indice) {
+    if (indice == 0) {
+      autocompila();
+
+      return;
+    }
+
+    if (indice > 0 && indice < righe.length) righe[indice].toccataAMano = true;
+  }
+
   /// Riempie le righe **che nessuno ha ancora toccato** copiando la prima.
   ///
   /// 📌 *«Quando compilo la prima si devono autocompilare anche le altre sotto
@@ -105,13 +129,11 @@ class SerieInScrittura {
   /// ⛔ Correggendo la prima, l'autocompilazione le sovrascriverebbe tutte — e
   /// chi voleva cambiare il peso della prima serie si ritroverebbe le altre
   /// due riscritte senza aver toccato niente.
-  factory SerieInScrittura.da(SeriePrevista s) =>
-      SerieInScrittura(
-          ripetizioni: s.ripetizioni?.toString(),
-          carico: _numero(s.peso) ?? s.isoSec?.toString(),
-          recupero: s.recuperoSec?.toString(),
-        )
-        ..toccataAMano = true;
+  factory SerieInScrittura.da(SeriePrevista s) => SerieInScrittura(
+    ripetizioni: s.ripetizioni?.toString(),
+    carico: _numero(s.peso) ?? s.isoSec?.toString(),
+    recupero: s.recuperoSec?.toString(),
+  )..toccataAMano = true;
 
   /// ⚠️ **`40` e non `40.0`**: il campo lo legge una persona, e un peso intero
   /// scritto con lo zero dietro sembra una precisione che non c'è.

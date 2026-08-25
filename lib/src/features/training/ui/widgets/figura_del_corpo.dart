@@ -357,6 +357,14 @@ const _zone = <GruppoMuscolare, _Zona>{
   ]),
 };
 
+/// Quanto sfumano i bordi delle zone, in frazione della larghezza — 3b-D.14.
+///
+/// ⚠️ **Relativo e non in pixel**: la stessa sfocatura su un telefono stretto e
+/// su un tablet. 💡 Il valore è basso apposta — *«falli **un po'** sfocati»*:
+/// deve togliere la riga dritta, non trasformare la figura in una nuvola su cui
+/// non si distingue più quale gruppo è di che colore.
+const double _sfocatura = 0.022;
+
 class _PittoreDelCorpo extends CustomPainter {
   const _PittoreDelCorpo({
     required this.sagoma,
@@ -454,17 +462,58 @@ class _PittoreDelCorpo extends CustomPainter {
 
       if (tinta == null) continue;
 
+      /*
+       * ══ 🌫️ I BORDI SFOCATI — 3b-D.14, 25/08/2026 ═════════════════════════
+       *
+       * 📌 *«le connessioni tra i gruppi muscolari, nella colorazione, sono
+       * troppo nette. Sono praticamente rettangoli, non va bene, falli un po'
+       * sfocati se proprio non puoi seguire la linea dei muscoli veri e
+       * propri»*.
+       *
+       * ⛔ **Seguire i muscoli veri non si puo', oggi.** Le zone sono
+       * rettangoli in coordinate relative, e per seguire l'anatomia
+       * servirebbe una **maschera per gruppo** — tredici ritagli per vista e
+       * per sesso, cioe' 52 immagini da preparare dai sorgenti. E' un lavoro a
+       * se', ⏳ dichiarato come debito.
+       *
+       * 💡 La sfocatura e' la risposta onesta al problema vero: quello che
+       * infastidisce non e' che la zona sia approssimata — **e' che il confine
+       * sia una riga dritta**. Un bordo morbido dice «di qua piu' o meno» senza
+       * fingere una precisione che non c'e'.
+       *
+       * 🚨 **Una FORMA SOLA per gruppo, non un rettangolo per volta.** I
+       * quadricipiti sono due rettangoli attaccati (0,32-0,50 e 0,50-0,68):
+       * sfocandoli separatamente il bordo di ognuno sfuma verso l'altro e in
+       * mezzo alla coscia comparirebbe una **cucitura chiara** — un difetto
+       * peggiore di quello che si sta togliendo. In un `Path` solo il confine
+       * interno non esiste.
+       *
+       * ⚠️ Il raggio e' **relativo alla figura** e non in pixel: la stessa
+       * sfocatura su un telefono stretto e su un tablet, invece di una macchia
+       * a caso su uno dei due.
+       */
+      final sagomaDelGruppo = Path();
+
       for (final forma in e.value.forme) {
-        canvas.drawRect(
+        sagomaDelGruppo.addRect(
           Rect.fromLTRB(
             dove.left + forma.left * dove.width,
             dove.top + forma.top * dove.height,
             dove.left + forma.right * dove.width,
             dove.top + forma.bottom * dove.height,
           ),
-          Paint()..color = tinta,
         );
       }
+
+      canvas.drawPath(
+        sagomaDelGruppo,
+        Paint()
+          ..color = tinta
+          ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal,
+            dove.width * _sfocatura,
+          ),
+      );
     }
 
     canvas.drawImageRect(

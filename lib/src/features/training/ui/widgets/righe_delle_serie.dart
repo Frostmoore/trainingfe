@@ -20,11 +20,33 @@ class RigheDelleSerie extends StatelessWidget {
   const RigheDelleSerie({
     required this.esercizio,
     required this.onCambio,
+    this.coda,
     super.key,
   });
 
   final ConLeSerie esercizio;
   final VoidCallback onCambio;
+
+  /// Cosa sta in fondo alla riga — 3b-E.2.
+  ///
+  /// ══ 🚨 UN POSTO SOLO, DUE MESTIERI ═══════════════════════════════════════
+  ///
+  /// 📌 *«queste modifiche devono riguardare anche l'editor del trainer e quello
+  /// del server … a che cazzo serve fare delle modifiche se poi non sono
+  /// ovunque»*.
+  ///
+  /// 💡 Nell'editor in fondo alla riga c'e' la **x**; nell'allenamento c'e' la
+  /// **spunta** che dice «questa serie l'ho fatta». Tutto il resto — i tre
+  /// campi, l'autocompilazione, lo slide per togliere, il carico che fa sparire
+  /// la colonna — e' identico, e deve **restare** identico.
+  ///
+  /// ⛔ Due widget gemelli sarebbero divergiti alla prima correzione, e il primo
+  /// a divergere sarebbe stato quello dell'allenamento: e' quello che si prova
+  /// con le mani sudate e non in un test.
+  ///
+  /// ⚠️ `null` = si usa la x di casa. La larghezza della coda **non cambia**
+  /// (40 px): a 328 px di schermo lo spazio non c'e' piu' di ieri.
+  final Widget Function(int indice)? coda;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +112,7 @@ class RigheDelleSerie extends StatelessWidget {
               numero: i + 1,
               riga: esercizio.righe[i],
               carico: esercizio.carico,
+              coda: coda?.call(i),
               // ⛔ L'ultima riga non si toglie: un esercizio con zero serie
               // non e' un esercizio.
               onTogli: esercizio.righe.length > 1 ? () => _togli(i) : null,
@@ -120,7 +143,7 @@ class RigheDelleSerie extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: () {
-              esercizio.righe.add(SerieInScrittura());
+              esercizio.righe.add(esercizio.rigaNuova());
               esercizio.autocompila();
               onCambio();
             },
@@ -135,7 +158,7 @@ class RigheDelleSerie extends StatelessWidget {
   void _togli(int i) {
     esercizio.righe.removeAt(i).dispose();
 
-    if (esercizio.righe.isEmpty) esercizio.righe.add(SerieInScrittura());
+    if (esercizio.righe.isEmpty) esercizio.righe.add(esercizio.rigaNuova());
 
     onCambio();
   }
@@ -202,6 +225,7 @@ class _RigaSerie extends StatelessWidget {
     required this.carico,
     required this.onTogli,
     required this.onCambioRiga,
+    required this.coda,
   });
 
   final int numero;
@@ -209,6 +233,7 @@ class _RigaSerie extends StatelessWidget {
   final CaricoDellEsercizio carico;
   final VoidCallback? onTogli;
   final VoidCallback onCambioRiga;
+  final Widget? coda;
 
   @override
   Widget build(BuildContext context) {
@@ -270,15 +295,20 @@ class _RigaSerie extends StatelessWidget {
           ),
 
           SizedBox(
-            width: 36,
-            child: onTogli == null
-                ? null
-                : IconButton(
-                    onPressed: onTogli,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                    tooltip: 'Togli questa serie',
-                  ),
+            // ⚠️ 40 e non 36: e' la larghezza della spunta dell'allenamento, e
+            // le due code devono occupare lo stesso posto o le righe delle due
+            // schermate non si sovrappongono piu'.
+            width: 40,
+            child:
+                coda ??
+                (onTogli == null
+                    ? null
+                    : IconButton(
+                        onPressed: onTogli,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        tooltip: 'Togli questa serie',
+                      )),
           ),
         ],
       ),

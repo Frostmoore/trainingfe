@@ -1,3 +1,56 @@
+/// Il player di allenamento — C9, rifatto in 3b-E (25/08/2026).
+///
+/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+///
+/// *«La pagina dell'allenamento deve mostrare gli esercizi come quella
+/// dell'editor delle schede, con una matita per modificare nome e muscoli»* ·
+/// *«Tutte le serie … come righe separate, con campi precompilati secondo quanto
+/// registrato nella scheda»* · *«tutti i campi devono poter essere modificati …
+/// e ogni modifica deve aggiornare la scheda»* · *«deve essere possibile
+/// riorganizzare gli esercizi»* · *«rimuovere gli esercizi o singole serie»* ·
+/// *«aggiungere nuovi esercizi … l'interfaccia di inserimento deve essere
+/// esattamente identica a quella dell'editor»* · *«il tempo di riposo deve
+/// seguire quello indicato nella scheda»* · *«Tutto deve funzionare bene (adesso
+/// funziona bene, quindi fai in modo che non si rompa)»*.
+///
+/// ══ 🚨 IL VINCOLO CHE QUESTA SCHERMATA HA E LE ALTRE NO ═══════════════════
+///
+/// È l'unica dell'app che si usa **con le mani sudate, di fretta, fra una serie
+/// e l'altra**, spesso col telefono appoggiato da qualche parte. ⛔ Quello che
+/// altrove è un difetto di gusto, qui è **una serie che non si registra**.
+///
+/// Le scelte vengono tutte da lì:
+///
+/// - lo **schermo resta acceso**: sbloccare il telefono con le mani sudate fra
+///   una serie e l'altra è il modo più rapido per far smettere di usarlo;
+/// - il **cronometro si calcola da `started_at`**, non incrementando un
+///   contatore: in background i tick non arrivano, e al ritorno la durata
+///   risulterebbe più corta di quella vera;
+/// - si può **aggiungere un esercizio scrivendone il nome**: in sala la scheda
+///   non corrisponde quasi mai alla realtà, fra macchine occupate e sostituzioni
+///   al volo;
+/// - ogni spunta **scrive subito** in archivio, e la scrittura è un UPSERT:
+///   ripremerla non duplica niente, la corregge.
+///
+/// ══ 🚨 E DA 3b-E LA SCHEDA SI MODIFICA DA QUI, SENZA CHIEDERE ═════════════
+///
+/// 📌 *«ricordati che TUTTE LE MODIFICHE fatte durante l'allenamento devono
+/// modificare la scheda»*.
+///
+/// ⛔ Prima c'era una finestra a fine seduta — *«Salvare le modifiche alla
+/// scheda?»* — e non andava bene per due ragioni opposte: chi diceva «no» per
+/// abitudine perdeva le correzioni fatte in sala, e chi diceva «sì» senza
+/// leggere si è visto **sparire due esercizi** (B.15, 24/08).
+///
+/// 💡 Adesso ogni modifica si scrive man mano. ⚠️ Il gesto che toglie qualcosa
+/// resta l'unico con una rete: togliendo un esercizio compare **Annulla**, e
+/// l'undo è più onesto di una domanda a fine allenamento su una cosa fatta
+/// venti minuti prima.
+///
+/// ⛔ **Sulle schede del trainer non si scrive**: restano com'è arrivata, e la
+/// riga in cima lo dice invece di far credere il contrario.
+library;
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -11,31 +64,32 @@ import '../../../core/notifications/notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
-import '../../../core/ui/miniatura.dart';
 import '../../health/health_controller.dart';
+import '../data/allenamento_in_corso.dart';
 import '../data/catalogo_esercizi.dart';
-import '../data/session_models.dart';
+import '../data/serie_prevista.dart';
 import '../rest_timer.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
+import 'widgets/card_esercizio_scrittura.dart';
 import 'widgets/rest_bar.dart';
 import 'widgets/scelta_muscoli.dart';
+import 'widgets/spunta_della_serie.dart';
 
-/// Il player di allenamento — C9.
+/// Il recupero di ripiego, quando la scheda non lo dice da nessuna parte.
 ///
-/// È il pezzo che rende l'app usabile **in palestra**, e le sue scelte vengono
-/// tutte da lì:
+/// ⚠️ Novanta secondi: è quello che c'era prima di 3b-E, e cambiarlo qui
+/// cambierebbe di nascosto il riposo di tutte le schede scritte finora.
+const int recuperoDiRipiego = 90;
+
+/// Quanto si aspetta prima di scrivere la scheda, dopo l'ultimo tasto.
 ///
-/// - lo **schermo resta acceso**: sbloccare il telefono con le mani sudate fra
-///   una serie e l'altra è il modo più rapido per far smettere di usarlo;
-/// - il **cronometro si calcola da `started_at`**, non incrementando un
-///   contatore: in background i tick non arrivano, e al ritorno la durata
-///   risulterebbe più corta di quella vera;
-/// - si può **aggiungere un esercizio scrivendone il nome**: in sala la scheda
-///   non corrisponde quasi mai alla realtà, fra macchine occupate e sostituzioni
-///   al volo;
-/// - ogni «OK» **scrive subito sul server**, e la scrittura è un UPSERT:
-///   rimandarla su rete instabile non duplica niente.
+/// 🚨 Non zero: scrivere l'archivio a ogni carattere vorrebbe dire una
+/// transazione per tasto mentre si compila un peso. ⚠️ E non troppo: quello che
+/// si è scritto e non è ancora finito su disco è quello che si perde se il
+/// sistema chiude l'app mentre è in tasca.
+const Duration attesaPrimaDiScrivere = Duration(milliseconds: 700);
+
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({required this.sessionId, super.key});
 
@@ -48,17 +102,24 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   final _riposo = RestTimer();
 
-  List<PlayerExercise> _esercizi = [];
+  List<EsercizioInAllenamento> _esercizi = [];
   bool _pronto = false;
   bool _permessoChiesto = false;
-  bool _modificato = false;
   bool _chiusura = false;
   String? _errore;
 
   Timer? _cronometro;
+  Timer? _scrittura;
   DateTime? _inizio;
   int? _planId;
   String? _planName;
+
+  /// La scheda **com'è scritta in archivio**, per rattopparla senza perdere
+  /// niente — vedi `schedaConGliEsercizi`.
+  Map<String, dynamic> _scheda = const {};
+
+  /// Vero solo per le schede proprie: su quelle del trainer non si scrive.
+  bool _modificabile = false;
 
   @override
   void initState() {
@@ -74,9 +135,30 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   @override
+  void deactivate() {
+    /*
+     * 🚨 **L'ultima scrittura si fa uscendo, non si aspetta il timer.**
+     *
+     * ⛔ Senza questo, quello che si è battuto negli ultimi 700 ms se ne va con
+     * la schermata: il tasto «indietro» premuto subito dopo aver corretto un
+     * peso lo butterebbe via — e chi l'ha corretto non ha nessun modo di
+     * saperlo.
+     */
+    _scrittura?.cancel();
+    unawaited(_scriviLaScheda());
+
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _cronometro?.cancel();
+    _scrittura?.cancel();
     _riposo.dispose();
+
+    for (final e in _esercizi) {
+      e.dispose();
+    }
 
     // 🚨 Sempre, anche in caso di errore: lasciare il wakelock acceso
     // significa un telefono che non si spegne più finché non si riavvia l'app,
@@ -94,51 +176,37 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _planId = sessione.planId;
       _planName = sessione.planName;
 
-      final righe = <PlayerExercise>[];
+      var scheda = const <String, dynamic>{};
 
-      // 1. Gli esercizi previsti dalla scheda, con dentro ciò che è già stato
-      //    registrato: riaprendo una sessione interrotta si ritrova tutto.
       if (sessione.planId != null) {
-        final piano = await ref.read(
-          planDetailProvider(sessione.planId!).future,
-        );
+        /*
+         * ══ 🚨 SI LEGGE IL JSON GREZZO, NON `PlanExercise` ═════════════════
+         *
+         * ⛔ È la stessa scelta dell'editor (3b-D), e per lo stesso motivo: il
+         * modello dell'app **non porta i muscoli scritti dentro la scheda**.
+         * Rileggendo da lì e riscrivendo, `muscle_group` e `secondary_muscles`
+         * sparirebbero al primo allenamento — 🚨 e non darebbero nessun errore:
+         * si spegnerebbe solo la figura, giorni dopo.
+         */
+        final locale = await ref
+            .read(archivioSaluteProvider)
+            .laScheda(sessione.planId!);
 
-        for (final riga in piano.exercises) {
-          righe.add(
-            PlayerExercise(
-              name: riga.name,
-              reps: _repsDa(riga.prescription),
-
-              // 🚨 La prescrizione si conserva: vedi la nota su
-              // `PlayerExercise.seriePreviste`.
-              seriePreviste: _seriePreviste(riga.prescription),
-              restSec: riga.restSec ?? 90,
-              targetWeight: riga.targetWeight,
-
-              /*
-               * ══ 🆕 LE RIGHE DELLA SCHEDA — 3b-D.8 ═══════════════════════
-               *
-               * 📌 *«ogni serie deve avere Ripetizioni, Peso (o niente o Iso.)
-               * e Recupero»* — e se lo dice la scheda, il player deve
-               * ubbidirle riga per riga invece di ripetere lo stesso numero.
-               *
-               * ⛔ **Nessun ramo «se e' vecchia»**: `PlanExercise.serie` e'
-               * gia' passata dall'adattatore, quindi qui arrivano righe anche
-               * da una scheda scritta un mese fa.
-               */
-              previste: riga.serie,
-              notes: riga.notes,
-              imageUrl: riga.imageUrl,
-              rows: const [],
-            ),
-          );
+        if (locale != null) {
+          scheda = (json.decode(locale.scheda) as Map).cast<String, dynamic>();
+          _modificabile = locale.mia;
+          _planName = locale.nome;
         }
       }
 
-      _riempiConIlGiaFatto(righe, sessione);
+      final righe = eserciziDellAllenamento(
+        scheda: scheda,
+        fatte: sessione.sets,
+      );
 
       if (mounted) {
         setState(() {
+          _scheda = scheda;
           _esercizi = righe;
           _pronto = true;
         });
@@ -153,112 +221,68 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
   }
 
-  /// Il primo numero di una prescrizione: «8-12» → 8, «cedimento» → `null`.
+  // ───────────────────────── la scheda si scrive ─────────────────────────
+
+  /// Ridisegna e **programma** la scrittura: per quello che si batte a mano.
+  void _cambiato() {
+    setState(() {});
+
+    _scrittura?.cancel();
+    _scrittura = Timer(attesaPrimaDiScrivere, () => unawaited(_scriviLaScheda()));
+  }
+
+  /// Ridisegna e scrive **subito**: per i gesti, che sono pochi e definitivi.
   ///
-  /// Serve a precompilare la riga della serie con un punto di partenza
-  /// ragionevole. Il valore prescritto resta comunque visibile per intero fra i
-  /// parametri dell'esercizio.
-  static int? _primoNumero(String? prescrizione) {
-    if (prescrizione == null) return null;
+  /// 💡 Aggiungere, togliere, spostare un esercizio o spuntare una serie non è
+  /// una cosa che si «sta ancora facendo»: aspettare mezzo secondo servirebbe
+  /// solo ad avere una finestra in cui perderlo.
+  void _cambiatoSubito() {
+    setState(() {});
 
-    final trovato = RegExp(r'\d+').firstMatch(prescrizione);
-
-    return trovato == null ? null : int.tryParse(trovato.group(0)!);
+    _scrittura?.cancel();
+    unawaited(_scriviLaScheda());
   }
 
-  /// Le **serie** prescritte, estratte da «3 × 8-12» → 3.
-  ///
-  /// ⚠️ `null` se la prescrizione non ha la parte prima del «×»: allora non c'è
-  /// niente da conservare, e inventare un numero sarebbe peggio che non averlo.
-  static int? _seriePreviste(String prescrizione) {
-    final parti = prescrizione.split('×');
+  Future<void> _scriviLaScheda() async {
+    final id = _planId;
 
-    return parti.length > 1 ? int.tryParse(parti.first.trim()) : null;
-  }
+    // ⛔ Niente scheda, o scheda del trainer: non c'è niente su cui scrivere.
+    if (id == null || !_modificabile) return;
 
-  /// Le ripetizioni prescritte, estratte da «3 × 8-12».
-  ///
-  /// ⚠️ La prescrizione arriva **già composta** dal backend perché app e
-  /// pannello mostrino la stessa cosa; qui serve solo la parte delle
-  /// ripetizioni per precompilare le righe.
-  static String? _repsDa(String prescrizione) {
-    final parti = prescrizione.split('×');
+    try {
+      final rifatta = schedaConGliEsercizi(_scheda, [
+        for (final e in _esercizi)
+          if (e.nome.text.trim().isNotEmpty) e.versoIlDato(),
+      ]);
 
-    return parti.length > 1 ? parti.last.trim() : null;
-  }
+      _scheda = rifatta;
 
-  /// Fonde le serie già registrate con gli esercizi previsti.
-  void _riempiConIlGiaFatto(
-    List<PlayerExercise> righe,
-    WorkoutSession sessione,
-  ) {
-    final perEsercizio = <String, List<LoggedSet>>{};
-
-    for (final serie in sessione.sets) {
-      perEsercizio.putIfAbsent(serie.exerciseName, () => []).add(serie);
+      /*
+       * 🚨 **Si legge il provider PRIMA di aspettare.** L'ultima scrittura parte
+       * da `deactivate()`, cioè mentre la schermata se ne sta andando: quello
+       * che c'è dopo l'`await` gira su un widget che non esiste più, e usare il
+       * `ref` di casa lì lancerebbe *«Cannot use ref after dispose»*.
+       *
+       * 💡 `PlanActions` vive nel contenitore e non nel widget: dentro di lui
+       * la sequenza «scrivi, poi fai rileggere» si completa comunque.
+       */
+      await ref
+          .read(planActionsProvider)
+          .riscrivi(id: id, nome: _planName ?? 'Scheda', scheda: rifatta);
+    } on Object catch (error) {
+      /*
+       * ⚠️ Si avvisa e basta: l'allenamento **continua**. Le serie stanno in un
+       * archivio diverso e sono già scritte; qui si è persa solo la modifica
+       * alla prescrizione, e fermare la seduta per quello sarebbe sproporzionato.
+       */
+      _avvisa('Scheda non aggiornata: ${ApiClient.unwrapError(error).message}');
     }
-
-    for (final riga in righe) {
-      final fatte = perEsercizio.remove(riga.name) ?? const <LoggedSet>[];
-
-      riga.exerciseId = fatte.isNotEmpty ? fatte.first.exerciseId : null;
-      riga.rows = _righeDa(fatte, riga);
-    }
-
-    // Gli esercizi registrati **fuori scheda**: ci sono e vanno mostrati, o
-    // sparirebbero dalla schermata pur essendo nel database.
-    for (final voce in perEsercizio.entries) {
-      final riga = PlayerExercise(
-        name: voce.key,
-        exerciseId: voce.value.first.exerciseId,
-        restSec: voce.value.first.restSec ?? 90,
-        rows: const [],
-      );
-
-      riga.rows = _righeDa(voce.value, riga);
-      righe.add(riga);
-    }
-  }
-
-  List<PlayerSet> _righeDa(List<LoggedSet> fatte, PlayerExercise riga) {
-    final perNumero = {for (final s in fatte) s.setNumber: s};
-    final quante = fatte.isEmpty ? 3 : fatte.length;
-    final totale = perNumero.keys.isEmpty
-        ? quante
-        : (perNumero.keys.reduce((a, b) => a > b ? a : b));
-
-    return [
-      for (var i = 1; i <= totale; i++)
-        PlayerSet(
-          setNumber: i,
-          // 🚨 `int.tryParse('8-12')` da' **null**: con una prescrizione a
-          // intervallo — cioe' quasi sempre — il campo restava vuoto e le
-          // ripetizioni andavano riscritte a ogni serie. Si prende il primo
-          // numero: da «8-12» si parte da 8, da «cedimento» non si parte.
-          /*
-           * 🆕 3b-D.8 — **la riga i-esima della scheda**, quando c'e'.
-           *
-           * 💡 Cosi' «12 a 40, 10 a 45, 8 a 50» arriva nel player gia' scritto,
-           * e chi si allena conferma invece di ricopiare. ⚠️ Il ripiego resta
-           * la prescrizione riassunta, per gli esercizi aggiunti al volo.
-           */
-          reps:
-              perNumero[i]?.reps ??
-              riga.previsteAl(i)?.ripetizioni ??
-              _primoNumero(riga.reps),
-          weight:
-              perNumero[i]?.weight ??
-              riga.previsteAl(i)?.peso ??
-              riga.targetWeight,
-          done: perNumero.containsKey(i),
-        ),
-    ];
   }
 
   // ───────────────────────── azioni ─────────────────────────
 
-  Future<void> _ok(PlayerExercise esercizio, PlayerSet riga) async {
-    if (esercizio.name.trim().isEmpty) {
+  Future<void> _ok(EsercizioInAllenamento esercizio, int indice) async {
+    if (esercizio.nome.text.trim().isEmpty) {
       _avvisa('Dai un nome all\'esercizio prima di registrare la serie.');
 
       return;
@@ -274,30 +298,59 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
      *
      * 💡 Chiedere **prima** costa un tocco e succede una volta sola: solo per
      * un nome che il catalogo non conosce, e solo la prima volta che si scrive.
-     * ⚠️ Se il catalogo non è ancora arrivato si chiede lo stesso — meglio una
-     * domanda in più di una serie che non si registra.
      */
     if (!await _muscoliSeServono(esercizio)) return;
 
-    final eraFatta = riga.done;
+    final riga = esercizio.serieFatte[indice];
+    final eraFatta = riga.fatta;
 
-    setState(() => riga.done = true);
+    // 🚨 Il numero con cui era già stata registrata, o la posizione di adesso:
+    // vedi `SerieInAllenamento.numeroRegistrato`.
+    final numero = riga.numeroRegistrato ?? indice + 1;
+
+    setState(() {
+      riga.fatta = true;
+      riga.numeroRegistrato = numero;
+    });
 
     try {
       final id = await ref
           .read(sessionActionsProvider)
           .logSet(
             sessionId: widget.sessionId,
-            setNumber: riga.setNumber,
+            setNumber: numero,
             exerciseId: esercizio.exerciseId,
-            exerciseName: esercizio.name.trim(),
+            exerciseName: esercizio.nome.text.trim(),
             muscoli: esercizio.muscoli,
-            reps: riga.reps,
-            weight: riga.weight,
-            restSec: esercizio.restSec,
+            reps: int.tryParse(riga.ripetizioni.text.trim()),
+
+            /*
+             * ⚠️ **Il peso solo se è un peso.** Con `Iso.` in quella colonna ci
+             * sono i **secondi** di tenuta, e scriverli in `pesoKg` vorrebbe
+             * dire 40 chili in uno storico che nessuno rileggerà mai con
+             * sospetto.
+             *
+             * ⏳ **Debito dichiarato**: i secondi di isometria nello storico non
+             * ci finiscono affatto — `SerieSeduta` non ha un campo per loro.
+             */
+            weight: esercizio.carico == CaricoDellEsercizio.peso
+                ? double.tryParse(riga.carico.text.trim().replaceAll(',', '.'))
+                : null,
+            restSec: _recuperoDi(esercizio, indice),
           );
 
-      esercizio.exerciseId = id;
+      /*
+       * ⚠️ **Solo un id vero.** `logSet` risponde con un id **negativo**
+       * provvisorio quando la rete non c'è (B.16.10). 🚨 Scrivendolo
+       * nell'esercizio finirebbe dentro la scheda al prossimo salvataggio, e
+       * `catalogo.perId(-12345)` non trova niente: muscoli spenti e MET perso,
+       * per sempre e senza un errore.
+       */
+      if (id > 0) esercizio.exerciseId = id;
+
+      // ⚠️ La spunta ha cambiato lo stato dell'esercizio: la scheda si riscrive
+      // comunque, perché i numeri della riga possono essere stati corretti.
+      _cambiatoSubito();
 
       // Il riposo parte solo la **prima** volta: correggere una serie già
       // registrata non è aver appena finito di spingere.
@@ -310,30 +363,41 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           await requestNotificationPermission();
         }
 
-        /*
-         * ══ ⏱️ IL RECUPERO E' DELLA RIGA, NON DELL'ESERCIZIO — 3b-D.8.2 ════
-         *
-         * 💡 Novanta secondi fra le prime serie e due minuti prima dell'ultima
-         * e' come sono scritte le schede vere. ⚠️ Il ripiego e' il recupero
-         * dell'esercizio, che e' quello che si sapeva prima di oggi.
-         */
-        await _riposo.avvia(
-          esercizio.previsteAl(riga.setNumber)?.recuperoSec ??
-              esercizio.restSec,
-        );
+        await _riposo.avvia(_recuperoDi(esercizio, indice) ?? recuperoDiRipiego);
       }
     } on Object catch (error) {
-      // 🚨 Si torna indietro sulla spunta. Lasciarla verde su una serie che il
-      // server non ha ricevuto farebbe credere di aver registrato qualcosa che
-      // non c'è — e ci si accorge solo giorni dopo, guardando lo storico.
-      setState(() => riga.done = eraFatta);
+      // 🚨 Si torna indietro sulla spunta. Lasciarla piena su una serie che non
+      // è stata scritta farebbe credere di aver registrato qualcosa che non
+      // c'è — e ci si accorge solo giorni dopo, guardando lo storico.
+      setState(() => riga.fatta = eraFatta);
 
       _avvisa(ApiClient.unwrapError(error).message);
     }
   }
 
+  /// Il recupero **di questa riga**, come lo dice la scheda — 3b-E.4.
+  ///
+  /// 📌 *«il tempo di riposo deve seguire quello indicato nella scheda»*.
+  ///
+  /// 💡 Adesso il campo è a schermo, sulla riga, e si corregge lì: novanta
+  /// secondi fra le prime serie e due minuti prima dell'ultima è come sono
+  /// scritte le schede vere.
+  ///
+  /// ⚠️ **Se questa riga non lo dice, lo dice la più vicina sopra.** Un campo
+  /// lasciato vuoto sull'ultima serie non deve far tornare al ripiego di
+  /// fabbrica una scheda che il recupero l'aveva dichiarato.
+  int? _recuperoDi(EsercizioInAllenamento esercizio, int indice) {
+    for (var i = indice; i >= 0; i--) {
+      final s = int.tryParse(esercizio.righe[i].recupero.text.trim());
+
+      if (s != null && s > 0) return s;
+    }
+
+    return null;
+  }
+
   /// Chiede i muscoli se l'esercizio non è in catalogo. `false` = si annulla.
-  Future<bool> _muscoliSeServono(PlayerExercise esercizio) async {
+  Future<bool> _muscoliSeServono(EsercizioInAllenamento esercizio) async {
     // 💡 Un esercizio che viene dalla scheda ha già il suo id: esiste, e il
     // server i suoi muscoli li sa.
     if (esercizio.exerciseId != null || esercizio.muscoli != null) return true;
@@ -342,13 +406,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ref.read(catalogoEserciziProvider).valueOrNull ??
         CatalogoEsercizi.vuoto;
 
-    if (catalogo.perNome(esercizio.name) != null) return true;
+    if (catalogo.perNome(esercizio.nome.text.trim()) != null) return true;
 
     if (!mounted) return false;
 
     final scelti = await chiediIMuscoli(
       context,
-      nomeEsercizio: esercizio.name.trim(),
+      nomeEsercizio: esercizio.nome.text.trim(),
     );
 
     if (scelti == null) {
@@ -373,24 +437,43 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   void _aggiungiEsercizio() {
-    setState(() {
-      _esercizi.add(PlayerExercise(name: '', rows: [PlayerSet(setNumber: 1)]));
-      _modificato = true;
-    });
+    _esercizi.add(EsercizioInAllenamento());
+    _cambiatoSubito();
   }
 
-  void _aggiungiSerie(PlayerExercise esercizio) {
-    setState(() {
-      final ultima = esercizio.rows.isEmpty ? null : esercizio.rows.last;
+  /// Toglie un esercizio, **con la rete sotto** — 3b-E.7.
+  ///
+  /// ══ 🚨 È IL GESTO CHE IL 24/08 HA FATTO SPARIRE DUE ESERCIZI ═════════════
+  ///
+  /// ⛔ Allora spariva a fine seduta, per un «sì» dato a una finestra che non
+  /// diceva **quali**. 💡 Adesso sparisce subito, si vede sparire, e per
+  /// dieci secondi c'è **Annulla**: chi ha toccato il cestino per sbaglio se ne
+  /// accorge nel momento in cui succede, che è l'unico in cui può rimediare.
+  ///
+  /// ⚠️ L'esercizio **non si `dispose()`** finché l'undo è in piedi: i suoi
+  /// controller devono essere ancora vivi per rimetterlo dov'era.
+  void _rimuoviEsercizio(int indice) {
+    final tolto = _esercizi.removeAt(indice);
 
-      esercizio.rows.add(
-        PlayerSet(
-          setNumber: esercizio.rows.length + 1,
-          reps: ultima?.reps,
-          weight: ultima?.weight,
+    _cambiatoSubito();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('«${tolto.nome.text.trim()}» tolto dalla scheda'),
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'Annulla',
+            onPressed: () {
+              _esercizi.insert(indice.clamp(0, _esercizi.length), tolto);
+              _cambiatoSubito();
+            },
+          ),
         ),
       );
-    });
   }
 
   Future<void> _termina() async {
@@ -414,55 +497,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
     if (conferma != true || !mounted) return;
 
-    // Se durante la seduta la scheda è cambiata, si chiede se salvarla — ma
-    // **solo se è sua**: proporlo per la scheda del trainer prometterebbe una
-    // cosa che il server rifiuterà con un 403.
-    if (_modificato && _planId != null) {
-      final piano = await ref.read(planDetailProvider(_planId!).future);
+    // ⚠️ L'ultima scrittura **prima** di chiudere: da qui in poi si va al
+    // riepilogo e questa schermata non esiste più.
+    _scrittura?.cancel();
+    await _scriviLaScheda();
 
-      if (piano.editable && mounted) {
-        /*
-         * ══ 🚨 UN «SÌ» SU UNA CANCELLAZIONE ANONIMA NON È UN CONSENSO ══════
-         *
-         * ⛔ La finestra diceva *«Hai cambiato gli esercizi durante
-         * l'allenamento»* e basta. Il 24/08 quel «sì» ha tolto **due** esercizi
-         * dalla scheda del committente, e nessuno dei due era nominato.
-         *
-         * 💡 Adesso li elenca. ⚠️ Sono i soli che spariscono davvero: quelli
-         * aggiunti e quelli modificati non tolgono niente a nessuno, e metterli
-         * nella stessa lista annacquerebbe l'unica riga che conta.
-         */
-        final spariti = piano.exercises
-            .map((r) => r.name)
-            .where((n) => !_esercizi.any((e) => e.name.trim() == n))
-            .toList();
-
-        final salva = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Salvare le modifiche alla scheda?'),
-            content: Text(
-              spariti.isEmpty
-                  ? 'Hai cambiato gli esercizi durante l\'allenamento.'
-                  : 'Questi esercizi verranno TOLTI dalla scheda:\n\n'
-                        '${spariti.map((n) => '· $n').join('\n')}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('No'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Sì, salva'),
-              ),
-            ],
-          ),
-        );
-
-        if (salva == true) await _salvaSchedaSulTelefono();
-      }
-    }
+    if (!mounted) return;
 
     setState(() => _chiusura = true);
 
@@ -486,68 +526,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     } on Object catch (error) {
       setState(() => _chiusura = false);
       _avvisa(ApiClient.unwrapError(error).message);
-    }
-  }
-
-  /// Scrive la scheda **sul telefono** — 3b-B.16.10.
-  ///
-  /// ══ 🚨 SUL TELEFONO, E SUBITO ═════════════════════════════════════════
-  ///
-  /// 📌 *«se inizio un allenamento, modifico un esercizio, ne aggiungo o rimuovo
-  /// uno, tutto deve stare sul telefono … perché potrei non avere rete quando mi
-  /// alleno»*.
-  ///
-  /// ⛔ Prima il salvataggio andava **dritto al server**, e in una palestra
-  /// senza campo falliva in silenzio: la modifica era persa e nessuno lo diceva.
-  /// 💡 Adesso si scrive in locale, e lì resta: da B.17 il server le schede non
-  /// le sa più, quindi non c'è niente da mandare e niente che possa fallire.
-  ///
-  /// ⚠️ **La scheda resta quella che era, con le modifiche applicate sopra**:
-  /// non si ricostruisce da zero. Ricostruirla è ciò che il 24/08 ha fatto
-  /// sparire due esercizi — quello che il player non conosce (note del trainer,
-  /// giorni, alternative) andrebbe perso a ogni allenamento.
-  Future<void> _salvaSchedaSulTelefono() async {
-    final id = _planId;
-
-    if (id == null) return;
-
-    try {
-      final locale = await ref.read(archivioSaluteProvider).laScheda(id);
-
-      if (locale == null) return;
-
-      final scheda = (jsonDecode(locale.scheda) as Map).cast<String, dynamic>();
-
-      scheda['exercises'] = _esercizi
-          .where((e) => e.name.trim().isNotEmpty)
-          .map(
-            (e) => {
-              'id': -1,
-              'exercise': {'id': e.exerciseId, 'name': e.name.trim()},
-              'prescription':
-                  '${e.seriePreviste ?? e.rows.length} × ${e.reps ?? ''}'
-                      .trim(),
-              'name': e.name.trim(),
-              'sets': e.seriePreviste ?? e.rows.length,
-              'reps': e.reps,
-              'rest_sec': e.restSec,
-              'target_weight': e.targetWeight,
-              'notes': e.notes,
-            },
-          )
-          .toList();
-
-      await ref
-          .read(archivioSaluteProvider)
-          .aggiornaScheda(
-            id: id,
-            nome: _planName ?? locale.nome,
-            scheda: jsonEncode(scheda),
-          );
-
-      ref.invalidate(planDetailProvider(id));
-    } on Object catch (error) {
-      _avvisa('Scheda non salvata: $error');
     }
   }
 
@@ -601,42 +579,110 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             child: ListView(
               padding: const EdgeInsets.all(Gap.md),
               children: [
-                for (final esercizio in _esercizi)
-                  /*
-                   * ══ 🚨 LA CHIAVE NON È UN'OTTIMIZZAZIONE — B.15, 24/08 ═════
-                   *
-                   * 📌 Il committente, dopo un allenamento vero: *«ho cercato di
-                   * rimuovere curl invertito, ma non mi è sparito dalla scheda
-                   * quindi semplicemente l'ho fatto»*. E sul server ne erano
-                   * spariti **due**.
-                   *
-                   * ⛔ Senza chiave, Flutter abbina i figli **per posizione**:
-                   * tolto l'elemento 8, la card che stava al 9 riceve i dati
-                   * dell'8 ma **si tiene il suo `State`** — e i
-                   * `TextEditingController`, che sono `late final`, restano
-                   * quelli di prima. A schermo non cambia niente.
-                   *
-                   * 🚨 E il danno non è cosmetico: chi tocca «rimuovi» e non
-                   * vede succedere niente **tocca di nuovo**, e il secondo tocco
-                   * cancella il vicino che nel frattempo è scivolato lì. Un
-                   * gesto, due esercizi persi, nessun errore da nessuna parte.
-                   *
-                   * 💡 `ObjectKey` e non `ValueKey(nome)`: due esercizi possono
-                   * chiamarsi uguale — o avere il nome vuoto, appena aggiunti —
-                   * e una chiave che collide è peggio di nessuna chiave.
-                   */
-                  _CardEsercizio(
-                    key: ObjectKey(esercizio),
-                    esercizio: esercizio,
-                    onOk: (riga) => _ok(esercizio, riga),
-                    onAggiungiSerie: () => _aggiungiSerie(esercizio),
-                    onCambiato: () => setState(() => _modificato = true),
-                    onRimuovi: () => setState(() {
-                      _esercizi.remove(esercizio);
-                      _modificato = true;
-                    }),
+                /*
+                 * ⚠️ **Si dice che qui non si scrive, invece di non scrivere e
+                 * basta.** Su una scheda del trainer i campi restano
+                 * modificabili — servono per registrare quello che si è
+                 * davvero fatto — ma la prescrizione non cambia, e chi corregge
+                 * un peso deve sapere che domani ritroverà quello di prima.
+                 */
+                if (_planId != null && !_modificabile)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Gap.md),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: Gap.sm),
+                        Expanded(
+                          child: Text(
+                            'Scheda del tuo trainer: le modifiche valgono solo '
+                            'per questo allenamento.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+
+                /*
+                 * ══ ↕️ GLI ESERCIZI SI SPOSTANO ANCHE QUI — 3b-E.3 ═════════
+                 *
+                 * 📌 *«deve essere possibile riorganizzare gli esercizi»*.
+                 *
+                 * 💡 In sala succede di continuo: la panca è occupata e si fa
+                 * prima la schiena. ⚠️ Stessa disposizione dell'editor —
+                 * `buildDefaultDragHandles: false` e la maniglia dentro la
+                 * card — o il trascinamento partirebbe da qualunque punto e
+                 * sposterebbe un esercizio mentre si prova a scrivere un peso.
+                 */
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  onReorderItem: (da, a) {
+                    _esercizi.insert(a, _esercizi.removeAt(da));
+                    _cambiatoSubito();
+                  },
+                  children: [
+                    for (var i = 0; i < _esercizi.length; i++)
+                      /*
+                       * ══ 🚨 LA CHIAVE NON È UN'OTTIMIZZAZIONE — B.15 ══════
+                       *
+                       * 📌 Il committente, dopo un allenamento vero: *«ho
+                       * cercato di rimuovere curl invertito, ma non mi è
+                       * sparito dalla scheda quindi semplicemente l'ho
+                       * fatto»*. E ne erano spariti **due**.
+                       *
+                       * ⛔ Senza chiave, Flutter abbina i figli **per
+                       * posizione**: tolto l'elemento 8, la card che stava al 9
+                       * riceve i dati dell'8 ma **si tiene il suo `State`** — e
+                       * i controller restano quelli di prima. A schermo non
+                       * cambia niente.
+                       *
+                       * 🚨 E il danno non è cosmetico: chi tocca «rimuovi» e
+                       * non vede succedere niente **tocca di nuovo**, e il
+                       * secondo tocco cancella il vicino che nel frattempo è
+                       * scivolato lì.
+                       *
+                       * 💡 `ObjectKey` e non `ValueKey(nome)`: due esercizi
+                       * possono chiamarsi uguale — o avere il nome vuoto,
+                       * appena aggiunti — e una chiave che collide è peggio di
+                       * nessuna chiave.
+                       */
+                      CardEsercizioScrittura(
+                        key: ObjectKey(_esercizi[i]),
+                        esercizio: _esercizi[i],
+                        numero: i + 1,
+                        posizione: i,
+                        etichetta: _etichetta(i),
+                        codaDellaRiga: (riga) => SpuntaDellaSerie(
+                          fatta: _esercizi[i].serieFatte[riga].fatta,
+                          onTocco: () => _ok(_esercizi[i], riga),
+                        ),
+                        onCambio: _cambiato,
+                        onRimuovi: () => _rimuoviEsercizio(i),
+                      ),
+                  ],
+                ),
+
                 const SizedBox(height: Gap.sm),
+
+                /*
+                 * 📌 *«deve essere possibile aggiungere nuovi esercizi. In
+                 * questo caso, l'interfaccia di inserimento deve essere
+                 * esattamente identica a quella dell'editor delle schede»*.
+                 *
+                 * ✅ Lo è alla lettera: la card è **la stessa classe**, con
+                 * l'elenco del catalogo mentre si scrive il nome e le pasticche
+                 * dei muscoli. L'unica differenza è la spunta in fondo a ogni
+                 * riga.
+                 */
                 OutlinedButton.icon(
                   onPressed: _aggiungiEsercizio,
                   icon: const Icon(Icons.add_rounded),
@@ -671,352 +717,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ),
     );
   }
-}
 
-/// «72.5» invece di «72.5000», «60» invece di «60.0».
-///
-/// A livello di file e non dentro una classe: la usano sia la riga della serie
-/// sia i parametri prescritti, e due copie della stessa formattazione sono due
-/// modi diversi di scrivere lo stesso peso nella stessa schermata.
-String _pulito(double v) =>
-    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
-
-/// Un esercizio con le sue righe-serie.
-class _CardEsercizio extends StatefulWidget {
-  const _CardEsercizio({
-    required this.esercizio,
-    required this.onOk,
-    required this.onAggiungiSerie,
-    required this.onCambiato,
-    required this.onRimuovi,
-    super.key,
-  });
-
-  final PlayerExercise esercizio;
-  final void Function(PlayerSet) onOk;
-  final VoidCallback onAggiungiSerie;
-  final VoidCallback onCambiato;
-  final VoidCallback onRimuovi;
-
-  @override
-  State<_CardEsercizio> createState() => _CardEsercizioState();
-}
-
-class _CardEsercizioState extends State<_CardEsercizio> {
-  late final _nome = TextEditingController(text: widget.esercizio.name);
-  late final _repsPreviste = TextEditingController(
-    text: widget.esercizio.reps ?? '',
-  );
-  late final _recupero = TextEditingController(
-    text: widget.esercizio.restSec.toString(),
-  );
-  late final _pesoObiettivo = TextEditingController(
-    text: widget.esercizio.targetWeight == null
-        ? ''
-        : _pulito(widget.esercizio.targetWeight!),
-  );
-
-  /// I parametri prescritti si aprono su richiesta.
+  /// «Esercizio 2 · 1 di 3» — 3b-E.2.
   ///
-  /// Chiusi di serie: mentre ci si allena servono le righe delle serie, non
-  /// tre campi di configurazione — che occuperebbero lo spazio di due esercizi
-  /// per ogni scheda.
-  bool _apertoIlDettaglio = false;
+  /// 💡 A che punto si è di **questo** esercizio è l'unica cosa che serve
+  /// sapere guardando il telefono da un metro, appoggiato sulla panca. ⚠️ Il
+  /// conteggio compare solo quando qualcosa è stato fatto: su un esercizio
+  /// intatto un «0 di 3» sarebbe rumore.
+  String _etichetta(int i) {
+    final e = _esercizi[i];
+    final fatte = e.quanteFatte;
 
-  @override
-  void dispose() {
-    _nome.dispose();
-    _repsPreviste.dispose();
-    _recupero.dispose();
-    _pesoObiettivo.dispose();
-    super.dispose();
-  }
+    if (fatte == 0) return 'Esercizio ${i + 1}';
 
-  @override
-  Widget build(BuildContext context) {
-    final e = widget.esercizio;
-    final theme = Theme.of(context);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: Gap.md),
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // C23 — durante l'allenamento un'immagine dice quale movimento
-                // molto piu' in fretta di un nome, e si guarda da lontano.
-                Miniatura(url: e.imageUrl, etichetta: e.name, lato: 40),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: TextField(
-                    controller: _nome,
-                    decoration: const InputDecoration(
-                      hintText: 'Nome esercizio',
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    onChanged: (v) {
-                      e.name = v;
-                      // Cambiando nome l'esercizio non è più quello di prima:
-                      // azzerare l'id costringe il server a riconciliare il
-                      // nome nuovo, invece di scrivere sotto quello vecchio.
-                      e.exerciseId = null;
-
-                      // 🚨 E i muscoli decadono con lui — 3b-A.3.5: sono la
-                      // risposta su **quel** nome, non su questo.
-                      e.muscoli = null;
-
-                      setState(() {});
-                      widget.onCambiato();
-                    },
-                  ),
-                ),
-                // 🚨 La matita, come sull'app homelab.
-                //
-                // I parametri prescritti — ripetizioni, recupero, peso
-                // obiettivo — si cambiano **mentre ci si allena**, perché è lì
-                // che ci si accorge che 8 erano troppe o che 90 secondi non
-                // bastano. Doverli correggere dopo, dall'editor delle schede,
-                // vuol dire non correggerli mai.
-                IconButton(
-                  onPressed: () =>
-                      setState(() => _apertoIlDettaglio = !_apertoIlDettaglio),
-                  icon: Icon(
-                    _apertoIlDettaglio
-                        ? Icons.expand_less_rounded
-                        : Icons.edit_outlined,
-                  ),
-                  tooltip: 'Parametri',
-                ),
-                IconButton(
-                  onPressed: widget.onRimuovi,
-                  icon: const Icon(Icons.close_rounded),
-                  tooltip: 'Togli dall\'allenamento',
-                ),
-              ],
-            ),
-
-            if (!_apertoIlDettaglio &&
-                (e.reps != null || e.targetWeight != null))
-              Text(
-                [
-                  if (e.reps != null) '${e.rows.length} × ${e.reps}',
-                  if (e.targetWeight != null) '${e.targetWeight} kg',
-                  '${e.restSec}s di recupero',
-                ].join(' · '),
-                style: theme.textTheme.bodySmall,
-              ),
-
-            if (_apertoIlDettaglio)
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.sm),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _repsPreviste,
-                        decoration: const InputDecoration(
-                          labelText: 'Ripetizioni',
-                          hintText: '8-12',
-                          isDense: true,
-                        ),
-                        // ⚠️ Testo e non numero: «8-12», «cedimento» e «max»
-                        // sono prescrizioni legittime, ed è il motivo per cui
-                        // anche a database `reps` è una stringa.
-                        onChanged: (v) {
-                          e.reps = v.trim().isEmpty ? null : v.trim();
-                          widget.onCambiato();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: TextField(
-                        controller: _recupero,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Recupero',
-                          suffixText: 's',
-                          isDense: true,
-                        ),
-                        onChanged: (v) {
-                          e.restSec = int.tryParse(v.trim()) ?? e.restSec;
-                          widget.onCambiato();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: TextField(
-                        controller: _pesoObiettivo,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Peso',
-                          suffixText: 'kg',
-                          isDense: true,
-                        ),
-                        onChanged: (v) {
-                          e.targetWeight = double.tryParse(
-                            v.trim().replaceAll(',', '.'),
-                          );
-                          widget.onCambiato();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            if ((e.notes ?? '').isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.xs),
-                child: Text(e.notes!, style: theme.textTheme.bodySmall),
-              ),
-
-            const SizedBox(height: Gap.sm),
-
-            for (final riga in e.rows)
-              _RigaSerie(riga: riga, onOk: () => widget.onOk(riga)),
-
-            TextButton.icon(
-              onPressed: widget.onAggiungiSerie,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Serie'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RigaSerie extends StatefulWidget {
-  const _RigaSerie({required this.riga, required this.onOk});
-
-  final PlayerSet riga;
-  final VoidCallback onOk;
-
-  @override
-  State<_RigaSerie> createState() => _RigaSerieState();
-}
-
-class _RigaSerieState extends State<_RigaSerie> {
-  late final _reps = TextEditingController(
-    text: widget.riga.reps?.toString() ?? '',
-  );
-  late final _peso = TextEditingController(
-    text: widget.riga.weight == null ? '' : _pulito(widget.riga.weight!),
-  );
-
-  /// 🚨 **Toccando il campo, il valore si seleziona tutto.**
-  ///
-  /// I campi arrivano già riempiti con quello che prescrive la scheda — ed è
-  /// giusto: nove volte su dieci il peso è quello, e non si deve riscrivere
-  /// niente. Ma quando **non** è quello, con il cursore piazzato in mezzo alle
-  /// cifre bisognerebbe cancellarle una a una con le mani sudate, in piedi
-  /// davanti a un bilanciere. Selezionandole tutte, la prima cifra digitata le
-  /// sostituisce: è come trovare il campo vuoto, ma se si tocca per sbaglio e
-  /// si tocca altrove il valore prescritto è ancora lì.
-  final FocusNode _fuocoReps = FocusNode();
-  final FocusNode _fuocoPeso = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-
-    _fuocoReps.addListener(() => _seleziona(_fuocoReps, _reps));
-    _fuocoPeso.addListener(() => _seleziona(_fuocoPeso, _peso));
-  }
-
-  void _seleziona(FocusNode fuoco, TextEditingController controller) {
-    if (!fuoco.hasFocus || controller.text.isEmpty) return;
-
-    controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: controller.text.length,
-    );
-  }
-
-  @override
-  void dispose() {
-    _reps.dispose();
-    _peso.dispose();
-    _fuocoReps.dispose();
-    _fuocoPeso.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final riga = widget.riga;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Gap.sm),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(
-              '${riga.setNumber}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: _reps,
-              focusNode: _fuocoReps,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'rip.',
-                isDense: true,
-              ),
-              onChanged: (v) => riga.reps = int.tryParse(v),
-            ),
-          ),
-          const SizedBox(width: Gap.sm),
-          Expanded(
-            child: TextField(
-              controller: _peso,
-              focusNode: _fuocoPeso,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(labelText: 'kg', isDense: true),
-              onChanged: (v) =>
-                  riga.weight = double.tryParse(v.replaceAll(',', '.')),
-            ),
-          ),
-          const SizedBox(width: Gap.sm),
-          // Il pulsante resta premibile anche dopo: correggere una serie
-          // registrata per sbaglio con il peso di quella prima capita di
-          // continuo, e l'UPSERT lo permette senza duplicare.
-          IconButton.filled(
-            onPressed: widget.onOk,
-            isSelected: riga.done,
-            icon: Icon(
-              riga.done ? Icons.check_rounded : Icons.done_outline_rounded,
-            ),
-            style: riga.done
-                ? null
-                : IconButton.styleFrom(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    foregroundColor: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant,
-                  ),
-          ),
-        ],
-      ),
-    );
+    return e.tuttoFatto
+        ? 'Esercizio ${i + 1} · fatto'
+        : 'Esercizio ${i + 1} · $fatte di ${e.righe.length}';
   }
 }

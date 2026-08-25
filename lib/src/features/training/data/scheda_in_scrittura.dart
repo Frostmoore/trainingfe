@@ -44,6 +44,20 @@ mixin ConLeSerie {
 
   set carico(CaricoDellEsercizio valore);
 
+  /// Una riga nuova, **del tipo di chi la ospita** — 3b-E.1.
+  ///
+  /// ══ 🚨 PERCHE' NON SI FA `SerieInScrittura()` E BASTA ═════════════════════
+  ///
+  /// ⛔ `RigheDelleSerie` costruiva la riga nuova da se', e andava bene finche'
+  /// di righe ce n'era un tipo solo. 💡 Nell'allenamento la riga sa anche **se
+  /// e' stata fatta** ([SerieInAllenamento]), e una riga base infilata in quella
+  /// lista sarebbe una serie che non si puo' spuntare — a meta' allenamento,
+  /// senza nessun errore.
+  ///
+  /// ⚠️ Il difetto sarebbe comparso **solo premendo «Aggiungi serie»**, cioe'
+  /// nel caso che si prova meno.
+  SerieInScrittura rigaNuova() => SerieInScrittura();
+
   /// Riempie le righe **che nessuno ha ancora toccato** copiando la prima.
   ///
   /// 📌 *«Quando compilo la prima si devono autocompilare anche le altre sotto
@@ -195,22 +209,19 @@ class EsercizioInScrittura with ConLeSerie {
   /// 🚨 Passa da [serieDellEsercizio], quindi una scheda vecchia si apre
   /// nell'editor nuovo **già in righe**: è il *«le schede già esistenti
   /// ricalchino questa nuova impostazione»* del committente, e succede qui.
-  factory EsercizioInScrittura.da(Map<String, dynamic> j) =>
-      EsercizioInScrittura(
-        nome:
-            j['name']?.toString() ??
-            (j['exercise'] as Map?)?['name']?.toString(),
-        note: j['notes']?.toString(),
-        exerciseId:
-            (j['exercise_id'] as num?)?.toInt() ??
-            ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
-        muscoli: muscoliDaJson(j),
-        immagine: j['immagine']?.toString(),
-        carico: CaricoDellEsercizio.da(j['carico']?.toString()),
-        serie: [
-          for (final s in serieDellEsercizio(j)) SerieInScrittura.da(s),
-        ],
-      );
+  factory EsercizioInScrittura.da(Map<String, dynamic> j) {
+    final campi = campiDellEsercizio(j);
+
+    return EsercizioInScrittura(
+      nome: campi.nome,
+      note: campi.note,
+      exerciseId: campi.exerciseId,
+      muscoli: campi.muscoli,
+      immagine: campi.immagine,
+      carico: campi.carico,
+      serie: [for (final s in campi.serie) SerieInScrittura.da(s)],
+    );
+  }
 
   static const seriePredefinite = 3;
 
@@ -258,6 +269,52 @@ class EsercizioInScrittura with ConLeSerie {
       s.dispose();
     }
   }
+}
+
+/// Quello che c'e' scritto dentro un esercizio, **letto da ogni sorgente**.
+///
+/// ══ 🚨 PERCHE' ESISTE, ED E' LA LEZIONE DI D.17 ═══════════════════════════
+///
+/// ⛔ Il 25/08 lo stesso esercizio si leggeva in **tre** posti diversi
+/// (`PlanExercise.fromJson`, `EsercizioInScrittura.da`, il player), e ognuno
+/// sapeva un pezzo di verita': il nome sta in `name` **oppure** in
+/// `exercise.name`, l'aggancio al catalogo in `exercise_id` **oppure** in
+/// `exercise.id`, a seconda che la riga l'abbia scritta l'app o il server.
+///
+/// 🚨 **Solo uno dei cinque campi dava un errore quando si sbagliava.** Gli
+/// altri davano un'etichetta generica («Esercizio») o una figura spenta: cose
+/// che sembrano una scelta, e che restano li' per mesi.
+///
+/// 💡 Da qui in avanti la conoscenza dei due formati sta **in una funzione
+/// sola**. Chi aggiunge un lettore chiama questa e non puo' dimenticarsi meta'
+/// delle sorgenti.
+typedef CampiDellEsercizio = ({
+  String? nome,
+  String? note,
+  int? exerciseId,
+  MuscoliScelti? muscoli,
+  String? immagine,
+  CaricoDellEsercizio carico,
+  List<SeriePrevista> serie,
+});
+
+CampiDellEsercizio campiDellEsercizio(Map<String, dynamic> j) {
+  final dalServer = (j['exercise'] as Map?);
+
+  return (
+    // 💡 Prima quello che scrive chi ha compilato, poi quello del catalogo.
+    nome: j['name']?.toString() ?? dalServer?['name']?.toString(),
+    note: j['notes']?.toString(),
+    exerciseId:
+        (j['exercise_id'] as num?)?.toInt() ??
+        (dalServer?['id'] as num?)?.toInt(),
+    muscoli: muscoliDaJson(j),
+    immagine: j['immagine']?.toString(),
+    carico: CaricoDellEsercizio.da(j['carico']?.toString()),
+
+    // ⚠️ Mai vuota, e mai un ramo «se e' vecchia»: ci pensa l'adattatore.
+    serie: serieDellEsercizio(j),
+  );
 }
 
 /// I muscoli scritti dentro un esercizio, se ci sono.

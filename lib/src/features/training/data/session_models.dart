@@ -3,8 +3,6 @@ library;
 
 import '../../../core/storage/archivio_salute.dart';
 import 'calorie_allenamento.dart';
-import 'gruppo_muscolare.dart';
-import 'serie_prevista.dart';
 
 class WorkoutSession {
   const WorkoutSession({
@@ -193,99 +191,16 @@ class SessionPhoto {
   final String url;
 }
 
-/// Una riga del player: un esercizio con le sue serie.
-///
-/// 🚨 **Non è un modello di rete**: è lo stato dell'interfaccia mentre ci si
-/// allena. Nasce dalla scheda (le serie previste) e si riempie con ciò che è
-/// stato davvero fatto. Tenerlo separato dal modello del server è ciò che
-/// permette di aggiungere un esercizio al volo senza inventarsi un id finto.
-class PlayerExercise {
-  PlayerExercise({
-    required this.name,
-    required this.rows,
-    this.exerciseId,
-    this.reps,
-    this.seriePreviste,
-    this.restSec = 90,
-    this.targetWeight,
-    this.notes,
-    this.imageUrl,
-    this.muscoli,
-    this.previste = const [],
-  });
-
-  int? exerciseId;
-  String name;
-
-  /// Le serie **prescritte** dalla scheda, quando viene da una scheda.
-  ///
-  /// ══ 🚨 LA PRESCRIZIONE NON È LO STORICO — B.15, 24/08/2026 ════════════
-  ///
-  /// ⛔ Il salvataggio a fine allenamento mandava `sets: rows.length`, cioè
-  /// **quante righe c'erano nel player**. Un esercizio non toccato ne riceve tre
-  /// di default, quindi dire «sì» a fine seduta riscriveva la scheda da 4×15 a
-  /// **3×15** su tutto quello che non si era fatto.
-  ///
-  /// 🚨 Quante serie hai fatto è **storia**; quante ne devi fare è **scheda**.
-  /// Sono due cose diverse e non devono passare per lo stesso campo.
-  ///
-  /// ⚠️ `null` per un esercizio aggiunto al volo: lì non c'è nessuna
-  /// prescrizione da conservare, e il numero di righe è l'unica cosa che si sa.
-  int? seriePreviste;
-
-  /// Che muscoli allena, quando l'ha detto qualcuno — 3b-A.3.5, 24/08/2026.
-  ///
-  /// 🚨 Serve **solo** per gli esercizi scritti al volo che il catalogo non
-  /// conosce: da A.3.5 il server rifiuta di crearne uno senza muscoli, e senza
-  /// questo campo la serie prenderebbe un 422 **a metà allenamento** — cioè nel
-  /// momento peggiore possibile per scoprire che manca un dato.
-  ///
-  /// ⚠️ `null` non vuol dire «nessuno»: vuol dire che nessuno ha risposto.
-  MuscoliScelti? muscoli;
-
-  /// Le ripetizioni **prescritte**, come stringa: «8-12», «cedimento», «max».
-  String? reps;
-
-  int restSec;
-  double? targetWeight;
-  String? notes;
-
-  /// L'illustrazione dell'esercizio — C23. Viene dalla scheda e resta anche
-  /// per gli esercizi aggiunti al volo, che semplicemente non ne hanno una.
-  String? imageUrl;
-
-  /// Le serie **come le prescrive la scheda**, una per riga — 3b-D.8.
-  ///
-  /// ⚠️ Vuota per un esercizio aggiunto al volo: li' non c'e' nessuna
-  /// prescrizione, e `previsteAl` risponde `null` come deve.
-  List<SeriePrevista> previste;
-
-  List<PlayerSet> rows;
-
-  /// La riga prevista per la serie numero [numero] (1-based).
-  ///
-  /// 🚨 **`null` quando la scheda non arriva fin li'**, e succede spesso: il
-  /// player aggiunge righe quando se ne fanno piu' di quelle previste. ⛔ Cadere
-  /// sull'ultima riga prevista direbbe «riposa 120 secondi» a una quinta serie
-  /// che la scheda non contempla — un numero inventato con l'aria di essere
-  /// prescritto.
-  SeriePrevista? previsteAl(int numero) =>
-      numero >= 1 && numero <= previste.length ? previste[numero - 1] : null;
-
-  /// Vero quando ogni serie prevista è stata registrata.
-  bool get completo => rows.isNotEmpty && rows.every((r) => r.done);
-}
-
-class PlayerSet {
-  PlayerSet({
-    required this.setNumber,
-    this.reps,
-    this.weight,
-    this.done = false,
-  });
-
-  final int setNumber;
-  int? reps;
-  double? weight;
-  bool done;
-}
+/*
+ * ══ 🪦 QUI C'ERANO `PlayerExercise` E `PlayerSet` — tolti in 3b-E ══════════
+ *
+ * ⛔ Erano **due modelli affiancati**: uno per quello che la scheda prescrive
+ * (`previste`) e uno per quello che si stava facendo (`rows`), con due
+ * numerazioni tenute in fila a mano. 🚨 Il loro disallineamento e' la sorgente
+ * di meta' dei difetti di B.15.
+ *
+ * 💡 Da 3b-E la riga della scheda **e'** la riga che si compila:
+ * `EsercizioInAllenamento` in `data/allenamento_in_corso.dart`, che estende
+ * quello dell'editor. ⚠️ Sono stati **cancellati e non lasciati li'**: un
+ * modello morto che si legge ancora bene e' il primo che qualcuno riusa.
+ */

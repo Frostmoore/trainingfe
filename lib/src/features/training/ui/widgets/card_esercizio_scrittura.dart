@@ -43,11 +43,23 @@ class CardEsercizioScrittura extends ConsumerWidget {
     required this.onCambio,
     required this.onRimuovi,
     this.posizione,
+    this.etichetta,
+    this.codaDellaRiga,
     super.key,
   });
 
   final EsercizioInScrittura esercizio;
   final int numero;
+
+  /// Cosa c'e' scritto in cima al posto di «Esercizio 3» — 3b-E.2.
+  ///
+  /// 💡 Durante l'allenamento dice anche **a che punto si e'** («Esercizio 3 ·
+  /// 2 di 4»): e' l'unica informazione che serve guardando il telefono da un
+  /// metro, appoggiato sulla panca. ⚠️ `null` = l'etichetta di casa.
+  final String? etichetta;
+
+  /// La coda delle righe delle serie — vedi `RigheDelleSerie.coda`.
+  final Widget Function(int indice)? codaDellaRiga;
 
   /// L'indice nella lista, per la maniglia di trascinamento — 3b-D.12.
   ///
@@ -71,7 +83,7 @@ class CardEsercizioScrittura extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  'Esercizio $numero',
+                  etichetta ?? 'Esercizio $numero',
                   style: tema.textTheme.labelLarge?.copyWith(
                     color: tema.colorScheme.onSurfaceVariant,
                   ),
@@ -132,7 +144,11 @@ class CardEsercizioScrittura extends ConsumerWidget {
 
             const SizedBox(height: Gap.md),
 
-            RigheDelleSerie(esercizio: esercizio, onCambio: onCambio),
+            RigheDelleSerie(
+              esercizio: esercizio,
+              onCambio: onCambio,
+              coda: codaDellaRiga,
+            ),
 
             const SizedBox(height: Gap.md),
 
@@ -243,6 +259,21 @@ class _NomeConElenco extends ConsumerWidget {
              * muscoli di un esercizio che non e' piu' quello scritto, e nessuno
              * avrebbe modo di accorgersene.
              */
+            /*
+             * ══ 🚨 E CON L'AGGANCIO DECADONO I MUSCOLI CHE VENIVANO DA LI' ══
+             *
+             * ⛔ Restavano appesi al nome nuovo: le pasticche dicevano «Pettorali»
+             * sotto un esercizio che nel frattempo era diventato «Rematore», e
+             * l'allenamento li mandava al server come muscoli di **quel** nome
+             * (3b-A.3.5). ⚠️ Nessun errore: solo un dato sbagliato, dichiarato.
+             *
+             * 💡 **Solo quelli del catalogo pero'.** Se `exerciseId` era gia'
+             * `null`, i muscoli li ha scelti una persona a mano: cancellarli
+             * perche' si corregge un refuso nel nome sarebbe buttare via
+             * l'unica cosa che nessuno puo' ricostruire.
+             */
+            if (esercizio.exerciseId != null) esercizio.muscoli = null;
+
             esercizio.exerciseId = null;
 
             onCambio();

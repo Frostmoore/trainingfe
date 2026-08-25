@@ -505,6 +505,37 @@ class PlanActions {
     _ref.invalidate(planDetailProvider(id));
   }
 
+  /// Riscrive la scheda **così com'è**, e fa rileggere chi la guarda — 3b-E.6.
+  ///
+  /// ══ 🚨 PERCHE' STA QUI E NON DENTRO IL PLAYER ═════════════════════════════
+  ///
+  /// ⛔ Il player scriveva da sé, e dopo l'`await` toccava il proprio `ref` per
+  /// far rileggere l'elenco. 🚨 L'ultima scrittura si fa **uscendo dalla
+  /// schermata**: a quel punto quel `ref` è morto, e le due righe dopo l'attesa
+  /// lanciano *«Cannot use ref after dispose»* — cioè un errore rosso proprio
+  /// nel gesto che chiude l'allenamento.
+  ///
+  /// 💡 Il `Ref` di un provider invece **vive nel contenitore**, non nel widget:
+  /// sopravvive alla schermata che l'ha chiamato, ed è l'unico posto da cui
+  /// questa sequenza si possa completare in sicurezza.
+  ///
+  /// ⚠️ La busta arriva **già intera** (vedi `schedaConGliEsercizi`): qui non si
+  /// ricostruisce niente, si scrive quello che il chiamante ha rattoppato.
+  Future<void> riscrivi({
+    required int id,
+    required String nome,
+    required Map<String, dynamic> scheda,
+  }) async {
+    await _archivio.aggiornaScheda(
+      id: id,
+      nome: nome,
+      scheda: json.encode(scheda),
+    );
+
+    _rileggi();
+    _ref.invalidate(planDetailProvider(id));
+  }
+
   /// Butta una scheda.
   ///
   /// 📌 *«se serve una nuova scheda il trainer la rimanda e l'utente cancella la

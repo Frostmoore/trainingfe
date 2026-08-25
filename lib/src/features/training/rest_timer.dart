@@ -33,7 +33,17 @@ class RestTimer extends ChangeNotifier {
   /// pur avendo `playSound: true` scritto nel codice — il canale era nato muto e
   /// nessuna modifica poteva più svegliarlo. Cambiando idea su come deve
   /// avvisare, si cambia **anche l'identificativo**: è l'unico modo.
-  static const _canaleFine = 'rest_timer_v2';
+  /// 🚨 **`v3` perche' e' cambiato il suono** — 3b-E.8, 25/08/2026.
+  ///
+  /// 📌 *«Adesso la notifica di fine del tempo di riposo ha lo stesso suono
+  /// delle suonerie di sistema. Non va bene, deve essere un suono piu'
+  /// squillante e piu' chiaro»*.
+  ///
+  /// ⛔ Lasciando `v2` **non sarebbe cambiato niente** sul telefono del
+  /// committente, che l'app ce l'ha gia' installata: il canale era nato con la
+  /// suoneria di sistema e nessuna riga di codice puo' piu' svegliarlo. E' la
+  /// stessa trappola che aveva fatto suonare muto il recupero.
+  static const _canaleFine = 'rest_timer_v3';
   static const _canaleInCorso = 'rest_timer_ongoing_v2';
 
   /// Un id solo: programmarne una nuova sostituisce la precedente invece di
@@ -157,18 +167,23 @@ class RestTimer extends ChangeNotifier {
   void _concludi() {
     _ferma();
 
-    // 🚨 **Si avvisa in tre modi, e non è ridondanza.**
-    //
-    // Il caso vero è: telefono appoggiato sulla panca, palestra rumorosa,
-    // l'utente sta guardando altrove. Ognuno dei tre copre un buco degli altri:
-    //  - la **vibrazione** funziona anche a suoneria spenta;
-    //  - il **suono di sistema** arriva anche se le notifiche sono negate;
-    //  - la **notifica** è l'unica che arriva a schermo spento.
-    //
-    // Prima c'era solo `HapticFeedback.heavyImpact()`, che su molti telefoni è
-    // un tocco appena percettibile — e su un emulatore non è niente affatto.
+    /*
+     * 🚨 **Si avvisa in due modi, e il terzo e' un ripiego.**
+     *
+     * Il caso vero e': telefono appoggiato sulla panca, palestra rumorosa,
+     * l'utente sta guardando altrove.
+     *  - la **vibrazione** funziona anche a suoneria spenta;
+     *  - la **notifica** porta il suono nostro, e arriva anche a schermo spento.
+     *
+     * ⛔ **Il suono di sistema non si fa piu' partire sempre** — 3b-E.8. Suonava
+     * *insieme* a quello della notifica, ed era proprio lui a far dire al
+     * committente che il recupero *«ha lo stesso suono delle suonerie di
+     * sistema»*: due avvisi sovrapposti, e quello generico copriva l'altro.
+     *
+     * 💡 Adesso parte **solo se la notifica non e' riuscita** — permesso negato,
+     * o piattaforma che non la mostra. Meglio un suono generico che nessuno.
+     */
     HapticFeedback.vibrate();
-    unawaited(SystemSound.play(SystemSoundType.alert));
     unawaited(_suonaAdesso());
 
     // ⚠️ La persistente va tolta **subito**: con il recupero finito resterebbe
@@ -189,7 +204,11 @@ class RestTimer extends ChangeNotifier {
   /// La programmata resta comunque: è l'unica che arriva a schermo spento.
   /// Si cancella qui per non farne suonare due.
   Future<void> _suonaAdesso() async {
-    if (!notificheAttive) return;
+    if (!notificheAttive) {
+      await _ripiegoDiSistema();
+
+      return;
+    }
 
     try {
       await _annullaAvviso();
@@ -198,9 +217,11 @@ class RestTimer extends ChangeNotifier {
         _idNotifica,
         'Riposo finito',
         'Vai con la prossima serie.',
-        const NotificationDetails(
+        // ⚠️ Niente `const`: `_dettagliFine` porta il suono e la pulsazione,
+        // che costanti non sono.
+        NotificationDetails(
           android: _dettagliFine,
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentSound: true,
             presentAlert: true,
             interruptionLevel: InterruptionLevel.timeSensitive,
@@ -208,8 +229,21 @@ class RestTimer extends ChangeNotifier {
         ),
       );
     } on Object catch (_) {
-      // Senza permesso non si mostra niente: restano vibrazione e suono di
-      // sistema, ed è il motivo per cui sono tre e non uno.
+      // ⚠️ Senza permesso non si mostra niente: resta la vibrazione, e qui si
+      // ripiega sul suono di sistema — vedi la nota in `_concludi`.
+      await _ripiegoDiSistema();
+    }
+  }
+
+  /// L'avviso di ultima istanza: la suoneria generica del sistema.
+  ///
+  /// ⚠️ Non e' bello ed e' voluto che non lo sia: si sente solo quando la
+  /// notifica non e' potuta partire, e li' l'alternativa e' il silenzio.
+  Future<void> _ripiegoDiSistema() async {
+    try {
+      await SystemSound.play(SystemSoundType.alert);
+    } on Object catch (_) {
+      // Su alcune piattaforme non esiste. Resta la vibrazione.
     }
   }
 
@@ -217,7 +251,7 @@ class RestTimer extends ChangeNotifier {
   ///
   /// Serve sia alla programmata sia a quella immediata: due copie divergono, e
   /// la copia sbagliata è quella che resta muta.
-  static const AndroidNotificationDetails _dettagliFine =
+  static final AndroidNotificationDetails _dettagliFine =
       AndroidNotificationDetails(
         _canaleFine,
         'Fine del recupero',
@@ -227,13 +261,46 @@ class RestTimer extends ChangeNotifier {
         priority: Priority.max,
         category: AndroidNotificationCategory.alarm,
         playSound: true,
+
+        /*
+         * ══ 🔔 IL SUONO E' NOSTRO — 3b-E.8 ══════════════════════════════════
+         *
+         * 📌 *«deve essere un suono piu' squillante e piu' chiaro»*.
+         *
+         * 💡 Tre colpi che **salgono** (C6, F6, C7), con un pizzico di terza
+         * armonica: una scala che sale dice «vai», una che scende direbbe
+         * «finito» — e qui il recupero e' finito ma la serie deve cominciare.
+         * ⚠️ Un seno puro in palestra lo mangia il rumore di sala.
+         *
+         * 🚨 Il file lo genera `memory/scripts/suono-del-recupero.py`, e sta in
+         * `res/raw/fine_recupero.wav`: niente licenze di terzi in un'app che
+         * finisce sugli store. ⛔ Il nome della risorsa e' **senza estensione**,
+         * e Android vuole minuscole e underscore.
+         *
+         * ⏳ **Debito dichiarato**: su iOS resta la suoneria di sistema. Il file
+         * andrebbe aggiunto al bundle di Xcode, e un `sound:` che punta a un
+         * file assente su iOS vuol dire **silenzio**, che e' peggio di adesso.
+         */
+        sound: const RawResourceAndroidNotificationSound('fine_recupero'),
+
         enableVibration: true,
-        // Una pulsazione lunga: fra le serie il telefono è appoggiato, e un
-        // singolo colpo breve non si sente.
-        vibrationPattern: null,
+
+        /*
+         * ⚠️ **Qui c'era `null`, e il commento accanto diceva il contrario.**
+         * Prometteva «una pulsazione lunga» e lasciava fare al sistema, che su
+         * molti telefoni e' un colpo appena percettibile.
+         *
+         * 💡 Due colpi lunghi separati da una pausa breve: si sentono col
+         * telefono appoggiato sulla panca, e non si confondono con la
+         * vibrazione di un messaggio. [pausa, on, off, on]
+         */
+        vibrationPattern: _pulsazione,
+
         fullScreenIntent: false,
         audioAttributesUsage: AudioAttributesUsage.alarm,
       );
+
+  static final Int64List _pulsazione = Int64List.fromList([0, 300, 140, 300]);
 
   Future<void> _programmaAvviso(int fraSecondi) async {
     if (!notificheAttive || fraSecondi <= 0) return;
@@ -246,9 +313,11 @@ class RestTimer extends ChangeNotifier {
         'Riposo finito',
         'Vai con la prossima serie.',
         tz.TZDateTime.now(tz.local).add(Duration(seconds: fraSecondi)),
-        const NotificationDetails(
+        // ⚠️ Niente `const`: `_dettagliFine` porta il suono e la pulsazione,
+        // che costanti non sono.
+        NotificationDetails(
           android: _dettagliFine,
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentSound: true,
             // Su iOS, senza questo, una notifica ad app aperta non suona: e
             // il caso «app aperta sulla panca» è quello che capita di più.

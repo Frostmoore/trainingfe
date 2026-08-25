@@ -93,12 +93,26 @@ class RigheDelleSerie extends StatelessWidget {
               // ⛔ L'ultima riga non si toglie: un esercizio con zero serie
               // non e' un esercizio.
               onTogli: esercizio.righe.length > 1 ? () => _togli(i) : null,
-              onPrimaRigaScritta: i == 0
+              /*
+               * 🚨 **La prima riga propaga, le altre si marcano** — 3b-D.15.
+               *
+               * ⛔ Prima le righe sotto chiamavano solo `onCambio`, e chi le
+               * riempiva a mano non lasciava traccia: l'autocompilazione le
+               * riconosceva «gia' scritte» solo perche' avevano del testo
+               * dentro — e bastava che ce l'avessero messo lei.
+               *
+               * 💡 Adesso battere un tasto in una riga la dichiara **di chi
+               * scrive**, e da li' in poi non si tocca piu'.
+               */
+              onCambioRiga: i == 0
                   ? () {
                       esercizio.autocompila();
                       onCambio();
                     }
-                  : onCambio,
+                  : () {
+                      esercizio.righe[i].toccataAMano = true;
+                      onCambio();
+                    },
             ),
           ),
 
@@ -187,14 +201,14 @@ class _RigaSerie extends StatelessWidget {
     required this.riga,
     required this.carico,
     required this.onTogli,
-    required this.onPrimaRigaScritta,
+    required this.onCambioRiga,
   });
 
   final int numero;
   final SerieInScrittura riga;
   final CaricoDellEsercizio carico;
   final VoidCallback? onTogli;
-  final VoidCallback onPrimaRigaScritta;
+  final VoidCallback onCambioRiga;
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +238,7 @@ class _RigaSerie extends StatelessWidget {
             child: _Campo(
               controller: riga.ripetizioni,
               etichetta: 'Rip.',
-              onCambio: onPrimaRigaScritta,
+              onCambio: onCambioRiga,
             ),
           ),
 
@@ -241,7 +255,7 @@ class _RigaSerie extends StatelessWidget {
               child: _Campo(
                 controller: riga.carico,
                 etichetta: carico == CaricoDellEsercizio.iso ? 'Sec.' : 'Kg',
-                onCambio: onPrimaRigaScritta,
+                onCambio: onCambioRiga,
               ),
             ),
           ],
@@ -251,7 +265,7 @@ class _RigaSerie extends StatelessWidget {
             child: _Campo(
               controller: riga.recupero,
               etichetta: 'Rec. s',
-              onCambio: onPrimaRigaScritta,
+              onCambio: onCambioRiga,
             ),
           ),
 

@@ -39,7 +39,14 @@ void main() {
     test('⛔ ma non tocca quelle che qualcuno ha già scritto', () {
       final e = EsercizioInScrittura();
 
+      /*
+       * ⚠️ **Il flag lo mette il widget quando qualcuno batte un tasto**, e qui
+       * si scrive a mano perché il widget non c'è. 🚨 Scrivere solo il testo
+       * non basta più, ed è il punto della correzione di 3b-D.15: una riga che
+       * ha del testo dentro può averlo ricevuto dall'autocompilazione stessa.
+       */
       e.serie[2].carico.text = '50';
+      e.serie[2].toccataAMano = true;
 
       e.serie.first.ripetizioni.text = '12';
       e.serie.first.carico.text = '40';
@@ -54,6 +61,55 @@ void main() {
         isEmpty,
         reason: 'la riga toccata si salta INTERA, non campo per campo',
       );
+    });
+
+    /// 🚨 **Il difetto vero, quello visto a schermo** — 3b-D.15.
+    ///
+    /// ⛔ La guardia guardava se la riga fosse **vuota**. Scrivendo «12» nella
+    /// prima riga, il **primo tasto** («1») si copiava sotto — e da quel
+    /// momento le righe sotto non erano più vuote, quindi il «2» non arrivava
+    /// più. Restavano a «1».
+    ///
+    /// ⚠️ A schermo sembrava che l'autocompilazione **non funzionasse
+    /// affatto**, ed è peggio che se non ci fosse: lascia numeri sbagliati dove
+    /// ci si aspettano quelli giusti.
+    ///
+    /// 💡 Questo test batte i tasti **uno alla volta**, come una persona. Con
+    /// il valore messo tutto in una volta il difetto non si vedeva — ed è il
+    /// motivo per cui i test di prima erano verdi.
+    test('⌨️ e regge la SECONDA cifra, non solo la prima', () {
+      final e = EsercizioInScrittura();
+
+      // Come si scrive «12» davvero: un tasto, poi l'altro.
+      e.serie.first.ripetizioni.text = '1';
+      e.autocompila();
+
+      e.serie.first.ripetizioni.text = '12';
+      e.autocompila();
+
+      expect(e.serie[1].ripetizioni.text, '12');
+      expect(e.serie[2].ripetizioni.text, '12');
+    });
+
+    /// ⛔ **E una scheda che esiste già non si fa riscrivere.**
+    ///
+    /// 🚨 Le righe sotto le ha scritte **una persona**, mesi fa. Correggendo il
+    /// peso della prima serie, le altre due non devono cambiare.
+    test('📂 e aprendo una scheda scritta prima non le sovrascrive', () {
+      final e = EsercizioInScrittura.da({
+        'name': 'Squat',
+        'serie': [
+          {'reps': 12, 'weight': 40.0},
+          {'reps': 10, 'weight': 45.0},
+          {'reps': 8, 'weight': 50.0},
+        ],
+      });
+
+      e.serie.first.carico.text = '42';
+      e.autocompila();
+
+      expect(e.serie[1].carico.text, '45', reason: "l'ha scritto una persona");
+      expect(e.serie[2].carico.text, '50');
     });
   });
 

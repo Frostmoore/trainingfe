@@ -44,7 +44,7 @@ mixin ConLeSerie {
 
   set carico(CaricoDellEsercizio valore);
 
-  /// Riempie le righe **ancora intatte** copiando la prima.
+  /// Riempie le righe **che nessuno ha ancora toccato** copiando la prima.
   ///
   /// 📌 *«Quando compilo la prima si devono autocompilare anche le altre sotto
   /// (ovviamente devo poterle modificare)»*.
@@ -54,6 +54,11 @@ mixin ConLeSerie {
   /// guardia, scrivere il peso della terza serie e poi correggere la prima
   /// cancellerebbe la correzione appena fatta.
   ///
+  /// ⛔ **E «toccata» non vuol dire «piena»**: guardando il contenuto invece di
+  /// chi l'ha scritto, il primo tasto della prima riga si copiava sotto e da
+  /// quel momento le righe smettevano di ricevere il resto — vedi
+  /// [SerieInScrittura.toccataAMano].
+  ///
   /// 💡 Sta qui e non nelle due classi proprio perché la regola è sottile: due
   /// copie avrebbero perso la guardia una alla volta.
   void autocompila() {
@@ -62,7 +67,8 @@ mixin ConLeSerie {
     final prima = righe.first;
 
     for (final riga in righe.skip(1)) {
-      if (!riga.intatta) continue;
+      // 🚨 `toccataAMano` e non `intatta`: vedi la nota lunga li'.
+      if (riga.toccataAMano) continue;
 
       riga.ripetizioni.text = prima.ripetizioni.text;
       riga.carico.text = prima.carico.text;
@@ -78,11 +84,20 @@ class SerieInScrittura {
       carico = TextEditingController(text: carico ?? ''),
       recupero = TextEditingController(text: recupero ?? '');
 
-  factory SerieInScrittura.da(SeriePrevista s) => SerieInScrittura(
-    ripetizioni: s.ripetizioni?.toString(),
-    carico: _numero(s.peso) ?? s.isoSec?.toString(),
-    recupero: s.recuperoSec?.toString(),
-  );
+  /// Da una serie gia' scritta.
+  ///
+  /// 🚨 **Nasce gia' [toccataAMano]**, ed e' il caso che si dimentica: aprendo
+  /// una scheda che esiste, le righe sotto le ha scritte **una persona**.
+  /// ⛔ Correggendo la prima, l'autocompilazione le sovrascriverebbe tutte — e
+  /// chi voleva cambiare il peso della prima serie si ritroverebbe le altre
+  /// due riscritte senza aver toccato niente.
+  factory SerieInScrittura.da(SeriePrevista s) =>
+      SerieInScrittura(
+          ripetizioni: s.ripetizioni?.toString(),
+          carico: _numero(s.peso) ?? s.isoSec?.toString(),
+          recupero: s.recuperoSec?.toString(),
+        )
+        ..toccataAMano = true;
 
   /// ⚠️ **`40` e non `40.0`**: il campo lo legge una persona, e un peso intero
   /// scritto con lo zero dietro sembra una precisione che non c'è.
@@ -103,11 +118,29 @@ class SerieInScrittura {
 
   final TextEditingController recupero;
 
-  /// ⚠️ Una riga «intatta» è una che **nessuno ha ancora toccato**.
+  /// ⚠️ **Qualcuno ha scritto in QUESTA riga** — 3b-D.15, 25/08/2026.
   ///
-  /// 🚨 È la guardia dell'autocompilazione: si riempiono solo le righe intatte,
-  /// perché sovrascrivere un numero appena scritto è il modo più veloce di far
-  /// perdere il lavoro a chi sta compilando.
+  /// ══ 🚨 NON E' «E' VUOTA», E LA DIFFERENZA E' TUTTO ═══════════════════════
+  ///
+  /// ⛔ L'autocompilazione guardava se la riga fosse **vuota**, e il difetto si
+  /// vedeva alla seconda cifra: scrivendo «12» nella prima riga, il **primo
+  /// tasto** («1») si copiava sotto — e da quel momento le righe sotto non
+  /// erano piu' vuote, quindi il «2» non arrivava piu'. Restavano a «1».
+  ///
+  /// 🚨 A schermo sembra che l'autocompilazione **non funzioni affatto**, ed e'
+  /// peggio che se non ci fosse: lascia dei numeri sbagliati dove ci si aspetta
+  /// quelli giusti, e chi salva non li rilegge uno per uno.
+  ///
+  /// 💡 Quello che conta non e' il contenuto: e' **chi l'ha scritto**. Una riga
+  /// che ha solo ricevuto la copia resta disponibile per la prossima; una in
+  /// cui una persona ha battuto un tasto non si tocca piu'.
+  bool toccataAMano = false;
+
+  /// ⚠️ Vuota davvero: nessuno dei tre campi ha niente dentro.
+  ///
+  /// 💡 Serve a **non mandare al server tre serie da niente** quando un
+  /// esercizio e' appena stato aggiunto — non all'autocompilazione, che guarda
+  /// [toccataAMano].
   bool get intatta =>
       ripetizioni.text.trim().isEmpty &&
       carico.text.trim().isEmpty &&

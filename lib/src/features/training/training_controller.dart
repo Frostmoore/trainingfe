@@ -97,14 +97,64 @@ class PlanExercise {
   });
 
   factory PlanExercise.fromJson(Map<String, dynamic> j) => PlanExercise(
-    id: (j['id'] as num).toInt(),
-    name: (j['exercise'] as Map?)?['name']?.toString() ?? 'Esercizio',
+    /*
+     * ══ 🚨 SENZA ID SI LEGGE LO STESSO — 3b-D.17, 25/08/2026 ═══════════════
+     *
+     * 📌 *«Se modifico una scheda, quando clicco salva mi dà errore … Adesso la
+     * pagina schede mi dice sempre "Qualcosa è andato storto"»*.
+     *
+     * ⛔ Qui c'era `(j['id'] as num).toInt()`, un **cast duro**. Gli id delle
+     * righe li dava il server, e **da B.17 il server non c'è più**: un
+     * esercizio scritto dall'editor non ha nessun id, e questa riga esplodeva
+     * con *«type 'Null' is not a subtype of type 'num'»*.
+     *
+     * 🚨 **E non si rompeva solo il salvataggio.** La scheda restava scritta
+     * nell'archivio, e `schedeUniteProvider` la rilegge per costruire
+     * **l'elenco**: da quel momento la pagina Schede intera non si apriva più.
+     * ⚠️ Un dato scritto male avvelena tutte le letture, non solo quella che lo
+     * ha prodotto — ed è il motivo per cui un cast duro su un dato **locale** è
+     * sempre una bomba a tempo.
+     *
+     * 💡 **Zero, e non fa niente**: nessuno usa questo campo. L'identità di un
+     * esercizio dentro una scheda è **il suo posto**, e per le righe scese dal
+     * server prima di B.17 l'id continua a leggersi.
+     */
+    id: (j['id'] as num?)?.toInt() ?? 0,
+    /*
+     * ══ 🚨 IL NOME STA IN CIMA, E `exercise.name` E' IL RIPIEGO — 3b-D.17 ══
+     *
+     * ⛔ Qui si leggeva **solo** `exercise.name`, cioe' il nome che manda il
+     * server. Un esercizio scritto dall'editor lo mette in cima (`name`), e
+     * quindi si chiamava **«Esercizio»** — in elenco, nel player, ovunque.
+     *
+     * 🚨 **E' lo stesso difetto di B.17**, quando ogni scheda ricevuta si
+     * chiamava «Scheda» da mesi: si legge il nome da dove lo scrive **una**
+     * delle sorgenti, e l'altra resta muta. ⚠️ Non da' errore: da' un'etichetta
+     * generica, che sembra una scelta.
+     *
+     * 💡 Stesso ordine di `EsercizioDellaScheda.fromJson`: prima quello che
+     * scrive chi ha compilato, poi quello del catalogo.
+     */
+    name:
+        j['name']?.toString() ??
+        (j['exercise'] as Map?)?['name']?.toString() ??
+        'Esercizio',
 
     /// ⚠️ **`id` è la riga della scheda, `exerciseId` è l'esercizio.** Due
     /// numeri diversi che si somigliano: usare il primo per cercare nel
     /// catalogo trova l'esercizio sbagliato — e non dà nessun errore, perché un
     /// id qualunque nel catalogo di solito esiste.
-    exerciseId: ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
+    /*
+     * ⚠️ **E anche l'aggancio al catalogo sta in due posti.** L'editor scrive
+     * `exercise_id` (3b-D.4.2), il server annida `exercise.id`.
+     *
+     * 🚨 Perderlo non da' nessun errore: fa **sparire i muscoli** dalla figura
+     * e il MET dalla stima, cioe' due schermate che diventano mute senza dire
+     * perche'.
+     */
+    exerciseId:
+        (j['exercise_id'] as num?)?.toInt() ??
+        ((j['exercise'] as Map?)?['id'] as num?)?.toInt(),
     // 🚨 Arriva già formattata dal backend («3 × 8-12»): comporla qui
     // significherebbe avere due formati diversi fra app e pannello per la
     // stessa scheda.

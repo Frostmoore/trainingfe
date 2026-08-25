@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/archivio_salute.dart';
+import '../auth/auth_controller.dart';
 import '../dashboard/gettoni_controller.dart';
 import '../health/health_controller.dart';
 import 'data/limiti_delle_schede.dart';
@@ -209,18 +210,20 @@ final schedeBloccateProvider =
         illimitata: ref.watch(gettoniProvider).valueOrNull?.illimitata,
 
         /*
-         * ⏳ **Il server non manda niente sull'abbonamento** — 25/08/2026.
+         * ✅ **E adesso il server lo manda** — 3b-C.8, 25/08/2026.
          *
-         * 📌 *«AI illimitata e abbonato sono due cose diverse»*, e infatti sono
-         * due parametri. ⛔ Ma di «abbonato» oggi non c'è traccia: `/me` non lo
-         * espone, e lo stato del *tenant* è la palestra, non la persona — un
-         * iscritto a una palestra attiva non è per questo un abbonato.
+         * 📌 *«aggiusta anche il server in modo che gli utenti (free users o
+         * iscritti in una palestra o con un trainer) abbiano il flag abbonato e
+         * il flag tier»*.
          *
-         * 🚨 `null` e non `true`: `null` vuol dire «non lo so, non bloccare»,
-         * ed è la cosa onesta. Scriverci `true` vorrebbe dire dichiarare
-         * abbonati tutti quanti, e fra un mese nessuno ricorderebbe perché.
+         * 💡 `PianoAttivo::eAbbonato()` lato server, dentro il profilo. ⚠️ In
+         * questo impianto **paga il tenant**: chi è iscritto a una palestra
+         * abbonata è coperto da quella, ed è il modello di vendita.
+         *
+         * 🚨 `null` mentre il profilo carica, e `null` non blocca: chi apre
+         * l'app non deve vedere le proprie schede spegnersi per un istante.
          */
-        abbonato: null,
+        abbonato: ref.watch(authControllerProvider).user?.abbonato,
       );
     });
 

@@ -580,9 +580,36 @@ class _AvviaAllenamento extends ConsumerWidget {
       if (scelta == null) return;
     }
 
-    try {
-      final idScheda = (scelta ?? 0) == 0 ? null : scelta;
+    final idScheda = (scelta ?? 0) == 0 ? null : scelta;
 
+    /*
+     * ══ 🔒 E QUI SI CHIUDE DAVVERO — 3b-C.6, 25/08/2026 ═══════════════════
+     *
+     * 📌 *«il limite di schede ovviamente deve esserci anche nel tasto inizia,
+     * altrimenti non ha senso: non puoi iniziare un allenamento con una scheda
+     * bloccata, è ovvio»*.
+     *
+     * ⚠️ **Filtrare l'elenco del foglio non basta.** Quello toglie la scheda
+     * dalla vista, ma l'elenco è una fotografia presa quando il foglio si è
+     * aperto: se nel frattempo il limite cambia — l'abbonamento scade mentre il
+     * foglio è aperto, o il profilo arriva un istante dopo — si partirebbe lo
+     * stesso.
+     *
+     * 🚨 Un controllo **al momento di partire** è l'unico che guarda lo stato
+     * di quel momento. ⛔ È lo stesso ragionamento per cui il server non si
+     * fida mai del client: qui il client non si fida della propria lista.
+     */
+    if (idScheda != null && bloccate.containsKey(idScheda)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(bloccate[idScheda]!.spiegazione)),
+        );
+      }
+
+      return;
+    }
+
+    try {
       /*
        * 🆕 **Il nome viaggia con la seduta** — FASE 11.4.
        *

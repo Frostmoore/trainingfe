@@ -17,6 +17,8 @@ class AppUser {
     this.social = const [],
     this.isTrainer = false,
     this.aiAbilitata = true,
+    this.abbonato = false,
+    this.tier = 'free',
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -51,6 +53,28 @@ class AppUser {
      * risponde `403` anche a un'app che ignorasse questo valore.
      */
     aiAbilitata: json['ai_enabled'] as bool? ?? true,
+
+    /*
+     * 🚨 **`abbonato` e `tier`, e NON sono `ai_enabled`** — 3b-C.8, 25/08/2026.
+     *
+     * 📌 *«ovviamente AI illimitata e abbonato sono due cose diverse, non va
+     * bene che siano trattati come una cosa singola»*.
+     *
+     * ⛔ Le avevo confuse, appoggiandomi al fatto che oggi l'abbonamento concede
+     * la quota illimitata: un'osservazione sul presente, non una definizione.
+     * 💡 `ai_enabled` dice *«puoi usare l'AI adesso»* — e comprende i gettoni
+     * comprati; `abbonato` dice *«hai un contratto»*. Chi compra gettoni su un
+     * piano gratuito ha il primo e non il secondo.
+     *
+     * ⚠️ **`false` e `'free'` come ripiego**, al contrario di `aiAbilitata` che
+     * cade su `true`: là un pulsante in meno sarebbe un danno per chi ha pagato,
+     * qui un limite in meno sarebbe un regalo a chi non ha pagato. 🚨 In dubbio
+     * si sbaglia **verso il proprio danno**, non verso quello del committente —
+     * e chi legge `schedeBloccate` sa già che `null` non blocca, quindi qui la
+     * scelta è fra due difetti diversi e si prende il meno costoso.
+     */
+    abbonato: json['abbonato'] as bool? ?? false,
+    tier: json['tier']?.toString() ?? 'free',
     social: ((json['social'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList(growable: false),
@@ -90,6 +114,22 @@ class AppUser {
   /// decide mai i permessi, e un'app che ignorasse questo campo riceverebbe
   /// comunque un rifiuto.
   final bool aiAbilitata;
+
+  /// Se questa persona ha un **abbonamento attivo** — 3b-C.8.
+  ///
+  /// ⚠️ Diverso da [aiAbilitata]: quello dice se l'AI si può usare **adesso**,
+  /// gettoni compresi. 💡 Lato server è `PianoAttivo::eAbbonato()`, e in questo
+  /// impianto paga il **tenant**: chi è iscritto a una palestra abbonata è
+  /// coperto da quella.
+  final bool abbonato;
+
+  /// Il livello del piano: `free`, `plus`, `gym`, `trainer_pro`…
+  ///
+  /// 💡 È il `code` del piano lato server, non un'etichetta nuova: inventarne
+  /// una vorrebbe dire una seconda lista da tenere allineata al listino.
+  /// ⚠️ **Mai vuoto**: chi non ha niente è `free`, che è un livello e non
+  /// un'assenza.
+  final String tier;
 
   /// Se questa persona ha una password **che conosce** — G8.
   ///

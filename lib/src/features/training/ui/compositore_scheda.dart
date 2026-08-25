@@ -7,6 +7,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
+import 'widgets/righe_delle_serie.dart';
 import 'widgets/scelta_muscoli.dart';
 
 /// Comporre una scheda dal telefono — G7.2 (D11).
@@ -463,100 +464,26 @@ class _Esercizio extends StatelessWidget {
             const SizedBox(height: Gap.sm),
 
             /*
-             * ⚠️ **Due righe da due campi, non una da quattro.**
+             * ══ 📋 LE STESSE RIGHE DELL'EDITOR DELL'ISCRITTO — 3b-D.11 ═════
              *
-             * `plan_editor_screen.dart` mette serie/ripetizioni/recupero/kg
-             * tutti in fila: a 328 px — la larghezza utile dello Xiaomi del
-             * committente — quattro etichette in una riga si accavallano. È la
-             * stessa misura su cui è stato trovato il difetto delle tendine del
-             * profilo.
+             * 📌 *«queste modifiche devono riguardare anche l'editor del
+             * trainer e quello del server, mi pare ovvio. A che cazzo serve
+             * fare delle modifiche se poi non sono ovunque»*.
+             *
+             * ⛔ Qui c'erano quattro campi — serie, ripetizioni, recupero, kg —
+             * che sapevano dire soltanto *«4 x 8-12 a 40 kg»*, uguale per tutte
+             * le serie. 🚨 Un trainer che prescrive una piramide doveva
+             * scriverla nelle note, dove nessuna funzione la legge.
+             *
+             * 💡 **Lo stesso identico widget** dell'editor dell'iscritto, non
+             * una copia che gli somiglia: `RigheDelleSerie` lavora
+             * sull'interfaccia `ConLeSerie`, che tutti e due i modelli
+             * implementano. Due copie sarebbero divergute alla prima
+             * correzione, e la prima a divergere sarebbe stata questa — che si
+             * prova meno.
              */
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    key: ValueKey('s-${esercizio.hashCode}'),
-                    initialValue: esercizio.serie?.toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'serie',
-                      isDense: true,
-                    ),
-                    onChanged: (v) {
-                      esercizio.serie = int.tryParse(v.trim());
-                      onCambio();
-                    },
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    key: ValueKey('r-${esercizio.hashCode}'),
-                    initialValue: esercizio.ripetizioni,
-                    // 🚨 **Nessun `keyboardType: number` qui**, ed è la
-                    // differenza che conta: «8-12», «cedimento», «max» sono
-                    // prescrizioni legittime, e una tastiera numerica le
-                    // renderebbe impossibili da scrivere.
-                    decoration: const InputDecoration(
-                      labelText: 'ripetizioni',
-                      hintText: '8-12',
-                      isDense: true,
-                    ),
-                    onChanged: (v) {
-                      esercizio.ripetizioni = v;
-                      onCambio();
-                    },
-                  ),
-                ),
-              ],
-            ),
+            RigheDelleSerie(esercizio: esercizio, onCambio: onCambio),
 
-            const SizedBox(height: Gap.sm),
-
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    key: ValueKey('rec-${esercizio.hashCode}'),
-                    initialValue: esercizio.recuperoSec?.toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'recupero (s)',
-                      isDense: true,
-                    ),
-                    onChanged: (v) {
-                      esercizio.recuperoSec = int.tryParse(v.trim());
-                      onCambio();
-                    },
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: TextFormField(
-                    key: ValueKey('kg-${esercizio.hashCode}'),
-                    initialValue: esercizio.pesoTarget?.toString(),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'kg',
-                      isDense: true,
-                    ),
-                    onChanged: (v) {
-                      // ⚠️ La virgola: su una tastiera italiana è quella che si
-                      // digita, e `double.tryParse` non la accetta.
-                      esercizio.pesoTarget = double.tryParse(
-                        v.trim().replaceAll(',', '.'),
-                      );
-                      onCambio();
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: Gap.sm),
 
             // 💡 Le note dell'esercizio: «fermo un secondo al petto» riguarda la
             // panca, non l'allenamento intero.

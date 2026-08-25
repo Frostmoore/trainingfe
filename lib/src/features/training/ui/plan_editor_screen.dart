@@ -256,19 +256,50 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
           const SizedBox(height: Gap.lg),
 
-          for (var i = 0; i < esercizi.length; i++)
-            CardEsercizioScrittura(
-              key: ObjectKey(esercizi[i]),
-              esercizio: esercizi[i],
-              numero: i + 1,
-              onCambio: () => setState(() {}),
-              onRimuovi: () => setState(() {
-                esercizi.removeAt(i).dispose();
+          /*
+           * ══ ↕️ GLI ESERCIZI SI SPOSTANO — 3b-D.12, 25/08/2026 ══════════════
+           *
+           * 📌 *«Devo poter muovere gli esercizi, o come prima o in un modo
+           * diverso ma deve essere possibile»*.
+           *
+           * ⛔ **Era una regressione mia**: l'editor vecchio aveva il
+           * `ReorderableListView` e riscrivendolo l'ho perso. 🚨 L'ordine degli
+           * esercizi **è parte della prescrizione** — si scaldano le spalle
+           * prima di spingere, non dopo — non una casualità della lista.
+           *
+           * ⚠️ `onReorderItem` e non `onReorder`: il secondo è deprecato
+           * proprio perché costringeva a correggere a mano l'indice
+           * (`a > da ? a - 1 : a`), e quella correzione dimenticata sposta
+           * l'esercizio di una posizione sbagliata **solo trascinando verso il
+           * basso** — un difetto che si nota tardi.
+           *
+           * 💡 `buildDefaultDragHandles: false` e la maniglia dentro la card:
+           * senza, il trascinamento parte da qualunque punto e si sposta un
+           * esercizio mentre si prova a scrivere in un campo.
+           */
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            onReorderItem: (da, a) =>
+                setState(() => esercizi.insert(a, esercizi.removeAt(da))),
+            children: [
+              for (var i = 0; i < esercizi.length; i++)
+                CardEsercizioScrittura(
+                  key: ObjectKey(esercizi[i]),
+                  esercizio: esercizi[i],
+                  numero: i + 1,
+                  posizione: i,
+                  onCambio: () => setState(() {}),
+                  onRimuovi: () => setState(() {
+                    esercizi.removeAt(i).dispose();
 
-                // ⛔ Mai zero: una scheda senza righe non si puo' scrivere.
-                if (esercizi.isEmpty) esercizi.add(EsercizioInScrittura());
-              }),
-            ),
+                    // ⛔ Mai zero: una scheda senza righe non si puo' scrivere.
+                    if (esercizi.isEmpty) esercizi.add(EsercizioInScrittura());
+                  }),
+                ),
+            ],
+          ),
 
           OutlinedButton.icon(
             onPressed: () =>

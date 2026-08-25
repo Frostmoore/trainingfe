@@ -42,11 +42,18 @@ class CardEsercizioScrittura extends ConsumerWidget {
     required this.numero,
     required this.onCambio,
     required this.onRimuovi,
+    this.posizione,
     super.key,
   });
 
   final EsercizioInScrittura esercizio;
   final int numero;
+
+  /// L'indice nella lista, per la maniglia di trascinamento — 3b-D.12.
+  ///
+  /// ⚠️ `null` quando la card non sta dentro un elenco riordinabile: la
+  /// maniglia semplicemente non compare, invece di comparire e non fare niente.
+  final int? posizione;
   final VoidCallback onCambio;
   final VoidCallback onRimuovi;
 
@@ -75,6 +82,23 @@ class CardEsercizioScrittura extends ConsumerWidget {
                   icon: const Icon(Icons.delete_outline_rounded),
                   tooltip: 'Togli questo esercizio',
                 ),
+
+                /*
+                 * ↕️ La maniglia, e **solo** questa trascina — 3b-D.12.
+                 *
+                 * 💡 `ReorderableDragStartListener` invece del trascinamento su
+                 * tutta la card: qui dentro ci sono sei campi di testo, e un
+                 * trascinamento che parte da qualunque punto sposta l'esercizio
+                 * mentre si prova a scrivere.
+                 */
+                if (posizione case final indice?)
+                  ReorderableDragStartListener(
+                    index: indice,
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: Gap.xs),
+                      child: Icon(Icons.drag_handle_rounded),
+                    ),
+                  ),
               ],
             ),
 

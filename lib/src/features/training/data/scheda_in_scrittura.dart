@@ -16,6 +16,61 @@ import 'package:flutter/widgets.dart';
 import 'gruppo_muscolare.dart';
 import 'serie_prevista.dart';
 
+/// Quello che serve a `RigheDelleSerie` per lavorare — 3b-D.11.
+///
+/// ══ 🚨 PERCHE' UN MIXIN E NON DUE WIDGET ══════════════════════════════════
+///
+/// 📌 *«queste modifiche devono riguardare anche l'editor del trainer e quello
+/// del server, mi pare ovvio. A che cazzo serve fare delle modifiche se poi non
+/// sono ovunque»*.
+///
+/// ⛔ Gli editor sono **due** — quello dell'iscritto ([EsercizioInScrittura]) e
+/// quello del trainer (`EsercizioDellaScheda`) — e tengono i dati in modo
+/// diverso per ragioni loro. 💡 Quello che **non** deve essere diverso è come si
+/// compilano le serie: stesso widget, stessa autocompilazione, stesse regole.
+///
+/// ⚠️ Due copie sarebbero divergute alla prima correzione, e la prima a
+/// divergere sarebbe stata quella del trainer — che si prova meno.
+mixin ConLeSerie {
+  /// Le righe da compilare.
+  ///
+  /// ⚠️ Si chiama `righe` e **non `serie`** per una ragione precisa: nel modello
+  /// del trainer `serie` è già un `int?` — *quante* serie, il campo vecchio. Due
+  /// cose diverse con lo stesso nome sono un errore che il compilatore trova e
+  /// un lettore no.
+  List<SerieInScrittura> get righe;
+
+  CaricoDellEsercizio get carico;
+
+  set carico(CaricoDellEsercizio valore);
+
+  /// Riempie le righe **ancora intatte** copiando la prima.
+  ///
+  /// 📌 *«Quando compilo la prima si devono autocompilare anche le altre sotto
+  /// (ovviamente devo poterle modificare)»*.
+  ///
+  /// ⚠️ **La parentesi è la specifica vera**: «devo poterle modificare» vuol
+  /// dire che una riga già toccata **non si tocca più**. 🚨 Senza quella
+  /// guardia, scrivere il peso della terza serie e poi correggere la prima
+  /// cancellerebbe la correzione appena fatta.
+  ///
+  /// 💡 Sta qui e non nelle due classi proprio perché la regola è sottile: due
+  /// copie avrebbero perso la guardia una alla volta.
+  void autocompila() {
+    if (righe.length < 2) return;
+
+    final prima = righe.first;
+
+    for (final riga in righe.skip(1)) {
+      if (!riga.intatta) continue;
+
+      riga.ripetizioni.text = prima.ripetizioni.text;
+      riga.carico.text = prima.carico.text;
+      riga.recupero.text = prima.recupero.text;
+    }
+  }
+}
+
 /// Una riga di serie, mentre la si compila.
 class SerieInScrittura {
   SerieInScrittura({String? ripetizioni, String? carico, String? recupero})
@@ -79,7 +134,7 @@ class SerieInScrittura {
 }
 
 /// Un esercizio, mentre lo si scrive.
-class EsercizioInScrittura {
+class EsercizioInScrittura with ConLeSerie {
   EsercizioInScrittura({
     String? nome,
     String? note,
@@ -141,32 +196,16 @@ class EsercizioInScrittura {
   /// Il percorso **relativo** dell'immagine (`foto/esercizi/…`).
   String? immagine;
 
+  @override
   CaricoDellEsercizio carico;
 
   final List<SerieInScrittura> serie;
 
-  /// Copia la prima riga su quelle **ancora intatte**.
-  ///
-  /// 📌 *«Quando compilo la prima si devono autocompilare anche le altre sotto
-  /// (ovviamente devo poterle modificare)»*.
-  ///
-  /// ⚠️ La parentesi del committente è la specifica vera: «devo poterle
-  /// modificare» vuol dire che una riga già toccata **non si tocca più**. 🚨
-  /// Senza quella guardia, scrivere il peso della terza serie e poi correggere
-  /// la prima cancellerebbe la correzione appena fatta.
-  void autocompila() {
-    if (serie.length < 2) return;
-
-    final prima = serie.first;
-
-    for (final riga in serie.skip(1)) {
-      if (!riga.intatta) continue;
-
-      riga.ripetizioni.text = prima.ripetizioni.text;
-      riga.carico.text = prima.carico.text;
-      riga.recupero.text = prima.recupero.text;
-    }
-  }
+  /// 💡 Le righe si chiamano `serie` qui e `righe` nel mixin: qui non c'è
+  /// nessun `int? serie` con cui confondersi, e cambiare nome a un campo usato
+  /// in mezza schermata per una simmetria non sarebbe un miglioramento.
+  @override
+  List<SerieInScrittura> get righe => serie;
 
   Map<String, dynamic> versoIlDato() => esercizioInJson(
     nome: nome.text.trim(),

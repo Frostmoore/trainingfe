@@ -20,6 +20,8 @@
 library;
 
 import 'gruppo_muscolare.dart';
+import 'scheda_in_scrittura.dart';
+import 'serie_prevista.dart';
 
 /// Un esercizio, o **l'alternativa a un esercizio** — D10.
 ///
@@ -27,7 +29,7 @@ import 'gruppo_muscolare.dart';
 /// sceglie l'alternativa deve trovarci serie, ripetizioni e recupero, o non
 /// saprebbe cosa fare. Se fossero due classi, la prima a perdere un campo
 /// sarebbe l'alternativa — cioè quella che nessuno prova.
-class EsercizioDellaScheda {
+class EsercizioDellaScheda with ConLeSerie {
   EsercizioDellaScheda({
     this.id,
     this.nome = '',
@@ -38,8 +40,16 @@ class EsercizioDellaScheda {
     this.pesoTarget,
     this.note,
     this.muscoli,
+    this.carico = CaricoDellEsercizio.peso,
+    List<SerieInScrittura>? righe,
     List<EsercizioDellaScheda>? alternative,
-  }) : alternative = alternative ?? [];
+  }) : righe =
+           righe ??
+           List.generate(
+             EsercizioInScrittura.seriePredefinite,
+             (_) => SerieInScrittura(),
+           ),
+       alternative = alternative ?? [];
 
   factory EsercizioDellaScheda.fromJson(
     Map<String, dynamic> json,
@@ -59,6 +69,17 @@ class EsercizioDellaScheda {
     pesoTarget: (json['target_weight'] as num?)?.toDouble(),
     note: json['notes']?.toString(),
     muscoli: _muscoliDa(json),
+
+    /*
+     * 🆕 3b-D.11 — le serie riga per riga, anche qui.
+     *
+     * 🚨 Passa dallo stesso adattatore dell'editor dell'iscritto, quindi un
+     * modello scritto prima del 25/08 si apre **gia' in righe**: e' il
+     * *«le schede gia' esistenti ricalchino questa nuova impostazione»*
+     * applicato al compositore del trainer.
+     */
+    carico: CaricoDellEsercizio.da(json['carico']?.toString()),
+    righe: [for (final s in serieDellEsercizio(json)) SerieInScrittura.da(s)],
     alternative: ((json['alternatives'] as List?) ?? const [])
         .map(
           (e) =>
@@ -69,7 +90,17 @@ class EsercizioDellaScheda {
 
   final int? id;
   String nome;
+
+  /// ⚠️ **Quante** serie: il campo vecchio, che resta perche' e' il riassunto
+  /// che il server rimanda e che il pannello mostra. 🚨 Quando ci sono le
+  /// [righe], comandano loro — e il riassunto lo ricalcola il server.
   int? serie;
+
+  @override
+  final List<SerieInScrittura> righe;
+
+  @override
+  CaricoDellEsercizio carico;
 
   /// 🚨 **Una STRINGA, e deve restarlo.**
   ///
@@ -129,6 +160,24 @@ class EsercizioDellaScheda {
 
   Map<String, dynamic> toJson() => {
     'name': nome.trim(),
+
+    /*
+     * ══ 🆕 LE RIGHE, E POI IL RIASSUNTO — 3b-D.11 ═══════════════════════════
+     *
+     * 🚨 **Il riassunto lo ricalcola il server** (`PlanExercise::booted()`)
+     * quando le righe ci sono: qui si mandano lo stesso, perche' servono a un
+     * server non ancora aggiornato e non fanno male a uno aggiornato — li
+     * sovrascrive con quelli veri.
+     *
+     * ⚠️ Le righe **tutte vuote non si mandano**: un esercizio appena
+     * aggiunto ne ha tre intatte, e mandarle vorrebbe dire dire al server
+     * «tre serie da niente» invece di «non l'ho ancora compilato».
+     */
+    if (righe.any((r) => !r.intatta))
+      'serie': [for (final r in righe) r.versoIlDato(carico).toJson()],
+
+    'carico': carico.codice,
+
     if (serie != null) 'sets': serie,
     if (ripetizioni != null && ripetizioni!.trim().isNotEmpty)
       'reps': ripetizioni!.trim(),

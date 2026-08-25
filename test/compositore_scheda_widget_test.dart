@@ -54,7 +54,7 @@ void main() {
   });
 
   testWidgets(
-    'serie e ripetizioni stanno su due righe da due, non una da quattro',
+    'le serie sono righe, e a 328 px non sforano',
     (tester) async {
       tester.view.physicalSize = const Size(656, 1400);
       tester.view.devicePixelRatio = 2.0;
@@ -64,15 +64,31 @@ void main() {
       await tester.pump();
 
       /*
-     * ⚠️ `plan_editor_screen.dart` mette serie/ripetizioni/recupero/kg tutti in
-     * fila: a questa larghezza quattro etichette si accavallano. Qui sono due
-     * righe da due, e questo test è ciò che impedisce a qualcuno di
-     * «compattarle» un giorno.
-     */
-      expect(find.text('serie'), findsOneWidget);
-      expect(find.text('ripetizioni'), findsOneWidget);
-      expect(find.text('recupero (s)'), findsOneWidget);
-      expect(find.text('kg'), findsOneWidget);
+       * ══ 🚨 QUESTO TEST DIFENDEVA IL LAYOUT DI PRIMA — 3b-D.11 ═══════════
+       *
+       * ⛔ Cercava «serie», «ripetizioni», «recupero (s)» e «kg»: i quattro
+       * campi che dicevano *«4 x 8-12 a 40 kg»*, uguale per tutte le serie.
+       * Quei campi non esistono piu' — adesso ogni serie e' una riga, con i
+       * suoi numeri, e il widget e' lo stesso dell'editor dell'iscritto.
+       *
+       * ⚠️ **Ma la misura che difendeva vale ancora**, ed e' la parte che
+       * conta: 328 px e' la larghezza utile dello Xiaomi del committente, e a
+       * quella larghezza il primo tentativo sforava di 175 px — il selettore
+       * del carico non si comprime, quindi non c'era niente da stringere.
+       *
+       * 💡 Per questo il test resta al suo posto invece di essere cancellato
+       * insieme ai campi: cambia **cosa** cerca, non **dove** guarda.
+       */
+      expect(find.text('Serie'), findsWidgets);
+      expect(find.text('Rip.'), findsWidgets);
+      expect(find.text('Kg'), findsWidgets);
+      expect(find.text('Rec. s'), findsWidgets);
+
+      // 📌 *«ogni esercizio deve partire di base con 3 serie»*.
+      expect(find.text('Aggiungi serie'), findsOneWidget);
+
+      // 🚨 `pumpWidget` non fallisce da solo su un overflow: l'eccezione
+      // finisce in `takeException()`, e va guardata esplicitamente.
       expect(tester.takeException(), isNull);
     },
   );

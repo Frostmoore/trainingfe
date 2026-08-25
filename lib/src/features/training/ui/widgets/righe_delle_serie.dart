@@ -23,7 +23,7 @@ class RigheDelleSerie extends StatelessWidget {
     super.key,
   });
 
-  final EsercizioInScrittura esercizio;
+  final ConLeSerie esercizio;
   final VoidCallback onCambio;
 
   @override
@@ -33,17 +33,33 @@ class RigheDelleSerie extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Text('Serie', style: tema.textTheme.labelLarge),
-            const Spacer(),
-            _SceltaDelCarico(esercizio: esercizio, onCambio: onCambio),
-          ],
+        /*
+         * ══ ⚠️ L'ETICHETTA E IL SELETTORE SU DUE RIGHE, NON UNA ═══════════
+         *
+         * ⛔ Stavano in riga con uno `Spacer` in mezzo, e a **328 px** — la
+         * larghezza utile dello Xiaomi del committente — sforavano di 175:
+         * `SegmentedButton` non si comprime, quindi non c'era niente da
+         * stringere. 🚨 Trovato dai test del compositore, che montano proprio
+         * quella larghezza: la stessa misura su cui era stato trovato il
+         * difetto delle tendine del profilo.
+         *
+         * 💡 Su una riga sua ci sta comodo, e l'etichetta resta dov'era.
+         */
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text('Serie', style: tema.textTheme.labelLarge),
         ),
 
         const SizedBox(height: Gap.xs),
 
-        for (var i = 0; i < esercizio.serie.length; i++)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: _SceltaDelCarico(esercizio: esercizio, onCambio: onCambio),
+        ),
+
+        const SizedBox(height: Gap.xs),
+
+        for (var i = 0; i < esercizio.righe.length; i++)
           /*
            * 📌 *«che posso rimuovere slidandola via o premendo una x»*.
            *
@@ -52,8 +68,8 @@ class RigheDelleSerie extends StatelessWidget {
            * costringe meta' delle persone al gesto sbagliato per loro.
            */
           Dismissible(
-            key: ObjectKey(esercizio.serie[i]),
-            direction: esercizio.serie.length > 1
+            key: ObjectKey(esercizio.righe[i]),
+            direction: esercizio.righe.length > 1
                 ? DismissDirection.endToStart
                 : DismissDirection.none,
             background: ColoredBox(
@@ -72,11 +88,11 @@ class RigheDelleSerie extends StatelessWidget {
             onDismissed: (_) => _togli(i),
             child: _RigaSerie(
               numero: i + 1,
-              riga: esercizio.serie[i],
+              riga: esercizio.righe[i],
               carico: esercizio.carico,
               // ⛔ L'ultima riga non si toglie: un esercizio con zero serie
               // non e' un esercizio.
-              onTogli: esercizio.serie.length > 1 ? () => _togli(i) : null,
+              onTogli: esercizio.righe.length > 1 ? () => _togli(i) : null,
               onPrimaRigaScritta: i == 0
                   ? () {
                       esercizio.autocompila();
@@ -90,7 +106,7 @@ class RigheDelleSerie extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: () {
-              esercizio.serie.add(SerieInScrittura());
+              esercizio.righe.add(SerieInScrittura());
               esercizio.autocompila();
               onCambio();
             },
@@ -103,9 +119,9 @@ class RigheDelleSerie extends StatelessWidget {
   }
 
   void _togli(int i) {
-    esercizio.serie.removeAt(i).dispose();
+    esercizio.righe.removeAt(i).dispose();
 
-    if (esercizio.serie.isEmpty) esercizio.serie.add(SerieInScrittura());
+    if (esercizio.righe.isEmpty) esercizio.righe.add(SerieInScrittura());
 
     onCambio();
   }
@@ -118,7 +134,7 @@ class RigheDelleSerie extends StatelessWidget {
 class _SceltaDelCarico extends StatelessWidget {
   const _SceltaDelCarico({required this.esercizio, required this.onCambio});
 
-  final EsercizioInScrittura esercizio;
+  final ConLeSerie esercizio;
   final VoidCallback onCambio;
 
   @override
@@ -154,7 +170,7 @@ class _SceltaDelCarico extends StatelessWidget {
             adesso == CaricoDellEsercizio.iso;
 
         if (cambiaUnita) {
-          for (final riga in esercizio.serie) {
+          for (final riga in esercizio.righe) {
             riga.carico.clear();
           }
         }

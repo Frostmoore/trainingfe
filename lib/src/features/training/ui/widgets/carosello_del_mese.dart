@@ -146,7 +146,7 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
           children: [
             Expanded(
               child: RiquadroBianco(
-                sempreBianco: true,
+                sempreChiaro: true,
                 child: FiguraDelCorpo(intensita: intensita),
               ),
             ),
@@ -306,26 +306,36 @@ class CardDelCarosello extends StatelessWidget {
 class RiquadroBianco extends StatelessWidget {
   const RiquadroBianco({
     required this.child,
-    this.sempreBianco = false,
+    this.sempreChiaro = false,
     super.key,
   });
 
   final Widget child;
 
-  /// 🚨 **Bianco vero anche col tema scuro**, e serve a una cosa sola: la
-  /// figura del corpo.
+  /// 🚨 **Chiaro anche col tema scuro**, e serve a una cosa sola: la figura del
+  /// corpo.
   ///
   /// 📌 *«col tema scuro, l'uomo risulta strano, bisognerebbe mettergli lo
-  /// sfondo bianco»*.
+  /// sfondo bianco»* e poi, vedendolo: *«se la facciamo bianca con tema scuro
+  /// ti brucia la retina. Facciamola semplicemente più chiara dello sfondo,
+  /// così è troppo bianco»*.
   ///
-  /// ⚠️ Il PNG della figura è disegnato **per un fondo chiaro**: i contorni sono
-  /// scuri e le zone spente sono grigie. Su nero non si legge, e non è una
-  /// questione di gusto — è che le linee spariscono.
+  /// ══ ⚠️ CHIARO, NON BIANCO — e le due richieste non si contraddicono ══════
   ///
-  /// ⛔ Per tutto il resto vale il contrario, e il committente l'ha detto nella
-  /// stessa frase: *«i quadrati bianchi ti carbonizzano la retina»*. Un numero o
-  /// un grafico su fondo bianco in una schermata scura è una lampada.
-  final bool sempreBianco;
+  /// ⛔ Il PNG della figura è disegnato **per un fondo chiaro**: i solchi fra i
+  /// muscoli sono trasparenti e lasciano vedere il fondo, quindi su nero il
+  /// disegno si perde. Serve chiaro.
+  ///
+  /// 🚨 Ma **bianco pieno dentro una schermata scura è una lampada**, ed è la
+  /// stessa cosa che il committente aveva già detto degli altri riquadri.
+  /// 💡 Quello che serve è **lo stacco**, non il bianco: in tema scuro basta un
+  /// tono chiaro e spento — abbastanza da far leggere il disegno, non tanto da
+  /// abbagliare.
+  ///
+  /// ⚠️ Il nome della classe resta `RiquadroBianco` e in tema scuro non è
+  /// bianco niente: rinominarla vorrebbe dire toccare sei schermate per un
+  /// nome, e questo dartdoc lo dice in prima riga.
+  final bool sempreChiaro;
 
   @override
   Widget build(BuildContext context) {
@@ -347,11 +357,24 @@ class RiquadroBianco extends StatelessWidget {
          * grigio più chiaro della card. La richiesta si rispetta cambiando il
          * colore, non tenendolo.
          *
-         * ⚠️ L'unica eccezione è [sempreBianco], per la figura del corpo.
+         * ⚠️ L'unica eccezione è [sempreChiaro], per la figura del corpo.
          */
-        color: sempreBianco || !scuro
-            ? Colors.white
-            : tema.colorScheme.surfaceContainerHighest,
+        color: switch ((sempreChiaro, scuro)) {
+          // In tema chiaro il bianco e' lo stacco giusto, per tutti.
+          (_, false) => Colors.white,
+
+          /*
+           * 🚨 **La figura in tema scuro: chiara, non bianca.** Un tono spento
+           * che fa ancora leggere i solchi trasparenti del PNG senza fare da
+           * lampada. ⛔ Scritto a mano e non preso dal tema: `ColorScheme` in
+           * scuro non ha **nessun** tono chiaro — sono tutti fondi scuri — e
+           * prenderne uno vorrebbe dire tornare al disegno che sparisce.
+           */
+          (true, true) => const Color(0xFFDCD7D0),
+
+          // Tutti gli altri riquadri seguono il tema, come chiesto.
+          (false, true) => tema.colorScheme.surfaceContainerHighest,
+        },
         borderRadius: BorderRadius.circular(Gap.radiusSm),
         border: Border.all(
           color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),

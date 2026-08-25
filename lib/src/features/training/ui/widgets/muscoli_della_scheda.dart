@@ -61,7 +61,7 @@ class _MuscoliInCardState extends State<MuscoliInCard> {
               // 📌 Nel quadrato bianco anche col tema scuro (3b-C.1): il PNG è
               // disegnato per un fondo chiaro, e su nero le linee spariscono.
               child: RiquadroBianco(
-                sempreBianco: true,
+                sempreChiaro: true,
                 child: FiguraDelCorpo(intensita: widget.intensita),
               ),
             ),

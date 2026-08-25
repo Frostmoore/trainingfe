@@ -107,7 +107,7 @@ class _CaroselloDellAllenamentoState
             children: [
               Expanded(
                 child: RiquadroBianco(
-                  sempreBianco: true,
+                  sempreChiaro: true,
                   child: FiguraDelCorpo(intensita: intensita),
                 ),
               ),

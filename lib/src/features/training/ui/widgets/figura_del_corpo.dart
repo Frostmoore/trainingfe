@@ -198,9 +198,27 @@ class FiguraDelCorpo extends ConsumerWidget {
                           '${quale.cartella}_${davanti ? 'davanti' : 'dietro'}',
                       intensita: intensita,
                       davanti: davanti,
-                      spento: tema.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.45,
-                      ),
+                      /*
+                       * ══ 🚨 LO SPENTO NON VIENE DAL TEMA — 3b-D.13 ═══════
+                       *
+                       * ⛔ Era `onSurfaceVariant` al 45%, e in **tema scuro**
+                       * quello e' un grigio **chiaro**: sopra un riquadro
+                       * chiaro il muscolo non allenato diventava quasi
+                       * invisibile. 💡 E' il vero motivo per cui la figura in
+                       * tema scuro sembrava «strana» — non il fondo, il corpo.
+                       *
+                       * 🚨 La figura sta **sempre** dentro un riquadro chiaro
+                       * (`RiquadroBianco(sempreChiaro: true)`, tutti e tre i
+                       * posti in cui compare): li' dentro il tema dell'app non
+                       * c'entra, e i colori devono essere quelli di una
+                       * superficie chiara — scuri sopra il chiaro, in tutti e
+                       * due i temi.
+                       *
+                       * ⚠️ Se un giorno la figura finisse fuori da quel
+                       * riquadro, questa riga andrebbe rifatta insieme al
+                       * fondo: sono la stessa decisione, presa in due file.
+                       */
+                      spento: const Color(0xFF3C3C3C).withValues(alpha: 0.45),
                     ),
                   ),
                 ),

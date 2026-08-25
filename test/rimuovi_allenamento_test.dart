@@ -77,10 +77,7 @@ void main() {
     /// 💡 Senza niente da perdere non si spaventa nessuno: si dice cosa succede
     /// e basta.
     test('e senza niente da perdere non si inventa una minaccia', () {
-      expect(
-        cosaSiPortaViaLaRimozione(voce()),
-        'Sparirà dallo storico.',
-      );
+      expect(cosaSiPortaViaLaRimozione(voce()), 'Sparirà dallo storico.');
     });
   });
 

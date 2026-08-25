@@ -139,7 +139,13 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
       CardDelCarosello(
         titolo: 'Cosa hai allenato',
         sottotitolo: titolo,
-        child: FiguraDelCorpo(intensita: intensita),
+        // 📌 *«mettiamolo in un quadrato con fondo bianco (anche nello
+        // storico)»*: il PNG è disegnato per un fondo chiaro, e col tema scuro
+        // i contorni sparivano.
+        child: RiquadroBianco(
+          sempreBianco: true,
+          child: FiguraDelCorpo(intensita: intensita),
+        ),
       ),
       CardDelCarosello(
         titolo: 'I gruppi muscolari',
@@ -290,23 +296,54 @@ class CardDelCarosello extends StatelessWidget {
 /// devono avere **lo stesso** riquadro, o accostate si vede che sono due cose
 /// disegnate in momenti diversi.
 class RiquadroBianco extends StatelessWidget {
-  const RiquadroBianco({required this.child, super.key});
+  const RiquadroBianco({
+    required this.child,
+    this.sempreBianco = false,
+    super.key,
+  });
 
   final Widget child;
+
+  /// 🚨 **Bianco vero anche col tema scuro**, e serve a una cosa sola: la
+  /// figura del corpo.
+  ///
+  /// 📌 *«col tema scuro, l'uomo risulta strano, bisognerebbe mettergli lo
+  /// sfondo bianco»*.
+  ///
+  /// ⚠️ Il PNG della figura è disegnato **per un fondo chiaro**: i contorni sono
+  /// scuri e le zone spente sono grigie. Su nero non si legge, e non è una
+  /// questione di gusto — è che le linee spariscono.
+  ///
+  /// ⛔ Per tutto il resto vale il contrario, e il committente l'ha detto nella
+  /// stessa frase: *«i quadrati bianchi ti carbonizzano la retina»*. Un numero o
+  /// un grafico su fondo bianco in una schermata scura è una lampada.
+  final bool sempreBianco;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final scuro = tema.brightness == Brightness.dark;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         /*
-         * ⚠️ **Bianco vero, non `surface`.** Il committente ha chiesto un
-         * riquadro **bianco**, e su questa card il fondo è già chiaro: un bianco
-         * «di tema» sarebbe invisibile in chiaro e nero in scuro, cioè in
-         * nessuno dei due casi quello che ha chiesto.
+         * ══ 🌗 IL FONDO SEGUE IL TEMA — 25/08/2026 ═══════════════════════════
+         *
+         * ⛔ Qui c'era `Colors.white` e basta, con scritto che il committente
+         * aveva chiesto un riquadro **bianco**. Era vero, ed era vero **in tema
+         * chiaro**: guardandolo col tema scuro l'ha corretto — *«ti carbonizzano
+         * la retina»*.
+         *
+         * 💡 Quello che aveva chiesto non era il colore: era **lo stacco** dal
+         * fondo della card. In chiaro lo stacco è il bianco, in scuro è un
+         * grigio più chiaro della card. La richiesta si rispetta cambiando il
+         * colore, non tenendolo.
+         *
+         * ⚠️ L'unica eccezione è [sempreBianco], per la figura del corpo.
          */
-        color: Colors.white,
+        color: sempreBianco || !scuro
+            ? Colors.white
+            : tema.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(Gap.radiusSm),
         border: Border.all(
           color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),

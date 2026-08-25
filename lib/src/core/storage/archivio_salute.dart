@@ -57,7 +57,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -321,7 +321,10 @@ class ArchivioSalute extends _$ArchivioSalute {
        * campo. 🚨 Nasce vuota, ed è giusto: nessuno ha ancora dichiarato niente.
        */
       if (da < 16) {
-        await m.addColumn(allenamentiDaOrologio, allenamentiDaOrologio.tipoScelto);
+        await m.addColumn(
+          allenamentiDaOrologio,
+          allenamentiDaOrologio.tipoScelto,
+        );
       }
 
       /*
@@ -335,6 +338,17 @@ class ArchivioSalute extends _$ArchivioSalute {
        */
       if (da < 17) {
         await m.addColumn(fotoProgressi, fotoProgressi.allenamentoOrologioId);
+      }
+
+      /*
+       * 🔥 v17 → v18 (3b-C.4): le calorie di un allenamento del polso si
+       * possono correggere, come quelle di una seduta dell'app.
+       */
+      if (da < 18) {
+        await m.addColumn(
+          allenamentiDaOrologio,
+          allenamentiDaOrologio.kcalCorrette,
+        );
       }
     },
   );
@@ -802,6 +816,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> assegnaSchedaAllenamento(int id, int? schedaId) =>
       (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
         AllenamentiDaOrologioCompanion(schedaAssegnata: Value(schedaId)),
+      );
+
+  /// Corregge a mano le calorie di un allenamento del polso — 3b-C.4.
+  ///
+  /// 💡 `null` toglie la correzione e rimette in gioco quelle dell'orologio: una
+  /// scelta che non si può disfare è una trappola.
+  Future<void> correggiKcalAllenamento(int id, int? kcal) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(kcalCorrette: Value(kcal)),
       );
 
   /// Dichiara che tipo di allenamento era — 3b-B.20.5.
@@ -2154,6 +2177,20 @@ class AllenamentiDaOrologio extends Table {
   /// ⚠️ Vale un codice di `TipoScelto`, non un testo libero: `null` vuol dire
   /// «non l'ho dichiarato», e allora vale quello dell'orologio.
   TextColumn get tipoScelto => text().nullable()();
+
+  /// Le calorie **corrette a mano** per questo allenamento — 3b-C.4.
+  ///
+  /// 📌 *«deve essere IDENTICA»*: sulla pagina di una seduta dell'app le calorie
+  /// si possono correggere da sempre, e senza questa colonna la pagina di un
+  /// allenamento del polso avrebbe avuto lo stesso riquadro con dentro un numero
+  /// che non si tocca. ⛔ Una card identica che non fa la stessa cosa è peggio di
+  /// una card diversa: promette e non mantiene.
+  ///
+  /// 🚨 **Accanto a `kcal`, non al suo posto**: quello lo ha misurato
+  /// l'orologio. È la stessa forma di `tipoScelto` accanto a `tipo`, e per la
+  /// stessa ragione — `insertOrIgnore` fa sì che la correzione sopravviva a ogni
+  /// risincronizzazione.
+  IntColumn get kcalCorrette => integer().nullable()();
 
   /// Nascosto dallo storico perché è il doppione di una seduta del player.
   ///

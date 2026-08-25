@@ -177,7 +177,22 @@ class VoceStorico {
   /// 🚨 Basta una: chi ha scritto un numero l'ha scritto apposta, e un sensore
   /// non lo sconfessa. ⚠️ Guardare solo la prima vorrebbe dire che una
   /// correzione fatta sul secondo tratto viene ignorata senza dirlo.
-  bool get kcalCorrettaAMano => sedute.any((s) => s.kcalSource == 'manual');
+  bool get kcalCorrettaAMano =>
+      sedute.any((s) => s.kcalSource == 'manual') ||
+      dalPolso.any((a) => a.kcalCorrette != null);
+
+  /// Le calorie corrette a mano su un allenamento del polso — 3b-C.4.
+  ///
+  /// ⚠️ Il **primo** tratto che ne ha una: correggere un pezzo di una corsa
+  /// spezzata in tre vuol dire correggere la corsa.
+  int? get kcalCorretteDalPolso {
+    for (final a in dalPolso) {
+      final k = a.kcalCorrette;
+      if (k != null) return k;
+    }
+
+    return null;
+  }
 
   /// Le calorie **che valgono** per questa riga, con la catena di priorità.
   ///
@@ -190,7 +205,10 @@ class VoceStorico {
   /// divergono alla prima modifica, e a quel punto la stessa seduta varrebbe
   /// due numeri diversi nella stessa schermata.
   int? get kcal =>
-      kcalCorrettaAMano ? kcalDalleSedute : (kcalDalPolso ?? kcalDalleSedute);
+      kcalCorretteDalPolso ??
+      (kcalCorrettaAMano
+          ? (kcalDalleSedute ?? kcalDalPolso)
+          : (kcalDalPolso ?? kcalDalleSedute));
 
   /// 🥇 La soglia oltre la quale un allenamento è **intenso** — 3b-B.20.6.
   ///

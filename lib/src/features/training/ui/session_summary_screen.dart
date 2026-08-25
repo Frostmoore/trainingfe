@@ -10,9 +10,11 @@ import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
 import 'widgets/azioni_dell_allenamento.dart';
+import 'widgets/calorie_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_fatti.dart';
 import 'widgets/foto_dell_allenamento.dart';
+import 'widgets/testa_dell_allenamento.dart';
 
 /// Il riepilogo di fine allenamento — G7.
 ///
@@ -72,19 +74,9 @@ class _Corpo extends ConsumerWidget {
     return out;
   }
 
-  /// Il volume totale: serie × ripetizioni × peso.
-  ///
-  /// È il numero che dice se la seduta è stata più dura della precedente, molto
-  /// più del tempo passato in palestra.
-  double get _volume {
-    var totale = 0.0;
-
-    for (final s in sessione.sets) {
-      totale += (s.reps ?? 0) * (s.weight ?? 0);
-    }
-
-    return totale;
-  }
+  // 💡 `_volume` se n'è andato con la riga dei numeri che lo mostrava: i chili
+  // sollevati li conta la terza card del carosello, e li conta **sul gruppo**
+  // invece che sulla singola seduta.
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -94,32 +86,22 @@ class _Corpo extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(Gap.md),
       children: [
-        Text(sessione.titolo, style: theme.textTheme.headlineSmall),
-        Text(
-          DateFormat('EEEE d MMMM, HH:mm', 'it').format(sessione.startedAt),
-          style: theme.textTheme.bodySmall,
-        ),
+        // 📌 *«stesso layout»*: la stessa prima riga della pagina del polso.
+        _TestaDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
 
-        Row(
-          children: [
-            _Numero(
-              valore: sessione.durationMinutes == null
-                  ? '—'
-                  : '${sessione.durationMinutes}',
-              etichetta: 'minuti',
-            ),
-            _Numero(valore: '${gruppi.length}', etichetta: 'esercizi'),
-            _Numero(valore: '${sessione.sets.length}', etichetta: 'serie'),
-            _Numero(
-              valore: _volume == 0
-                  ? '—'
-                  : NumberFormat.compact(locale: 'it').format(_volume),
-              etichetta: 'kg totali',
-            ),
-          ],
-        ),
+        /*
+         * ⛔ **Qui c'era una riga di quattro numeri**, e diceva le stesse cose
+         * della terza card del carosello — minuti, serie, chili — a dieci pixel
+         * di distanza. 🚨 Due volte lo stesso numero nella stessa schermata è il
+         * difetto segnalato due volte dal committente: l'etichetta «consumo» il
+         * 21/08, la fiammella il 25/08.
+         *
+         * 💡 E toglierla è anche ciò che rende questa pagina **identica** a
+         * quella di un allenamento del polso: là non poteva esserci, perché
+         * senza serie registrate «esercizi» e «serie» sarebbero due trattini.
+         */
 
         /*
          * 📌 *«aggiungere sopra le tre cards a carosello come nella sezione
@@ -132,7 +114,7 @@ class _Corpo extends ConsumerWidget {
         _CaroselloDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
-        _Calorie(sessione: sessione),
+        _CalorieDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
         FotoDellAllenamento(sedutaId: sessione.id),
@@ -175,12 +157,13 @@ class _Corpo extends ConsumerWidget {
         const SizedBox(height: Gap.lg),
         _AzioniDiQuestaSeduta(sessione: sessione),
 
-        const SizedBox(height: Gap.lg),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-          child: const Text('Fine'),
-        ),
+        /*
+         * ⛔ **Il pulsante «Fine» se n'è andato.** Faceva `pop()`, cioè quello
+         * che fa già la freccia dell'intestazione — e sulla pagina di un
+         * allenamento del polso non c'era mai stato. ⚠️ In una schermata che si
+         * apre anche dallo storico e dal calendario, un pulsante grande che
+         * duplica una freccia è un invito a uscire da una cosa appena aperta.
+         */
         const SizedBox(height: Gap.lg),
       ],
     );
@@ -190,223 +173,11 @@ class _Corpo extends ConsumerWidget {
   // formatta `CardEsercizioFatto.kg`, dove stanno anche le serie.
 }
 
-/// Le calorie: la stima, e come sostituirla.
-class _Calorie extends ConsumerStatefulWidget {
-  const _Calorie({required this.sessione});
+// 💡 `_Calorie` se n'e' andata in `widgets/calorie_dell_allenamento.dart`:
+// lo stesso riquadro deve stare anche sulla pagina di un allenamento del polso,
+// e una classe privata dentro una schermata non ci poteva arrivare.
 
-  final WorkoutSession sessione;
-
-  @override
-  ConsumerState<_Calorie> createState() => _CalorieState();
-}
-
-class _CalorieState extends ConsumerState<_Calorie> {
-  late final _campo = TextEditingController(
-    text: widget.sessione.kcal?.toString() ?? '',
-  );
-
-  bool _inCorso = false;
-
-  @override
-  void dispose() {
-    _campo.dispose();
-    super.dispose();
-  }
-
-  Future<void> _salva(int? kcal) async {
-    setState(() => _inCorso = true);
-
-    try {
-      await ref.read(sessionActionsProvider).setKcal(widget.sessione.id, kcal);
-    } on Object catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.unwrapError(error).message)),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _inCorso = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final s = widget.sessione;
-    final aMano = s.kcalSource == 'manual';
-
-    /*
-     * 🆕 FASE 1-bis — quello che ha visto l'orologio nella stessa ora.
-     *
-     * 🚨 Serve a **non contraddire lo storico**: là la card mostra il numero
-     * misurato, qui si mostrava la stima chiamandola «calcolata dagli
-     * esercizi». Due schermate, la stessa seduta, due numeri diversi.
-     *
-     * ⚠️ `valueOrNull` e nessuna rotellina: è un'informazione **accessoria**,
-     * e far aspettare il riepilogo per averla sarebbe sproporzionato. Se arriva
-     * tardi, arriva al fotogramma dopo.
-     */
-    final dallOrologio = aMano
-        ? null
-        : ref.watch(voceDellaSedutaProvider(s.id)).valueOrNull?.kcalDalPolso;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.local_fire_department_rounded,
-                  color: theme.colorScheme.tertiary,
-                ),
-                const SizedBox(width: Gap.sm),
-                Text('Calorie bruciate', style: theme.textTheme.titleMedium),
-              ],
-            ),
-            const SizedBox(height: Gap.sm),
-
-            /*
-             * 🚨 Si dice **da dove viene** il numero. Senza, non si sa se sia
-             * una misura o un'ipotesi — e non si sa se valga la pena
-             * correggerlo.
-             *
-             * 💡 La catena è quella di §5 FASE 1, e le fonti si
-             * **sostituiscono**: a mano → orologio → stima.
-             */
-            if (dallOrologio != null) ...[
-              Row(
-                children: [
-                  Icon(
-                    Icons.watch_outlined,
-                    size: 16,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '$dallOrologio kcal misurate dal tuo orologio.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'È il numero che conta: la nostra stima '
-                '(${s.kcal ?? 0} kcal) serve solo quando l\'orologio non c\'è.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ] else
-              Text(
-                aMano
-                    ? 'Valore inserito da te.'
-                    : 'Stima calcolata dagli esercizi, dalla durata e dal tuo peso.',
-                style: theme.textTheme.bodySmall,
-              ),
-
-            const SizedBox(height: Gap.md),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _campo,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Calorie',
-                      suffixText: 'kcal',
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                FilledButton(
-                  onPressed: _inCorso
-                      ? null
-                      : () => _salva(int.tryParse(_campo.text.trim())),
-                  child: const Text('Salva'),
-                ),
-              ],
-            ),
-
-            // ⚠️ Rimettere la stima è una funzione a sé, e serve: chi corregge
-            // e poi si accorge di aver scritto una sciocchezza, senza questo
-            // non ha nessun modo di tornare indietro se non indovinare il
-            // numero di prima.
-            if (aMano)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: _inCorso ? null : () => _salva(null),
-                  child: const Text('Rimetti la stima automatica'),
-                ),
-              ),
-
-            /*
-             * ⏸️ **Dall'orologio: non ancora.**
-             *
-             * Il ponte con il telefono manda solo il sonno; le calorie di un
-             * allenamento non arrivano da nessuna parte. Dirlo qui e' meglio
-             * che mettere un pulsante che non fa niente — e meglio che tacere,
-             * perche' chi ha un orologio si aspetta che il numero arrivi da
-             * solo e altrimenti pensa che l'app sia rotta.
-             */
-            const SizedBox(height: Gap.xs),
-            Text(
-              'Dall\'orologio non arrivano ancora: quando collegheremo Health '
-              'Connect, il valore misurato prenderà il posto della stima.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// 💡 `_Foto` se n'è andata in `widgets/foto_dell_allenamento.dart`: la stessa
-// card deve stare anche sulla pagina di un allenamento del polso, e una card
-// privata dentro una schermata non ci poteva arrivare.
-
-class _Numero extends StatelessWidget {
-  const _Numero({required this.valore, required this.etichetta});
-
-  final String valore;
-  final String etichetta;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            valore,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            maxLines: 1,
-          ),
-          Text(
-            etichetta,
-            style: theme.textTheme.labelSmall,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
+// 💡 `_Numero` se n'e' andato con la riga che lo usava.
 
 /// Le tre card di **questa** seduta — 3b-B.20.1.
 ///
@@ -465,5 +236,82 @@ class _AzioniDiQuestaSeduta extends ConsumerWidget {
     if (voce == null) return const SizedBox.shrink();
 
     return AzioniDellAllenamento(voce: voce);
+  }
+}
+
+/// Le calorie di **questa** seduta — 3b-C.4.
+///
+/// ⚠️ Passa dallo storico fuso come il carosello e le azioni: una seduta fermata
+/// e ripresa sono due righe e **un** allenamento, e le calorie da mostrare sono
+/// quelle del gruppo.
+class _CalorieDiQuestaSeduta extends ConsumerWidget {
+  const _CalorieDiQuestaSeduta({required this.sessione});
+
+  final WorkoutSession sessione;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voci = ref.watch(storicoUnificatoProvider).valueOrNull;
+
+    if (voci == null) return const SizedBox.shrink();
+
+    final voce = voci
+        .where((v) => v.sedute.any((s) => s.id == sessione.id))
+        .firstOrNull;
+
+    if (voce == null) return const SizedBox.shrink();
+
+    return CalorieDellAllenamento(voce: voce);
+  }
+}
+
+/// L'intestazione di **questa** seduta — 3b-C.4.
+class _TestaDiQuestaSeduta extends ConsumerWidget {
+  const _TestaDiQuestaSeduta({required this.sessione});
+
+  final WorkoutSession sessione;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voci = ref.watch(storicoUnificatoProvider).valueOrNull;
+
+    final voce = voci
+        ?.where((v) => v.sedute.any((s) => s.id == sessione.id))
+        .firstOrNull;
+
+    /*
+     * ⚠️ **Un ripiego che non fa aspettare.** Mentre lo storico carica il nome e
+     * la data si sanno già dalla seduta: lasciare la prima riga vuota per un
+     * istante a ogni apertura darebbe l'idea di una pagina che fatica.
+     */
+    if (voce == null) {
+      final tema = Theme.of(context);
+
+      return Row(
+        children: [
+          Icon(Icons.fitness_center, size: 32, color: tema.colorScheme.primary),
+          const SizedBox(width: Gap.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(sessione.titolo, style: tema.textTheme.titleLarge),
+                Text(
+                  DateFormat(
+                    'EEEE d MMMM, HH:mm',
+                    'it',
+                  ).format(sessione.startedAt),
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return TestaDellAllenamento(voce: voce);
   }
 }

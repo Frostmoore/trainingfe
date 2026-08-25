@@ -56,13 +56,7 @@ void main() {
 
     test('e le 00:10 di stanotte sono «oggi»', () {
       final adesso = DateTime.now();
-      final stanotte = DateTime(
-        adesso.year,
-        adesso.month,
-        adesso.day,
-        0,
-        10,
-      );
+      final stanotte = DateTime(adesso.year, adesso.month, adesso.day, 0, 10);
 
       expect(daQuando(stanotte), 'oggi alle 00:10');
     });

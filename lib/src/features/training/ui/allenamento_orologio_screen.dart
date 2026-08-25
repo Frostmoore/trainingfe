@@ -27,18 +27,18 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
-import '../../health/tipo_allenamento.dart';
 import '../data/storico_unificato.dart';
 import '../storico_unificato_controller.dart';
 import 'widgets/azioni_dell_allenamento.dart';
+import 'widgets/calorie_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_dalla_scheda.dart';
 import 'widgets/foto_dell_allenamento.dart';
+import 'widgets/testa_dell_allenamento.dart';
 
 class AllenamentoOrologioScreen extends ConsumerWidget {
   const AllenamentoOrologioScreen({required this.id, super.key});
@@ -95,9 +95,8 @@ class _Dettaglio extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
-    // 💡 **Quello che vale**: il tipo dichiarato se c'è, se no quello
-    // dell'orologio. Vedi `VoceStorico.tipo`.
-    final tipo = TipoAllenamento.da(voce.tipo ?? voce.dalPolso.first.tipo);
+    // 💡 Il tipo lo legge `TestaDellAllenamento`, che lo mostra insieme al
+    // nome e alla data. Qui non serve più.
 
     // 💡 I muscoli adesso li calcola `CaroselloDellAllenamento`, che è anche
     // l'unico a disegnarli: tenerne una seconda copia qui vorrebbe dire due
@@ -121,26 +120,7 @@ class _Dettaglio extends ConsumerWidget {
         CaroselloDellAllenamento(voce: voce),
         const SizedBox(height: Gap.md),
 
-        Row(
-          children: [
-            Icon(tipo.icona, size: 32, color: tema.colorScheme.primary),
-            const SizedBox(width: Gap.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(tipo.nome, style: tema.textTheme.titleLarge),
-                  Text(
-                    DateFormat('EEEE d MMMM, HH:mm', 'it').format(voce.quando),
-                    style: tema.textTheme.bodySmall?.copyWith(
-                      color: tema.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        TestaDellAllenamento(voce: voce),
 
         const SizedBox(height: Gap.md),
 
@@ -168,6 +148,14 @@ class _Dettaglio extends ConsumerWidget {
          * tratto che si è aperto per caso la farebbe sparire quando i tratti si
          * raggruppano diversamente.
          */
+        /*
+         * 🔥 **Le calorie, con la correzione** — 3b-C.4. Stesso riquadro, stesso
+         * posto, stessa cosa che fa: è quello che *«IDENTICA»* vuol dire.
+         */
+        CalorieDellAllenamento(voce: voce),
+
+        const SizedBox(height: Gap.md),
+
         FotoDellAllenamento(allenamentoOrologioId: voce.dalPolso.first.id),
 
         const SizedBox(height: Gap.md),

@@ -98,7 +98,16 @@ void main() {
       expect(find.text('10,0 km'), findsOneWidget);
       // 60 minuti per 10 km = 6:00 al chilometro.
       expect(find.text('6:00'), findsOneWidget);
-      expect(find.text('700'), findsOneWidget);
+      /*
+       * ⚠️ **`findsWidgets` e non `findsOneWidget`** — 25/08. Da 3b-C.4 la
+       * pagina ha anche il riquadro delle calorie con il **campo di
+       * correzione**, che nasce compilato col valore corrente: quel numero
+       * compare due volte di proposito — una come dato, una come cosa che si
+       * puo' cambiare. 🚨 Non e' il difetto del numero ripetuto (quello e' due
+       * volte lo stesso **dato** con la stessa etichetta): qui la seconda e' un
+       * campo di scrittura.
+       */
+      expect(find.text('700'), findsWidgets);
     });
 
     /// ══ ⛔ IL TEST CHE CONTA DI PIÙ QUI ═══════════════════════════════════
@@ -113,7 +122,16 @@ void main() {
       await apri(tester, orologio(id: 2, tipo: 'STRENGTH_TRAINING', kcal: 300));
 
       expect(find.text('Pesi'), findsOneWidget);
-      expect(find.text('300'), findsOneWidget);
+      /*
+       * ⚠️ **`findsWidgets` e non `findsOneWidget`** — 25/08. Da 3b-C.4 la
+       * pagina ha anche il riquadro delle calorie con il **campo di
+       * correzione**, che nasce compilato col valore corrente: quel numero
+       * compare due volte di proposito — una come dato, una come cosa che si
+       * puo' cambiare. 🚨 Non e' il difetto del numero ripetuto (quello e' due
+       * volte lo stesso **dato** con la stessa etichetta): qui la seconda e' un
+       * campo di scrittura.
+       */
+      expect(find.text('300'), findsWidgets);
       expect(find.textContaining('km'), findsNothing);
       expect(find.textContaining('percorsi'), findsNothing);
       expect(find.textContaining('passi'), findsNothing);

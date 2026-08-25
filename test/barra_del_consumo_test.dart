@@ -10,7 +10,8 @@ import 'package:training_companion/src/features/dashboard/ui/widgets/barra_del_c
 void main() {
   const bmr = 1800.0;
 
-  DateTime alle(int ora, [int minuti = 0]) => DateTime(2026, 8, 25, ora, minuti);
+  DateTime alle(int ora, [int minuti = 0]) =>
+      DateTime(2026, 8, 25, ora, minuti);
 
   group('🕒 il basale si mappa sull\'ora', () {
     test('a mezzanotte non hai ancora bruciato niente', () {

@@ -79,21 +79,26 @@ void main() {
     /// ⚠️ Chat e server hanno **due numerazioni diverse**, e prima stavano in
     /// due tabelle che non potevano confonderle. Adesso convivono: il messaggio
     /// 8 e la scheda 8 del server devono restare due righe distinte.
-    test('il messaggio 8 e la scheda 8 del server non si accavallano', () async {
-      await schedaDallaChat(messaggioId: 8, nome: 'Dalla chat');
+    test(
+      'il messaggio 8 e la scheda 8 del server non si accavallano',
+      () async {
+        await schedaDallaChat(messaggioId: 8, nome: 'Dalla chat');
 
-      await archivio.aggiungiScheda(
-        nome: 'Dal server',
-        scheda: '{}',
-        mia: false,
-        origine: 'server',
-        idOrigine: 8,
-      );
+        await archivio.aggiungiScheda(
+          nome: 'Dal server',
+          scheda: '{}',
+          mia: false,
+          origine: 'server',
+          idOrigine: 8,
+        );
 
-      final nomi = (await archivio.tutteLeSchede()).map((s) => s.nome).toSet();
+        final nomi = (await archivio.tutteLeSchede())
+            .map((s) => s.nome)
+            .toSet();
 
-      expect(nomi, {'Dalla chat', 'Dal server'});
-    });
+        expect(nomi, {'Dalla chat', 'Dal server'});
+      },
+    );
 
     /// 💡 `laScheda()` vuole l'id di **qui**, `laSchedaDalServer()` quello di
     /// **là**: confonderli farebbe saltare l'importazione, che scarterebbe una

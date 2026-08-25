@@ -201,6 +201,23 @@ Future<void> dichiaraTipoAllenamento(
   ref.read(revisioneAllenamentiProvider.notifier).state++;
 }
 
+/// Corregge a mano le calorie di un allenamento del polso — 3b-C.4.
+///
+/// 💡 `null` toglie la correzione e rimette in gioco quelle dell'orologio: è la
+/// stessa regola di [dichiaraTipoAllenamento] e di [assegnaSchedaAllAllenamento]
+/// — una scelta che non si può disfare è una trappola.
+Future<void> correggiKcalAllenamento(
+  WidgetRef ref, {
+  required int allenamentoId,
+  required int? kcal,
+}) async {
+  await ref
+      .read(archivioSaluteProvider)
+      .correggiKcalAllenamento(allenamentoId, kcal);
+
+  ref.read(revisioneAllenamentiProvider.notifier).state++;
+}
+
 /// «Non è lo stesso allenamento» — FASE 1-bis.
 ///
 /// ── 🚨 È la contropartita della regola larga ──────────────────────────────

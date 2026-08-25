@@ -35,10 +35,8 @@ void main() {
         ],
       );
 
-  Map<GruppoMuscolare, double> muscoliDi(VoceStorico v) => intensitaDeiMuscoli(
-    voci: [v],
-    catalogo: CatalogoEsercizi.vuoto,
-  );
+  Map<GruppoMuscolare, double> muscoliDi(VoceStorico v) =>
+      intensitaDeiMuscoli(voci: [v], catalogo: CatalogoEsercizi.vuoto);
 
   group('🏃 quello che vale', () {
     test('senza dichiarazione vale quello dell\'orologio', () {

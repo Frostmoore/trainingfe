@@ -99,7 +99,12 @@ class _CaroselloDellAllenamentoState
         CardDelCarosello(
           titolo: 'Cosa hai mosso',
           sottotitolo: quando,
-          child: FiguraDelCorpo(intensita: intensita),
+          // 📌 Nel quadrato bianco, come nello storico: il PNG è disegnato
+          // per un fondo chiaro.
+          child: RiquadroBianco(
+            sempreBianco: true,
+            child: FiguraDelCorpo(intensita: intensita),
+          ),
         ),
         CardDelCarosello(
           titolo: 'I gruppi muscolari',
@@ -247,6 +252,25 @@ class _NumeriDellAllenamento extends ConsumerWidget {
       if (_passi > 0) ('$_passi', 'passi'),
     ];
 
+    /*
+     * ══ 🔢 UNO GRANDE, GLI ALTRI PICCOLI — 25/08/2026 ═══════════════════════
+     *
+     * 📌 *«La card "L'Allenamento in numeri" dovrebbe avere (in base al tipo di
+     * esercizio) un numero al centro più grande degli altri (molto più grande
+     * degli altri)»*.
+     *
+     * 🚨 **«In base al tipo» è la parte che conta.** Sette numeri della stessa
+     * dimensione non dicono niente: chi guarda deve decidere da solo quale
+     * conta, e la risposta cambia con lo sport. Di una corsa si vogliono i
+     * **chilometri**; di una seduta di pesi i **chili sollevati**.
+     *
+     * ⚠️ E il protagonista **esce dall'elenco sotto**: ripeterlo grande e poi
+     * piccolo sarebbe lo stesso numero due volte nella stessa card — il difetto
+     * della fiammella di B.19, appena corretto.
+     */
+    final protagonista = _protagonista(numeri);
+    final resto = numeri.where((n) => n != protagonista).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -281,33 +305,129 @@ class _NumeriDellAllenamento extends ConsumerWidget {
         Expanded(
           child: RiquadroBianco(
             child: Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                runAlignment: WrapAlignment.center,
-                spacing: Gap.lg,
-                runSpacing: Gap.md,
-                children: [
-                  for (final (valore, etichetta) in numeri)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          valore,
-                          style: tema.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: tema.colorScheme.primary,
-                          ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /*
+                     * 🚨 Il protagonista: **molto** più grande, non un po'.
+                     * 💡 `FittedBox` perché «12,4 km» e «1.480» non sono larghi
+                     * uguale, e un numero che sfora è peggio di uno piccolo.
+                     */
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        protagonista.$1,
+                        style: tema.textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: tema.colorScheme.primary,
+                          height: 1,
                         ),
-                        Text(etichetta, style: tema.textTheme.bodySmall),
-                      ],
+                      ),
                     ),
-                ],
+                    Text(
+                      protagonista.$2,
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+
+                    if (resto.isNotEmpty) ...[
+                      const SizedBox(height: Gap.md),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        runAlignment: WrapAlignment.center,
+                        spacing: Gap.lg,
+                        runSpacing: Gap.sm,
+                        children: [
+                          for (final (valore, etichetta) in resto)
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  valore,
+                                  style: tema.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  etichetta,
+                                  style: tema.textTheme.bodySmall?.copyWith(
+                                    color: tema.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ],
     );
+  }
+
+  /// Quale dei numeri merita di stare grande, **in base al tipo**.
+  ///
+  /// | Sport | Protagonista |
+  /// |---|---|
+  /// | corsa, camminata, bici, escursione, scale, nuoto, vogatore | i **chilometri** |
+  /// | pesi, corpo libero | i **chili sollevati** |
+  /// | tutto il resto | le **calorie**, se ci sono |
+  ///
+  /// ⚠️ **Con un ripiego a scalare, e non è pigrizia**: una corsa senza GPS i
+  /// chilometri non ce li ha, e una seduta a corpo libero non ha chili. 🚨 Una
+  /// card che mostra grande un trattino sarebbe peggio di una che sceglie un
+  /// numero meno interessante ma vero.
+  ///
+  /// 💡 L'ultima spiaggia sono i **minuti**, che ci sono sempre: un allenamento
+  /// senza durata non esiste.
+  (String, String) _protagonista(List<(String, String)> numeri) {
+    (String, String)? cerca(String etichetta) {
+      for (final n in numeri) {
+        if (n.$2 == etichetta) return n;
+      }
+
+      return null;
+    }
+
+    const diDistanza = {
+      'RUNNING',
+      'WALKING',
+      'HIKING',
+      'BIKING',
+      'STAIR_CLIMBING',
+      'ROWING',
+      'SWIMMING',
+    };
+
+    const diCarico = {'STRENGTH_TRAINING', 'CALISTHENICS'};
+
+    final tipo = voce.tipo;
+
+    final ordine = <String>[
+      if (tipo != null && diDistanza.contains(tipo)) 'percorsi',
+      if (tipo != null && diCarico.contains(tipo)) 'kg sollevati',
+      // 💡 Senza tipo — una seduta nata nell'app — i chili sollevati sono la
+      // cosa che dice se oggi è stato più duro dell'altra volta.
+      if (tipo == null) 'kg sollevati',
+      'kcal',
+      'kcal stimate',
+      'percorsi',
+      'kg sollevati',
+      'minuti',
+    ];
+
+    for (final etichetta in ordine) {
+      final trovato = cerca(etichetta);
+      if (trovato != null) return trovato;
+    }
+
+    return numeri.first;
   }
 
   static String _kg(double v) =>

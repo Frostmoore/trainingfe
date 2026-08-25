@@ -142,9 +142,17 @@ class _CaroselloDelMeseState extends ConsumerState<CaroselloDelMese> {
         // 📌 *«mettiamolo in un quadrato con fondo bianco (anche nello
         // storico)»*: il PNG è disegnato per un fondo chiaro, e col tema scuro
         // i contorni sparivano.
-        child: RiquadroBianco(
-          sempreBianco: true,
-          child: FiguraDelCorpo(intensita: intensita),
+        child: Column(
+          children: [
+            Expanded(
+              child: RiquadroBianco(
+                sempreBianco: true,
+                child: FiguraDelCorpo(intensita: intensita),
+              ),
+            ),
+            const SizedBox(height: Gap.xs),
+            const LegendaDeiMuscoli(),
+          ],
         ),
       ),
       CardDelCarosello(

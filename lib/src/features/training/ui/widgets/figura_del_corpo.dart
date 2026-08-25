@@ -77,6 +77,76 @@ final sagomaDelCorpoProvider = FutureProvider.family<ui.Image, String>((
 });
 
 /// Il servizio riutilizzabile: dalle intensità al disegno.
+/// Quanto un gruppo e' stato allenato, in **quattro gradini** — 3b-C.9.
+///
+/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+///
+/// *«non facciamo più o meno rosso per l'uso dei muscoli, facciamo 4 colori:
+/// nessuno, verde, giallo, rosso. Secondo me è più chiaro»*.
+///
+/// ⛔ **Prima era una scala continua di rosso**, dall'opacità 0,30 all'1. ⚠️ Una
+/// scala continua si legge male per il motivo per cui esiste: due muscoli allo
+/// 0,55 e allo 0,70 hanno due rossi che nessuno sa distinguere, e chi guarda
+/// **non puo' dire quale dei due ha allenato di piu'**. Sembra informazione e
+/// non lo e'.
+///
+/// 💡 Quattro gradini si contano a colpo d'occhio, e ognuno vuol dire una cosa:
+/// non l'hai toccato, l'hai sfiorato, l'hai fatto, l'hai massacrato.
+enum GradinoDelMuscolo {
+  /// ⛔ Non allenato: resta **spento**, del grigio della sagoma. 🚨 Non e' un
+  /// quarto colore da mostrare — e' l'assenza, e va letta come assenza.
+  nessuno(0),
+
+  poco(1),
+  abbastanza(2),
+  tanto(3);
+
+  const GradinoDelMuscolo(this.livello);
+
+  final int livello;
+
+  /// 🚨 **Le soglie stanno qui e in nessun altro posto.** Sono la regola, non un
+  /// dettaglio di disegno: le legge la figura, e un domani le leggeranno la
+  /// legenda e le medaglie. Copiarle vorrebbe dire che lo stesso muscolo e'
+  /// giallo in un posto e rosso in un altro.
+  ///
+  /// ⚠️ **Un terzo per gradino**, e non soglie «furbe» tarate su un mese
+  /// particolare: `intensitaDeiMuscoli` normalizza gia' a 0..1 sul gruppo piu'
+  /// allenato del periodo, quindi il piu' allenato e' sempre 1 e i tre terzi
+  /// dicono *«rispetto al tuo massimo»*, che e' la domanda vera.
+  static GradinoDelMuscolo da(double intensita) {
+    if (intensita <= 0) return GradinoDelMuscolo.nessuno;
+    if (intensita <= 1 / 3) return GradinoDelMuscolo.poco;
+    if (intensita <= 2 / 3) return GradinoDelMuscolo.abbastanza;
+
+    return GradinoDelMuscolo.tanto;
+  }
+
+  /// Il colore del gradino.
+  ///
+  /// ⚠️ **Scritti a mano, non presi dal tema.** `ColorScheme` non ha un verde ne'
+  /// un giallo, e prendere `primary` e `tertiary` vorrebbe dire che la figura
+  /// cambia significato quando il committente cambia il colore d'accento — un
+  /// muscolo «giallo» diventerebbe blu.
+  ///
+  /// 💡 Toni un po' spenti e non fluorescenti: stanno **dentro una sagoma**, su
+  /// fondo bianco, e tre colori accesi vicini fanno un semaforo.
+  Color? get colore => switch (this) {
+    GradinoDelMuscolo.nessuno => null,
+    GradinoDelMuscolo.poco => const Color(0xFF2E9E5B),
+    GradinoDelMuscolo.abbastanza => const Color(0xFFE0A81C),
+    GradinoDelMuscolo.tanto => const Color(0xFFC62828),
+  };
+
+  /// Come si chiama, per la legenda.
+  String get etichetta => switch (this) {
+    GradinoDelMuscolo.nessuno => 'Non allenato',
+    GradinoDelMuscolo.poco => 'Poco',
+    GradinoDelMuscolo.abbastanza => 'Abbastanza',
+    GradinoDelMuscolo.tanto => 'Tanto',
+  };
+}
+
 class FiguraDelCorpo extends ConsumerWidget {
   const FiguraDelCorpo({
     required this.intensita,
@@ -131,7 +201,6 @@ class FiguraDelCorpo extends ConsumerWidget {
                       spento: tema.colorScheme.onSurfaceVariant.withValues(
                         alpha: 0.45,
                       ),
-                      acceso: tema.colorScheme.error,
                     ),
                   ),
                 ),
@@ -167,14 +236,12 @@ class _UnaFigura extends ConsumerWidget {
     required this.intensita,
     required this.davanti,
     required this.spento,
-    required this.acceso,
   });
 
   final String nome;
   final Map<GruppoMuscolare, double> intensita;
   final bool davanti;
   final Color spento;
-  final Color acceso;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -193,7 +260,6 @@ class _UnaFigura extends ConsumerWidget {
         intensita: intensita,
         davanti: davanti,
         spento: spento,
-        acceso: acceso,
       ),
       child: const SizedBox.expand(),
     );
@@ -269,14 +335,12 @@ class _PittoreDelCorpo extends CustomPainter {
     required this.intensita,
     required this.davanti,
     required this.spento,
-    required this.acceso,
   });
 
   final ui.Image sagoma;
   final Map<GruppoMuscolare, double> intensita;
   final bool davanti;
   final Color spento;
-  final Color acceso;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -343,11 +407,24 @@ class _PittoreDelCorpo extends CustomPainter {
       final quanto = intensita[e.key]!;
 
       /*
-       * 💡 L'opacità parte da 0,3: un'intensità dello 0,02 con opacità 0,02
-       * sarebbe invisibile, e il muscolo sembrerebbe non allenato. ⚠️ Sotto una
-       * certa soglia il colore deve **esserci**, anche pallido.
+       * ══ 🎨 QUATTRO GRADINI, NON UNA SFUMATURA — 3b-C.9, 25/08/2026 ═══════
+       *
+       * 📌 *«non facciamo più o meno rosso per l'uso dei muscoli, facciamo 4
+       * colori: nessuno, verde, giallo, rosso»*.
+       *
+       * ⛔ Qui c'era `acceso.withValues(alpha: 0.30 + 0.70 * quanto)`: una scala
+       * continua di rosso. ⚠️ Il difetto non era estetico — due muscoli allo
+       * 0,55 e allo 0,70 avevano due rossi indistinguibili, e chi guardava non
+       * poteva dire quale dei due aveva allenato di piu'. **Sembrava
+       * informazione e non lo era.**
+       *
+       * 💡 La soglia sta in `GradinoDelMuscolo`, non qui: la stessa scala
+       * servira' alla legenda e alle medaglie, e copiarla vorrebbe dire lo
+       * stesso muscolo giallo in un posto e rosso in un altro.
        */
-      final tinta = acceso.withValues(alpha: 0.30 + 0.70 * quanto);
+      final tinta = GradinoDelMuscolo.da(quanto).colore;
+
+      if (tinta == null) continue;
 
       for (final forma in e.value.forme) {
         canvas.drawRect(
@@ -375,7 +452,6 @@ class _PittoreDelCorpo extends CustomPainter {
   @override
   bool shouldRepaint(_PittoreDelCorpo vecchio) =>
       vecchio.davanti != davanti ||
-      vecchio.acceso != acceso ||
       vecchio.sagoma != sagoma ||
       !_stesseIntensita(vecchio.intensita, intensita);
 
@@ -421,4 +497,46 @@ Future<ui.Image> sagomaFinta({int lato = 64}) async {
   );
 
   return (await (await descrittore.instantiateCodec()).getNextFrame()).image;
+}
+
+/// La legenda dei quattro gradini — 3b-C.9.
+///
+/// 🚨 **Senza, quattro colori restano da indovinare.** Una scala continua di
+/// rosso si capisce da sola — piu' scuro, piu' allenato; quattro colori no:
+/// verde e giallo non hanno un ordine ovvio finche' qualcuno non lo dice.
+///
+/// ⛔ Il gradino `nessuno` **non c'e'**: e' l'assenza di colore, e metterlo in
+/// legenda vorrebbe dire spiegare che il grigio significa grigio.
+class LegendaDeiMuscoli extends StatelessWidget {
+  const LegendaDeiMuscoli({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 2,
+      children: [
+        for (final g in GradinoDelMuscolo.values)
+          if (g.colore != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: g.colore,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(g.etichetta, style: tema.textTheme.bodySmall),
+              ],
+            ),
+      ],
+    );
+  }
 }

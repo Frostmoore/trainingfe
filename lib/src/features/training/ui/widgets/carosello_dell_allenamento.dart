@@ -103,9 +103,17 @@ class _CaroselloDellAllenamentoState
           sottotitolo: quando,
           // 📌 Nel quadrato bianco, come nello storico: il PNG è disegnato
           // per un fondo chiaro.
-          child: RiquadroBianco(
-            sempreBianco: true,
-            child: FiguraDelCorpo(intensita: intensita),
+          child: Column(
+            children: [
+              Expanded(
+                child: RiquadroBianco(
+                  sempreBianco: true,
+                  child: FiguraDelCorpo(intensita: intensita),
+                ),
+              ),
+              const SizedBox(height: Gap.xs),
+              const LegendaDeiMuscoli(),
+            ],
           ),
         ),
         CardDelCarosello(

@@ -22,7 +22,9 @@ import '../../../sleep/sleep_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../../training/data/storico_unificato.dart';
 import '../../data/dashboard_models.dart';
+import '../../giorno_scelto.dart';
 import '../../riassunto_settimana.dart';
+import '../../saldo_calorico.dart';
 import 'barra_del_consumo.dart';
 import 'onda_metrica.dart';
 
@@ -109,20 +111,34 @@ class CaloriesCard extends ConsumerWidget {
      * 💡 `BruciateDelGiorno.scegli` resta dov'era: la regola di precedenza non
      * cambia, cambia **da dove arrivano i tre numeri**.
      */
-    final oggi = DateTime.now();
+    /*
+     * ══ 🚨 QUESTA CARD NON GUARDAVA IL GIORNO SCELTO. AFFATTO. ══════════════
+     *
+     * 📌 Trovato il 26/08 dietro a *«le calorie di ieri sono sbagliate»*, che
+     * era un difetto diverso e più piccolo (vedi `today_header`).
+     *
+     * ⛔ Qui c'era `DateTime.now()`, e da lì scendeva tutto: le bruciate, il
+     * consumo maturato, e quindi l'obiettivo. Su un giorno passato la card
+     * diceva cose impossibili — «2259 mangiate, 58 bruciate» — dove il 58 era
+     * il TDEE maturato **stanotte alle 0:37**, appiccicato sopra una giornata
+     * finita da ore.
+     *
+     * 🚨 **E l'intestazione sopra diceva altri numeri**: 2132 di obiettivo
+     * contro 1799, 333 bruciate contro 58. Due catene per la stessa cosa nella
+     * stessa schermata, che coincidono **solo guardando oggi** — ed è per questo
+     * che non se n'era accorto nessuno.
+     *
+     * 💡 Adesso `giornoSceltoProvider` guida anche questa card, come già
+     * guidava l'intestazione.
+     */
+    final giorno = ref.watch(giornoSceltoProvider);
+    final adesso = DateTime.now();
 
     final bruciate = BruciateDelGiorno.scegli(
       manuale: null,
-      daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
+      daHealth: ref.watch(kcalAttiveDelGiornoProvider(giorno)).valueOrNull ?? 0,
       stimate:
-          ref
-              .watch(
-                bruciateLocaliDelGiornoProvider(
-                  DateTime(oggi.year, oggi.month, oggi.day),
-                ),
-              )
-              .valueOrNull ??
-          0,
+          ref.watch(bruciateLocaliDelGiornoProvider(giorno)).valueOrNull ?? 0,
     );
 
     final delGiorno = TargetDelGiorno.scegli(
@@ -136,11 +152,9 @@ class CaloriesCard extends ConsumerWidget {
     final haObiettivo = delGiorno.esiste;
 
     /*
-     * ⚠️ **`oggi` e non una data qualunque**: e' lo stesso istante usato per
-     * cercare le bruciate, quindi la parte a riposo e quella in movimento
-     * parlano dello stesso momento. Prenderne due letture diverse
-     * dell'orologio, a cavallo della mezzanotte, farebbe dire alla barra una
-     * cosa impossibile.
+     * ⚠️ **Lo stesso giorno usato per le bruciate**, o la parte quotidiana e
+     * quella in movimento parlerebbero di due momenti diversi — che è
+     * esattamente il difetto appena chiuso.
      */
     /*
      * ══ 🚨 IL TDEE, NON IL BMR — 3b-F, 26/08/2026 ═══════════════════════════
@@ -153,9 +167,18 @@ class CaloriesCard extends ConsumerWidget {
      * vero: il TDEE su 1.2 è la vita da scrivania, che si brucia comunque, e
      * lasciarla fuori faceva sembrare che si spendesse quanto un uomo immobile.
      */
-    final quotidianoOra = stima == null
+    /*
+     * 📌 *«nella barra sotto ci devi mettere TDEE mappato sulla giornata +
+     * allenamenti»*.
+     *
+     * 🚨 **«Mappato sulla giornata», non «sull'ora che è adesso».** Su oggi si
+     * ferma all'ora corrente, perché la giornata non è finita; su un giorno
+     * passato è il TDEE **intero**, perché quelle ventiquattro ore le hai
+     * bruciate tutte. 💡 È `consumoDelGiorno`, la stessa che usa il grafico.
+     */
+    final quotidiano = stima == null
         ? 0.0
-        : consumoFinora(kcalDelGiorno: stima.tdee, adesso: oggi);
+        : consumoDelGiorno(tdee: stima.tdee, giorno: giorno, adesso: adesso);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -377,7 +400,7 @@ class CaloriesCard extends ConsumerWidget {
                     Text('Bruciate', style: theme.textTheme.labelLarge),
                     const Spacer(),
                     Text(
-                      '${(quotidianoOra + bruciate.kcal).round()}',
+                      '${(quotidiano + bruciate.kcal).round()}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -390,13 +413,13 @@ class CaloriesCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: Gap.xs),
                 BarraDelConsumo(
-                  quotidiano: quotidianoOra,
+                  quotidiano: quotidiano,
                   allenamento: bruciate.kcal.toDouble(),
                   tdee: stima.tdee,
                 ),
                 const SizedBox(height: Gap.xs),
                 LegendaDelConsumo(
-                  quotidiano: quotidianoOra,
+                  quotidiano: quotidiano,
                   allenamento: bruciate.kcal.toDouble(),
                 ),
               ],

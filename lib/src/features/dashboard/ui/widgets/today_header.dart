@@ -68,9 +68,27 @@ class TodayHeader extends ConsumerWidget {
      * `CaloriesCard`: con `workout_sessions` via, i numeri del server sarebbero
      * diventati zero **senza un errore**.
      */
+    /*
+     * ══ 🚨 «DEL GIORNO», NON «DI OGGI» — 3b-F.7, 26/08/2026 ═════════════════
+     *
+     * 📌 *«Adesso le calorie di ieri sono sbagliate, mi segna bruciate 333 anzi
+     * che 580, perché??»*.
+     *
+     * ⛔ Qui c'era `kcalAttiveOggiProvider`, mentre la riga sotto guardava il
+     * **giorno scelto**. Due sorgenti della stessa catena che parlavano di due
+     * giorni diversi: passata la mezzanotte, l'orologio del giorno mostrato
+     * spariva e restava solo la stima locale.
+     *
+     * 🚨 **E il dato non era cambiato: era cambiato il giorno.** 580 diventavano
+     * 333 da soli, senza che nessuno toccasse niente — il tipo di difetto che
+     * si scopre solo guardando indietro, cioè quasi mai.
+     *
+     * 💡 Il provider giusto esisteva già: `kcalAttiveOggiProvider` non è altro
+     * che questo con `oggi` dentro.
+     */
     final bruciate = BruciateDelGiorno.scegli(
       manuale: null,
-      daHealth: ref.watch(kcalAttiveOggiProvider).valueOrNull ?? 0,
+      daHealth: ref.watch(kcalAttiveDelGiornoProvider(giorno)).valueOrNull ?? 0,
       stimate:
           ref.watch(bruciateLocaliDelGiornoProvider(giorno)).valueOrNull ?? 0,
     );

@@ -41,19 +41,26 @@ import 'package:flutter/foundation.dart';
 
 import 'ui/widgets/barra_del_consumo.dart';
 
-/// Quanto si è mangiato oltre quello che si è **davvero** speso.
+/// Quanto si è mangiato oltre l'obiettivo del giorno.
 ///
-/// 💡 Positivo = surplus, negativo = deficit.
+/// 💡 Positivo = sopra il target, negativo = sotto.
 ///
-/// ⚠️ `consumo` è il **TDEE**, cioè la vita quotidiana, e va passato **già
-/// mappato sull'ora** per il giorno in corso — vedi [consumoFinora]. 🚨 Non si
-/// mappa qui dentro: questa funzione non sa che giorno sta guardando, e
-/// indovinarlo è il modo in cui nascono due conteggi diversi per la stessa cosa.
-double saldoDelGiorno({
-  required double assunte,
-  required double consumo,
-  required double allenamento,
-}) => assunte - (consumo + allenamento);
+/// ══ ⚠️ SUL TARGET, NON SUL CONSUMO — 3b-F.8, 26/08/2026 ═══════════════════
+///
+/// 📌 *«si dovrebbe capire che è deficit e surplus rispetto AL TARGET, non
+/// rispetto alla giornata vera»*.
+///
+/// 🚨 **E la parola «deficit» è sparita da qui**, di proposito: in palestra
+/// vuol dire *rispetto a quanto spendi*, e usarla per la distanza da un
+/// obiettivo è esattamente l'ambiguità che il committente stava segnalando.
+/// ⛔ Un numero senza il suo riferimento scritto accanto non è un numero, è
+/// un'impressione.
+///
+/// ⚠️ **L'obiettivo lo compone `TargetDelGiorno`**, quindi qui dentro le
+/// bruciate ci sono già o no a seconda dell'interruttore. Non si sommano una
+/// seconda volta.
+double saldoDelGiorno({required double assunte, required double obiettivo}) =>
+    assunte - obiettivo;
 
 /// Il consumo di un giorno: intero se è passato, fino a **adesso** se è oggi.
 ///
@@ -78,7 +85,7 @@ double consumoDelGiorno({
 class SaldoMedio {
   const SaldoMedio({required this.kcalAlGiorno, required this.giorni});
 
-  /// Positivo = surplus medio, negativo = deficit medio.
+  /// Positivo = **sopra** il target in media, negativo = sotto.
   final double kcalAlGiorno;
 
   /// Su quanti giorni è calcolata.
@@ -88,31 +95,33 @@ class SaldoMedio {
   /// come se lo fosse.
   final int giorni;
 
-  bool get deficit => kcalAlGiorno < 0;
+  /// ⚠️ Si chiama `sotto` e **non `deficit`**: «deficit» in palestra vuol dire
+  /// *rispetto a quanto spendi*, e questo è rispetto al target.
+  bool get sotto => kcalAlGiorno < 0;
 }
 
-/// Il saldo medio di un periodo, **sui soli giorni completi e con diario**.
+/// La media dei saldi di un periodo, **sui soli giorni completi e con diario**.
 ///
-/// ══ ⚠️ IL CONFRONTO E' COL CONSUMO, NON CON L'OBIETTIVO ═══════════════════
+/// ══ ⚠️ E' LA DISTANZA DAL TARGET ══════════════════════════════════════════
 ///
-/// 🚨 «Deficit» e «surplus» vogliono dire *rispetto a quanto spendi*, non
-/// rispetto a quanto ti eri ripromesso. ⛔ Chi ha un obiettivo di dimagrimento
-/// del 20% e lo centra ogni giorno è a **zero** rispetto all'obiettivo e a
-/// **−20%** rispetto al consumo: il secondo numero è quello che diventa peso, ed
-/// è quello che la parola «deficit» promette a chi la legge.
+/// 📌 *«si dovrebbe capire che è deficit e surplus rispetto AL TARGET, non
+/// rispetto alla giornata vera»*.
 ///
-/// 💡 Il riquadro del dito invece parla dell'**obiettivo**, perché quella è la
-/// linea di base del grafico. ⚠️ Sono due domande diverse, e le risposte portano
-/// scritto a cosa si riferiscono.
+/// 💡 Risponde a *«sto seguendo quello che mi ero ripromesso?»*, che è la
+/// stessa domanda del riquadro del dito — solo mediata sul periodo invece che
+/// su un giorno. ⚠️ **Non** risponde a «sto dimagrendo, e di quanto»: per
+/// quello servirebbe il confronto col consumo, ed è un'altra cosa (vedi
+/// 3b-F.8.3 nel piano, dove sta scritto perché i grammi a settimana sono spariti
+/// da questa riga).
 ///
 /// ══ ⛔ DUE GIORNI NON ENTRANO, E SONO DUE REGOLE DIVERSE ══════════════════
 ///
-/// 1. 🚨 **Un giorno senza diario si salta, non vale zero.** Con `assunte = 0` il
-///    saldo sarebbe `−(consumo + allenamento)`, cioè un digiuno completo: su tre
-///    giorni saltati fanno una media da fame che non è successa. ⚠️ È la stessa
-///    regola di `pesoDalSaldo`, e lì è già costata una discussione.
+/// 1. 🚨 **Un giorno senza diario si salta, non vale zero.** Con `assunte = 0`
+///    il saldo sarebbe `−obiettivo`, cioè un digiuno completo: su tre giorni
+///    saltati fanno una media da fame che non è successa. ⚠️ È la stessa regola
+///    di `pesoDalSaldo`, e lì è già costata una discussione.
 /// 2. ⛔ **Oggi non entra**, perché non è finito. Un pomeriggio a metà entra in
-///    media come una giornata intera e la tira verso il deficit — 💡 e il giorno
+///    media come una giornata intera e la tira verso il basso — 💡 e il giorno
 ///    dopo lo stesso numero cambia da solo, il che è il modo più rapido per far
 ///    smettere di fidarsi di una media.
 ///
@@ -121,8 +130,7 @@ class SaldoMedio {
 SaldoMedio? saldoMedioDelPeriodo({
   required List<DateTime> giorni,
   required List<double> assunte,
-  required List<double> allenamento,
-  required double tdee,
+  required List<double> obiettivi,
   required DateTime adesso,
 }) {
   var totale = 0.0;
@@ -137,16 +145,12 @@ SaldoMedio? saldoMedioDelPeriodo({
     }
 
     final mangiate = i < assunte.length ? assunte[i] : 0.0;
+    final obiettivo = i < obiettivi.length ? obiettivi[i] : 0.0;
 
-    // ⛔ Nessun diario: si salta. Vedi la nota qui sopra.
-    if (mangiate <= 0) continue;
+    // ⛔ Nessun diario, o nessun obiettivo: si salta. Vedi la nota qui sopra.
+    if (mangiate <= 0 || obiettivo <= 0) continue;
 
-    totale += saldoDelGiorno(
-      assunte: mangiate,
-      consumo: tdee,
-      allenamento: i < allenamento.length ? allenamento[i] : 0.0,
-    );
-
+    totale += saldoDelGiorno(assunte: mangiate, obiettivo: obiettivo);
     contati++;
   }
 

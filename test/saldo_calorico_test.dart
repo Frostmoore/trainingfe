@@ -1,51 +1,44 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/dashboard/saldo_calorico.dart';
 
-/// Il saldo calorico, e il movimento contato due volte — 3b-F, 26/08/2026.
+/// Il saldo calorico della card di «Oggi» — 3b-F, 26/08/2026.
 ///
-/// ══ 📌 LA SEGNALAZIONE ════════════════════════════════════════════════════
+/// ══ 📌 LA SEGNALAZIONE, E I TRE GIRI CHE SONO SERVITI ═════════════════════
 ///
-/// *«se passo il dito sull'ultimo giorno mi dice che sono sotto di 570 kcal. Le
-/// calorie effettivamente consumate sono 2259 e quelle bruciate 2403 (secondo la
-/// prima card delle calorie), quindi non capisco bene cosa stia succedendo»*.
+/// *«se passo il dito sull'ultimo giorno mi dice che sono sotto di 570 kcal»* →
+/// *«il tdee è il consumo ad attività praticamente 0 (1.2) … non ha nulla a che
+/// vedere con gli allenamenti»* → *«si dovrebbe capire che è deficit e surplus
+/// rispetto AL TARGET, non rispetto alla giornata vera»*.
 ///
 /// ══ 🚨 COSA DIFENDE QUESTO FILE ═══════════════════════════════════════════
 ///
-/// ⛔ Il difetto era che il riquadro del dito mescolava **due riferimenti**:
-/// toglieva il TDEE (la vita quotidiana) **e** le calorie dell'allenamento, e
-/// per giunta confrontava le assunte di adesso con ventiquattro ore di consumo.
+/// Tre numeri nella stessa pagina, e ognuno con un **riferimento diverso**:
 ///
-/// 💡 Adesso ci sono due numeri con due riferimenti **dichiarati**:
-/// il dito parla dell'**obiettivo**, la media parla del **consumo**.
+/// | Dove | Riferimento |
+/// |---|---|
+/// | il riquadro del dito | l'**obiettivo** del giorno |
+/// | la media in fondo | l'**obiettivo**, mediato sul periodo |
+/// | la barra della prima card | il **consumo** (vita quotidiana + allenamento) |
 ///
-/// ⚠️ **Nessun test poteva accorgersene**, e il motivo va detto: il numero
-/// restava **plausibile**. −570 invece di −144 è un deficit credibile, di quelli
-/// che si guardano e si accettano. 🚨 E non c'era niente da provare: la formula
-/// viveva dentro il costruttore di un tooltip di `fl_chart`.
+/// ⛔ Il difetto originale era che un numero solo cercava di rispondere a due
+/// domande, e non diceva a quale. ⚠️ **Nessun test poteva prenderlo**: il numero
+/// restava plausibile, e la formula viveva dentro il costruttore di un tooltip
+/// di `fl_chart`. 💡 Adesso sta qui, e si prova.
 void main() {
   group('🔢 il saldo di un giorno', () {
-    /// 🚨 **I numeri della segnalazione**: 2259 mangiate, 1686 di vita
-    /// quotidiana maturata, 717 di allenamento → 2403 spese davvero, e un saldo
-    /// di **−144**, che è quello che il committente si aspettava.
-    test('è mangiate meno spese, e basta', () {
-      expect(
-        saldoDelGiorno(assunte: 2259, consumo: 1686, allenamento: 717),
-        closeTo(-144, 1),
-      );
+    /// ⚠️ **Sul target, non sul consumo.** Chi ha un obiettivo di dimagrimento
+    /// e lo centra è a **zero** qui, e ci deve essere: la domanda è «sto
+    /// seguendo quello che mi ero ripromesso», non «sto dimagrendo».
+    test('è mangiate meno obiettivo, e basta', () {
+      expect(saldoDelGiorno(assunte: 2259, obiettivo: 2132), closeTo(127, 1));
     });
 
-    test('un surplus è positivo', () {
-      expect(
-        saldoDelGiorno(assunte: 2600, consumo: 1700, allenamento: 300),
-        600,
-      );
+    test('sotto il target dà un numero negativo', () {
+      expect(saldoDelGiorno(assunte: 1650, obiettivo: 1990), -340);
     });
 
-    /// ⚠️ Chi non si è allenato ha comunque speso la sua giornata: **non è
-    /// zero**. È il punto su cui il committente ha corretto la prima
-    /// risposta — il TDEE su 1.2 è la vita da scrivania, e si brucia comunque.
-    test('e senza allenamento resta la vita quotidiana', () {
-      expect(saldoDelGiorno(assunte: 2000, consumo: 1700, allenamento: 0), 300);
+    test('e centrarlo dà zero', () {
+      expect(saldoDelGiorno(assunte: 1990, obiettivo: 1990), 0);
     });
   });
 
@@ -53,8 +46,8 @@ void main() {
     final adesso = DateTime(2026, 8, 26, 18);
 
     /// 🚨 **Su oggi si ferma all'ora che è.** Le calorie assunte sono quelle di
-    /// finora: confrontarle con ventiquattro ore di consumo dichiara un deficit
-    /// che è soltanto la giornata non ancora finita.
+    /// finora: confrontarle con ventiquattro ore di consumo dichiarerebbe un
+    /// deficit che è soltanto la giornata non ancora finita.
     test('oggi si ferma all\'ora che è', () {
       final consumo = consumoDelGiorno(
         tdee: 2400,
@@ -66,6 +59,9 @@ void main() {
       expect(consumo, closeTo(1800, 1));
     });
 
+    /// ⛔ È il difetto trovato il 26/08 dietro a *«le calorie di ieri sono
+    /// sbagliate»*: la card mostrava il consumo maturato **stanotte** sopra una
+    /// giornata finita da ore.
     test('e su un giorno passato è intero', () {
       expect(
         consumoDelGiorno(
@@ -77,8 +73,7 @@ void main() {
       );
     });
 
-    /// ⚠️ L'ora di oggi vale anche se l'istante porta minuti e secondi: quello
-    /// che conta è **il giorno**, non l'uguaglianza fra due `DateTime`.
+    /// ⚠️ Quello che conta è **il giorno**, non l'uguaglianza fra due istanti.
     test('e «oggi» è il giorno, non l\'istante', () {
       expect(
         consumoDelGiorno(
@@ -99,51 +94,58 @@ void main() {
     final adesso = DateTime(2026, 8, 26, 18);
     final giorni = giorniFinoA(DateTime(2026, 8, 26), 4);
 
-    /// ⚠️ **La media è rispetto al CONSUMO**, non all'obiettivo: «deficit» vuol
-    /// dire *rispetto a quanto spendi*, ed è quello che diventa peso. 💡 Il
-    /// riquadro del dito parla invece dell'obiettivo, e ognuno dei due porta
-    /// scritto a cosa si riferisce.
+    /// ⚠️ **È la distanza dal target**, non dal consumo: risponde a «sto
+    /// seguendo quello che mi ero ripromesso?».
     test('è la media dei saldi dei giorni completi', () {
       final medio = saldoMedioDelPeriodo(
         // 23, 24, 25 completi · 26 è oggi
         giorni: giorni,
-        assunte: const [2000, 2000, 2000, 2000],
-        allenamento: const [0, 0, 0, 0],
-        tdee: 2200,
+        assunte: const [1800, 1800, 1800, 1800],
+        obiettivi: const [2000, 2000, 2000, 2000],
         adesso: adesso,
       );
 
       expect(medio, isNotNull);
       expect(medio!.giorni, 3);
       expect(medio.kcalAlGiorno, -200);
-      expect(medio.deficit, isTrue);
+      expect(medio.sotto, isTrue);
     });
 
-    /// ⛔ **Oggi non entra**, perché non è finito. Un pomeriggio a metà entra in
-    /// media come una giornata intera e la tira verso il deficit — e il giorno
-    /// dopo lo stesso numero cambierebbe da solo.
-    test('e oggi non entra, anche se ha già del diario', () {
-      final conOggiEnorme = saldoMedioDelPeriodo(
+    test('e sopra il target il segno si gira', () {
+      final medio = saldoMedioDelPeriodo(
         giorni: giorni,
-        assunte: const [2000, 2000, 2000, 9999],
-        allenamento: const [0, 0, 0, 0],
-        tdee: 2200,
+        assunte: const [2300, 2300, 2300, 0],
+        obiettivi: const [2000, 2000, 2000, 2000],
         adesso: adesso,
       );
 
-      expect(conOggiEnorme!.giorni, 3);
-      expect(conOggiEnorme.kcalAlGiorno, -200);
+      expect(medio!.kcalAlGiorno, 300);
+      expect(medio.sotto, isFalse);
+    });
+
+    /// ⛔ **Oggi non entra**, perché non è finito. Un pomeriggio a metà entra in
+    /// media come una giornata intera e la tira verso il basso — e il giorno
+    /// dopo lo stesso numero cambierebbe da solo.
+    test('e oggi non entra, anche se ha già del diario', () {
+      final medio = saldoMedioDelPeriodo(
+        giorni: giorni,
+        assunte: const [1800, 1800, 1800, 300],
+        obiettivi: const [2000, 2000, 2000, 2000],
+        adesso: adesso,
+      );
+
+      expect(medio!.giorni, 3);
+      expect(medio.kcalAlGiorno, -200);
     });
 
     /// 🚨 **Un giorno senza diario si salta, non vale zero.** Con `assunte = 0`
-    /// il saldo sarebbe un digiuno completo, e su tre giorni saltati fanno una
-    /// media da fame che non è successa. È la stessa regola di `pesoDalSaldo`.
+    /// il saldo sarebbe l'obiettivo intero in negativo, cioè un digiuno
+    /// completo. È la stessa regola di `pesoDalSaldo`.
     test('un giorno senza diario si salta, non vale digiuno', () {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
-        assunte: const [2000, 0, 2000, 2000],
-        allenamento: const [0, 0, 0, 0],
-        tdee: 2200,
+        assunte: const [1800, 0, 1800, 1800],
+        obiettivi: const [2000, 2000, 2000, 2000],
         adesso: adesso,
       );
 
@@ -151,21 +153,20 @@ void main() {
       expect(
         medio.kcalAlGiorno,
         -200,
-        reason: 'contando lo zero verrebbe −933: un digiuno che non c\'è stato',
+        reason: 'contando lo zero verrebbe −800: un digiuno che non c\'è stato',
       );
     });
 
-    test('e il movimento entra nel conto', () {
+    /// ⚠️ Senza obiettivo non c'è distanza da misurare: quel giorno esce.
+    test('e un giorno senza obiettivo pure', () {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
-        assunte: const [2500, 2500, 2500, 0],
-        allenamento: const [300, 300, 300, 0],
-        tdee: 2200,
+        assunte: const [1800, 1800, 1800, 1800],
+        obiettivi: const [2000, 0, 2000, 2000],
         adesso: adesso,
       );
 
-      expect(medio!.kcalAlGiorno, 0);
-      expect(medio.deficit, isFalse);
+      expect(medio!.giorni, 2);
     });
 
     /// ⚠️ La media di niente non è zero, è **assente**.
@@ -174,8 +175,7 @@ void main() {
         saldoMedioDelPeriodo(
           giorni: [DateTime(2026, 8, 26)],
           assunte: const [1500],
-          allenamento: const [0],
-          tdee: 2200,
+          obiettivi: const [2000],
           adesso: adesso,
         ),
         isNull,
@@ -187,8 +187,7 @@ void main() {
         saldoMedioDelPeriodo(
           giorni: giorni,
           assunte: const [0, 0, 0, 0],
-          allenamento: const [0, 0, 0, 0],
-          tdee: 2200,
+          obiettivi: const [2000, 2000, 2000, 2000],
           adesso: adesso,
         ),
         isNull,
@@ -200,9 +199,8 @@ void main() {
     test('e una serie più corta delle date non esplode', () {
       final medio = saldoMedioDelPeriodo(
         giorni: giorni,
-        assunte: const [2000, 2000],
-        allenamento: const [],
-        tdee: 2200,
+        assunte: const [1800, 1800],
+        obiettivi: const [2000, 2000],
         adesso: adesso,
       );
 

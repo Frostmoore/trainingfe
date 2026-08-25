@@ -11,8 +11,8 @@ import '../../../profile/somma_bruciate.dart';
 import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../dashboard_controller.dart';
-import '../../riassunto_settimana.dart';
 import '../../saldo_calorico.dart';
+import 'barra_del_consumo.dart';
 
 /// Le calorie del periodo, **due linee attorno a una linea di base** —
 /// 3b-O.9, 21/08/2026, ridisegnato il 22/08.
@@ -335,169 +335,228 @@ class _Corpo extends ConsumerWidget {
 
         const SizedBox(height: Gap.sm),
 
-        /*
-         * ══ 🚨 «0 BRUCIATE» ERA UNA BUGIA — 22/08/2026 ═══════════════════
-         *
-         * ⚠️ Qui c'era `serie.avgBurned`, che è la media del **server**. ⛔ Dopo
-         * la FASE 11 il server gli allenamenti non ce li ha più: quel campo
-         * vale **zero per tutti**, e la riga diceva «0 bruciate» sotto un
-         * grafico che nella stessa schermata disegnava la linea arancione, e
-         * sopra una scheda che diceva «1227».
-         *
-         * 🚨 **Tre numeri per la stessa cosa, due dei quali falsi.** È la quinta
-         * volta che il server sopravvive in un angolo dopo il trasloco (O.D.6,
-         * O.D.9, la `bruciateDi` qui sopra): 🚨 non dà errore, dà **zero**, e
-         * uno zero credibile non si distingue da un dato.
-         *
-         * 💡 Si conta dalla stessa `bruciateDi` che disegna la linea: una
-         * funzione sola, quindi non possono più discordare.
-         */
-        Builder(
-          builder: (context) {
-            var totale = 0.0;
-            var giorniMossi = 0;
-
-            for (var i = 0; i < serie.labels.length; i++) {
-              final b = bruciateDi(serie, i, daHealth, locali);
-              if (b > 0) {
-                totale += b;
-                giorniMossi++;
-              }
-            }
-
-            // 🚨 Il contesto della media è parte della media: «2.200 di media»
-            // su due giorni registrati su sette non è lo stesso numero che su
-            // sette, e senza dirlo si legge come se lo fosse.
-            final cibo = serie.daysWithData == 0
-                ? 'Nessun giorno registrato in questo periodo.'
-                : 'Media ${serie.avgConsumed} kcal assunte sui '
-                      '${serie.daysWithData} giorni in cui hai registrato '
-                      'qualcosa.';
-
-            /*
-             * ⛔ **Zero giorni mossi si dice, non si stampa come «0 bruciate»**:
-             * la media di niente non è zero, è assente. Sono due frasi diverse
-             * perché sono due notizie diverse.
-             */
-            final mosso = giorniMossi == 0
-                ? ''
-                : ' Media ${(totale / giorniMossi).round()} kcal bruciate sui '
-                      '$giorniMossi giorni in cui ti sei mosso.';
-
-            return Text(
-              '$cibo$mosso',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            );
-          },
-        ),
-
-        _MediaDelSaldo(
+        _Pasticche(
           serie: serie,
           daHealth: daHealth,
           locali: locali,
-          tdee: tdee,
+          obiettivi: obiettivi,
         ),
       ],
     );
   }
 }
 
-/// 📌 *«in fondo a quella card mettici le calorie medie di deficit o surplus di
-/// questa settimana»*.
+/// Il riassunto del periodo, in **tre pasticche** — 3b-F.9, 26/08/2026.
 ///
-/// ══ 🚨 E' IL NUMERO CHE DICE SE LA DIREZIONE E' GIUSTA ════════════════════
+/// ══ 📌 LA SEGNALAZIONE ════════════════════════════════════════════════════
 ///
-/// 💡 Il grafico mostra i **giorni**, e i giorni oscillano: uno sopra, uno sotto,
-/// e a occhio non si capisce dove si sta andando. ⚠️ La media di un periodo è
-/// l'unica cosa che risponde alla domanda vera — *sto dimagrendo o no* — e
-/// accanto ci sta la traduzione in grammi, perche' «−340 kcal al giorno» non
-/// dice niente a nessuno finche' non diventa peso.
+/// *«fa cagare messo così, o me lo metti in un elenco puntato o me lo metti in
+/// delle pasticche, perché le frasi "Media x calorie sugli y giorni in cui hai
+/// registrato. Media x kcal bruciate su y giorni bla bla e media x kcal sotto il
+/// target sugli y giorni eccetera" fa veramente schifo»*.
 ///
-/// ⛔ **Non compare quando non c'e' niente da dire**: senza profilo manca il
-/// basale, e senza giorni completi con diario non c'e' media. E' la regola di
-/// tutta la pagina — una voce senza dati sparisce, perche' uno zero afferma
-/// qualcosa e un'assenza no.
-class _MediaDelSaldo extends StatelessWidget {
-  const _MediaDelSaldo({
+/// ⛔ **Aveva ragione, ed era colpa di come sono cresciute.** Le tre righe sono
+/// nate in tre momenti diversi — le assunte in 3b-O.9, le bruciate il 22/08, il
+/// target stanotte — e ognuna, presa da sola, era una frase ragionevole. 🚨
+/// Messe in fila diventavano *«Media … sui … giorni in cui …»* per tre volte:
+/// nessuno le legge, e chi ci prova non trova il numero che cerca.
+///
+/// 💡 Sono **tre misure dello stesso periodo**, e una griglia lo dice meglio di
+/// tre frasi: il numero grande si trova a colpo d'occhio, e il contesto — su
+/// quanti giorni — sta sotto, dove serve solo a chi lo cerca.
+///
+/// ⚠️ **Il contesto resta però su ognuna, e non in fondo**: i tre conteggi sono
+/// diversi (i giorni con diario, quelli in cui ci si è mossi, quelli completi) e
+/// una nota sola in fondo si leggerebbe come se valesse per tutti e tre.
+///
+/// ⛔ **Una pasticca senza dati non compare.** È la regola di tutta la pagina:
+/// uno zero afferma qualcosa, un'assenza no.
+class _Pasticche extends StatelessWidget {
+  const _Pasticche({
     required this.serie,
     required this.daHealth,
     required this.locali,
-    required this.tdee,
+    required this.obiettivi,
   });
 
   final Series serie;
   final Map<String, int> daHealth;
   final Map<String, int> locali;
-  final double? tdee;
+  final List<double> obiettivi;
 
   @override
   Widget build(BuildContext context) {
-    final kcal = tdee;
+    final tema = Theme.of(context);
 
-    if (kcal == null) return const SizedBox.shrink();
+    /*
+     * ══ 🚨 LE BRUCIATE SI CONTANO DA `bruciateDi` — 22/08/2026 ═════════════
+     *
+     * ⚠️ Qui c'era `serie.avgBurned`, che è la media del **server**. ⛔ Dopo la
+     * FASE 11 il server gli allenamenti non ce li ha più: quel campo vale
+     * **zero per tutti**, e la riga diceva «0 bruciate» sotto un grafico che
+     * nella stessa schermata disegnava la linea arancione.
+     *
+     * 💡 Si conta dalla stessa funzione che disegna la linea: una sola, quindi
+     * non possono più discordare.
+     */
+    var bruciate = 0.0;
+    var giorniMossi = 0;
+
+    for (var i = 0; i < serie.labels.length; i++) {
+      final b = bruciateDi(serie, i, daHealth, locali);
+
+      if (b > 0) {
+        bruciate += b;
+        giorniMossi++;
+      }
+    }
 
     final medio = saldoMedioDelPeriodo(
       giorni: [
         for (final d in serie.dates) DateTime.tryParse(d) ?? DateTime(0),
       ],
       assunte: serie.consumed,
-      allenamento: [
-        for (var i = 0; i < serie.dates.length; i++)
-          bruciateDi(serie, i, daHealth, locali),
-      ],
-      tdee: kcal,
+      obiettivi: obiettivi,
       adesso: DateTime.now(),
     );
 
-    if (medio == null) return const SizedBox.shrink();
+    final pasticche = <Widget>[
+      if (serie.daysWithData > 0)
+        _Pasticca(
+          icona: Icons.restaurant_rounded,
+          valore: '${serie.avgConsumed}',
+          etichetta: 'assunte',
+          giorni: serie.daysWithData,
+        ),
+      if (giorniMossi > 0)
+        _Pasticca(
+          icona: Icons.local_fire_department_rounded,
+          valore: '${(bruciate / giorniMossi).round()}',
+          etichetta: 'bruciate',
+          giorni: giorniMossi,
+          colore: BarraDelConsumo.fuoco,
+        ),
+      if (medio != null)
+        _Pasticca(
+          icona: Icons.adjust_rounded,
+          valore: '${medio.kcalAlGiorno.abs().round()}',
+          /*
+           * ⚠️ **«sotto/sopra il target» e non «deficit/surplus».** Quelle due
+           * parole, in palestra, vogliono dire *rispetto a quanto spendi*: qui
+           * si parla della distanza dall'obiettivo, ed è un'altra cosa.
+           * 🚨 Il riferimento sta **nell'etichetta**, non in una nota altrove.
+           */
+          etichetta: medio.sotto ? 'sotto il target' : 'sopra il target',
+          giorni: medio.giorni,
+          colore: medio.sotto
+              ? tema.colorScheme.tertiary
+              : tema.colorScheme.primary,
+        ),
+    ];
 
-    final theme = Theme.of(context);
-    final quanto = medio.kcalAlGiorno.abs().round();
-
-    /*
-     * 💡 **In grammi a settimana, non in chili**: su una settimana i chili sono
-     * uno zero virgola qualcosa, e uno «0,3 kg» si legge come «niente». ⚠️ La
-     * costante e' quella di Wishnofsky (7.700 kcal per chilo) e sta in un posto
-     * solo — con l'avvertenza che le sta accanto da 3b-O.7.4: e' una stima
-     * grossolana, non una misura.
-     */
-    final grammi = (quanto * 7 / RiassuntoSettimana.kcalPerChilo * 1000)
-        .round();
+    if (pasticche.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Gap.sm),
+        child: Text(
+          'Nessun giorno registrato in questo periodo.',
+          style: tema.textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(top: Gap.xs),
+      padding: const EdgeInsets.only(top: Gap.sm),
       child: Column(
         children: [
+          /*
+           * 📌 *«ci va solo scritto sopra "Medie" sennò non si capisce che sono
+           * medie»*.
+           *
+           * 🚨 **Le tre frasi lo dicevano, le pasticche no.** Togliendo le
+           * parole per far posto ai numeri se n'era andata anche quella —
+           * «2.200» accanto a «assunte» si legge come *«oggi ne hai mangiate
+           * 2.200»*, che e' un'altra cosa e per giunta plausibile.
+           *
+           * ⚠️ E' il prezzo di ogni compattazione: si perde sempre qualcosa, e
+           * il mestiere sta nel decidere **cosa** invece di scoprirlo dopo.
+           */
           Text(
-            medio.deficit
-                ? 'In media $quanto kcal di deficit al giorno'
-                : 'In media $quanto kcal di surplus al giorno',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: medio.deficit
-                  ? theme.colorScheme.tertiary
-                  : theme.colorScheme.primary,
+            'Medie del periodo',
+            style: tema.textTheme.labelLarge?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
             ),
-            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: Gap.xs),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: Gap.xs,
+            runSpacing: Gap.xs,
+            children: pasticche,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una pasticca: un numero grande, cosa vuol dire, e su quanti giorni.
+///
+/// 🚨 **Il conteggio dei giorni è parte del numero**, non una nota: «2.200 di
+/// media» su due giorni su sette non è lo stesso dato che su sette, e senza
+/// dirlo si legge come se lo fosse.
+class _Pasticca extends StatelessWidget {
+  const _Pasticca({
+    required this.icona,
+    required this.valore,
+    required this.etichetta,
+    required this.giorni,
+    this.colore,
+  });
+
+  final IconData icona;
+  final String valore;
+  final String etichetta;
+  final int giorni;
+  final Color? colore;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final tinta = colore ?? tema.colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.xs),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(Gap.sm),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icona, size: 14, color: tinta),
+              const SizedBox(width: 4),
+              Text(
+                valore,
+                style: tema.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: tinta,
+                ),
+              ),
+            ],
+          ),
+          Text(etichetta, style: tema.textTheme.labelSmall),
           Text(
-            /*
-             * 🚨 **Due cose che vanno dette insieme al numero.**
-             *
-             * ⚠️ Il contesto della media e' parte della media: su due giorni su
-             * sette non e' lo stesso numero che su sette.
-             *
-             * ⚠️ E **rispetto a cosa**: qui e' il consumo — «deficit» vuol dire
-             * *rispetto a quanto spendi*, non rispetto a quanto ti eri
-             * ripromesso. Il riquadro del dito invece parla dell'obiettivo, e
-             * senza scriverlo i due numeri sembrerebbero in contraddizione.
-             */
-            'rispetto al consumo, sui ${medio.giorni} '
-            '${medio.giorni == 1 ? 'giorno completo' : 'giorni completi'} '
-            'con diario · circa $grammi g a settimana',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
+            // 💡 «su 5 gg» e non «sui 5 giorni in cui hai registrato qualcosa»:
+            // in una pasticca lo spazio è quello, e la frase lunga era proprio
+            // il difetto da cui si è partiti.
+            'su $giorni ${giorni == 1 ? 'giorno' : 'gg'}',
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -724,7 +783,10 @@ LineTooltipItem? _vocePerIlDito(
     );
   }
 
-  final saldo = assunte - (i < obiettivi.length ? obiettivi[i] : 0);
+  final saldo = saldoDelGiorno(
+    assunte: assunte,
+    obiettivo: i < obiettivi.length ? obiettivi[i] : 0,
+  );
 
   return LineTooltipItem(
     '$giorno\n'

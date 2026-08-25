@@ -75,6 +75,13 @@ enum CaricoDellEsercizio {
   };
 }
 
+/// Un numero come lo legge una persona: `40` e non `40.0`.
+///
+/// ⚠️ Uno zero dietro la virgola sembra una **precisione**: «11.0 kg» dice che
+/// qualcuno ha misurato il decimo di chilo, e nessuno l'ha fatto.
+String numeroPulito(double v) =>
+    v == v.roundToDouble() ? v.round().toString() : v.toString();
+
 /// Una riga: quante ripetizioni, con che carico, e quanto si riposa dopo.
 class SeriePrevista {
   const SeriePrevista({

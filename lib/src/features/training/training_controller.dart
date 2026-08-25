@@ -94,6 +94,8 @@ class PlanExercise {
     this.targetWeight,
     this.notes,
     this.imageUrl,
+    this.immagine,
+    this.carico = CaricoDellEsercizio.peso,
   });
 
   factory PlanExercise.fromJson(Map<String, dynamic> j) => PlanExercise(
@@ -177,6 +179,18 @@ class PlanExercise {
      * l'editor leggono tutti delle righe.
      */
     serie: serieDellEsercizio(j),
+
+    /*
+     * 🆕 3b-D.18 — la foto che ci ha messo chi ha scritto la scheda, e con che
+     * cosa si carica l'esercizio.
+     *
+     * ⚠️ **Le scriveva gia' l'editor e non le leggeva nessuno**: la foto era
+     * nel backup e invisibile, e il carico faceva mostrare «0 kg» su un
+     * esercizio a corpo libero. 🚨 Un campo scritto e mai riletto e' peggio di
+     * un campo che non c'e': occupa spazio e fa credere che la funzione ci sia.
+     */
+    immagine: j['immagine']?.toString(),
+    carico: CaricoDellEsercizio.da(j['carico']?.toString()),
   );
 
   final int id;
@@ -200,8 +214,20 @@ class PlanExercise {
   final double? targetWeight;
   final String? notes;
 
-  /// L'illustrazione dell'esercizio — C23.
+  /// L'illustrazione dell'esercizio — C23. Viene dal **catalogo**.
   final String? imageUrl;
+
+  /// La foto che ci ha messo chi ha scritto la scheda — 3b-D.3.3.
+  ///
+  /// ⚠️ **Percorso relativo** dentro l'archivio delle foto (`foto/esercizi/…`),
+  /// non un URL: questa non si scarica da nessuna parte, e sta nel backup.
+  ///
+  /// 💡 Vince su [imageUrl] quando c'e': una foto della macchina di *quella*
+  /// palestra dice piu' di un'illustrazione generica.
+  final String? immagine;
+
+  /// Peso, niente, o isometria — 3b-D.1.
+  final CaricoDellEsercizio carico;
 }
 
 /// Le schede dell'iscritto, **dal telefono** — 3b-B.17, 24/08/2026.

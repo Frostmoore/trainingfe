@@ -21,6 +21,7 @@ import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
 import 'widgets/barra_settimana.dart';
+import 'widgets/esercizio_della_scheda.dart';
 import 'widgets/muscoli_della_scheda.dart';
 import 'widgets/scelta_tipo_scheda.dart';
 
@@ -564,29 +565,21 @@ class _DettaglioScheda extends ConsumerWidget {
               ),
               const SizedBox(height: Gap.md),
             ],
-            for (final e in p.exercises)
-              Card(
-                margin: const EdgeInsets.only(bottom: Gap.sm),
-                child: ListTile(
-                  leading: Miniatura(
-                    url: e.imageUrl,
-                    etichetta: e.name,
-                    lato: 44,
-                  ),
-                  title: Text(
-                    e.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    [
-                      e.prescription,
-                      if (e.restSec != null) 'rec. ${e.restSec}s',
-                      if (e.targetWeight != null) '${e.targetWeight} kg',
-                    ].where((s) => s.isNotEmpty).join(' · '),
-                  ),
-                  isThreeLine: e.notes != null && e.notes!.isNotEmpty,
-                ),
-              ),
+            /*
+             * ══ 📋 OGNI ESERCIZIO, CON LE SUE SERIE — 3b-D.18 ══════════════
+             *
+             * 📌 *«in ogni esercizio deve essere mostrata la foto (se c'è) e
+             * tutti i dettagli di ogni serie, non solo rec. 60s o 11.0kg come
+             * adesso»*.
+             *
+             * ⛔ Qui c'era una `ListTile` che mostrava **il riassunto del
+             * formato vecchio**: un recupero e un peso soli, uguali per tutte
+             * le serie. 🚨 Le righe vere c'erano da 3b-D.1 e non le leggeva
+             * nessuno — il difetto peggiore di una funzione nuova, perche' il
+             * dato si scrive, si salva, entra nel backup, e a schermo continua
+             * a comparire quello di prima.
+             */
+            for (final e in p.exercises) EsercizioDellaScheda(esercizio: e),
           ],
         ),
       ),

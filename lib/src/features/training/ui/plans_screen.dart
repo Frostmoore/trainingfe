@@ -9,14 +9,19 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../profile/corpo_controller.dart';
 import '../../progress/ui/progress_screen.dart';
+import '../data/calorie_allenamento.dart';
 import '../data/catalogo_esercizi.dart';
 import '../data/limiti_delle_schede.dart';
+import '../data/stima_della_scheda.dart';
 import '../muscoli_allenati.dart';
 import '../session_controller.dart';
+import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
 import 'widgets/barra_settimana.dart';
+import 'widgets/muscoli_della_scheda.dart';
 import 'widgets/scelta_tipo_scheda.dart';
 
 /// La sezione Allenamento — A5.1, riorganizzata in G6.
@@ -520,6 +525,28 @@ class _DettaglioScheda extends ConsumerWidget {
         data: (p) => ListView(
           padding: const EdgeInsets.all(Gap.md),
           children: [
+            /*
+             * ══ 🧍 COSA ALLENA, E QUANTO COSTA — 3b-D.16, 25/08/2026 ═══════
+             *
+             * 📌 *«Mettici le cards con l'uomo e il diagramma a stella, e una
+             * stima del tempo di esecuzione e delle calorie bruciate»* · *«E
+             * mettici anche quante volte l'ho fatta»*.
+             *
+             * ⛔ Questa schermata era **un elenco di esercizi e basta**: la
+             * stessa cosa che si legge meglio nel player, dove serve davvero.
+             * 💡 Quello che qui serviva e non c'era e' **decidere**: questa
+             * scheda cosa allena, quanto dura, quanto costa, e da quanto la
+             * faccio.
+             *
+             * 🚨 Gli **stessi widget** dello storico e dell'editor
+             * (`MuscoliInCard`): tre posti, una figura sola.
+             */
+            _CosaAllena(scheda: p),
+
+            _SchedaInNumeri(scheda: p),
+
+            const SizedBox(height: Gap.md),
+
             if (p.attribuzione.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: Gap.sm),
@@ -563,6 +590,152 @@ class _DettaglioScheda extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// La figura e la stella di una scheda — 3b-D.16.
+///
+/// ⚠️ **Muta finche' il catalogo non sa niente** degli esercizi: una figura
+/// tutta spenta sotto una scheda piena sembra un difetto dell'app, non
+/// un'informazione.
+class _CosaAllena extends ConsumerWidget {
+  const _CosaAllena({required this.scheda});
+
+  final WorkoutPlan scheda;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalogo = ref.watch(catalogoEserciziProvider).valueOrNull;
+
+    if (catalogo == null) return const SizedBox.shrink();
+
+    final intensita = intensitaDellaScheda(scheda, catalogo);
+
+    if (intensita.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.md),
+      child: MuscoliInCard(intensita: intensita),
+    );
+  }
+}
+
+/// Quanto dura, quanto costa, e quante volte l'hai fatta — 3b-D.16.
+class _SchedaInNumeri extends ConsumerWidget {
+  const _SchedaInNumeri({required this.scheda});
+
+  final WorkoutPlan scheda;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+
+    final catalogo =
+        ref.watch(catalogoEserciziProvider).valueOrNull ?? CatalogoEsercizi.vuoto;
+
+    final stima = stimaDellaScheda(
+      scheda: scheda,
+      catalogo: catalogo,
+      /*
+       * ⚠️ Il peso vero se c'e', il ripiego prudente se no — la stessa catena
+       * di `bruciate_locali.dart`. 🚨 Non si inventa un peso «medio» diverso da
+       * quello che usa il resto dell'app, o due schermate direbbero due numeri
+       * per la stessa seduta.
+       */
+      kg:
+          ref.watch(corpoOggiProvider).valueOrNull?.weightKg ??
+          CalorieAllenamento.pesoDiRipiego,
+    );
+
+    /*
+     * ══ 🔁 QUANTE VOLTE L'HO FATTA ════════════════════════════════════════
+     *
+     * 💡 Lo storico unificato tiene l'id della scheda su ogni voce, quindi si
+     * contano **anche gli allenamenti visti solo dall'orologio** a cui e' stata
+     * associata questa scheda. ⛔ Contare solo le sedute registrate nell'app
+     * direbbe «due volte» a chi ne ha fatte sei col telefono in tasca.
+     */
+    final volte = ref
+        .watch(storicoUnificatoProvider)
+        .valueOrNull
+        ?.where((v) => v.schedaId == scheda.id)
+        .length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Questa scheda',
+              style: tema.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: Gap.sm),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: Gap.md,
+              runSpacing: Gap.sm,
+              children: [
+                /*
+                 * 🚨 **«circa» e i minuti tondi a cinque.** Nessuno di questi
+                 * numeri e' misurato: il tempo di una serie dipende da come la
+                 * si fa, le calorie da chi la fa. ⛔ «47 minuti» sarebbe una
+                 * bugia con l'aria di una misura.
+                 */
+                _Numero(
+                  valore: 'circa ${stima.minutiTondi}',
+                  etichetta: 'minuti',
+                ),
+                if (stima.kcal case final k?)
+                  _Numero(valore: 'circa $k', etichetta: 'kcal'),
+                _Numero(valore: '${stima.esercizi}', etichetta: 'esercizi'),
+                _Numero(valore: '${stima.serie}', etichetta: 'serie'),
+                if (volte != null)
+                  _Numero(
+                    // ⚠️ «Mai» e non «0 volte»: zero volte e' un conteggio,
+                    // mai e' una risposta.
+                    valore: volte == 0 ? 'Mai' : '$volte',
+                    etichetta: volte == 1 ? 'volta fatta' : 'volte fatta',
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Numero extends StatelessWidget {
+  const _Numero({required this.valore, required this.etichetta});
+
+  final String valore;
+  final String etichetta;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          valore,
+          style: tema.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: tema.colorScheme.primary,
+          ),
+        ),
+        Text(
+          etichetta,
+          style: tema.textTheme.labelSmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

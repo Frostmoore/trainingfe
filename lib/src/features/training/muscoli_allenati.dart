@@ -411,3 +411,31 @@ final muscoliDelMeseProvider =
             ref.watch(muscoliDelleSchedeProvider).valueOrNull ?? const {},
       );
     });
+
+/// L'intensita' dei muscoli di **una scheda**, da 0 a 1 — 3b-D.16.
+///
+/// 💡 Serve alla figura sotto una scheda che si sta **guardando**, non
+/// eseguendo: qui l'intensita' viene da quello che la scheda **prescrive**,
+/// mentre nello storico viene da quello che si e' fatto. Stessa forma, tempo
+/// verbale diverso.
+///
+/// ⚠️ **Normalizzata sul gruppo piu' coinvolto della scheda**, esattamente come
+/// `intensitaDeiMuscoli`: cosi' il rosso vuol dire «il piu' allenato **di
+/// questa scheda**», non una soglia assoluta che nessuna scheda raggiungerebbe.
+///
+/// ⛔ Vuota quando il catalogo non conosce nessuno degli esercizi: meglio
+/// nessuna figura che una figura spenta, che sembra un difetto.
+Map<GruppoMuscolare, double> intensitaDellaScheda(
+  WorkoutPlan scheda,
+  CatalogoEsercizi catalogo,
+) {
+  final pesi = pesiDellaScheda(scheda, catalogo);
+
+  if (pesi.isEmpty) return const {};
+
+  final massimo = pesi.values.reduce((a, b) => a > b ? a : b);
+
+  if (massimo <= 0) return const {};
+
+  return {for (final voce in pesi.entries) voce.key: voce.value / massimo};
+}

@@ -538,14 +538,30 @@ class _AvviaAllenamento extends ConsumerWidget {
      * pulsante «Inizia» offre la stessa scheda in un foglio, e chi la sceglie
      * si allena con una scheda che l'elenco dice bloccata.
      */
-    final bloccate =
-        ref.read(schedeBloccateProvider).valueOrNull ??
-        const <int, MotivoBlocco>{};
+    /*
+     * ══ 🚨 `await …future`, NON `ref.read(...).valueOrNull` ════════════════
+     *
+     * ⛔ **Era il difetto, e il committente l'ha visto subito**: *«non è vero,
+     * controlla, se faccio inizia vedo tutte le mie schede»*.
+     *
+     * 🚨 `schedeBloccateProvider` è `autoDispose` e **questo widget non lo
+     * guarda**: la prima `read` lo fa nascere in quel momento, quindi risponde
+     * `AsyncLoading` e `valueOrNull` è `null`. Il ripiego `?? {}` diventava
+     * allora «nessuna scheda bloccata», e il foglio le offriva tutte.
+     *
+     * ⚠️ **Il difetto peggiore della sua specie**: il codice c'era, si leggeva
+     * giusto, e non faceva niente. Nessun errore, nessun avviso — solo un
+     * limite che non scatta mai.
+     *
+     * 💡 `await …future` aspetta il valore vero. Costa un istante prima che il
+     * foglio si apra, ed è il momento giusto per pagarlo: chi tocca «Inizia» sta
+     * per allenarsi, non sta scorrendo.
+     */
+    final bloccate = await ref.read(schedeBloccateProvider.future);
 
-    final schede =
-        (ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[])
-            .where((s) => !bloccate.containsKey(s.id))
-            .toList();
+    final schede = (await ref.read(
+      schedeUniteProvider.future,
+    )).where((s) => !bloccate.containsKey(s.id)).toList();
 
     int? scelta;
 

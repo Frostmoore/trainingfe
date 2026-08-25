@@ -10,6 +10,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../../progress/ui/progress_screen.dart';
+import '../data/limiti_delle_schede.dart';
 import '../session_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -59,7 +60,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
          * spazio serve a `sotto` e lo taglierebbe. Sbagliarla non dà un errore,
          * dà un navigatore mezzo tagliato.
          */
-        altezzaSotto: _vista == 0 ? 52 + altezzaBarraSettimana : 52,
+        // ⚠️ **Anche «Foto» adesso**: da 3b-C.7 le foto si guardano per
+        // settimana, quindi il navigatore serve su due delle tre viste.
+        altezzaSotto: _vista == 1 ? 52 : 52 + altezzaBarraSettimana,
         sotto: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -118,7 +121,21 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 ),
               ),
             ),
+            /*
+             * ⚠️ **Su «Schede» no**, e non è per risparmiare spazio: là una
+             * freccia per settimana comanderebbe qualcosa che non c'è, e un
+             * comando che non fa niente insegna a non fidarsi degli altri.
+             *
+             * 💡 Su «Foto» conta le foto, non le sedute: la stessa barra, con
+             * un'etichetta che dice cosa sta contando.
+             */
             if (_vista == 0) const BarraSettimana(),
+            if (_vista == 2)
+              BarraSettimana(
+                quanti: ref.watch(fotoDellaSettimanaProvider).valueOrNull,
+                uno: 'foto',
+                molti: 'foto',
+              ),
           ],
         ),
       ),
@@ -216,7 +233,14 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                         icon: const Icon(Icons.add_rounded),
                         label: const Text('Nuova scheda'),
                       )
-                    : _SchedaCard(scheda: elenco[index]),
+                    : _SchedaCard(
+                        scheda: elenco[index],
+                        // 💡 La regola sta in `schedeBloccateProvider`, non
+                        // qui: la stessa domanda la fa anche il dettaglio.
+                        bloccata: ref
+                            .watch(schedeBloccateProvider)
+                            .valueOrNull?[elenco[index].id],
+                      ),
               ),
             ),
     );
@@ -295,51 +319,96 @@ class _SessioneAperta extends ConsumerWidget {
 }
 
 class _SchedaCard extends StatelessWidget {
-  const _SchedaCard({required this.scheda});
+  const _SchedaCard({required this.scheda, this.bloccata});
 
   final WorkoutPlan scheda;
+
+  /// Perché non si può usare, o `null` se si può — 3b-C.6.
+  final MotivoBlocco? bloccata;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final motivo = bloccata;
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Gap.radius),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => _DettaglioScheda(id: scheda.id, nome: scheda.name),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(Gap.md),
-          child: Row(
-            children: [
-              // C23 — la copertina. Fra sei «Full body A/B/C» e' la sola cosa
-              // che le distingue a colpo d'occhio.
-              Miniatura(url: scheda.imageUrl, etichetta: scheda.name),
-              const SizedBox(width: Gap.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      scheda.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+    /*
+     * ══ 🔒 SI VEDE, E NON SI APRE — 3b-C.6 ═══════════════════════════════
+     *
+     * 📌 *«le altre le deve vedere disabilitate, con scritto che senza
+     * abbonamento il massimo è 3»*.
+     *
+     * ⛔ **Disabilitata, non nascosta.** Chi non si abbona deve vedere cosa si
+     * sta perdendo — è il punto di un limite commerciale — e una scheda mandata
+     * dal trainer che sparisce sarebbe un danno vero: quel trainer l'ha scritta
+     * per quella persona.
+     *
+     * 💡 Il grigio da solo non basta: **si dice perché**. Una card spenta senza
+     * spiegazione si legge come un guasto, e chi la vede pensa che l'app sia
+     * rotta invece di capire che c'è un abbonamento da fare.
+     */
+    return Opacity(
+      opacity: motivo == null ? 1 : 0.55,
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Gap.radius),
+          onTap: motivo == null
+              ? () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        _DettaglioScheda(id: scheda.id, nome: scheda.name),
+                  ),
+                )
+              : () => ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(motivo.spiegazione))),
+          child: Padding(
+            padding: const EdgeInsets.all(Gap.md),
+            child: Row(
+              children: [
+                // C23 — la copertina. Fra sei «Full body A/B/C» e' la sola cosa
+                // che le distingue a colpo d'occhio.
+                Miniatura(url: scheda.imageUrl, etichetta: scheda.name),
+                const SizedBox(width: Gap.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        scheda.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${scheda.exercisesCount} esercizi',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      Text(
+                        '${scheda.exercisesCount} esercizi'
+                        '${scheda.giorni > 1 ? ' · ${scheda.giorni} giorni' : ''}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+
+                      // 🔒 Il perché, sotto il nome: senza, una card spenta si
+                      // legge come un guasto.
+                      if (motivo != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: Gap.xs),
+                          child: Text(
+                            motivo.spiegazione,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
+                Icon(
+                  motivo == null
+                      ? Icons.chevron_right_rounded
+                      : Icons.lock_outline_rounded,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -463,8 +532,20 @@ class _AvviaAllenamento extends ConsumerWidget {
       return;
     }
 
+    /*
+     * 🔒 **Le bloccate non si possono nemmeno cominciare** — 3b-C.6. ⛔ Senza
+     * questa riga il limite sarebbe solo estetico: la card non si apre, ma il
+     * pulsante «Inizia» offre la stessa scheda in un foglio, e chi la sceglie
+     * si allena con una scheda che l'elenco dice bloccata.
+     */
+    final bloccate =
+        ref.read(schedeBloccateProvider).valueOrNull ??
+        const <int, MotivoBlocco>{};
+
     final schede =
-        ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[];
+        (ref.read(schedeUniteProvider).valueOrNull ?? const <WorkoutPlan>[])
+            .where((s) => !bloccate.containsKey(s.id))
+            .toList();
 
     int? scelta;
 

@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/archivio_salute.dart';
+import '../dashboard/gettoni_controller.dart';
 import '../health/health_controller.dart';
+import 'data/limiti_delle_schede.dart';
 import 'porta_giu_le_schede.dart';
 
 /// Una scheda assegnata — A5.1.
@@ -18,6 +20,7 @@ class WorkoutPlan {
     this.imageUrl,
     this.authorName,
     this.authorIsMe = false,
+    this.giorni = 1,
   });
 
   factory WorkoutPlan.fromJson(Map<String, dynamic> j) => WorkoutPlan(
@@ -37,6 +40,19 @@ class WorkoutPlan {
     imageUrl: j['image_url']?.toString(),
     authorName: (j['author'] as Map?)?['name']?.toString(),
     authorIsMe: (j['author'] as Map?)?['is_me'] == true,
+
+    /*
+     * 🆕 3b-C.6 — quanti giorni ha questa scheda.
+     *
+     * 📌 Serve al limite di chi non è abbonato: *«possono essere solo schede a
+     * un giorno singolo»*.
+     *
+     * ⚠️ **`1` e non `0` quando `days` non c'è.** Una scheda senza giorni
+     * dichiarati è una scheda a giorno unico — è la forma più vecchia, quella
+     * di prima di D2 — e contarla come zero la farebbe passare per «senza
+     * giorni», cioè per una cosa che non esiste.
+     */
+    giorni: (j['days'] as List?)?.length ?? 1,
   );
 
   final int id;
@@ -53,6 +69,9 @@ class WorkoutPlan {
 
   final String? authorName;
   final bool authorIsMe;
+
+  /// Quanti giorni ha la scheda — 3b-C.6. `1` per quelle a giorno unico.
+  final int giorni;
 
   /// Da mostrare sotto il nome: «scritta dal tuo trainer» dà contesto a un
   /// elenco che altrimenti è solo una lista di nomi.
@@ -142,8 +161,28 @@ final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
 
   final locali = await archivio.tutteLeSchede();
 
+  /*
+   * ══ 📅 IN ORDINE DI NASCITA, NON DI ULTIMA MODIFICA — 3b-C.6 ═════════════
+   *
+   * ⛔ `tutteLeSchede()` ordina per `aggiornataIl`, e per un elenco andava
+   * benissimo. 🚨 Da quando esiste il limite delle tre schede non basta più:
+   * rinominare una scheda di marzo la porterebbe in cima e sbloccherebbe
+   * quella, bloccando una arrivata ieri. **Un limite che si aggira rinominando
+   * non è un limite.**
+   *
+   * ⚠️ `creataIl` è nullable — le righe che c'erano prima una data di nascita
+   * non ce l'hanno — e lì si cade su `aggiornataIl`, che per quelle è la stima
+   * migliore disponibile.
+   */
+  final ordinate = [...locali]
+    ..sort(
+      (a, b) => (b.creataIl ?? b.aggiornataIl).compareTo(
+        a.creataIl ?? a.aggiornataIl,
+      ),
+    );
+
   return [
-    for (final r in locali)
+    for (final r in ordinate)
       WorkoutPlan.fromJson({
         ...(json.decode(r.scheda) as Map).cast<String, dynamic>(),
         'id': r.id,
@@ -152,6 +191,24 @@ final schedeUniteProvider = FutureProvider.autoDispose<List<WorkoutPlan>>((
       }),
   ];
 });
+
+/// Quali schede sono bloccate per chi non è abbonato — 3b-C.6.
+///
+/// 🚨 **Se il flag non si sa, non si blocca niente.** `gettoniProvider` va in
+/// rete: un errore lì non deve nascondere le schede a chi le ha pagate. ⛔ Meglio
+/// un limite che non scatta che un abbonato chiuso fuori dai propri allenamenti.
+///
+/// 💡 `valueOrNull` fa esattamente questo: mentre carica, e se fallisce, vale
+/// `null` — e `schedeBloccate` con `null` non blocca.
+final schedeBloccateProvider =
+    FutureProvider.autoDispose<Map<int, MotivoBlocco>>((ref) async {
+      final schede = await ref.watch(schedeUniteProvider.future);
+
+      return schedeBloccate(
+        schede: schede,
+        illimitata: ref.watch(gettoniProvider).valueOrNull?.illimitata,
+      );
+    });
 
 /// Cambia quando una scheda viene scritta o buttata.
 final revisioneSchedeProvider = StateProvider<int>((ref) => 0);

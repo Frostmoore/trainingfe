@@ -57,7 +57,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -289,6 +289,30 @@ class ArchivioSalute extends _$ArchivioSalute {
               ),
               schedeSulTelefono.origineIdStabile:
                   const CustomExpression<String>('NULL'),
+
+              /*
+               * ══ 🚨 OGNI COLONNA NUOVA VA DICHIARATA ANCHE QUI ═════════════
+               *
+               * ⛔ **Questo passo non è finito il giorno in cui è stato
+               * scritto.** `alterTable` ricostruisce la tabella dalla
+               * definizione Dart di **oggi** e ci copia dentro i dati della
+               * vecchia: una colonna aggiunta dopo esiste nella definizione ma
+               * **non** nella tabella da cui si copia, e la copia fallisce con
+               * *«no such column»*.
+               *
+               * 🚨 Chi aggiunge una colonna a `SchedeSulTelefono` deve
+               * aggiungerne una riga qui, o l'aggiornamento si ferma a metà —
+               * **sul telefono di chi viene da una v14**, mai sul nostro che
+               * installa da zero. È successo con `creataIl` il 25/08, e l'ha
+               * trovato il test della migrazione.
+               *
+               * 💡 `NULL` e non `aggiornata_il`: una scheda che c'era prima una
+               * data di nascita non ce l'ha, e inventargliela vorrebbe dire
+               * dare a tutte le vecchie la stessa età.
+               */
+              schedeSulTelefono.creataIl: const CustomExpression<DateTime>(
+                'NULL',
+              ),
             },
           ),
         );
@@ -349,6 +373,45 @@ class ArchivioSalute extends _$ArchivioSalute {
           allenamentiDaOrologio,
           allenamentiDaOrologio.kcalCorrette,
         );
+      }
+
+      /*
+       * 📅 v18 → v19 (3b-C.6): quando è nata una scheda.
+       *
+       * ⚠️ **Resta vuota per quelle che c'erano già**, e va bene: chi legge cade
+       * su `aggiornataIl`. 🚨 Riempirla con `now()` darebbe a tutte le schede
+       * vecchie la stessa età, e l'ordine «le ultime tre» diventerebbe casuale
+       * proprio per chi ne ha di più.
+       */
+      if (da < 19) {
+        /*
+         * ══ 🚨 «SE NON C'È GIÀ», E NON È PRUDENZA GENERICA ══════════════════
+         *
+         * ⛔ **`addColumn` qui esplodeva davvero**, e non solo nel test. Il
+         * passo v14 → v15 usa `m.alterTable`, che **ricostruisce la tabella
+         * dalla definizione Dart di OGGI** — cioè con dentro `creataIl`. Chi
+         * aggiorna da una v14 arriva quindi alla v19 con la colonna già
+         * presente, e `ALTER TABLE ADD COLUMN` su una colonna che esiste è un
+         * errore SQL: l'aggiornamento si ferma a metà.
+         *
+         * 🚨 **È la trappola di ogni `alterTable`**: da quel passo in poi, ogni
+         * colonna nuova su quella tabella nasce «già fatta» per chi viene da
+         * prima e «da fare» per chi viene da dopo. Chi aggiunge una colonna a
+         * `SchedeSulTelefono` deve passare di qui.
+         *
+         * 💡 L'ha trovata il test della migrazione, che parte da un database
+         * v14 vero. Senza, sarebbe esplosa sul telefono di chi aggiorna — mai
+         * sul nostro, che installa da zero.
+         */
+        final colonne = await customSelect(
+          'PRAGMA table_info(schede_sul_telefono)',
+        ).get();
+
+        final ceGia = colonne.any((r) => r.read<String>('name') == 'creata_il');
+
+        if (!ceGia) {
+          await m.addColumn(schedeSulTelefono, schedeSulTelefono.creataIl);
+        }
       }
     },
   );
@@ -1268,6 +1331,9 @@ class ArchivioSalute extends _$ArchivioSalute {
       nome: nome,
       scheda: scheda,
       aggiornataIl: quando ?? DateTime.now(),
+      // 💡 Nasce adesso, e da qui in poi non si tocca più: `aggiornaScheda` non
+      // la sfiora.
+      creataIl: Value(quando ?? DateTime.now()),
       mia: Value(mia),
       origine: origine,
       idOrigine: Value(idOrigine),
@@ -2029,6 +2095,23 @@ class SchedeSulTelefono extends Table {
 
   /// Quando è stata toccata l'ultima volta, **su questo telefono**.
   DateTimeColumn get aggiornataIl => dateTime()();
+
+  /// Quando è **arrivata**, o è stata scritta — 3b-C.6.
+  ///
+  /// 📌 Serve al limite di chi non è abbonato: *«le ultime 3 per data di
+  /// creazione»*.
+  ///
+  /// 🚨 **Non è `aggiornataIl`, e la differenza è tutta qui.** Quella cambia a
+  /// ogni modifica: rinominare una scheda di marzo la porterebbe in cima e
+  /// scavalcherebbe una arrivata ieri, cioè **sbloccherebbe la vecchia
+  /// bloccando la nuova**. Un limite che si aggira rinominando non è un limite.
+  ///
+  /// ⚠️ **Nullable**, perché le righe che c'erano prima una data di nascita non
+  /// ce l'hanno: chi legge cade su `aggiornataIl`, che per quelle è la stima
+  /// migliore disponibile. ⛔ Riempirla con `DateTime.now()` in migrazione
+  /// avrebbe dato a tutte le schede vecchie la stessa età — quella del giorno
+  /// dell'aggiornamento — e l'ordine sarebbe stato casuale.
+  DateTimeColumn get creataIl => dateTime().nullable()();
 
   /// Se la si può modificare.
   ///

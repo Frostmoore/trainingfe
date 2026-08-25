@@ -8,6 +8,8 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../training/settimana_scelta.dart';
+import '../../training/ui/widgets/barra_settimana.dart';
 import '../progress_controller.dart';
 
 /// La galleria delle foto dei progressi — C16.
@@ -23,7 +25,15 @@ class ProgressScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => const Scaffold(
-    appBar: IntestazioneApp(titolo: 'Foto dei progressi'),
+    // ⚠️ **Anche qui**, non solo nel segmento della sezione Allenamento: sono
+    // due strade per le stesse foto, e una che avesse il navigatore e l'altra
+    // no sembrerebbe una funzione che va e viene. È la stessa nota di
+    // `BarraSettimana` sullo storico.
+    appBar: IntestazioneApp(
+      titolo: 'Foto dei progressi',
+      altezzaSotto: altezzaBarraSettimana,
+      sotto: BarraSettimana(uno: 'foto', molti: 'foto'),
+    ),
     floatingActionButton: AggiungiFoto(),
     body: CorpoFotoProgressi(),
   );
@@ -44,6 +54,21 @@ class ProgressScreen extends ConsumerWidget {
 ///
 /// 💡 Quello che resta in `ProgressScreen` e' solo il vestito: intestazione,
 /// pulsante, `Scaffold`.
+/// Quante foto ha la settimana scelta — 3b-C.7.
+///
+/// 💡 Serve all'etichetta del navigatore. ⚠️ Sta qui e non nel widget della
+/// barra: quella non deve sapere cosa sono le foto, o diventerebbe il posto in
+/// cui ogni schermata aggiunge il suo conteggio.
+final fotoDellaSettimanaProvider = FutureProvider.autoDispose<int>((ref) async {
+  final tutte = await ref.watch(progressPhotosProvider.future);
+  final inizio = ref.watch(settimanaSceltaProvider);
+  final fine = inizio.add(const Duration(days: 7));
+
+  return tutte
+      .where((f) => !f.takenOn.isBefore(inizio) && f.takenOn.isBefore(fine))
+      .length;
+});
+
 class CorpoFotoProgressi extends ConsumerWidget {
   const CorpoFotoProgressi({super.key});
 
@@ -51,38 +76,76 @@ class CorpoFotoProgressi extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final foto = ref.watch(progressPhotosProvider);
 
+    /*
+     * ══ 📅 SOLO LE FOTO DELLA SETTIMANA SCELTA — 3b-C.7, 25/08/2026 ═════════
+     *
+     * 📌 *«Mettiamoci un navigatore settimanale e un calendario dove posso
+     * scegliere la settimana e mostriamo solo le foto di quei giorni, per il
+     * resto va bene così»*.
+     *
+     * ⚠️ **La settimana è la stessa dello storico** (`settimanaSceltaProvider`),
+     * ed è una scelta: le due schermate stanno nella stessa sezione, una accanto
+     * all'altra, e due «settimane correnti» diverse a due tocchi di distanza
+     * sono il modo più veloce di guardare le foto di una settimana e gli
+     * allenamenti di un'altra credendo che siano la stessa.
+     */
+    final inizio = ref.watch(settimanaSceltaProvider);
+    final fine = inizio.add(const Duration(days: 7));
+
+    bool diQuestaSettimana(ProgressPhoto f) =>
+        !f.takenOn.isBefore(inizio) && f.takenOn.isBefore(fine);
+
     return foto.when(
       loading: () => const LoadingState(),
       error: (e, _) => ErrorState(
         error: ApiClient.unwrapError(e),
         onRetry: () => ref.invalidate(progressPhotosProvider),
       ),
-      data: (elenco) => elenco.isEmpty
-          ? const EmptyState(
-              icon: Icons.photo_camera_outlined,
-              title: 'Nessuna foto',
-              message:
-                  'Una foto ogni tanto, sempre nella stessa posizione e con la '
-                  'stessa luce, racconta i progressi meglio della bilancia.',
-            )
-          : RefreshIndicator(
-              onRefresh: () => aggiornaTutto(
-                context,
-                ref,
-                () => ref.invalidate(progressPhotosProvider),
-              ),
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.sm, Gap.sm, 96),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.78,
-                  mainAxisSpacing: Gap.sm,
-                  crossAxisSpacing: Gap.sm,
+      data: (tutte) {
+        final elenco = tutte.where(diQuestaSettimana).toList();
+
+        return elenco.isEmpty
+            /*
+           * ⛔ **Due vuoti diversi, e vanno detti diversamente.** «Non hai
+           * nessuna foto» a chi ne ha trenta ma non in questa settimana è
+           * falso, e fa pensare che siano sparite.
+           */
+            ? EmptyState(
+                icon: Icons.photo_camera_outlined,
+                title: tutte.isEmpty
+                    ? 'Nessuna foto'
+                    : 'Nessuna foto questa settimana',
+                message: tutte.isEmpty
+                    ? 'Una foto ogni tanto, sempre nella stessa posizione e con '
+                          'la stessa luce, racconta i progressi meglio della '
+                          'bilancia.'
+                    : 'Le altre ci sono: cambia settimana con le frecce qui '
+                          'sopra, o scegline una dal calendario.',
+              )
+            : RefreshIndicator(
+                onRefresh: () => aggiornaTutto(
+                  context,
+                  ref,
+                  () => ref.invalidate(progressPhotosProvider),
                 ),
-                itemCount: elenco.length,
-                itemBuilder: (context, i) => _Cella(foto: elenco[i]),
-              ),
-            ),
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                    Gap.sm,
+                    Gap.sm,
+                    Gap.sm,
+                    96,
+                  ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.78,
+                    mainAxisSpacing: Gap.sm,
+                    crossAxisSpacing: Gap.sm,
+                  ),
+                  itemCount: elenco.length,
+                  itemBuilder: (context, i) => _Cella(foto: elenco[i]),
+                ),
+              );
+      },
     );
   }
 }

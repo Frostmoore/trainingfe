@@ -31,7 +31,27 @@ import '../../storico_unificato_controller.dart';
 const double altezzaBarraSettimana = 40;
 
 class BarraSettimana extends ConsumerWidget {
-  const BarraSettimana({super.key});
+  const BarraSettimana({
+    this.quanti,
+    this.uno = 'seduta',
+    this.molti = 'sedute',
+    super.key,
+  });
+
+  /// Quanti elementi ha la settimana scelta, per l'etichetta.
+  ///
+  /// 📌 Serve da 3b-C.7, quando questa barra è finita anche sulle foto:
+  /// *«Mettiamoci un navigatore settimanale e un calendario dove posso
+  /// scegliere la settimana»*.
+  ///
+  /// ⚠️ **`null` non vuol dire zero**: vuol dire «contale tu», e la barra cade
+  /// sul conteggio delle sedute — il caso di casa, lo storico. 🚨 Scrivere «0
+  /// foto» mentre l'elenco sta caricando sarebbe un numero falso.
+  final int? quanti;
+
+  /// Come si chiama quello che si conta, al singolare e al plurale.
+  final String uno;
+  final String molti;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,11 +75,13 @@ class BarraSettimana extends ConsumerWidget {
      * 🚨 `valueOrNull`: mentre lo storico carica non si scrive «0 sedute», che
      * sarebbe un numero falso. Si scrive solo l'intervallo.
      */
-    final quante = ref
-        .watch(storicoUnificatoProvider)
-        .valueOrNull
-        ?.where((v) => lunediDi(v.quando) == inizio)
-        .length;
+    final quante =
+        quanti ??
+        ref
+            .watch(storicoUnificatoProvider)
+            .valueOrNull
+            ?.where((v) => lunediDi(v.quando) == inizio)
+            .length;
 
     final etichetta = StringBuffer()
       ..write(
@@ -70,7 +92,7 @@ class BarraSettimana extends ConsumerWidget {
       );
 
     if (quante != null) {
-      etichetta.write(' · $quante ${quante == 1 ? 'seduta' : 'sedute'}');
+      etichetta.write(' · $quante ${quante == 1 ? uno : molti}');
     }
 
     return SizedBox(
@@ -101,6 +123,33 @@ class BarraSettimana extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          ),
+
+          /*
+           * 📅 **Il calendario** — 3b-C.7. 📌 *«un calendario dove posso
+           * scegliere la settimana»*.
+           *
+           * 💡 Le frecce vanno bene per la settimana prima; per marzo ci
+           * vorrebbero venti tocchi. ⚠️ `lastDate` è **oggi**: una settimana
+           * futura non ha né allenamenti né foto, e portarci darebbe una
+           * schermata vuota che sembra un guasto — la stessa ragione per cui la
+           * freccia avanti è spenta.
+           */
+          IconButton(
+            onPressed: () async {
+              final scelto = await showDatePicker(
+                context: context,
+                initialDate: inizio,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                helpText: 'Scegli una settimana',
+              );
+
+              if (scelto != null) controllo.vaiA(scelto);
+            },
+            icon: Icon(Icons.calendar_month_rounded, color: sopra),
+            tooltip: 'Scegli la settimana',
+            visualDensity: VisualDensity.compact,
           ),
 
           IconButton(

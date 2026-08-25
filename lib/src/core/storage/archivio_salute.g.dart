@@ -5223,6 +5223,17 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _creataIlMeta = const VerificationMeta(
+    'creataIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creataIl = GeneratedColumn<DateTime>(
+    'creata_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _miaMeta = const VerificationMeta('mia');
   @override
   late final GeneratedColumn<bool> mia = GeneratedColumn<bool>(
@@ -5275,6 +5286,7 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
     nome,
     scheda,
     aggiornataIl,
+    creataIl,
     mia,
     origine,
     idOrigine,
@@ -5321,6 +5333,12 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
       );
     } else if (isInserting) {
       context.missing(_aggiornataIlMeta);
+    }
+    if (data.containsKey('creata_il')) {
+      context.handle(
+        _creataIlMeta,
+        creataIl.isAcceptableOrUnknown(data['creata_il']!, _creataIlMeta),
+      );
     }
     if (data.containsKey('mia')) {
       context.handle(
@@ -5380,6 +5398,10 @@ class $SchedeSulTelefonoTable extends SchedeSulTelefono
         DriftSqlType.dateTime,
         data['${effectivePrefix}aggiornata_il'],
       )!,
+      creataIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creata_il'],
+      ),
       mia: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}mia'],
@@ -5430,6 +5452,23 @@ class SchedaSulTelefono extends DataClass
   /// Quando è stata toccata l'ultima volta, **su questo telefono**.
   final DateTime aggiornataIl;
 
+  /// Quando è **arrivata**, o è stata scritta — 3b-C.6.
+  ///
+  /// 📌 Serve al limite di chi non è abbonato: *«le ultime 3 per data di
+  /// creazione»*.
+  ///
+  /// 🚨 **Non è `aggiornataIl`, e la differenza è tutta qui.** Quella cambia a
+  /// ogni modifica: rinominare una scheda di marzo la porterebbe in cima e
+  /// scavalcherebbe una arrivata ieri, cioè **sbloccherebbe la vecchia
+  /// bloccando la nuova**. Un limite che si aggira rinominando non è un limite.
+  ///
+  /// ⚠️ **Nullable**, perché le righe che c'erano prima una data di nascita non
+  /// ce l'hanno: chi legge cade su `aggiornataIl`, che per quelle è la stima
+  /// migliore disponibile. ⛔ Riempirla con `DateTime.now()` in migrazione
+  /// avrebbe dato a tutte le schede vecchie la stessa età — quella del giorno
+  /// dell'aggiornamento — e l'ordine sarebbe stato casuale.
+  final DateTime? creataIl;
+
   /// Se la si può modificare.
   ///
   /// ⚠️ `false` per quelle del trainer: si eseguono, non si cambiano. ⛔ E se
@@ -5469,6 +5508,7 @@ class SchedaSulTelefono extends DataClass
     required this.nome,
     required this.scheda,
     required this.aggiornataIl,
+    this.creataIl,
     required this.mia,
     required this.origine,
     this.idOrigine,
@@ -5481,6 +5521,9 @@ class SchedaSulTelefono extends DataClass
     map['nome'] = Variable<String>(nome);
     map['scheda'] = Variable<String>(scheda);
     map['aggiornata_il'] = Variable<DateTime>(aggiornataIl);
+    if (!nullToAbsent || creataIl != null) {
+      map['creata_il'] = Variable<DateTime>(creataIl);
+    }
     map['mia'] = Variable<bool>(mia);
     map['origine'] = Variable<String>(origine);
     if (!nullToAbsent || idOrigine != null) {
@@ -5498,6 +5541,9 @@ class SchedaSulTelefono extends DataClass
       nome: Value(nome),
       scheda: Value(scheda),
       aggiornataIl: Value(aggiornataIl),
+      creataIl: creataIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(creataIl),
       mia: Value(mia),
       origine: Value(origine),
       idOrigine: idOrigine == null && nullToAbsent
@@ -5519,6 +5565,7 @@ class SchedaSulTelefono extends DataClass
       nome: serializer.fromJson<String>(json['nome']),
       scheda: serializer.fromJson<String>(json['scheda']),
       aggiornataIl: serializer.fromJson<DateTime>(json['aggiornataIl']),
+      creataIl: serializer.fromJson<DateTime?>(json['creataIl']),
       mia: serializer.fromJson<bool>(json['mia']),
       origine: serializer.fromJson<String>(json['origine']),
       idOrigine: serializer.fromJson<int?>(json['idOrigine']),
@@ -5533,6 +5580,7 @@ class SchedaSulTelefono extends DataClass
       'nome': serializer.toJson<String>(nome),
       'scheda': serializer.toJson<String>(scheda),
       'aggiornataIl': serializer.toJson<DateTime>(aggiornataIl),
+      'creataIl': serializer.toJson<DateTime?>(creataIl),
       'mia': serializer.toJson<bool>(mia),
       'origine': serializer.toJson<String>(origine),
       'idOrigine': serializer.toJson<int?>(idOrigine),
@@ -5545,6 +5593,7 @@ class SchedaSulTelefono extends DataClass
     String? nome,
     String? scheda,
     DateTime? aggiornataIl,
+    Value<DateTime?> creataIl = const Value.absent(),
     bool? mia,
     String? origine,
     Value<int?> idOrigine = const Value.absent(),
@@ -5554,6 +5603,7 @@ class SchedaSulTelefono extends DataClass
     nome: nome ?? this.nome,
     scheda: scheda ?? this.scheda,
     aggiornataIl: aggiornataIl ?? this.aggiornataIl,
+    creataIl: creataIl.present ? creataIl.value : this.creataIl,
     mia: mia ?? this.mia,
     origine: origine ?? this.origine,
     idOrigine: idOrigine.present ? idOrigine.value : this.idOrigine,
@@ -5569,6 +5619,7 @@ class SchedaSulTelefono extends DataClass
       aggiornataIl: data.aggiornataIl.present
           ? data.aggiornataIl.value
           : this.aggiornataIl,
+      creataIl: data.creataIl.present ? data.creataIl.value : this.creataIl,
       mia: data.mia.present ? data.mia.value : this.mia,
       origine: data.origine.present ? data.origine.value : this.origine,
       idOrigine: data.idOrigine.present ? data.idOrigine.value : this.idOrigine,
@@ -5585,6 +5636,7 @@ class SchedaSulTelefono extends DataClass
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
           ..write('aggiornataIl: $aggiornataIl, ')
+          ..write('creataIl: $creataIl, ')
           ..write('mia: $mia, ')
           ..write('origine: $origine, ')
           ..write('idOrigine: $idOrigine, ')
@@ -5599,6 +5651,7 @@ class SchedaSulTelefono extends DataClass
     nome,
     scheda,
     aggiornataIl,
+    creataIl,
     mia,
     origine,
     idOrigine,
@@ -5612,6 +5665,7 @@ class SchedaSulTelefono extends DataClass
           other.nome == this.nome &&
           other.scheda == this.scheda &&
           other.aggiornataIl == this.aggiornataIl &&
+          other.creataIl == this.creataIl &&
           other.mia == this.mia &&
           other.origine == this.origine &&
           other.idOrigine == this.idOrigine &&
@@ -5623,6 +5677,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
   final Value<String> nome;
   final Value<String> scheda;
   final Value<DateTime> aggiornataIl;
+  final Value<DateTime?> creataIl;
   final Value<bool> mia;
   final Value<String> origine;
   final Value<int?> idOrigine;
@@ -5632,6 +5687,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     this.nome = const Value.absent(),
     this.scheda = const Value.absent(),
     this.aggiornataIl = const Value.absent(),
+    this.creataIl = const Value.absent(),
     this.mia = const Value.absent(),
     this.origine = const Value.absent(),
     this.idOrigine = const Value.absent(),
@@ -5642,6 +5698,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     required String nome,
     required String scheda,
     required DateTime aggiornataIl,
+    this.creataIl = const Value.absent(),
     this.mia = const Value.absent(),
     required String origine,
     this.idOrigine = const Value.absent(),
@@ -5655,6 +5712,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     Expression<String>? nome,
     Expression<String>? scheda,
     Expression<DateTime>? aggiornataIl,
+    Expression<DateTime>? creataIl,
     Expression<bool>? mia,
     Expression<String>? origine,
     Expression<int>? idOrigine,
@@ -5665,6 +5723,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
       if (nome != null) 'nome': nome,
       if (scheda != null) 'scheda': scheda,
       if (aggiornataIl != null) 'aggiornata_il': aggiornataIl,
+      if (creataIl != null) 'creata_il': creataIl,
       if (mia != null) 'mia': mia,
       if (origine != null) 'origine': origine,
       if (idOrigine != null) 'id_origine': idOrigine,
@@ -5677,6 +5736,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     Value<String>? nome,
     Value<String>? scheda,
     Value<DateTime>? aggiornataIl,
+    Value<DateTime?>? creataIl,
     Value<bool>? mia,
     Value<String>? origine,
     Value<int?>? idOrigine,
@@ -5687,6 +5747,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
       nome: nome ?? this.nome,
       scheda: scheda ?? this.scheda,
       aggiornataIl: aggiornataIl ?? this.aggiornataIl,
+      creataIl: creataIl ?? this.creataIl,
       mia: mia ?? this.mia,
       origine: origine ?? this.origine,
       idOrigine: idOrigine ?? this.idOrigine,
@@ -5708,6 +5769,9 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
     }
     if (aggiornataIl.present) {
       map['aggiornata_il'] = Variable<DateTime>(aggiornataIl.value);
+    }
+    if (creataIl.present) {
+      map['creata_il'] = Variable<DateTime>(creataIl.value);
     }
     if (mia.present) {
       map['mia'] = Variable<bool>(mia.value);
@@ -5731,6 +5795,7 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
           ..write('nome: $nome, ')
           ..write('scheda: $scheda, ')
           ..write('aggiornataIl: $aggiornataIl, ')
+          ..write('creataIl: $creataIl, ')
           ..write('mia: $mia, ')
           ..write('origine: $origine, ')
           ..write('idOrigine: $idOrigine, ')
@@ -8593,6 +8658,7 @@ typedef $$SchedeSulTelefonoTableCreateCompanionBuilder =
       required String nome,
       required String scheda,
       required DateTime aggiornataIl,
+      Value<DateTime?> creataIl,
       Value<bool> mia,
       required String origine,
       Value<int?> idOrigine,
@@ -8604,6 +8670,7 @@ typedef $$SchedeSulTelefonoTableUpdateCompanionBuilder =
       Value<String> nome,
       Value<String> scheda,
       Value<DateTime> aggiornataIl,
+      Value<DateTime?> creataIl,
       Value<bool> mia,
       Value<String> origine,
       Value<int?> idOrigine,
@@ -8636,6 +8703,11 @@ class $$SchedeSulTelefonoTableFilterComposer
 
   ColumnFilters<DateTime> get aggiornataIl => $composableBuilder(
     column: $table.aggiornataIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creataIl => $composableBuilder(
+    column: $table.creataIl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8689,6 +8761,11 @@ class $$SchedeSulTelefonoTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get creataIl => $composableBuilder(
+    column: $table.creataIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get mia => $composableBuilder(
     column: $table.mia,
     builder: (column) => ColumnOrderings(column),
@@ -8732,6 +8809,9 @@ class $$SchedeSulTelefonoTableAnnotationComposer
     column: $table.aggiornataIl,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get creataIl =>
+      $composableBuilder(column: $table.creataIl, builder: (column) => column);
 
   GeneratedColumn<bool> get mia =>
       $composableBuilder(column: $table.mia, builder: (column) => column);
@@ -8792,6 +8872,7 @@ class $$SchedeSulTelefonoTableTableManager
                 Value<String> nome = const Value.absent(),
                 Value<String> scheda = const Value.absent(),
                 Value<DateTime> aggiornataIl = const Value.absent(),
+                Value<DateTime?> creataIl = const Value.absent(),
                 Value<bool> mia = const Value.absent(),
                 Value<String> origine = const Value.absent(),
                 Value<int?> idOrigine = const Value.absent(),
@@ -8801,6 +8882,7 @@ class $$SchedeSulTelefonoTableTableManager
                 nome: nome,
                 scheda: scheda,
                 aggiornataIl: aggiornataIl,
+                creataIl: creataIl,
                 mia: mia,
                 origine: origine,
                 idOrigine: idOrigine,
@@ -8812,6 +8894,7 @@ class $$SchedeSulTelefonoTableTableManager
                 required String nome,
                 required String scheda,
                 required DateTime aggiornataIl,
+                Value<DateTime?> creataIl = const Value.absent(),
                 Value<bool> mia = const Value.absent(),
                 required String origine,
                 Value<int?> idOrigine = const Value.absent(),
@@ -8821,6 +8904,7 @@ class $$SchedeSulTelefonoTableTableManager
                 nome: nome,
                 scheda: scheda,
                 aggiornataIl: aggiornataIl,
+                creataIl: creataIl,
                 mia: mia,
                 origine: origine,
                 idOrigine: idOrigine,

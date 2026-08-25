@@ -207,6 +207,20 @@ final schedeBloccateProvider =
       return schedeBloccate(
         schede: schede,
         illimitata: ref.watch(gettoniProvider).valueOrNull?.illimitata,
+
+        /*
+         * ⏳ **Il server non manda niente sull'abbonamento** — 25/08/2026.
+         *
+         * 📌 *«AI illimitata e abbonato sono due cose diverse»*, e infatti sono
+         * due parametri. ⛔ Ma di «abbonato» oggi non c'è traccia: `/me` non lo
+         * espone, e lo stato del *tenant* è la palestra, non la persona — un
+         * iscritto a una palestra attiva non è per questo un abbonato.
+         *
+         * 🚨 `null` e non `true`: `null` vuol dire «non lo so, non bloccare»,
+         * ed è la cosa onesta. Scriverci `true` vorrebbe dire dichiarare
+         * abbonati tutti quanti, e fra un mese nessuno ricorderebbe perché.
+         */
+        abbonato: null,
       );
     });
 

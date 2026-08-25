@@ -49,21 +49,42 @@ const quanteSenzaAbbonamento = 3;
 
 /// Quali schede sono bloccate, e perché.
 ///
-/// ⚠️ **`illimitata` viene da `Gettoni`**, cioè dalla quota AI. In questo
-/// impianto è **la stessa cosa** che essere abbonati: la quota illimitata è ciò
-/// che l'abbonamento concede (`MemberAiQuota.remaining()` torna `null`). 🚨 Se un
-/// giorno le due cose si separassero, questo è il punto in cui aggiungere il
-/// secondo controllo — non nei widget.
+/// ══ 🚨 DUE CONDIZIONI DIVERSE, E NON VANNO CONFUSE ════════════════════════
 ///
-/// 🚨 **Se non si sa, non si blocca niente.** Il flag arriva dalla rete, e un
-/// errore di rete non deve nascondere le schede a chi le ha pagate: ⛔ meglio un
-/// limite che non scatta che un abbonato chiuso fuori dai propri allenamenti.
-/// Per questo `illimitata` è un `bool?` e `null` vale «lascia stare».
+/// 📌 *«ovviamente AI illimitata e abbonato sono due cose diverse, non va bene
+/// che siano trattati come una cosa singola»*.
+///
+/// ⛔ **Le avevo trattate come una sola**, appoggiandomi al fatto che oggi
+/// l'abbonamento concede la quota illimitata. È un'osservazione sul presente,
+/// non una definizione: il giorno in cui si vendesse un pacchetto AI senza
+/// abbonamento — o un abbonamento senza AI — quella riga avrebbe sbagliato in
+/// silenzio, e nessun test se ne sarebbe accorto perché il test l'avrebbe
+/// scritta uguale.
+///
+/// 💡 Adesso sono **due parametri**, e la regola è quella detta dal committente:
+/// *«un utente che **non** sia abbonato **o non** abbia l'ai illimitata»* → il
+/// limite scatta. Cioè servono **tutte e due** per non averlo.
+///
+/// ══ ⚠️ E CIASCUNA, SE NON SI SA, NON BLOCCA ══════════════════════════════
+///
+/// I flag arrivano dalla rete, e un errore lì non deve nascondere le schede a
+/// chi le ha pagate: ⛔ meglio un limite che non scatta che un abbonato chiuso
+/// fuori dai propri allenamenti. Per questo sono `bool?`, e `null` vale «questa
+/// condizione lasciala stare».
+///
+/// ⏳ **Oggi `abbonato` arriva sempre `null`**, perché il server non lo manda:
+/// `/me` non espone niente sull'abbonamento, e l'unica cosa che ci somiglia è lo
+/// stato del *tenant*, che è la palestra e non la persona. 🚨 Finché non c'è,
+/// blocca solo `illimitata` — ed è dichiarato qui invece che nascosto in un
+/// `?? true` da qualche parte.
 Map<int, MotivoBlocco> schedeBloccate({
   required List<WorkoutPlan> schede,
+  required bool? abbonato,
   required bool? illimitata,
 }) {
-  if (illimitata != false) return const {};
+  final senzaLimiti = illimitata != false && abbonato != false;
+
+  if (senzaLimiti) return const {};
 
   final bloccate = <int, MotivoBlocco>{};
 
@@ -73,26 +94,39 @@ Map<int, MotivoBlocco> schedeBloccate({
    * una scheda vecchia la porterebbe in cima scavalcando una nuova. 💡 Chi
    * chiama passa già l'elenco nell'ordine giusto — vedi `schedePerCreazione`.
    */
-  var usabili = 0;
+  var contate = 0;
 
   for (final scheda in schede) {
     /*
-     * 🚨 **Il limite dei giorni si controlla PRIMA di contare.** Una scheda a
-     * più giorni è bloccata comunque: farla occupare uno dei tre posti vorrebbe
-     * dire togliere un posto usabile per una scheda che comunque non si può
-     * usare.
+     * ══ 🚨 IL POSTO LO OCCUPA COMUNQUE — corretto dal committente il 25/08 ══
+     *
+     * 📌 *«Una scheda a più giorni certo che occupa uno slot scheda. In realtà è
+     * un deficit piccolo, un utente può sempre crearsi una scheda a giorno
+     * singolo finché non arriva a tre. Quelle multiday sono bloccate se non sei
+     * iscritto»*.
+     *
+     * ⛔ **Avevo fatto il contrario**: le multi-giorno saltavano il conteggio,
+     * col ragionamento che un posto non va sprecato per una scheda inutilizzabile.
+     * 🚨 Sbagliato, e per un motivo semplice: **il limite conta le schede che
+     * hai, non quelle che puoi usare**. Saltarle vorrebbe dire che chi ne
+     * accumula dieci a più giorni ha ancora tutti e tre i posti liberi — cioè
+     * che una scheda in più non costa niente finché è multi-giorno.
+     *
+     * 💡 Il «deficit» che ne esce è dichiarato e accettato: chi riempie i tre
+     * posti di schede a più giorni resta senza schede usabili finché non ne
+     * cancella una. ⚠️ Se ne accorge subito, perché il perché c'è scritto sotto
+     * ognuna.
      */
-    if (scheda.giorni > 1) {
-      bloccate[scheda.id] = MotivoBlocco.piuGiorni;
-      continue;
-    }
+    contate++;
 
-    if (usabili >= quanteSenzaAbbonamento) {
+    if (contate > quanteSenzaAbbonamento) {
       bloccate[scheda.id] = MotivoBlocco.troppeSchede;
       continue;
     }
 
-    usabili++;
+    // 💡 Dentro i tre posti, ma a più giorni: si dice **quello**, che è il
+    // motivo vero per cui questa non si apre.
+    if (scheda.giorni > 1) bloccate[scheda.id] = MotivoBlocco.piuGiorni;
   }
 
   return bloccate;

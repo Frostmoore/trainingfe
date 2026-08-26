@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../achievements/ui/carosello_achievements.dart';
+import '../../acquisti/ui/modale_acquisti.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
@@ -536,9 +537,19 @@ class _SenzaAi extends StatelessWidget {
                   const SizedBox(height: Gap.sm),
                   Align(
                     alignment: Alignment.centerLeft,
+                    /*
+                     * 💳 **La modale e non la schermata** — 3b-H, 26/08/2026.
+                     *
+                     * 📌 *«Fai anche in modo che si vada su quell'interfaccia
+                     * quando clicco su una cosa bloccata ai non abbonati»*.
+                     *
+                     * 💡 Chi tocca qui sta guardando la sua giornata: una
+                     * schermata intera gliela porterebbe via, e chi torna
+                     * indietro spesso non ritrova il punto in cui era.
+                     */
                     child: FilledButton.tonal(
-                      onPressed: () => context.push(AppRoutes.acquisti),
-                      child: const Text('Scopri come attivarlo'),
+                      onPressed: () => ModaleAcquisti.mostra(context),
+                      child: const Text('Attiva l\'assistente'),
                     ),
                   ),
                 ],

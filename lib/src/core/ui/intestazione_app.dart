@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/acquisti/ui/modale_acquisti.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/dashboard/gettoni_controller.dart';
 import '../../features/onboarding/branding_controller.dart';
@@ -432,7 +433,19 @@ class SaldoGettoni extends ConsumerWidget {
              */
             final testo = g.illimitata ? '∞' : '${g.disponibili ?? 0}';
 
-            return Tooltip(
+            /*
+             * ══ 💳 SI TOCCA, E PORTA A COMPRARE — 3b-H, 26/08/2026 ═════════
+             *
+             * 📌 *«collegata alla pillola dei gettoni nell'header»*.
+             *
+             * 💡 È il posto giusto: chi guarda quel numero lo guarda **perché
+             * sta finendo**, ed è l'unico momento in cui l'offerta non è
+             * un'interruzione ma una risposta.
+             *
+             * ⚠️ Una modale e non una schermata: si chiude e sotto c'è ancora
+             * quello che si stava facendo.
+             */
+            final pillola = Tooltip(
               message: g.illimitata
                   ? 'Gettoni AI illimitati'
                   // 💡 «comprati», non «questo mese»: sono i soli che questo
@@ -476,6 +489,16 @@ class SaldoGettoni extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            );
+
+            return Semantics(
+              button: true,
+              label: 'Gettoni AI: tocca per comprarne',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => ModaleAcquisti.mostra(context),
+                child: pillola,
               ),
             );
           },

@@ -9,6 +9,7 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../acquisti/ui/modale_acquisti.dart';
 import '../../profile/corpo_controller.dart';
 import '../../progress/ui/progress_screen.dart';
 import '../data/calorie_allenamento.dart';
@@ -367,9 +368,18 @@ class _SchedaCard extends StatelessWidget {
                         _DettaglioScheda(id: scheda.id, nome: scheda.name),
                   ),
                 )
-              : () => ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(motivo.spiegazione))),
+              /*
+               * ══ 💳 TOCCARLA PORTA A SBLOCCARLA — 3b-H.4, 26/08/2026 ══════
+               *
+               * 📌 *«fai in modo che si vada su quell'interfaccia quando clicco
+               * su una cosa bloccata ai non abbonati»*.
+               *
+               * ⛔ Prima usciva un avviso in fondo allo schermo con **la stessa
+               * frase che sta già scritta sulla card**: ripeteva il problema e
+               * non offriva la via d'uscita. 💡 Il perché si legge lì sotto;
+               * qui serve il come.
+               */
+              : () => ModaleAcquisti.mostra(context),
           child: Padding(
             padding: const EdgeInsets.all(Gap.md),
             child: Row(

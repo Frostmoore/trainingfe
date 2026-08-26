@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/acquisti/data/listino.dart';
 
@@ -96,6 +98,69 @@ void main() {
     /// colonna di prezzi si legge come un errore di stampa.
     test('e i tondi tengono i decimali', () {
       expect(euro(1000), contains('10,00'));
+    });
+  });
+  group('🧿 cosa la modale NON deve dire', () {
+    /// Il sorgente **senza i commenti**.
+    ///
+    /// ⛔ **Al primo giro questa guardia si e' morsa la coda**: i commenti che
+    /// spiegano *perche'* quelle parole non ci sono la facevano fallire.
+    ///
+    /// 💡 E' anche il verso giusto: quello che non deve arrivare a chi legge e'
+    /// il **testo a schermo**, non la ragione scritta accanto — che invece deve
+    /// restare, o fra sei mesi qualcuno rimette la frase senza sapere perche'
+    /// era stata tolta.
+    String senzaCommenti(String percorso) {
+      final riga = RegExp(r'^\s*(///|//).*\$', multiLine: true);
+      final blocco = RegExp(r'/\*.*?\*/', dotAll: true);
+
+      return File(
+        percorso,
+      ).readAsStringSync().replaceAll(blocco, '').replaceAll(riga, '');
+    }
+
+    final modale = senzaCommenti(
+      'lib/src/features/acquisti/ui/modale_acquisti.dart',
+    );
+
+    /// ══ 🚨 IL NUMERO DELLE RICHIESTE NON SI SCRIVE ═══════════════════
+    ///
+    /// 📌 *«togli la scritta "150 richieste al mese" non va detto, perché
+    /// l'abbonamento non fa solo quello»*.
+    ///
+    /// ⛔ **Un numero in cima a un'offerta diventa l'offerta.** Chi legge «150
+    /// richieste» compra un contatore, lo confronta con i pacchetti di gettoni e
+    /// fa la divisione — invece di guardare cosa si porta a casa.
+    ///
+    /// ⚠️ È la stessa decisione del 16/08 sulla pillola: la dotazione inclusa
+    /// è **uso compreso**, non credito da contare.
+    test('quante richieste sono incluse', () {
+      expect(
+        modale.contains('chiamateMensili'),
+        isFalse,
+        reason: 'la quota inclusa non si mostra: e uso compreso, non un saldo',
+      );
+    });
+
+    /// ⛔ 📌 *«togliamo il riferimento al piano alimentare (ce l'abbiamo ma
+    /// non voglio spingerlo subito)»*. 💡 La funzione c'è: è una scelta di
+    /// vetrina, non una cosa che manca.
+    test('e il piano alimentare da PDF', () {
+      for (final parola in ['PDF', 'nutrizionista', 'piano alimentare']) {
+        expect(
+          modale.contains(parola),
+          isFalse,
+          reason: '«$parola» era stato tolto dalla vetrina di proposito',
+        );
+      }
+    });
+
+    /// 🚨 **Non si promette quello che l'app non sa fare.** La modale diceva
+    /// «Disdici quando vuoi» e dall'app non si può disdire: o si aggiunge il
+    /// portale di Stripe, o la frase non ci va. ⚠️ Il giorno che il portale
+    /// arriva, questo test si toglie **insieme** alla frase che si rimette.
+    test('e «disdici quando vuoi», finché non si può davvero', () {
+      expect(modale.toLowerCase().contains('disdic'), isFalse);
     });
   });
 }

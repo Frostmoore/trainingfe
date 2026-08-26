@@ -196,7 +196,7 @@ class _Insegna extends StatelessWidget {
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Text(
-                'Fai fare i conti a lei',
+                'L\'IA che ti serve tutti i giorni',
                 style: tema.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -205,6 +205,22 @@ class _Insegna extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Gap.sm),
+        /*
+         * ══ ⛔ QUI NON SI DICE QUANTE RICHIESTE — 26/08/2026 ═══════════════
+         *
+         * 📌 *«togli la scritta "150 richieste al mese" non va detto, perché
+         * l'abbonamento non fa solo quello»*.
+         *
+         * 🚨 **Un numero in cima a un'offerta diventa l'offerta.** Chi legge
+         * «150 richieste» compra un contatore, lo confronta con i pacchetti di
+         * gettoni e fa la divisione — invece di guardare **cosa** si porta a
+         * casa. ⚠️ È lo stesso motivo per cui il 16/08 la dotazione inclusa era
+         * sparita dalla pillola: è **uso compreso**, non credito da contare.
+         *
+         * 💡 Il numero resta nell'API (`Listino.chiamateMensili`) perché serve
+         * a chi lo cerca — condizioni d'uso, assistenza — ma non è quello che
+         * si vende.
+         */
         Text(
           'Fotografi il piatto e finisce nel diario, con calorie e macro. '
           'Ogni mattina un consiglio costruito su come hai mangiato, dormito '
@@ -221,9 +237,19 @@ class _Insegna extends StatelessWidget {
           icona: Icons.auto_awesome_outlined,
           testo: 'Il consiglio del giorno, tutti i giorni',
         ),
+        /*
+         * ⛔ **Il piano alimentare da PDF è uscito da qui** — 26/08/2026.
+         * 📌 *«togliamo il riferimento al piano alimentare (ce l'abbiamo ma non
+         * voglio spingerlo subito)»*. 💡 La funzione c'è: è una scelta di cosa
+         * mettere in vetrina, non una cosa che manca.
+         */
         const _Riga(
-          icona: Icons.picture_as_pdf_outlined,
-          testo: 'Il piano del nutrizionista, da PDF a piano vero',
+          icona: Icons.calendar_month_rounded,
+          testo: 'Le schede su più giorni, e quante ne vuoi',
+        ),
+        const _Riga(
+          icona: Icons.lock_open_rounded,
+          testo: 'E tutto quello che arriva dopo, senza pagare di nuovo',
         ),
       ],
     );
@@ -302,8 +328,7 @@ class _BottoneAbbonamento extends StatelessWidget {
           ),
           const SizedBox(height: Gap.xs),
           Text(
-            '${listino.chiamateMensili} richieste al mese, che si rinnovano. '
-            'Disdici quando vuoi.',
+            'Tutto compreso, e si rinnova ogni mese.',
             style: tema.textTheme.bodySmall?.copyWith(
               color: tema.colorScheme.onPrimaryContainer,
             ),
@@ -363,9 +388,20 @@ class _GiaAbbonato extends StatelessWidget {
                     color: tema.colorScheme.onSecondaryContainer,
                   ),
                 ),
+                /*
+                 * ⚠️ **Nemmeno qui si contano le richieste incluse.** Vale la
+                 * stessa regola del 16/08: la dotazione dell'abbonamento è uso
+                 * compreso, e mostrarla come un saldo che scende insegna a
+                 * risparmiarla — cioè a usare meno l'unica cosa per cui si è
+                 * pagato.
+                 *
+                 * 💡 I gettoni **comprati** invece si dicono: quelli sono suoi,
+                 * li ha pagati a parte, e vuole sapere quanti gliene restano.
+                 */
                 Text(
-                  '${listino.chiamateMensili} richieste al mese incluse · '
-                  '${listino.gettoniDisponibili} gettoni comprati',
+                  listino.gettoniDisponibili > 0
+                      ? '${listino.gettoniDisponibili} gettoni comprati, oltre a quelle incluse'
+                      : 'Hai tutto quello che serve. I gettoni servono solo se finisci le richieste incluse.',
                   style: tema.textTheme.bodySmall?.copyWith(
                     color: tema.colorScheme.onSecondaryContainer,
                   ),

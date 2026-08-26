@@ -476,18 +476,33 @@ class CaloriesCard extends ConsumerWidget {
 /// ══ 🔥 E CON L'ALLENAMENTO SEPARATO DAL TARGET — 26/08/2026 ═══════════════
 ///
 /// 📌 *«il mio obbiettivo è l'obbiettivo. L'allenamento è oltre, in questo caso.
-/// Sulla barra sopra mettiamo due colori anche lì (ma nella parte VUOTA della
-/// barra). L'allenamento deve essere chiaramente separato dal target»*.
+/// Sulla barra sopra mettiamo due colori anche lì. L'allenamento deve essere
+/// chiaramente separato dal target»*.
 ///
 /// ⛔ **Prima la barra mentiva per omissione.** Su un giorno di palestra il
 /// fondo arrivava a 2.460 tutto uguale, quindi «essere a metà barra» voleva dire
 /// due cose diverse a seconda che ci si fosse allenati o no — e niente lo
 /// diceva.
 ///
-/// 💡 Adesso il fondo è spezzato: fino all'obiettivo di un colore, oltre di
-/// quello del fuoco. ⚠️ **Solo il fondo**: il riempimento resta di un colore
-/// solo, perché quello che hai mangiato è quello che hai mangiato — non cambia
-/// natura superando l'obiettivo.
+/// ══ ⛔ IL PRIMO TENTATIVO COLORAVA SOLO IL FONDO, ED ERA INVISIBILE ════════
+///
+/// 📌 *«No è venuto di merda, controlla. È tutta dello stesso colore»*.
+///
+/// 🚨 **Aveva ragione, e la causa non era il colore: era dove stava.** Colorare
+/// solo la parte **vuota** funziona finché non hai ancora mangiato il tuo
+/// obiettivo — ma su un giorno di palestra ci si mangia dentro, ed è proprio il
+/// motivo per cui il margine esiste. Il 25/08: 2.259 mangiate su 1.880 di
+/// obiettivo, cioè il confine al **76%** e il riempimento al **92%**. Il confine
+/// finiva **sotto** il pieno, e restava un'unghia di colore nell'ultimo 8%.
+///
+/// 💡 Adesso si spezzano **tutti e due**: il fondo e il pieno. Quello che hai
+/// mangiato **dentro** l'obiettivo è di un colore, quello che hai mangiato
+/// **oltre** — cioè dentro il margine dell'allenamento — è del colore del fuoco.
+/// ⚠️ Così la separazione si vede sempre, non solo quando avanzi.
+///
+/// 🎨 Le tinte del fondo sono quelle della card del carico (`BarraCarico`):
+/// `alpha 0.18` e `0.22`. 📌 *«Devi usare colori più chiari per lo sfondo, come
+/// sulla card del carico»*.
 class _BarraConRitmo extends StatelessWidget {
   const _BarraConRitmo({
     required this.percentualeMangiata,
@@ -506,68 +521,109 @@ class _BarraConRitmo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     final sfora = percentualeMangiata > 1;
     final base = percentualeBase.clamp(0.0, 1.0);
+    final mangiata = percentualeMangiata.clamp(0.0, 1.0);
+
+    // Quanto del pieno sta dentro l'obiettivo, e quanto oltre.
+    final dentro = mangiata < base ? mangiata : base;
+    final oltre = mangiata > base ? mangiata - base : 0.0;
+
+    /*
+     * ⚠️ **Sforando, tutto il pieno diventa rosso.** Chi ha superato anche il
+     * margine dell'allenamento non ha bisogno di sapere quanto ne ha usato:
+     * ha bisogno di sapere che ha superato. 🚨 Tenere due colori lì
+     * ammorbidirebbe l'unico segnale che conta.
+     */
+    final coloreDentro = sfora
+        ? theme.colorScheme.error
+        : theme.colorScheme.primary;
+    final coloreOltre = sfora ? theme.colorScheme.error : BarraDelConsumo.fuoco;
 
     return LayoutBuilder(
-      builder: (context, vincoli) => SizedBox(
-        height: 14,
-        child: Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: SizedBox(
-                height: 10,
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: (base * 1000).round(),
-                      child: ColoredBox(
-                        color: theme.colorScheme.surfaceContainerHighest,
+      builder: (context, vincoli) {
+        final larghezza = vincoli.maxWidth;
+
+        return SizedBox(
+          height: 14,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  height: 10,
+                  width: larghezza,
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      // ── Il fondo, in due tinte chiare ──────────────────
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: (base * 1000).round().clamp(1, 1000),
+                            child: ColoredBox(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.18,
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+                          if (base < 1)
+                            Expanded(
+                              flex: ((1 - base) * 1000).round().clamp(1, 1000),
+                              child: ColoredBox(
+                                color: BarraDelConsumo.fuoco.withValues(
+                                  alpha: 0.22,
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                    if (base < 1)
-                      Expanded(
-                        flex: ((1 - base) * 1000).round(),
-                        child: ColoredBox(
-                          // ⚠️ Tenue: e' lo sfondo di quello che **puoi ancora**
-                          // mangiare, non un valore raggiunto. Pieno
-                          // competerebbe con il riempimento vero.
-                          color: BarraDelConsumo.fuoco.withValues(alpha: 0.28),
+
+                      // ── Il pieno, spezzato sull'obiettivo ──────────────
+                      if (dentro > 0)
+                        Positioned(
+                          left: 0,
+                          child: Container(
+                            width: larghezza * dentro,
+                            height: 10,
+                            color: coloreDentro,
+                          ),
                         ),
-                      ),
-                  ],
+                      if (oltre > 0)
+                        Positioned(
+                          left: larghezza * base,
+                          child: Container(
+                            width: larghezza * oltre,
+                            height: 10,
+                            color: coloreOltre,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: percentualeMangiata.clamp(0.0, 1.0),
-                minHeight: 10,
-                backgroundColor: Colors.transparent,
-                color: sfora
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.primary,
+
+              // Il segno del ritmo: senza, la barra dice quanto si è mangiato ma
+              // non se è troppo **per l'ora che è**.
+              Positioned(
+                left: (larghezza * percentualeGiornata).clamp(
+                  0.0,
+                  larghezza - 2,
+                ),
+                child: Container(
+                  width: 2,
+                  height: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-            ),
-            // Il segno del ritmo: senza, la barra dice quanto si è mangiato ma
-            // non se è troppo **per l'ora che è**.
-            Positioned(
-              left: (vincoli.maxWidth * percentualeGiornata).clamp(
-                0.0,
-                vincoli.maxWidth - 2,
-              ),
-              child: Container(
-                width: 2,
-                height: 14,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

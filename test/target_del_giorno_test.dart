@@ -30,6 +30,7 @@ void main() {
     test('le bruciate si sommano al target del piano', () {
       final t = TargetDelGiorno.scegli(
         sommaLeBruciate: true,
+        bruciateExtra: 0,
         dalServer: 2000,
         locale: 1800,
         bruciate: 450,
@@ -44,6 +45,7 @@ void main() {
     test('e il calcolo locale non lo tocca nemmeno', () {
       final t = TargetDelGiorno.scegli(
         sommaLeBruciate: true,
+        bruciateExtra: 0,
         dalServer: 2450,
         locale: 9999,
         bruciate: 0,
@@ -58,6 +60,7 @@ void main() {
     test('le bruciate si sommano', () {
       final t = TargetDelGiorno.scegli(
         sommaLeBruciate: true,
+        bruciateExtra: 0,
         dalServer: null,
         locale: 2000,
         bruciate: 450,
@@ -70,6 +73,7 @@ void main() {
     test('senza bruciate resta il numero calcolato', () {
       final t = TargetDelGiorno.scegli(
         sommaLeBruciate: true,
+        bruciateExtra: 0,
         dalServer: null,
         locale: 2000,
         bruciate: 0,
@@ -89,6 +93,7 @@ void main() {
     test('resta null anche se ci sono bruciate', () {
       final t = TargetDelGiorno.scegli(
         sommaLeBruciate: true,
+        bruciateExtra: 0,
         dalServer: null,
         locale: null,
         bruciate: 600,
@@ -115,6 +120,7 @@ void main() {
         locale: null,
         bruciate: 400,
         sommaLeBruciate: false,
+        bruciateExtra: 0,
       );
 
       expect(t.kcal, 2000);
@@ -131,6 +137,7 @@ void main() {
         locale: 1800,
         bruciate: 400,
         sommaLeBruciate: false,
+        bruciateExtra: 0,
       );
 
       expect(t.kcal, 1800);
@@ -144,6 +151,7 @@ void main() {
           locale: 1800,
           bruciate: 400,
           sommaLeBruciate: true,
+          bruciateExtra: 0,
         ).kcal,
         2200,
       );
@@ -157,6 +165,7 @@ void main() {
           locale: 0,
           bruciate: 300,
           sommaLeBruciate: true,
+          bruciateExtra: 0,
         ).esiste,
         isFalse,
       );

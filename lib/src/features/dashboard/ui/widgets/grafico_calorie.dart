@@ -264,6 +264,15 @@ class _Corpo extends ConsumerWidget {
               locale: target,
               bruciate: bruciateDi(serie, i, daHealth, locali).round(),
               sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
+              bruciateExtra:
+                  ref
+                      .watch(
+                        bruciateExtraDelGiornoProvider(
+                          DateTime.tryParse(serie.dates[i]) ?? DateTime(0),
+                        ),
+                      )
+                      .valueOrNull ??
+                  0,
             ).kcal ??
             (target ?? 0),
     ];

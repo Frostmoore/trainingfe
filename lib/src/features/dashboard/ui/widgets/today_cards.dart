@@ -146,6 +146,8 @@ class CaloriesCard extends ConsumerWidget {
       locale: locale?.kcal.toDouble(),
       bruciate: bruciate.kcal,
       sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
+      bruciateExtra:
+          ref.watch(bruciateExtraDelGiornoProvider(giorno)).valueOrNull ?? 0,
     );
 
     final target = delGiorno.kcal ?? 0;

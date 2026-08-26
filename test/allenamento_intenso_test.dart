@@ -24,6 +24,7 @@ void main() {
         kcal: kcal,
         nascosto: false,
         staccato: false,
+        contaComeExtra: false,
       ),
     ],
   );

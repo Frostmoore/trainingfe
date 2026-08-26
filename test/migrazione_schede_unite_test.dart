@@ -93,6 +93,24 @@ void main() {
     );
 
     /*
+     * 🏃 E le sedute dell'app, che il passo v19 → v20 tocca — 26/08.
+     *
+     * ⚠️ **La terza volta che questa lista si allunga**, e sempre per lo stesso
+     * motivo: un passo nuovo tocca una tabella che la finzione non ha. 💡 Le
+     * colonne qui sotto sono il minimo per far girare un `ADD COLUMN`: questa
+     * prova sulle sedute non ci guarda, le serve solo che la tabella esista.
+     *
+     * 🚨 Chi legge questo file cercando «perché il mio passo esplode» è
+     * arrivato nel posto giusto: aggiungi la tua tabella qui.
+     */
+    await esegui(
+      'CREATE TABLE sedute_allenamento ('
+      'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+      'iniziata_il INTEGER NOT NULL, '
+      'kcal INTEGER)',
+    );
+
+    /*
      * 📸 E le foto, che il passo v16 → v17 tocca. ⚠️ **È già successo una volta
      * il giorno stesso**: la nota qui sopra è stata scritta aggiungendo il
      * passo v16, e il passo v17 l'ha ripagata subito. Chi ne aggiunge un altro

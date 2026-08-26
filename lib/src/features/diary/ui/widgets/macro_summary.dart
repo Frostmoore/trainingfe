@@ -94,6 +94,11 @@ class MacroSummary extends ConsumerWidget {
       locale: locale?.kcal.toDouble(),
       bruciate: bruciate.kcal,
       sommaLeBruciate: ref.watch(sommaLeBruciateProvider),
+      // ⚠️ `day.date` e non «oggi»: il diario si apre anche su ieri, ed è la
+      // stessa trappola di 3b-F.7 — un numero giusto guardando oggi e sbagliato
+      // guardando qualunque altro giorno.
+      bruciateExtra:
+          ref.watch(bruciateExtraDelGiornoProvider(day.date)).valueOrNull ?? 0,
     );
 
     // 💡 `?? 0` e non `!`: il numero si usa solo dentro rami protetti da

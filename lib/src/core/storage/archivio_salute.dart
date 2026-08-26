@@ -57,7 +57,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -412,6 +412,26 @@ class ArchivioSalute extends _$ArchivioSalute {
         if (!ceGia) {
           await m.addColumn(schedeSulTelefono, schedeSulTelefono.creataIl);
         }
+      }
+
+      /*
+       * 🏃 v19 → v20 (3b-G.7): la spunta «conta come extra», sulle sedute del
+       * polso e su quelle dell'app.
+       *
+       * ⚠️ Due `addColumn` e non un `alterTable`: aggiungere una colonna con un
+       * valore di serie non ha bisogno di ricostruire la tabella — e
+       * ricostruirla e' il passo che nel v14 → v15 ha lasciato la trappola
+       * descritta qui sopra.
+       *
+       * 💡 Nessuna delle due tabelle e' mai passata da un `alterTable`, quindi
+       * qui il controllo «se non c'e' gia'» non serve.
+       */
+      if (da < 20) {
+        await m.addColumn(
+          allenamentiDaOrologio,
+          allenamentiDaOrologio.contaComeExtra,
+        );
+        await m.addColumn(seduteAllenamento, seduteAllenamento.contaComeExtra);
       }
     },
   );
@@ -875,6 +895,92 @@ class ArchivioSalute extends _$ArchivioSalute {
             ..limit(quanti))
           .get();
 
+  /// Le sedute dell'orologio **di un giorno**, per contarne le calorie —
+  /// 3b-G.3, 26/08/2026.
+  ///
+  /// 🚨 Restituisce le **righe**, non un totale: la regola per non contare due
+  /// volte lo stesso allenamento vive in `kcalDelleSedute` — che è una funzione
+  /// pura e quindi si può provare — e non dentro una query.
+  ///
+  /// ⚠️ **Il giorno è quello in cui l'allenamento è COMINCIATO.** Una seduta a
+  /// cavallo della mezzanotte conta tutta nel giorno in cui sei partito: è la
+  /// stessa convenzione dello storico, e spezzarla vorrebbe dire due mezze
+  /// sedute che non corrispondono a niente.
+  ///
+  /// 💡 `nascosto` **non** si filtra qui, come in `allenamentiDellOrologio`:
+  /// filtrare alla fonte renderebbe la scelta irreversibile. Lo toglie
+  /// `kcalDelleSedute`.
+  Future<List<AllenamentoDaOrologio>> seduteDellOrologioDi(DateTime giorno) {
+    final da = _soloGiorno(giorno);
+    final a = da.add(const Duration(days: 1));
+
+    return (select(allenamentiDaOrologio)..where(
+          (t) =>
+              t.iniziatoIl.isBiggerOrEqualValue(da) &
+              t.iniziatoIl.isSmallerThanValue(a),
+        ))
+        .get();
+  }
+
+  /// Le calorie delle sedute marcate **«fuori dal solito»** di un giorno —
+  /// 3b-G.7, 26/08/2026.
+  ///
+  /// 🚨 Serve **solo** al modello «stima», dove gli allenamenti normali sono già
+  /// dentro il fattore e non si sommano. ⛔ Nel modello «misurata» questo numero
+  /// non va usato: lì le sedute entrano già tutte, e sommarlo le conterebbe due
+  /// volte — è il provider a saperlo, non questa query.
+  ///
+  /// ⚠️ Le due famiglie si sommano perché sono cose diverse: quelle del polso e
+  /// quelle registrate col player. 💡 Il doppione fra le due lo toglie già
+  /// `nascosto`, che è nato per quello.
+  Future<int> kcalExtraDi(DateTime giorno) async {
+    final da = _soloGiorno(giorno);
+    final a = da.add(const Duration(days: 1));
+
+    final dalPolso =
+        await (select(allenamentiDaOrologio)..where(
+              (t) =>
+                  t.contaComeExtra.equals(true) &
+                  t.nascosto.equals(false) &
+                  t.iniziatoIl.isBiggerOrEqualValue(da) &
+                  t.iniziatoIl.isSmallerThanValue(a),
+            ))
+            .get();
+
+    final dallApp =
+        await (select(seduteAllenamento)..where(
+              (t) =>
+                  t.contaComeExtra.equals(true) &
+                  t.iniziataIl.isBiggerOrEqualValue(da) &
+                  t.iniziataIl.isSmallerThanValue(a),
+            ))
+            .get();
+
+    var totale = 0;
+
+    for (final s in dalPolso) {
+      totale += s.kcalCorrette ?? s.kcal ?? 0;
+    }
+
+    for (final s in dallApp) {
+      totale += s.kcal ?? 0;
+    }
+
+    return totale;
+  }
+
+  /// Marca (o smarca) una seduta del polso come «fuori dal solito» — 3b-G.7.
+  Future<void> segnaExtraDalPolso(int id, {required bool extra}) =>
+      (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
+        AllenamentiDaOrologioCompanion(contaComeExtra: Value(extra)),
+      );
+
+  /// Marca (o smarca) una seduta dell'app come «fuori dal solito» — 3b-G.7.
+  Future<void> segnaExtraDallApp(int id, {required bool extra}) =>
+      (update(seduteAllenamento)..where((t) => t.id.equals(id))).write(
+        SeduteAllenamentoCompanion(contaComeExtra: Value(extra)),
+      );
+
   /// Assegna (o toglie) la scheda che questa persona dice di aver fatto.
   Future<void> assegnaSchedaAllenamento(int id, int? schedaId) =>
       (update(allenamentiDaOrologio)..where((t) => t.id.equals(id))).write(
@@ -1089,6 +1195,16 @@ class ArchivioSalute extends _$ArchivioSalute {
   ///
   /// È un dato di salute: vive qui e finisce **nel backup**, e il server non lo
   /// vede. La somma con l'obiettivo si fa **a runtime** nell'app.
+  /// ══ ⚠️ DAL 26/08 NON ALIMENTA PIU' L'OBIETTIVO — 3b-G.3 ════════════════
+  ///
+  /// Questo è il **flusso giornaliero** delle calorie attive: tutto il movimento
+  /// del giorno, allenamenti compresi. ⛔ Nel modello «misurata» il movimento di
+  /// tutti i giorni sta **già dentro il fattore di attività quotidiana**, quindi
+  /// sommarlo lo conterebbe due volte.
+  ///
+  /// 💡 Le bruciate che entrano nell'obiettivo vengono da `kcalDelleSedute`.
+  /// ⚠️ Questo resta perché è un dato vero e serve ai controlli netto/lordo di
+  /// 3b-G.4: `totale del giorno − attive del giorno ≈ metabolismo basale`.
   Future<int> kcalAttiveDi(DateTime giorno) async {
     final righe =
         await (select(lettureSalute)..where(
@@ -2305,6 +2421,27 @@ class AllenamentiDaOrologio extends Table {
   /// sparire uno dei due allenamenti — cioè il difetto che si stava correggendo.
   BoolColumn get staccato => boolean().withDefault(const Constant(false))();
 
+  /// «Questo è stato fuori dal solito» — 3b-G.7, 26/08/2026.
+  ///
+  /// ══ 📌 A COSA SERVE, E SOLO IN UN MODELLO ══════════════════════════════
+  ///
+  /// Chi ha scelto il modello **«stima»** ha un fattore di attività che gli
+  /// allenamenti li contiene già, quindi registrarli non alza l'obiettivo — ed è
+  /// giusto, o li conterebbe due volte. ⚠️ Ma la frase con cui il committente ha
+  /// descritto quel modello era *«registrerò solo gli allenamenti
+  /// eccezionali»*: la mezza maratona di domenica **non** sta dentro «3-4
+  /// allenamenti a settimana».
+  ///
+  /// 💡 Questa spunta è quel «eccezionale»: nel modello a stima **solo** le
+  /// sedute marcate entrano nell'obiettivo.
+  ///
+  /// ⛔ **Spenta di serie, e non è pigrizia**: accesa di serie rimetterebbe
+  /// dentro tutti gli allenamenti, cioè il doppio conteggio da cui veniamo.
+  ///
+  /// ⚠️ **Nel modello «misurata» non fa niente**, perché lì entra già tutto.
+  BoolColumn get contaComeExtra =>
+      boolean().withDefault(const Constant(false))();
+
   /// 🚨 `fonte` + `iniziatoIl`: la stessa chiave del sonno, per la stessa
   /// ragione. Si rileggono sempre gli ultimi sette giorni, e senza questa
   /// coppia ogni avvio dell'app aggiungerebbe di nuovo tutto.
@@ -2343,6 +2480,15 @@ class AllenamentiDaOrologio extends Table {
 @DataClassName('SedutaAllenamento')
 class SeduteAllenamento extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  /// «Questa è stata fuori dal solito» — 3b-G.7.
+  ///
+  /// 🚨 Stessa cosa di `AllenamentiDaOrologio.contaComeExtra`, e c'è su tutte e
+  /// due perché nel modello a stima esistono tutte e due: marcarne solo una
+  /// famiglia vorrebbe dire che la mezza maratona conta se l'hai fatta con
+  /// l'orologio e non se l'hai registrata con l'app.
+  BoolColumn get contaComeExtra =>
+      boolean().withDefault(const Constant(false))();
 
   /// L'`id` che questa seduta aveva sul server, se ci è mai stata.
   IntColumn get idServer => integer().nullable().unique()();

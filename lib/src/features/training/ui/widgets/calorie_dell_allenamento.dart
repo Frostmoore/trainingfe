@@ -23,6 +23,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../profile/data/modello_calorie.dart';
+import '../../../profile/livello_attivita.dart';
 import '../../data/storico_unificato.dart';
 import '../../session_controller.dart';
 import '../../storico_unificato_controller.dart';
@@ -70,6 +72,26 @@ class _CalorieDellAllenamentoState
           await correggiKcalAllenamento(ref, allenamentoId: a.id, kcal: kcal);
         }
       }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  /// Se questa voce è già marcata «fuori dal solito».
+  ///
+  /// 💡 Basta che lo sia **una** delle righe: `segnaExtraAllenamento` le scrive
+  /// tutte insieme, quindi discordano solo se qualcosa è andato storto — e in
+  /// quel caso mostrare «acceso» è il verso prudente, perché è quello che il
+  /// conto sta effettivamente facendo.
+  bool get _extra =>
+      (widget.voce.seduta?.contaComeExtra ?? false) ||
+      widget.voce.dalPolso.any((a) => a.contaComeExtra);
+
+  Future<void> _segnaExtra({required bool extra}) async {
+    setState(() => _inCorso = true);
+
+    try {
+      await segnaExtraAllenamento(ref, widget.voce, extra: extra);
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
@@ -123,6 +145,40 @@ class _CalorieDellAllenamentoState
                 color: tema.colorScheme.onSurfaceVariant,
               ),
             ),
+
+            /*
+             * ══ 🏃 «FUORI DAL SOLITO» — 3b-G.7, 26/08/2026 ══════════════════
+             *
+             * 📌 La frase con cui il committente ha descritto il modello a
+             * stima: *«registrerò solo gli allenamenti eccezionali»*.
+             *
+             * ⛔ **Compare SOLO nel modello a stima**, e non è una scorciatoia:
+             * nel modello misurato ogni allenamento entra già nell'obiettivo,
+             * quindi lì questo interruttore non farebbe niente — e un
+             * interruttore che non fa niente non è neutro, è una bugia.
+             *
+             * 💡 Sta in questa card perché è la card che vale per tutte e due
+             * le provenienze: metterla nel riepilogo del player l'avrebbe
+             * lasciata fuori dagli allenamenti dell'orologio, che sono la
+             * maggioranza.
+             */
+            if (ref.watch(modelloCalorieProvider) == ModelloCalorie.stima) ...[
+              const Divider(height: Gap.lg),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Fuori dal solito'),
+                subtitle: Text(
+                  _extra
+                      ? 'Queste calorie si sommano al tuo obiettivo di oggi.'
+                      : 'Il tuo livello di attività comprende già gli '
+                            'allenamenti abituali: accendilo solo se questo '
+                            'non lo era.',
+                  style: tema.textTheme.bodySmall,
+                ),
+                value: _extra,
+                onChanged: _inCorso ? null : (v) => _segnaExtra(extra: v),
+              ),
+            ],
 
             const SizedBox(height: Gap.sm),
 

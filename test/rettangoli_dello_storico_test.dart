@@ -42,6 +42,7 @@ void main() {
         kcal: 300 + i,
         nascosto: false,
         staccato: false,
+        contaComeExtra: false,
       ),
     ],
   );
@@ -184,6 +185,7 @@ void main() {
             finitoIl: lunedi.subtract(const Duration(days: 21, hours: -1)),
             nascosto: false,
             staccato: false,
+            contaComeExtra: false,
           ),
         ],
       ),

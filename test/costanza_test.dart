@@ -36,6 +36,7 @@ void main() {
             distanzaMetri: null,
             nascosto: false,
             staccato: false,
+            contaComeExtra: false,
           ),
         ],
       );

@@ -77,11 +77,26 @@ class TargetDelGiorno {
   /// schermate che lo mostrano. ⛔ È la stessa famiglia di O.D.15 e O.D.20 —
   /// due numeri per la stessa cosa — e l'unico modo di renderla impossibile è
   /// **non far compilare** chi se ne dimentica.
+  /// [bruciateExtra] — 3b-G.7, 26/08/2026.
+  ///
+  /// 🚨 **Si sommano SEMPRE, anche quando [sommaLeBruciate] è falso**, ed è
+  /// tutto il punto: nel modello «stima» gli allenamenti normali stanno già
+  /// dentro il fattore di attività, ma quello fuori dal solito no.
+  ///
+  /// ⛔ **Obbligatorio, e non con un valore di serie a zero.** Un `= 0` avrebbe
+  /// fatto compilare chi se ne dimentica, e il risultato sarebbe stato la mezza
+  /// maratona che non alza l'obiettivo **in una sola** delle schermate che lo
+  /// mostrano. È la stessa ragione per cui [sommaLeBruciate] è obbligatorio.
+  ///
+  /// ⚠️ Chi lo passa deve leggerlo da `bruciateExtraDelGiornoProvider`, che vale
+  /// **zero** fuori dal modello «stima»: passare il totale grezzo qui
+  /// raddoppierebbe le sedute marcate per chi sta su «misurata».
   factory TargetDelGiorno.scegli({
     required double? dalServer,
     required double? locale,
     required int bruciate,
     required bool sommaLeBruciate,
+    required int bruciateExtra,
   }) {
     /*
      * 💡 Si azzera **qui**, in un punto solo, invece di chiedere a ogni
@@ -89,6 +104,15 @@ class TargetDelGiorno {
      * che possono sbagliare, e un quinto che nascerà domani.
      */
     if (!sommaLeBruciate) bruciate = 0;
+
+    /*
+     * 🏃 **Le sedute fuori dal solito si sommano comunque** — 3b-G.7.
+     *
+     * 🚨 Dopo l'azzeramento e non prima: nel modello «stima» `sommaLeBruciate`
+     * e' falso, e sommarle prima le farebbe sparire insieme alle altre — cioe'
+     * la funzione non farebbe niente proprio nel modello per cui esiste.
+     */
+    bruciate += bruciateExtra;
 
     if (dalServer != null && dalServer > 0) {
       return TargetDelGiorno._(

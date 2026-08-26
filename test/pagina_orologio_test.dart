@@ -46,6 +46,7 @@ void main() {
     passi: passi,
     nascosto: false,
     staccato: false,
+    contaComeExtra: false,
   );
 
   /// ⚠️ **Una finestra alta, e serve davvero** — 3b-B.20.1, 25/08.

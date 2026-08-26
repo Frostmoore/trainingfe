@@ -417,6 +417,7 @@ class PonteSalute {
          * `_companionAllenamento`, quindi una rilettura non puo' cancellarlo.
          */
           staccato: false,
+          contaComeExtra: false,
         ),
       );
     }

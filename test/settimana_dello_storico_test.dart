@@ -34,6 +34,7 @@ void main() {
         finitoIl: quando.add(const Duration(hours: 1)),
         nascosto: false,
         staccato: false,
+        contaComeExtra: false,
       ),
     ],
   );

@@ -68,6 +68,7 @@ void main() {
     distanzaMetri: metri,
     nascosto: false,
     staccato: false,
+    contaComeExtra: false,
   );
 
   // ═════════════════════ le intensità ═════════════════════

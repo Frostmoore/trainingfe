@@ -9,6 +9,7 @@ import '../data/calcolatore_calorie.dart';
 import '../data/modello_calorie.dart';
 import '../livello_attivita.dart';
 import '../target_locale_controller.dart';
+import '../tdee_misurato_controller.dart';
 
 /// La scelta del modello di calcolo, e poi del livello — 3b-G.1, 26/08/2026.
 ///
@@ -91,6 +92,8 @@ class _SchermataModelloCalorieState
             'leggerli tutti e due.',
             style: tema.textTheme.bodyMedium,
           ),
+          const SizedBox(height: Gap.md),
+          const _LaMisura(),
           const SizedBox(height: Gap.lg),
 
           for (final m in ModelloCalorie.values) ...[
@@ -391,6 +394,124 @@ class _Anteprima extends ConsumerWidget {
               color: tema.colorScheme.onSurfaceVariant,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Il dispendio **misurato** sui dati veri — 3b-G.8.
+///
+/// ══ 🚨 SI PROPONE, NON SI SOSTITUISCE ═════════════════════════════════════
+///
+/// ⛔ L'app non passa da sola dalla stima alla misura, per quanto la misura sia
+/// migliore: un obiettivo che cambia da solo non lo si può più controllare.
+///
+/// ⚠️ **E il ± si mostra sempre.** Un numero nudo si legge come esatto, e questo
+/// esatto non è — dirlo senza incertezza sarebbe la stessa bugia della tabella,
+/// con l'aggravante di sembrare una misura.
+class _LaMisura extends ConsumerWidget {
+  const _LaMisura();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final numeri = NumberFormat.decimalPattern('it');
+    final accettato = ref.watch(tdeeAccettatoProvider);
+    final misura = ref.watch(tdeeMisuratoProvider).valueOrNull;
+
+    // ⛔ Finché non si sa niente non si dice niente: un riquadro «sto
+    // calcolando» in cima a una pagina di scelte è solo rumore.
+    if (accettato == null && (misura == null || !misura.riuscita)) {
+      if (misura == null) return const SizedBox.shrink();
+
+      return Container(
+        padding: const EdgeInsets.all(Gap.md),
+        decoration: BoxDecoration(
+          color: tema.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Misurare invece di stimare',
+              style: tema.textTheme.labelLarge,
+            ),
+            const SizedBox(height: Gap.xs),
+            Text(
+              'Con quattro settimane di diario e qualche pesata, questa app '
+              'può '
+              'calcolare quanto consumi davvero invece di stimarlo. '
+              'Adesso non ancora: ${misura.motivo}.',
+              style: tema.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final kcal = accettato ?? misura!.kcal;
+
+    return Container(
+      padding: const EdgeInsets.all(Gap.md),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(Gap.radiusSm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            accettato != null
+                ? 'Stai usando la misura'
+                : 'I tuoi dati dicono un altro numero',
+            style: tema.textTheme.labelLarge?.copyWith(
+              color: tema.colorScheme.onSecondaryContainer,
+            ),
+          ),
+          const SizedBox(height: Gap.xs),
+          Text(
+            misura != null && misura.riuscita
+                ? '${numeri.format(kcal.round())} ± '
+                      '${numeri.format(misura.incertezza.round())} kcal al '
+                      'giorno, su ${misura.giorni} giorni con '
+                      '${misura.giorniConDiario} di diario'
+                : '${numeri.format(kcal.round())} kcal al giorno',
+            style: tema.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: tema.colorScheme.onSecondaryContainer,
+            ),
+          ),
+          const SizedBox(height: Gap.xs),
+
+          /*
+           * ⚠️ **L'avvertenza sull'acqua non è facoltativa** — 3b-G.8.4. Le
+           * prime settimane di deficit perdono glicogeno e acqua, non solo
+           * grasso: il conto sopravvaluta il dispendio, e chi lo prende per
+           * buono si dà un obiettivo troppo alto proprio all'inizio.
+           */
+          Text(
+            'Stima da 7.700 kcal per chilo: le prime settimane di dieta '
+            'sbaglia per eccesso.',
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSecondaryContainer,
+            ),
+          ),
+          const SizedBox(height: Gap.sm),
+
+          if (accettato == null)
+            FilledButton(
+              onPressed: () =>
+                  ref.read(tdeeAccettatoProvider.notifier).accetta(kcal),
+              child: const Text('Usa la misura'),
+            )
+          else
+            TextButton(
+              onPressed: () =>
+                  ref.read(tdeeAccettatoProvider.notifier).dimentica(),
+              child: const Text('Torna alla stima'),
+            ),
         ],
       ),
     );

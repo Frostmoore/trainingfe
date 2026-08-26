@@ -2853,6 +2853,21 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _contaComeExtraMeta = const VerificationMeta(
+    'contaComeExtra',
+  );
+  @override
+  late final GeneratedColumn<bool> contaComeExtra = GeneratedColumn<bool>(
+    'conta_come_extra',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("conta_come_extra" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2868,6 +2883,7 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
     kcalCorrette,
     nascosto,
     staccato,
+    contaComeExtra,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2973,6 +2989,15 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
         staccato.isAcceptableOrUnknown(data['staccato']!, _staccatoMeta),
       );
     }
+    if (data.containsKey('conta_come_extra')) {
+      context.handle(
+        _contaComeExtraMeta,
+        contaComeExtra.isAcceptableOrUnknown(
+          data['conta_come_extra']!,
+          _contaComeExtraMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3037,6 +3062,10 @@ class $AllenamentiDaOrologioTable extends AllenamentiDaOrologio
       staccato: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}staccato'],
+      )!,
+      contaComeExtra: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}conta_come_extra'],
       )!,
     );
   }
@@ -3173,6 +3202,26 @@ class AllenamentoDaOrologio extends DataClass
   /// dire che l'unico modo di correggere un raggruppamento sbagliato è far
   /// sparire uno dei due allenamenti — cioè il difetto che si stava correggendo.
   final bool staccato;
+
+  /// «Questo è stato fuori dal solito» — 3b-G.7, 26/08/2026.
+  ///
+  /// ══ 📌 A COSA SERVE, E SOLO IN UN MODELLO ══════════════════════════════
+  ///
+  /// Chi ha scelto il modello **«stima»** ha un fattore di attività che gli
+  /// allenamenti li contiene già, quindi registrarli non alza l'obiettivo — ed è
+  /// giusto, o li conterebbe due volte. ⚠️ Ma la frase con cui il committente ha
+  /// descritto quel modello era *«registrerò solo gli allenamenti
+  /// eccezionali»*: la mezza maratona di domenica **non** sta dentro «3-4
+  /// allenamenti a settimana».
+  ///
+  /// 💡 Questa spunta è quel «eccezionale»: nel modello a stima **solo** le
+  /// sedute marcate entrano nell'obiettivo.
+  ///
+  /// ⛔ **Spenta di serie, e non è pigrizia**: accesa di serie rimetterebbe
+  /// dentro tutti gli allenamenti, cioè il doppio conteggio da cui veniamo.
+  ///
+  /// ⚠️ **Nel modello «misurata» non fa niente**, perché lì entra già tutto.
+  final bool contaComeExtra;
   const AllenamentoDaOrologio({
     required this.id,
     required this.fonte,
@@ -3187,6 +3236,7 @@ class AllenamentoDaOrologio extends DataClass
     this.kcalCorrette,
     required this.nascosto,
     required this.staccato,
+    required this.contaComeExtra,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3216,6 +3266,7 @@ class AllenamentoDaOrologio extends DataClass
     }
     map['nascosto'] = Variable<bool>(nascosto);
     map['staccato'] = Variable<bool>(staccato);
+    map['conta_come_extra'] = Variable<bool>(contaComeExtra);
     return map;
   }
 
@@ -3244,6 +3295,7 @@ class AllenamentoDaOrologio extends DataClass
           : Value(kcalCorrette),
       nascosto: Value(nascosto),
       staccato: Value(staccato),
+      contaComeExtra: Value(contaComeExtra),
     );
   }
 
@@ -3266,6 +3318,7 @@ class AllenamentoDaOrologio extends DataClass
       kcalCorrette: serializer.fromJson<int?>(json['kcalCorrette']),
       nascosto: serializer.fromJson<bool>(json['nascosto']),
       staccato: serializer.fromJson<bool>(json['staccato']),
+      contaComeExtra: serializer.fromJson<bool>(json['contaComeExtra']),
     );
   }
   @override
@@ -3285,6 +3338,7 @@ class AllenamentoDaOrologio extends DataClass
       'kcalCorrette': serializer.toJson<int?>(kcalCorrette),
       'nascosto': serializer.toJson<bool>(nascosto),
       'staccato': serializer.toJson<bool>(staccato),
+      'contaComeExtra': serializer.toJson<bool>(contaComeExtra),
     };
   }
 
@@ -3302,6 +3356,7 @@ class AllenamentoDaOrologio extends DataClass
     Value<int?> kcalCorrette = const Value.absent(),
     bool? nascosto,
     bool? staccato,
+    bool? contaComeExtra,
   }) => AllenamentoDaOrologio(
     id: id ?? this.id,
     fonte: fonte ?? this.fonte,
@@ -3320,6 +3375,7 @@ class AllenamentoDaOrologio extends DataClass
     kcalCorrette: kcalCorrette.present ? kcalCorrette.value : this.kcalCorrette,
     nascosto: nascosto ?? this.nascosto,
     staccato: staccato ?? this.staccato,
+    contaComeExtra: contaComeExtra ?? this.contaComeExtra,
   );
   AllenamentoDaOrologio copyWithCompanion(AllenamentiDaOrologioCompanion data) {
     return AllenamentoDaOrologio(
@@ -3346,6 +3402,9 @@ class AllenamentoDaOrologio extends DataClass
           : this.kcalCorrette,
       nascosto: data.nascosto.present ? data.nascosto.value : this.nascosto,
       staccato: data.staccato.present ? data.staccato.value : this.staccato,
+      contaComeExtra: data.contaComeExtra.present
+          ? data.contaComeExtra.value
+          : this.contaComeExtra,
     );
   }
 
@@ -3364,7 +3423,8 @@ class AllenamentoDaOrologio extends DataClass
           ..write('tipoScelto: $tipoScelto, ')
           ..write('kcalCorrette: $kcalCorrette, ')
           ..write('nascosto: $nascosto, ')
-          ..write('staccato: $staccato')
+          ..write('staccato: $staccato, ')
+          ..write('contaComeExtra: $contaComeExtra')
           ..write(')'))
         .toString();
   }
@@ -3384,6 +3444,7 @@ class AllenamentoDaOrologio extends DataClass
     kcalCorrette,
     nascosto,
     staccato,
+    contaComeExtra,
   );
   @override
   bool operator ==(Object other) =>
@@ -3401,7 +3462,8 @@ class AllenamentoDaOrologio extends DataClass
           other.tipoScelto == this.tipoScelto &&
           other.kcalCorrette == this.kcalCorrette &&
           other.nascosto == this.nascosto &&
-          other.staccato == this.staccato);
+          other.staccato == this.staccato &&
+          other.contaComeExtra == this.contaComeExtra);
 }
 
 class AllenamentiDaOrologioCompanion
@@ -3419,6 +3481,7 @@ class AllenamentiDaOrologioCompanion
   final Value<int?> kcalCorrette;
   final Value<bool> nascosto;
   final Value<bool> staccato;
+  final Value<bool> contaComeExtra;
   const AllenamentiDaOrologioCompanion({
     this.id = const Value.absent(),
     this.fonte = const Value.absent(),
@@ -3433,6 +3496,7 @@ class AllenamentiDaOrologioCompanion
     this.kcalCorrette = const Value.absent(),
     this.nascosto = const Value.absent(),
     this.staccato = const Value.absent(),
+    this.contaComeExtra = const Value.absent(),
   });
   AllenamentiDaOrologioCompanion.insert({
     this.id = const Value.absent(),
@@ -3448,6 +3512,7 @@ class AllenamentiDaOrologioCompanion
     this.kcalCorrette = const Value.absent(),
     this.nascosto = const Value.absent(),
     this.staccato = const Value.absent(),
+    this.contaComeExtra = const Value.absent(),
   }) : fonte = Value(fonte),
        tipo = Value(tipo),
        iniziatoIl = Value(iniziatoIl),
@@ -3466,6 +3531,7 @@ class AllenamentiDaOrologioCompanion
     Expression<int>? kcalCorrette,
     Expression<bool>? nascosto,
     Expression<bool>? staccato,
+    Expression<bool>? contaComeExtra,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3481,6 +3547,7 @@ class AllenamentiDaOrologioCompanion
       if (kcalCorrette != null) 'kcal_corrette': kcalCorrette,
       if (nascosto != null) 'nascosto': nascosto,
       if (staccato != null) 'staccato': staccato,
+      if (contaComeExtra != null) 'conta_come_extra': contaComeExtra,
     });
   }
 
@@ -3498,6 +3565,7 @@ class AllenamentiDaOrologioCompanion
     Value<int?>? kcalCorrette,
     Value<bool>? nascosto,
     Value<bool>? staccato,
+    Value<bool>? contaComeExtra,
   }) {
     return AllenamentiDaOrologioCompanion(
       id: id ?? this.id,
@@ -3513,6 +3581,7 @@ class AllenamentiDaOrologioCompanion
       kcalCorrette: kcalCorrette ?? this.kcalCorrette,
       nascosto: nascosto ?? this.nascosto,
       staccato: staccato ?? this.staccato,
+      contaComeExtra: contaComeExtra ?? this.contaComeExtra,
     );
   }
 
@@ -3558,6 +3627,9 @@ class AllenamentiDaOrologioCompanion
     if (staccato.present) {
       map['staccato'] = Variable<bool>(staccato.value);
     }
+    if (contaComeExtra.present) {
+      map['conta_come_extra'] = Variable<bool>(contaComeExtra.value);
+    }
     return map;
   }
 
@@ -3576,7 +3648,8 @@ class AllenamentiDaOrologioCompanion
           ..write('tipoScelto: $tipoScelto, ')
           ..write('kcalCorrette: $kcalCorrette, ')
           ..write('nascosto: $nascosto, ')
-          ..write('staccato: $staccato')
+          ..write('staccato: $staccato, ')
+          ..write('contaComeExtra: $contaComeExtra')
           ..write(')'))
         .toString();
   }
@@ -3600,6 +3673,21 @@ class $SeduteAllenamentoTable extends SeduteAllenamento
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _contaComeExtraMeta = const VerificationMeta(
+    'contaComeExtra',
+  );
+  @override
+  late final GeneratedColumn<bool> contaComeExtra = GeneratedColumn<bool>(
+    'conta_come_extra',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("conta_come_extra" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _idServerMeta = const VerificationMeta(
     'idServer',
@@ -3693,6 +3781,7 @@ class $SeduteAllenamentoTable extends SeduteAllenamento
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    contaComeExtra,
     idServer,
     schedaServerId,
     nomeScheda,
@@ -3716,6 +3805,15 @@ class $SeduteAllenamentoTable extends SeduteAllenamento
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('conta_come_extra')) {
+      context.handle(
+        _contaComeExtraMeta,
+        contaComeExtra.isAcceptableOrUnknown(
+          data['conta_come_extra']!,
+          _contaComeExtraMeta,
+        ),
+      );
     }
     if (data.containsKey('id_server')) {
       context.handle(
@@ -3783,6 +3881,10 @@ class $SeduteAllenamentoTable extends SeduteAllenamento
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      contaComeExtra: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}conta_come_extra'],
+      )!,
       idServer: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id_server'],
@@ -3828,6 +3930,14 @@ class SedutaAllenamento extends DataClass
     implements Insertable<SedutaAllenamento> {
   final int id;
 
+  /// «Questa è stata fuori dal solito» — 3b-G.7.
+  ///
+  /// 🚨 Stessa cosa di `AllenamentiDaOrologio.contaComeExtra`, e c'è su tutte e
+  /// due perché nel modello a stima esistono tutte e due: marcarne solo una
+  /// famiglia vorrebbe dire che la mezza maratona conta se l'hai fatta con
+  /// l'orologio e non se l'hai registrata con l'app.
+  final bool contaComeExtra;
+
   /// L'`id` che questa seduta aveva sul server, se ci è mai stata.
   final int? idServer;
 
@@ -3862,6 +3972,7 @@ class SedutaAllenamento extends DataClass
   final String? note;
   const SedutaAllenamento({
     required this.id,
+    required this.contaComeExtra,
     this.idServer,
     this.schedaServerId,
     this.nomeScheda,
@@ -3875,6 +3986,7 @@ class SedutaAllenamento extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['conta_come_extra'] = Variable<bool>(contaComeExtra);
     if (!nullToAbsent || idServer != null) {
       map['id_server'] = Variable<int>(idServer);
     }
@@ -3901,6 +4013,7 @@ class SedutaAllenamento extends DataClass
   SeduteAllenamentoCompanion toCompanion(bool nullToAbsent) {
     return SeduteAllenamentoCompanion(
       id: Value(id),
+      contaComeExtra: Value(contaComeExtra),
       idServer: idServer == null && nullToAbsent
           ? const Value.absent()
           : Value(idServer),
@@ -3927,6 +4040,7 @@ class SedutaAllenamento extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SedutaAllenamento(
       id: serializer.fromJson<int>(json['id']),
+      contaComeExtra: serializer.fromJson<bool>(json['contaComeExtra']),
       idServer: serializer.fromJson<int?>(json['idServer']),
       schedaServerId: serializer.fromJson<int?>(json['schedaServerId']),
       nomeScheda: serializer.fromJson<String?>(json['nomeScheda']),
@@ -3942,6 +4056,7 @@ class SedutaAllenamento extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'contaComeExtra': serializer.toJson<bool>(contaComeExtra),
       'idServer': serializer.toJson<int?>(idServer),
       'schedaServerId': serializer.toJson<int?>(schedaServerId),
       'nomeScheda': serializer.toJson<String?>(nomeScheda),
@@ -3955,6 +4070,7 @@ class SedutaAllenamento extends DataClass
 
   SedutaAllenamento copyWith({
     int? id,
+    bool? contaComeExtra,
     Value<int?> idServer = const Value.absent(),
     Value<int?> schedaServerId = const Value.absent(),
     Value<String?> nomeScheda = const Value.absent(),
@@ -3965,6 +4081,7 @@ class SedutaAllenamento extends DataClass
     Value<String?> note = const Value.absent(),
   }) => SedutaAllenamento(
     id: id ?? this.id,
+    contaComeExtra: contaComeExtra ?? this.contaComeExtra,
     idServer: idServer.present ? idServer.value : this.idServer,
     schedaServerId: schedaServerId.present
         ? schedaServerId.value
@@ -3979,6 +4096,9 @@ class SedutaAllenamento extends DataClass
   SedutaAllenamento copyWithCompanion(SeduteAllenamentoCompanion data) {
     return SedutaAllenamento(
       id: data.id.present ? data.id.value : this.id,
+      contaComeExtra: data.contaComeExtra.present
+          ? data.contaComeExtra.value
+          : this.contaComeExtra,
       idServer: data.idServer.present ? data.idServer.value : this.idServer,
       schedaServerId: data.schedaServerId.present
           ? data.schedaServerId.value
@@ -4000,6 +4120,7 @@ class SedutaAllenamento extends DataClass
   String toString() {
     return (StringBuffer('SedutaAllenamento(')
           ..write('id: $id, ')
+          ..write('contaComeExtra: $contaComeExtra, ')
           ..write('idServer: $idServer, ')
           ..write('schedaServerId: $schedaServerId, ')
           ..write('nomeScheda: $nomeScheda, ')
@@ -4015,6 +4136,7 @@ class SedutaAllenamento extends DataClass
   @override
   int get hashCode => Object.hash(
     id,
+    contaComeExtra,
     idServer,
     schedaServerId,
     nomeScheda,
@@ -4029,6 +4151,7 @@ class SedutaAllenamento extends DataClass
       identical(this, other) ||
       (other is SedutaAllenamento &&
           other.id == this.id &&
+          other.contaComeExtra == this.contaComeExtra &&
           other.idServer == this.idServer &&
           other.schedaServerId == this.schedaServerId &&
           other.nomeScheda == this.nomeScheda &&
@@ -4041,6 +4164,7 @@ class SedutaAllenamento extends DataClass
 
 class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   final Value<int> id;
+  final Value<bool> contaComeExtra;
   final Value<int?> idServer;
   final Value<int?> schedaServerId;
   final Value<String?> nomeScheda;
@@ -4051,6 +4175,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   final Value<String?> note;
   const SeduteAllenamentoCompanion({
     this.id = const Value.absent(),
+    this.contaComeExtra = const Value.absent(),
     this.idServer = const Value.absent(),
     this.schedaServerId = const Value.absent(),
     this.nomeScheda = const Value.absent(),
@@ -4062,6 +4187,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   });
   SeduteAllenamentoCompanion.insert({
     this.id = const Value.absent(),
+    this.contaComeExtra = const Value.absent(),
     this.idServer = const Value.absent(),
     this.schedaServerId = const Value.absent(),
     this.nomeScheda = const Value.absent(),
@@ -4073,6 +4199,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   }) : iniziataIl = Value(iniziataIl);
   static Insertable<SedutaAllenamento> custom({
     Expression<int>? id,
+    Expression<bool>? contaComeExtra,
     Expression<int>? idServer,
     Expression<int>? schedaServerId,
     Expression<String>? nomeScheda,
@@ -4084,6 +4211,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (contaComeExtra != null) 'conta_come_extra': contaComeExtra,
       if (idServer != null) 'id_server': idServer,
       if (schedaServerId != null) 'scheda_server_id': schedaServerId,
       if (nomeScheda != null) 'nome_scheda': nomeScheda,
@@ -4097,6 +4225,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
 
   SeduteAllenamentoCompanion copyWith({
     Value<int>? id,
+    Value<bool>? contaComeExtra,
     Value<int?>? idServer,
     Value<int?>? schedaServerId,
     Value<String?>? nomeScheda,
@@ -4108,6 +4237,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   }) {
     return SeduteAllenamentoCompanion(
       id: id ?? this.id,
+      contaComeExtra: contaComeExtra ?? this.contaComeExtra,
       idServer: idServer ?? this.idServer,
       schedaServerId: schedaServerId ?? this.schedaServerId,
       nomeScheda: nomeScheda ?? this.nomeScheda,
@@ -4124,6 +4254,9 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (contaComeExtra.present) {
+      map['conta_come_extra'] = Variable<bool>(contaComeExtra.value);
     }
     if (idServer.present) {
       map['id_server'] = Variable<int>(idServer.value);
@@ -4156,6 +4289,7 @@ class SeduteAllenamentoCompanion extends UpdateCompanion<SedutaAllenamento> {
   String toString() {
     return (StringBuffer('SeduteAllenamentoCompanion(')
           ..write('id: $id, ')
+          ..write('contaComeExtra: $contaComeExtra, ')
           ..write('idServer: $idServer, ')
           ..write('schedaServerId: $schedaServerId, ')
           ..write('nomeScheda: $nomeScheda, ')
@@ -7266,6 +7400,7 @@ typedef $$AllenamentiDaOrologioTableCreateCompanionBuilder =
       Value<int?> kcalCorrette,
       Value<bool> nascosto,
       Value<bool> staccato,
+      Value<bool> contaComeExtra,
     });
 typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
     AllenamentiDaOrologioCompanion Function({
@@ -7282,6 +7417,7 @@ typedef $$AllenamentiDaOrologioTableUpdateCompanionBuilder =
       Value<int?> kcalCorrette,
       Value<bool> nascosto,
       Value<bool> staccato,
+      Value<bool> contaComeExtra,
     });
 
 class $$AllenamentiDaOrologioTableFilterComposer
@@ -7355,6 +7491,11 @@ class $$AllenamentiDaOrologioTableFilterComposer
 
   ColumnFilters<bool> get staccato => $composableBuilder(
     column: $table.staccato,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7432,6 +7573,11 @@ class $$AllenamentiDaOrologioTableOrderingComposer
     column: $table.staccato,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AllenamentiDaOrologioTableAnnotationComposer
@@ -7491,6 +7637,11 @@ class $$AllenamentiDaOrologioTableAnnotationComposer
 
   GeneratedColumn<bool> get staccato =>
       $composableBuilder(column: $table.staccato, builder: (column) => column);
+
+  GeneratedColumn<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
+    builder: (column) => column,
+  );
 }
 
 class $$AllenamentiDaOrologioTableTableManager
@@ -7552,6 +7703,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> kcalCorrette = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
                 Value<bool> staccato = const Value.absent(),
+                Value<bool> contaComeExtra = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion(
                 id: id,
                 fonte: fonte,
@@ -7566,6 +7718,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 kcalCorrette: kcalCorrette,
                 nascosto: nascosto,
                 staccato: staccato,
+                contaComeExtra: contaComeExtra,
               ),
           createCompanionCallback:
               ({
@@ -7582,6 +7735,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 Value<int?> kcalCorrette = const Value.absent(),
                 Value<bool> nascosto = const Value.absent(),
                 Value<bool> staccato = const Value.absent(),
+                Value<bool> contaComeExtra = const Value.absent(),
               }) => AllenamentiDaOrologioCompanion.insert(
                 id: id,
                 fonte: fonte,
@@ -7596,6 +7750,7 @@ class $$AllenamentiDaOrologioTableTableManager
                 kcalCorrette: kcalCorrette,
                 nascosto: nascosto,
                 staccato: staccato,
+                contaComeExtra: contaComeExtra,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7629,6 +7784,7 @@ typedef $$AllenamentiDaOrologioTableProcessedTableManager =
 typedef $$SeduteAllenamentoTableCreateCompanionBuilder =
     SeduteAllenamentoCompanion Function({
       Value<int> id,
+      Value<bool> contaComeExtra,
       Value<int?> idServer,
       Value<int?> schedaServerId,
       Value<String?> nomeScheda,
@@ -7641,6 +7797,7 @@ typedef $$SeduteAllenamentoTableCreateCompanionBuilder =
 typedef $$SeduteAllenamentoTableUpdateCompanionBuilder =
     SeduteAllenamentoCompanion Function({
       Value<int> id,
+      Value<bool> contaComeExtra,
       Value<int?> idServer,
       Value<int?> schedaServerId,
       Value<String?> nomeScheda,
@@ -7697,6 +7854,11 @@ class $$SeduteAllenamentoTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7780,6 +7942,11 @@ class $$SeduteAllenamentoTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get idServer => $composableBuilder(
     column: $table.idServer,
     builder: (column) => ColumnOrderings(column),
@@ -7832,6 +7999,11 @@ class $$SeduteAllenamentoTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<bool> get contaComeExtra => $composableBuilder(
+    column: $table.contaComeExtra,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get idServer =>
       $composableBuilder(column: $table.idServer, builder: (column) => column);
@@ -7923,6 +8095,7 @@ class $$SeduteAllenamentoTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<bool> contaComeExtra = const Value.absent(),
                 Value<int?> idServer = const Value.absent(),
                 Value<int?> schedaServerId = const Value.absent(),
                 Value<String?> nomeScheda = const Value.absent(),
@@ -7933,6 +8106,7 @@ class $$SeduteAllenamentoTableTableManager
                 Value<String?> note = const Value.absent(),
               }) => SeduteAllenamentoCompanion(
                 id: id,
+                contaComeExtra: contaComeExtra,
                 idServer: idServer,
                 schedaServerId: schedaServerId,
                 nomeScheda: nomeScheda,
@@ -7945,6 +8119,7 @@ class $$SeduteAllenamentoTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<bool> contaComeExtra = const Value.absent(),
                 Value<int?> idServer = const Value.absent(),
                 Value<int?> schedaServerId = const Value.absent(),
                 Value<String?> nomeScheda = const Value.absent(),
@@ -7955,6 +8130,7 @@ class $$SeduteAllenamentoTableTableManager
                 Value<String?> note = const Value.absent(),
               }) => SeduteAllenamentoCompanion.insert(
                 id: id,
+                contaComeExtra: contaComeExtra,
                 idServer: idServer,
                 schedaServerId: schedaServerId,
                 nomeScheda: nomeScheda,

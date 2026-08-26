@@ -18,7 +18,15 @@ class WorkoutSession {
     this.kcal,
     this.kcalSource,
     this.notes,
+    this.contaComeExtra = false,
   });
+
+  /// «Questa è stata fuori dal solito» — 3b-G.7.
+  ///
+  /// ⚠️ Con un valore di serie a `false` perché [WorkoutSession.fromJson] legge
+  /// il **server**, che questo campo non ce l'ha e non deve averlo: è una scelta
+  /// che vive sul telefono, come il livello di attività.
+  final bool contaComeExtra;
 
   factory WorkoutSession.fromJson(Map<String, dynamic> j) {
     final piano = (j['plan'] as Map?)?.cast<String, dynamic>();
@@ -85,6 +93,7 @@ class WorkoutSession {
       endedAt: fine,
       durationMinutes: durata.inMinutes,
       isOpen: fine == null,
+      contaComeExtra: seduta.contaComeExtra,
 
       /*
        * ⛔ Su una seduta **ancora aperta** non si mostra nessun numero: la

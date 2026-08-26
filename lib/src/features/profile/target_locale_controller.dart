@@ -6,6 +6,7 @@ import 'data/calcolatore_calorie.dart';
 import 'data/target_scelto.dart';
 import 'livello_attivita.dart';
 import 'profile_controller.dart';
+import 'tdee_misurato_controller.dart';
 
 /// Il fabbisogno calorico, **calcolato sul telefono** — S5.1 / correzione S7.
 ///
@@ -180,6 +181,16 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
    */
   final livelloScelto = ref.watch(livelloAttivitaSceltoProvider);
 
+  /*
+   * 📏 **La misura, se la persona ha deciso di usarla** — 3b-G.8.
+   *
+   * 🚨 Quando c'è, il livello di attività non serve più a niente: il dispendio
+   * non si stima da una tabella, si è misurato. ⚠️ Ed è per questo che qui
+   * sotto `PezzoMancante.attivita` non scatta se questo numero c'è — chi ha la
+   * misura non deve dichiarare un mestiere per avere un obiettivo.
+   */
+  final tdeeMisurato = ref.watch(tdeeAccettatoProvider);
+
   // ⚠️ Letta apposta, o l'analizzatore la segnerebbe come inutilizzata e
   // qualcuno la toglierebbe insieme alla dipendenza.
   assert(revisione >= 0, 'la revisione del corpo non è mai negativa');
@@ -214,7 +225,7 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
     if (cm == null) PezzoMancante.altezza,
     if (nascita == null) PezzoMancante.dataDiNascita,
     if (sesso == null) PezzoMancante.sesso,
-    if (fattore == null) PezzoMancante.attivita,
+    if (fattore == null && tdeeMisurato == null) PezzoMancante.attivita,
   };
 
   if (mancano.isNotEmpty) return EsitoTarget.incompleto(mancano);
@@ -251,7 +262,12 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
    * 💡 Qui non può tornare `null`: `fattore` è già stato controllato sopra, e
    * senza di lui non si arriva a questa riga.
    */
-  final tdee = calcolatore.tdeeSeNoto(bmr, livello)!;
+  /*
+   * 💡 La misura batte la stima, quando c'è: è lo stesso ordine di precedenza
+   * di `TargetScelto` sopra il calcolo, e per la stessa ragione — un dato che
+   * riguarda **questa** persona vale più di una formula che riguarda tutti.
+   */
+  final tdee = tdeeMisurato ?? calcolatore.tdeeSeNoto(bmr, livello)!;
   final kcal = calcolatore.targetCalorico(tdee, profilo.obiettivoPerFormula);
 
   final macroStimato = calcolatore.macro(kcal, profilo.obiettivoPerFormula);

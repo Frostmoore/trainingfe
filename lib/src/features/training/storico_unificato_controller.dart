@@ -230,6 +230,33 @@ Future<void> correggiKcalAllenamento(
 /// 💡 Il committente l'ha messa proprio come uno scambio: *«se i timeframes si
 /// sovrappongono allora è lo stesso allenamento. Poi ci mettiamo la possibilità
 /// di splittarli e via»*. Le due cose stanno o cadono insieme.
+/// Marca (o smarca) un allenamento come **«fuori dal solito»** — 3b-G.7.
+///
+/// 🚨 **Scrive su tutte e due le provenienze**, come `correggiKcalAllenamento`:
+/// una voce di storico può tenere insieme una seduta dell'app e una o più righe
+/// dell'orologio, e marcarne solo una vorrebbe dire che il conto cambia a
+/// seconda di quale delle due l'app guarda per prima.
+Future<void> segnaExtraAllenamento(
+  WidgetRef ref,
+  VoceStorico voce, {
+  required bool extra,
+}) async {
+  final archivio = ref.read(archivioSaluteProvider);
+
+  final seduta = voce.seduta;
+
+  if (seduta != null) {
+    await archivio.segnaExtraDallApp(seduta.id, extra: extra);
+  }
+
+  for (final a in voce.dalPolso) {
+    await archivio.segnaExtraDalPolso(a.id, extra: extra);
+  }
+
+  ref.read(revisioneAllenamentiProvider.notifier).state++;
+  ref.invalidate(sessionsProvider);
+}
+
 Future<void> staccaAllenamento(
   WidgetRef ref, {
   required int allenamentoId,

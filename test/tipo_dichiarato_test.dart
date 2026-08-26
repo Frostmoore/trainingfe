@@ -30,6 +30,7 @@ void main() {
             finitoIl: DateTime(2026, 8, 25, 18),
             nascosto: false,
             staccato: false,
+            contaComeExtra: false,
             tipoScelto: dichiarato,
           ),
         ],

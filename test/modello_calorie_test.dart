@@ -229,6 +229,7 @@ void main() {
         locale: base.toDouble(),
         bruciate: 700,
         sommaLeBruciate: true,
+        bruciateExtra: 0,
       );
 
       expect(base, closeTo(2030, 1));

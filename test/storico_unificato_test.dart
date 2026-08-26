@@ -64,6 +64,7 @@ void main() {
     kcal: kcal,
     nascosto: nascosto,
     staccato: staccato,
+    contaComeExtra: false,
     schedaAssegnata: schedaAssegnata,
   );
 

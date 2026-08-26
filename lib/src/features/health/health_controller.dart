@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../../core/storage/archivio_salute.dart';
 import '../privacy/consensi_controller.dart';
+import '../profile/data/modello_calorie.dart';
+import '../profile/livello_attivita.dart';
+import '../profile/target_locale_controller.dart';
+import 'bruciate_dalle_sedute.dart';
 import 'dati_salute.dart';
 import 'ponte_salute.dart';
 
@@ -52,9 +56,59 @@ final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
 /// 💡 `family` sul giorno perché la scheda cibo si può sfogliare indietro, e
 /// il numero è quello **di quel giorno** — non quello di oggi mostrato accanto a
 /// una data di tre giorni fa.
+/// Le bruciate dell'orologio di un giorno — **dalle sedute**, 3b-G.3.
+///
+/// ⚠️ **Il nome è rimasto** perché lo leggono cinque schermate e cambiarlo
+/// avrebbe voluto dire toccarle tutte per una cosa che non cambia il loro
+/// significato: restano «le calorie che l'orologio dice che hai bruciato
+/// allenandoti». ⛔ Cambia da dove le prende — vedi `bruciate_dalle_sedute.dart`
+/// per il perché, che è lungo e vale la pena.
 final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
     .family<int, DateTime>((ref, giorno) async {
-      return ref.watch(archivioSaluteProvider).kcalAttiveDi(giorno);
+      ref.watch(revisioneAllenamentiProvider);
+
+      /*
+       * ⚠️ **`valueOrNull` e non `await`, ed è deliberato** — 3b-G.4.
+       *
+       * 🚨 Il basale serve solo alla correzione netto/lordo, che oggi non
+       * scatta per nessuna sorgente conosciuta. ⛔ Aspettarlo vorrebbe dire far
+       * dipendere le calorie bruciate — che stanno nell'archivio locale — da
+       * una chiamata al server per il profilo: la card di «Oggi» si
+       * fermerebbe a metà per una correzione che quasi sempre vale zero.
+       *
+       * 💡 Se il basale non c'è ancora non si corregge (che è comunque il
+       * ripiego giusto), e quando arriva questo provider si rifà da solo.
+       */
+      final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
+
+      final sedute = await ref
+          .watch(archivioSaluteProvider)
+          .seduteDellOrologioDi(giorno);
+
+      return kcalDelleSedute(sedute, bmr: bmr);
+    });
+
+/// Le bruciate che si sommano **anche nel modello a stima** — 3b-G.7.
+///
+/// ══ 🚨 PERCHE' NON E' SEMPRE IL TOTALE DELLE SEDUTE MARCATE ═══════════════
+///
+/// | Modello | Cosa torna | Perché |
+/// |---|---|---|
+/// | `stima` | le sedute marcate | gli allenamenti normali sono già nel fattore, questi no |
+/// | `misurata` | **zero** | lì entrano già tutte: sommarle di nuovo le conterebbe due volte |
+/// | non ha scelto | **zero** | niente cambia da solo prima che risponda |
+///
+/// ⛔ **Lo zero del secondo caso è la cosa importante.** Una seduta marcata
+/// «fuori dal solito» resta marcata anche cambiando modello — è un dato della
+/// seduta, non dell'impostazione — e senza questo zero riapparirebbe come
+/// margine doppio il giorno che qualcuno passa a «misurata».
+final bruciateExtraDelGiornoProvider = FutureProvider.autoDispose
+    .family<int, DateTime>((ref, giorno) async {
+      ref.watch(revisioneAllenamentiProvider);
+
+      if (ref.watch(modelloCalorieProvider) != ModelloCalorie.stima) return 0;
+
+      return ref.watch(archivioSaluteProvider).kcalExtraDi(giorno);
     });
 
 /// L'andamento di una metrica negli ultimi giorni — 3b-O.5.3.
@@ -112,12 +166,20 @@ final kcalAttivePerGiorniProvider = FutureProvider.autoDispose
       final archivio = ref.watch(archivioSaluteProvider);
       final esito = <String, int>{};
 
+      // 3b-G.3: dalle sedute, non dal flusso. Vedi `kcalAttiveDelGiornoProvider`.
+      ref.watch(revisioneAllenamentiProvider);
+
+      final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
+
       for (final etichetta in giorniUnitiDaVirgole.split(',')) {
         final giorno = DateTime.tryParse(etichetta);
 
         if (giorno == null) continue;
 
-        esito[etichetta] = await archivio.kcalAttiveDi(giorno);
+        esito[etichetta] = kcalDelleSedute(
+          await archivio.seduteDellOrologioDi(giorno),
+          bmr: bmr,
+        );
       }
 
       return esito;

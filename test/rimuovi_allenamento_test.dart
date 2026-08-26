@@ -24,6 +24,7 @@ void main() {
         kcal: kcalDalPolso,
         nascosto: false,
         staccato: false,
+        contaComeExtra: false,
       ),
     ],
   );
@@ -106,6 +107,7 @@ void main() {
           finitoIl: DateTime(2026, 8, 25, 18),
           nascosto: false,
           staccato: false,
+          contaComeExtra: false,
         ),
       ]);
 

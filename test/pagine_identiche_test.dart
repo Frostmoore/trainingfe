@@ -28,6 +28,7 @@ void main() {
         kcalCorrette: kcalCorrette,
         nascosto: false,
         staccato: false,
+        contaComeExtra: false,
       );
 
   WorkoutSession seduta({int? kcal, String? fonte}) => WorkoutSession(

@@ -148,6 +148,23 @@ void main() {
           'sommaLeBruciate: ref.watch(sommaLeBruciateProvider)',
         )) {
           colpevoli.add(percorso);
+          continue;
+        }
+
+        /*
+         * 🏃 **E anche gli extra** — 3b-G.7, 26/08/2026.
+         *
+         * ⛔ `bruciateExtra` e' obbligatorio, quindi chi se ne dimentica non
+         * compila. ⚠️ Ma puo' passare `0` fisso, e **quello compila**: sarebbe
+         * la mezza maratona che non alza l'obiettivo in una sola delle
+         * schermate che lo mostrano, cioe' lo stesso difetto di sopra.
+         *
+         * 💡 Qui si cerca il nome del provider e non la riga intera, perche' il
+         * formattatore la spezza su piu' righe dove il giorno non e' una
+         * variabile corta.
+         */
+        if (!s.contains('bruciateExtraDelGiornoProvider')) {
+          colpevoli.add(percorso);
         }
       }
 

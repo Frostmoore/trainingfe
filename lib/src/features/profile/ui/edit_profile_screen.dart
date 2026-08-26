@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/avvertenza_nutrizionale.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../data/profile_models.dart';
 import '../data/target_scelto.dart';
+import '../livello_attivita.dart';
 import '../profile_controller.dart';
 import '../somma_bruciate.dart';
 import '../target_locale_controller.dart';
@@ -57,7 +60,7 @@ class _Modulo extends ConsumerStatefulWidget {
 class _ModuloState extends ConsumerState<_Modulo> {
   late String? _sesso = widget.profilo.sex;
   late DateTime? _nascita = widget.profilo.birthdate;
-  late String? _attivita = widget.profilo.activityLevel;
+  late final String? _attivita = widget.profilo.activityLevel;
   late String? _obiettivo = widget.profilo.goal;
   late final _altezza = TextEditingController(
     text: widget.profilo.heightCm?.toString() ?? '',
@@ -90,6 +93,16 @@ class _ModuloState extends ConsumerState<_Modulo> {
             sex: _sesso,
             birthdate: _nascita,
             heightCm: int.tryParse(_altezza.text.trim()),
+            /*
+             * ⚠️ **Rimandato indietro com'era, e non più modificabile qui.**
+             * Da 3b-G il livello vive sul telefono (`livelloAttivitaScelto`),
+             * come il peso: 📌 *«tanto i calcoli li facciamo lì»*.
+             *
+             * 🚨 Si continua a spedirlo per **non cancellare** quello che c'è
+             * già sul server: è ormai un dato inerte — nessuno lo legge più per
+             * calcolare — ma buttarlo via non è compito di un salvataggio del
+             * profilo. Sparirà con la migration che toglie la colonna.
+             */
             activityLevel: _attivita,
             goal: _obiettivo,
             targetWeightKg: double.tryParse(
@@ -180,15 +193,18 @@ class _ModuloState extends ConsumerState<_Modulo> {
         ),
         const SizedBox(height: Gap.md),
 
-        // Le tendine arrivano dal server: aggiungere un livello non richiede
-        // una nuova versione dell'app sugli store.
-        TendinaProfilo(
-          etichetta: 'Quanto ti muovi',
-          icona: Icons.directions_run_rounded,
-          voci: p.activityLevels,
-          scelta: _attivita,
-          onCambio: (v) => setState(() => _attivita = v),
-        ),
+        /*
+         * ══ ⚖️ NON E' PIU' UNA TENDINA — 3b-G.1, 26/08/2026 ═══════════════
+         *
+         * 📌 *«Livello di attività deve diventare un bottone che rimanda a una
+         * pagina con le descrizioni di entrambi i modelli di misura»*.
+         *
+         * ⛔ La tendina offriva nove voci senza modo di capire che le prime
+         * cinque e le ultime quattro rispondono a **due domande diverse** — e
+         * sceglierne una dell'elenco sbagliato voleva dire contare gli
+         * allenamenti due volte, o non contarli affatto.
+         */
+        const _BottoneModello(),
         const SizedBox(height: Gap.md),
 
         TendinaProfilo(
@@ -740,6 +756,52 @@ class _RegistraPeso extends ConsumerWidget {
   }
 }
 
+/// Il bottone che porta ai due modelli di calcolo — 3b-G.1, 26/08/2026.
+///
+/// ══ 🚨 MOSTRA LA SCELTA, NON SOLO LA STRADA ═══════════════════════════════
+///
+/// ⛔ Un bottone che dicesse solo «Livello di attività ›» costringerebbe ad
+/// aprirlo per sapere cosa c'è dentro. 💡 Qui si legge il gradino in uso **e**
+/// il modello a cui appartiene, che è l'informazione che cambia il significato
+/// di tutti i numeri di «Oggi».
+///
+/// ⚠️ **E dice quando la domanda non è ancora stata fatta.** Chi ha un livello
+/// ereditato dal server (`moderate`, …) ce l'ha, ma non ha mai scelto con quale
+/// modello vuole che l'app conti: il richiamo resta finché non risponde, e
+/// intanto **niente cambia da solo**.
+class _BottoneModello extends ConsumerWidget {
+  const _BottoneModello();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final livello = ref.watch(livelloAttivitaProvider);
+    final modello = ref.watch(modelloCalorieProvider);
+    final daScegliere = ref.watch(deveScegliereIlModelloProvider);
+
+    final gradino = modello?.livello(livello);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: daScegliere ? tema.colorScheme.secondaryContainer : null,
+      child: ListTile(
+        leading: const Icon(Icons.directions_run_rounded),
+        title: const Text('Quanto ti muovi'),
+        subtitle: Text(switch ((daScegliere, gradino)) {
+          (true, final g?) =>
+            '${g.etichetta} — ma non hai ancora scelto come contare '
+                'gli allenamenti. Tocca per decidere.',
+          (true, null) => 'Da scegliere: senza, non c\'è un obiettivo.',
+          (false, final g?) => '${g.etichetta} · ${modello!.titolo}',
+          (false, null) => 'Da scegliere: senza, non c\'è un obiettivo.',
+        }, style: tema.textTheme.bodySmall),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => context.push(AppRoutes.modelloCalorie),
+      ),
+    );
+  }
+}
+
 /// Se le calorie bruciate si sommano all'obiettivo — 3b-P.2.3.
 ///
 /// 🚨 **La spiegazione non e' facoltativa.** Un interruttore che dice solo
@@ -756,20 +818,23 @@ class _SommaLeBruciate extends ConsumerWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: SwitchListTile(
-        secondary: const Icon(Icons.local_fire_department_outlined),
-        title: const Text('Somma le calorie bruciate'),
+      child: ListTile(
+        leading: const Icon(Icons.local_fire_department_outlined),
+        title: Text(
+          somma
+              ? 'Gli allenamenti si sommano all\'obiettivo'
+              : 'Gli allenamenti non alzano l\'obiettivo',
+        ),
         subtitle: Text(
           somma
               ? 'Ti muovi di piu\', puoi mangiare di piu\': l\'obiettivo '
                     'cresce con le calorie che bruci.'
-              : 'L\'obiettivo resta fisso: quello che bruci e\' margine in '
-                    'piu\', non permesso di mangiare.',
+              : 'Sono gia\' compresi nel fattore del tuo livello di '
+                    'attivita\': sommarli li conterebbe due volte.',
           style: theme.textTheme.bodySmall,
         ),
-        value: somma,
-        onChanged: (v) =>
-            ref.read(sommaLeBruciateProvider.notifier).imposta(somma: v),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => context.push(AppRoutes.modelloCalorie),
       ),
     );
   }

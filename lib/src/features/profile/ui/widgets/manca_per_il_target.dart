@@ -77,7 +77,25 @@ class MancaPerIlTarget extends ConsumerWidget {
                       label: const Text('Registra il peso'),
                     ),
 
-            if (esito.mancano.any((p) => p.staNelProfilo))
+            /*
+             * ⚖️ **Il livello di attività ha la SUA pagina** — 3b-G.1.
+             *
+             * 🚨 Mandarlo genericamente «al profilo» sarebbe ripetere esattamente
+             * il difetto per cui questo widget è nato: la persona arriva su una
+             * schermata piena di campi già compilati e deve indovinare quale sia
+             * quello che manca. ⚠️ Qui la cosa da fare è una sola, e si porta
+             * dritti lì.
+             */
+            if (esito.mancano.contains(PezzoMancante.attivita))
+              FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.modelloCalorie),
+                icon: const Icon(Icons.directions_run_rounded, size: 18),
+                label: const Text('Come contare le calorie'),
+              ),
+
+            if (esito.mancano.any(
+              (p) => p.staNelProfilo && p != PezzoMancante.attivita,
+            ))
               TextButton(
                 onPressed: () => context.push(AppRoutes.profileEdit),
                 child: const Text('Compila i tuoi dati'),

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import 'data/modello_calorie.dart';
+import 'livello_attivita.dart';
 
 /// Se le calorie bruciate si sommano all'obiettivo — 3b-P.2.1, 22/08/2026.
 ///
@@ -44,13 +46,38 @@ class SommaLeBruciate extends Notifier<bool> {
   /// nessun errore da nessuna parte.
   static const acceso = true;
 
+  /// ══ 🚨 DAL 26/08 NON E' PIU' UNA PREFERENZA LIBERA — 3b-G.1 ═════════════
+  ///
+  /// 📌 Il committente, alla domanda se l'interruttore dovesse diventare una
+  /// conseguenza del modello: *«Ovviamente sì, è una conseguenza»*.
+  ///
+  /// ⛔ **Il difetto che questo chiude.** Prima si poteva stare sul livello
+  /// «moderato» — che *dichiara* 3-4 allenamenti a settimana — **e** avere la
+  /// somma accesa: gli allenamenti finivano nell'obiettivo due volte, una dentro
+  /// il fattore e una dall'orologio. 🚨 Non era un errore di calcolo: erano
+  /// **due scelte che devono muoversi insieme, lasciate indipendenti**.
+  ///
+  /// | Modello scelto | Si somma? |
+  /// |---|---|
+  /// | `misurata` — «registro ogni allenamento» | ✅ sempre: è il modello |
+  /// | `stima` — «stimalo tu» | ⛔ mai: sono già dentro il fattore |
+  /// | **nessuno**, non ha ancora risposto | la preferenza di prima |
+  ///
+  /// ⚠️ **L'ultima riga è deliberata.** Finché la persona non ha risposto alla
+  /// domanda nuova, l'obiettivo non deve muoversi di un chilocaloria: un numero
+  /// che cambia da solo prima che tu abbia scelto è peggio di un numero vecchio.
+  ///
+  /// 💡 Guarda la scelta **locale** e non il livello in uso, di proposito: chi
+  /// ha ereditato `moderate` dal server ha un livello, ma non ha ancora deciso
+  /// con quale modello vuole che l'app conti.
   @override
-  bool build() => ref.watch(localCacheProvider).getBool(chiave) ?? acceso;
+  bool build() {
+    final preferenza = ref.watch(localCacheProvider).getBool(chiave) ?? acceso;
+    final modello = modelloDelLivello(ref.watch(livelloAttivitaSceltoProvider));
 
-  Future<void> imposta({required bool somma}) async {
-    state = somma;
+    if (modello == null) return preferenza;
 
-    await ref.read(localCacheProvider).setBool(chiave, value: somma);
+    return modello.sommaGliAllenamenti;
   }
 }
 

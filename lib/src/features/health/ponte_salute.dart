@@ -206,6 +206,53 @@ class PonteSalute {
   /// lunga è l'archivio locale**, che accumula. La media di riferimento a sette
   /// giorni esiste solo dopo sette giorni di app installata — non è un difetto,
   /// ma va detto a chi la usa o sembrerà che la funzione non parta.
+  /// I passi **al giorno** degli ultimi [giorni] — 3b-G.1.4, 26/08/2026.
+  ///
+  /// ══ 💡 A COSA SERVE ═══════════════════════════════════════════════════
+  ///
+  /// «Quanto ti muovi?» è la domanda peggiore della registrazione: nessuno sa
+  /// rispondere, e chi prova indovina. 🚨 Ma il numero che risponde davvero
+  /// **ce l'abbiamo già**, e allora non si chiede: si misura e si fa
+  /// confermare.
+  ///
+  /// ══ ⛔ PERCHE' L'AGGREGATO E NON LA SOMMA DEI RECORD ══════════════════
+  ///
+  /// 🚨 **Le sorgenti possono essere due**, e scrivere gli stessi passi. Sul
+  /// telefono del committente, ad agosto 2026, scrivono sia il POCO X7 Pro sia
+  /// lo Zepp: sommare i record grezzi **raddoppierebbe**, e il gradino
+  /// suggerito salirebbe di due scalini senza che niente lo dica.
+  ///
+  /// 💡 `getTotalStepsInInterval` passa dall'aggregazione di Health Connect,
+  /// che i doppioni li toglie per priorità di sorgente. È l'unico modo di
+  /// avere un numero che voglia dire quello che sembra.
+  ///
+  /// ⚠️ `null` quando non c'è niente da leggere — nessun permesso, nessun
+  /// dato, o un telefono senza Health Connect. ⛔ **Non zero**: zero passi
+  /// sarebbe un'affermazione, e su un suggerimento di dieta un'affermazione
+  /// inventata è la cosa che non deve succedere.
+  Future<int?> passiAlGiorno({int giorni = 30}) async {
+    if (giorni <= 0) return null;
+
+    try {
+      await _salute.configure();
+
+      final a = DateTime.now();
+      final da = a.subtract(Duration(days: giorni));
+      final totale = await _salute.getTotalStepsInInterval(da, a);
+
+      if (totale == null || totale <= 0) return null;
+
+      return (totale / giorni).round();
+    } on Object catch (errore) {
+      // ⚠️ Detto e non ingoiato: un `catch` muto qui vorrebbe dire un
+      // suggerimento che non compare mai, senza niente da cui partire. È la
+      // lezione del suono del recupero (3b-E.8).
+      debugPrint('passi: non leggibili — $errore');
+
+      return null;
+    }
+  }
+
   Future<int> sincronizza({int giorniIndietro = 7}) async {
     final a = DateTime.now();
     final da = a.subtract(Duration(days: giorniIndietro));

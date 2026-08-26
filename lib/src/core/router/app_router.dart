@@ -27,6 +27,7 @@ import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
 import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
+import '../../features/profile/ui/schermata_modello_calorie.dart';
 import '../../features/profile/ui/schermata_palestra.dart';
 import '../../features/profile/ui/schermata_tu.dart';
 import '../../features/progress/ui/progress_screen.dart';
@@ -141,6 +142,9 @@ class AppRoutes {
   static const palestra = '/profilo/palestra';
 
   static const profileEdit = '/profilo/dati';
+
+  /// ⚖️ Come si contano le calorie: il modello, e poi il livello — 3b-G.1.
+  static const modelloCalorie = '/profilo/calorie';
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
 
@@ -475,6 +479,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profileEdit,
         builder: (_, _) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.modelloCalorie,
+        builder: (_, _) => const SchermataModelloCalorie(),
       ),
       GoRoute(
         path: AppRoutes.deleteAccount,

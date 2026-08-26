@@ -4,6 +4,7 @@ import '../health/health_controller.dart';
 import 'corpo_controller.dart';
 import 'data/calcolatore_calorie.dart';
 import 'data/target_scelto.dart';
+import 'livello_attivita.dart';
 import 'profile_controller.dart';
 
 /// Il fabbisogno calorico, **calcolato sul telefono** — S5.1 / correzione S7.
@@ -72,7 +73,17 @@ enum PezzoMancante {
   peso('il tuo peso'),
   altezza('la tua altezza'),
   dataDiNascita('la tua data di nascita'),
-  sesso('il sesso');
+  sesso('il sesso'),
+
+  /// 🚨 **Nuovo con la 3b-G, e prima non poteva mancare niente.**
+  ///
+  /// ⛔ Un livello sconosciuto — o mai scelto — cadeva su `sedentary`, cioè
+  /// **1,2**. Chi era su «estremamente attivo» (1,9) si vedeva un fabbisogno
+  /// più basso di **1.300 kcal** senza nessun errore da nessuna parte, e chi
+  /// non aveva mai risposto ne prendeva uno inventato di sana pianta.
+  ///
+  /// 💡 Adesso è un pezzo che manca come gli altri quattro, e si dice.
+  attivita('come vuoi che l\'app conti le calorie');
 
   const PezzoMancante(this.etichetta);
 
@@ -160,6 +171,15 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
   final archivio = ref.watch(archivioSaluteProvider);
   final profiloFuturo = ref.watch(profileProvider.future);
 
+  /*
+   * 🚨 **Letto qui, prima dell'`await`, come tutti gli altri.** Vale la stessa
+   * regola scritta sopra: dopo una pausa asincrona `ref.watch` non si iscrive
+   * più, e questo provider non si accorgerebbe di una scelta appena fatta —
+   * cioè la persona sceglie il modello e l'obiettivo non cambia finché non
+   * esce e rientra dalla schermata.
+   */
+  final livelloScelto = ref.watch(livelloAttivitaSceltoProvider);
+
   // ⚠️ Letta apposta, o l'analizzatore la segnerebbe come inutilizzata e
   // qualcuno la toglierebbe insieme alla dipendenza.
   assert(revisione >= 0, 'la revisione del corpo non è mai negativa');
@@ -172,11 +192,29 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
   final nascita = profilo.birthdate;
   final sesso = profilo.sex;
 
+  /*
+   * ══ ⚠️ IL LIVELLO IN USO, E L'EREDITA' — 3b-G.2 ═══════════════════════════
+   *
+   * La scelta locale vince; se non c'è, vale ancora quello che stava sul
+   * server. ⛔ **Non si converte in automatico**: chi aveva scelto «moderato
+   * (3-4 allenamenti)» ha dichiarato lo sport, e del suo lavoro non sappiamo
+   * niente — mapparlo su un gradino del modello misurato vuol dire inventargli
+   * un mestiere. 💡 Glielo si chiede, e finché non risponde non cambia niente.
+   *
+   * 🚨 Preso dal profilo **già atteso** e non da `livelloAttivitaProvider`:
+   * quello legge l'`AsyncValue`, che al primo giro è ancora `loading` — e
+   * l'obiettivo avrebbe lampeggiato «manca il livello» per un istante, su una
+   * schermata che dice a qualcuno quanto può mangiare.
+   */
+  final livello = livelloScelto ?? profilo.activityLevel;
+  final fattore = CalcolatoreCalorie.fattoreDi(livello);
+
   final mancano = <PezzoMancante>{
     if (kg == null) PezzoMancante.peso,
     if (cm == null) PezzoMancante.altezza,
     if (nascita == null) PezzoMancante.dataDiNascita,
     if (sesso == null) PezzoMancante.sesso,
+    if (fattore == null) PezzoMancante.attivita,
   };
 
   if (mancano.isNotEmpty) return EsitoTarget.incompleto(mancano);
@@ -207,7 +245,13 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
     sesso: profilo.sessoPerFormula,
   );
 
-  final tdee = calcolatore.tdee(bmr, profilo.attivitaPerFormula);
+  /*
+   * ⛔ **`tdeeSeNoto` e non `tdee`**: il secondo ripiega su 1,2 quando la
+   * chiave non la conosce, ed è il ripiego che la 3b-G esiste per togliere.
+   * 💡 Qui non può tornare `null`: `fattore` è già stato controllato sopra, e
+   * senza di lui non si arriva a questa riga.
+   */
+  final tdee = calcolatore.tdeeSeNoto(bmr, livello)!;
   final kcal = calcolatore.targetCalorico(tdee, profilo.obiettivoPerFormula);
 
   final macroStimato = calcolatore.macro(kcal, profilo.obiettivoPerFormula);
@@ -232,5 +276,50 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
       macroStimato: macroStimato,
       aMano: scelto != null,
     ),
+  );
+});
+
+/// Il solo metabolismo basale — 3b-G.1, 26/08/2026.
+///
+/// ══ 🚨 PERCHE' NON RIUSA `targetLocaleProvider` ═══════════════════════════
+///
+/// ⛔ Perché deve funzionare **proprio quando quello si rifiuta**: da 3b-G, chi
+/// non ha ancora scelto il livello di attività non ha un fabbisogno, e
+/// `targetLocaleProvider` risponde `incompleto`. 🚨 Ma è esattamente la persona
+/// che sta aprendo la pagina della scelta, e a cui va mostrato **il suo numero**
+/// dentro la formula: *«1.880 × 1,25 = 2.350»* convince, *«BMR × fattore»* no.
+///
+/// 💡 Il basale non dipende dall'attività — solo da sesso, età, altezza e peso —
+/// quindi c'è anche quando il resto non c'è. ⚠️ L'assemblaggio dei quattro pezzi
+/// è ripetuto di proposito: metterlo in comune vorrebbe dire che questo
+/// provider eredita anche la condizione che lo blocca.
+final metabolismoBasaleProvider = FutureProvider.autoDispose<double?>((
+  ref,
+) async {
+  // 🚨 Tutte le `ref.watch` prima del primo `await`: vedi la nota lunga sopra.
+  final revisione = ref.watch(revisioneCorpoProvider);
+  final archivio = ref.watch(archivioSaluteProvider);
+  final profiloFuturo = ref.watch(profileProvider.future);
+
+  assert(revisione >= 0, 'la revisione del corpo non è mai negativa');
+
+  final profilo = await profiloFuturo;
+  final pesata = await archivio.ultimoPeso();
+
+  final kg = pesata?.pesoKg;
+  final cm = profilo.heightCm?.toDouble();
+  final nascita = profilo.birthdate;
+
+  if (kg == null || cm == null || nascita == null || profilo.sex == null) {
+    return null;
+  }
+
+  const calcolatore = CalcolatoreCalorie();
+
+  return calcolatore.bmr(
+    kg: kg,
+    cm: cm,
+    eta: calcolatore.etaDa(nascita),
+    sesso: profilo.sessoPerFormula,
   );
 });

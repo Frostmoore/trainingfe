@@ -38,17 +38,104 @@ class Macro {
 class CalcolatoreCalorie {
   const CalcolatoreCalorie();
 
-  /// Moltiplicatori del metabolismo basale per livello di attività.
+  /// Moltiplicatori del **modello «stima»**: i valori standard di
+  /// Harris-Benedict.
   ///
-  /// Valori classici di Harris-Benedict aggiornati; l'ultimo, `athlete`, copre
-  /// chi si allena due volte al giorno e nella tabella standard non c'è.
-  static const attivita = <String, double>{
+  /// ⚠️ Sono descritti ad **allenamenti a settimana**, e quindi lo sport ce
+  /// l'hanno già dentro: chi sceglie uno di questi non deve sommarci anche gli
+  /// allenamenti misurati dall'orologio, o li conta due volte.
+  ///
+  /// 💡 L'ultimo, `athlete`, copre chi si allena due volte al giorno e nella
+  /// tabella standard non c'è.
+  static const attivitaStima = <String, double>{
     'sedentary': 1.2,
     'light': 1.375,
     'moderate': 1.55,
     'active': 1.725,
-    'athlete': 1.9,
+    'very_active': 1.9,
   };
+
+  /// Moltiplicatori del **modello «misurata»**: l'attività quotidiana **non
+  /// sportiva** — 3b-G.1, 26/08/2026.
+  ///
+  /// ══ 🚨 QUESTI NON SONO I FATTORI DI HARRIS-BENEDICT ═══════════════════════
+  ///
+  /// ⛔ **E non vanno «corretti» riportandoli alla tabella qui sopra.** Quelli
+  /// includono lo sport, questi lo **escludono di proposito**, perché in questo
+  /// modello lo sport lo misura l'orologio e si somma a parte. Chi li allinea fa
+  /// contare gli allenamenti due volte, e nessun test se ne accorge perché il
+  /// numero resta plausibile.
+  ///
+  /// ⚠️ **Non sono nemmeno i PAL della FAO** (1,40-1,69 per la vita sedentaria):
+  /// quelli descrivono chi cammina 6-8.000 passi al giorno. Il pavimento qui è
+  /// più basso perché esiste — ed è misurato — chi ne fa 2.500, e per lui la
+  /// tabella FAO non ha nessun gradino.
+  ///
+  /// ══ 💡 DA DOVE VENGONO I NUMERI ═══════════════════════════════════════════
+  ///
+  /// Ricavati il 26/08/2026 dai dati veri del committente, con **due conti
+  /// indipendenti che concordano**:
+  ///
+  /// | Metodo | Risultato |
+  /// |---|---|
+  /// | bilancio energetico (assunte + peso perso × 7.700) | 1,16 ± 0,20 |
+  /// | costruzione dal basso (BMR + termogenesi + passi misurati) | 1,24-1,27 |
+  ///
+  /// 🚨 E hanno **escluso 1,50**, che era la proposta di partenza: a 96,6 kg un
+  /// fattore 1,50 richiede ~761 kcal di movimento al giorno, cioè **circa 28.000
+  /// passi**. Lui ne fa 2.492 (agosto 2026, misurati da Health Connect).
+  static const attivitaQuotidiana = <String, double>{
+    'desk': 1.25,
+    'standing': 1.45,
+    'on_feet': 1.65,
+    'labour': 1.9,
+  };
+
+  /// Tutti i fattori, di qualunque modello.
+  ///
+  /// ⚠️ **Le chiavi dei due modelli non si sovrappongono**, ed è la proprietà su
+  /// cui poggia tutto il resto: da una chiave si risale al modello, quindi non
+  /// serve un secondo campo «modalità» da tenere allineato — e da sbagliare.
+  /// I nomi del **vocabolario del calcolatore**, che non è quello del profilo.
+  ///
+  /// ══ 🚨 DUE NOMI PER LO STESSO GRADINO, E COSA E' COSTATO ══════════════════
+  ///
+  /// Il profilo salva `very_active`, il calcolatore lo chiamava `athlete`: sono
+  /// lo stesso 1,9, con due nomi, perché la tabella nasce in B1.4 e il
+  /// calcolatore è il port di un'app precedente. ⛔ Il 12/08/2026 quel disallineo
+  /// è costato **1,2 al posto di 1,9** a chi si allenava ogni giorno — nessun
+  /// errore, solo un fabbisogno più basso del vero.
+  ///
+  /// 💡 Da 3b-G il gradino si cerca con il **nome del profilo**, che è quello
+  /// che l'app salva davvero. `athlete` resta qui perché [tdee] è il ritratto
+  /// fedele del metodo PHP e continua a riceverlo, e perché i profili non ancora
+  /// ritradotti passano di lì.
+  ///
+  /// ⚠️ Non è una tabella nuova: è **lo stesso numero sotto l'altro nome**. Chi
+  /// ne cambia uno deve cambiare l'altro, e il test `traduzione_profilo_test`
+  /// fallisce se non lo fa.
+  static const aliasStorici = <String, double>{'athlete': 1.9};
+
+  /// Tutti i fattori, di qualunque modello e con tutti i nomi.
+  static const attivita = <String, double>{
+    ...attivitaStima,
+    ...attivitaQuotidiana,
+    ...aliasStorici,
+  };
+
+  /// Il fattore di un livello, **`null` se non lo conosciamo**.
+  ///
+  /// 🚨 **Niente ripiego, ed è il punto di tutta la 3b-G.** Il ripiego naturale
+  /// sarebbe `?? 1.2`: una chiave sconosciuta darebbe un fabbisogno **più basso
+  /// del vero**, plausibile, senza nessun errore da nessuna parte. È già
+  /// successo con `very_active`, che valeva 1,9 e ne prendeva 1,2.
+  ///
+  /// 💡 Chi non sa il fattore non deve inventarlo: deve **dire che non lo sa**.
+  static double? fattoreDi(String? chiave) {
+    if (chiave == null) return null;
+
+    return attivita[chiave.toLowerCase().trim()];
+  }
 
   /// Scostamento dal fabbisogno, per obiettivo.
   ///
@@ -160,9 +247,30 @@ class CalcolatoreCalorie {
     return _arrotonda(base + (sesso.toLowerCase() == 'male' ? 5 : -161), 1);
   }
 
+  /// Il TDEE con il ripiego su `sedentary`.
+  ///
+  /// ⚠️ **Esiste solo perché è il ritratto fedele di
+  /// `CalorieCalculator::tdee()`**, che sul server continua a servire ai
+  /// **modelli** del pannello del trainer — e un modello non è una persona: se
+  /// un valore d'esempio prende 1,2 invece di 1,55 non fa male a nessuno.
+  ///
+  /// ⛔ **L'app NON deve usarlo per una persona vera**: per quello c'è
+  /// [tdeeSeNoto], che quando non sa dice che non sa. Vedi [fattoreDi].
   double tdee(double bmr, String attivitaScelta) {
     final fattore =
         attivita[attivitaScelta.toLowerCase()] ?? attivita['sedentary']!;
+
+    return _arrotonda(bmr * fattore, 1);
+  }
+
+  /// Il TDEE di una persona vera, **`null` se il livello non è noto**.
+  ///
+  /// 🚨 È la porta stretta: un fabbisogno inventato non è un numero storto, è
+  /// **una dieta storta**.
+  double? tdeeSeNoto(double bmr, String? chiave) {
+    final fattore = fattoreDi(chiave);
+
+    if (fattore == null) return null;
 
     return _arrotonda(bmr * fattore, 1);
   }

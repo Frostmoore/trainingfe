@@ -171,4 +171,53 @@ void main() {
       );
     });
   });
+  group('🔥 il margine dell\'allenamento si sa quanto vale', () {
+    /// 🚨 **Serve a disegnarlo separato dal target.** Il committente:
+    /// *«il mio obbiettivo e' l'obbiettivo. L'allenamento e' oltre»* - e per
+    /// spezzare il fondo della barra serve il numero, non un booleano.
+    test('e l\'obiettivo senza margine si ricava', () {
+      final t = TargetDelGiorno.scegli(
+        dalServer: null,
+        locale: 1880,
+        bruciate: 580,
+        sommaLeBruciate: true,
+        bruciateExtra: 0,
+      );
+
+      expect(t.kcal, 2460);
+      expect(t.margine, 580);
+      expect(t.kcalBase, 1880);
+    });
+
+    /// ⚠️ Con la somma spenta il margine e' **zero**, non 580: la barra
+    /// disegnerebbe una zona arancione che non corrisponde a niente.
+    test('con la somma spenta il margine e zero', () {
+      final t = TargetDelGiorno.scegli(
+        dalServer: null,
+        locale: 1880,
+        bruciate: 580,
+        sommaLeBruciate: false,
+        bruciateExtra: 0,
+      );
+
+      expect(t.kcal, 1880);
+      expect(t.margine, 0);
+      expect(t.kcalBase, 1880);
+    });
+
+    /// 🏃 E le sedute «fuori dal solito» sono margine come le altre.
+    test('gli extra contano nel margine', () {
+      final t = TargetDelGiorno.scegli(
+        dalServer: null,
+        locale: 1880,
+        bruciate: 580,
+        sommaLeBruciate: false,
+        bruciateExtra: 300,
+      );
+
+      expect(t.kcal, 2180);
+      expect(t.margine, 300);
+      expect(t.kcalBase, 1880);
+    });
+  });
 }

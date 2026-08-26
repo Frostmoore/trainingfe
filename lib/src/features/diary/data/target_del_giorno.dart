@@ -26,7 +26,11 @@ import 'package:flutter/foundation.dart';
 /// rapido per far smettere qualcuno di fidarsi di tutti e tre.
 @immutable
 class TargetDelGiorno {
-  const TargetDelGiorno._({required this.kcal, required this.bruciateIncluse});
+  const TargetDelGiorno._({
+    required this.kcal,
+    required this.bruciateIncluse,
+    this.margine = 0,
+  });
 
   /// 🚨 **Il numero da mostrare.** `null` vuol dire «non lo so», e va detto —
   /// non si inventa: qualcuno ci costruirebbe sopra una dieta.
@@ -38,6 +42,27 @@ class TargetDelGiorno {
   /// «2.100 kcal, di cui 450 bruciate oggi». Senza, chi vede l'obiettivo salire
   /// non ha nessun modo di capire perché.
   final bool bruciateIncluse;
+
+  /// **Quante** delle [kcal] vengono dall'allenamento — 26/08/2026.
+  ///
+  /// ══ 📌 PERCHE' NON BASTAVA [bruciateIncluse] ══════════════════════════
+  ///
+  /// Il committente, guardando la card: *«il mio obbiettivo è l'obbiettivo.
+  /// L'allenamento è oltre, in questo caso. Sulla barra sopra mettiamo due
+  /// colori anche lì (ma nella parte VUOTA della barra). L'allenamento deve
+  /// essere chiaramente separato dal target»*.
+  ///
+  /// 💡 Per disegnare quella separazione serve **il numero**, non un
+  /// booleano: la barra deve sapere dove finisce l'obiettivo e dove comincia
+  /// il margine.
+  ///
+  /// ⚠️ È anche la spiegazione del perché i **macro non salgono** con
+  /// l'allenamento, che a prima vista sembra un difetto: l'obiettivo — e la
+  /// sua ripartizione — è quello, e le calorie bruciate stanno **oltre**.
+  final int margine;
+
+  /// L'obiettivo **senza** il margine dell'allenamento.
+  double get kcalBase => (kcal ?? 0) - margine;
 
   bool get esiste => kcal != null && kcal! > 0;
 
@@ -118,6 +143,7 @@ class TargetDelGiorno {
       return TargetDelGiorno._(
         kcal: dalServer + bruciate,
         bruciateIncluse: bruciate > 0,
+        margine: bruciate,
       );
     }
 
@@ -136,6 +162,7 @@ class TargetDelGiorno {
     return TargetDelGiorno._(
       kcal: locale + bruciate,
       bruciateIncluse: bruciate > 0,
+      margine: bruciate,
     );
   }
 }

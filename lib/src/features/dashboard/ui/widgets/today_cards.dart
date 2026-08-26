@@ -278,7 +278,18 @@ class CaloriesCard extends ConsumerWidget {
                 _BarraConRitmo(
                   percentualeMangiata: (n.kcal / target).clamp(0.0, 1.5),
                   percentualeGiornata: riepilogo.dayProgressPct / 100,
+                  percentualeBase: delGiorno.kcalBase / target,
                 ),
+
+                // 🔥 La legenda compare **solo** quando c'e' un margine: un
+                // colore spiegato quando non c'e' niente da spiegare e' rumore.
+                if (delGiorno.margine > 0) ...[
+                  const SizedBox(height: Gap.xs),
+                  _LegendaDelMargine(
+                    obiettivo: delGiorno.kcalBase.round(),
+                    margine: delGiorno.margine,
+                  ),
+                ],
                 const SizedBox(height: Gap.xs),
                 Text(
                   _frase(
@@ -461,19 +472,42 @@ class CaloriesCard extends ConsumerWidget {
 }
 
 /// La barra con il segno di dove **dovrebbe** essere la giornata.
+///
+/// ══ 🔥 E CON L'ALLENAMENTO SEPARATO DAL TARGET — 26/08/2026 ═══════════════
+///
+/// 📌 *«il mio obbiettivo è l'obbiettivo. L'allenamento è oltre, in questo caso.
+/// Sulla barra sopra mettiamo due colori anche lì (ma nella parte VUOTA della
+/// barra). L'allenamento deve essere chiaramente separato dal target»*.
+///
+/// ⛔ **Prima la barra mentiva per omissione.** Su un giorno di palestra il
+/// fondo arrivava a 2.460 tutto uguale, quindi «essere a metà barra» voleva dire
+/// due cose diverse a seconda che ci si fosse allenati o no — e niente lo
+/// diceva.
+///
+/// 💡 Adesso il fondo è spezzato: fino all'obiettivo di un colore, oltre di
+/// quello del fuoco. ⚠️ **Solo il fondo**: il riempimento resta di un colore
+/// solo, perché quello che hai mangiato è quello che hai mangiato — non cambia
+/// natura superando l'obiettivo.
 class _BarraConRitmo extends StatelessWidget {
   const _BarraConRitmo({
     required this.percentualeMangiata,
     required this.percentualeGiornata,
+    this.percentualeBase = 1,
   });
 
   final double percentualeMangiata;
   final double percentualeGiornata;
 
+  /// Dove finisce l'obiettivo e comincia il margine dell'allenamento.
+  ///
+  /// 💡 `1` quando non c'è margine: la barra torna com'era, senza rami morti.
+  final double percentualeBase;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sfora = percentualeMangiata > 1;
+    final base = percentualeBase.clamp(0.0, 1.0);
 
     return LayoutBuilder(
       builder: (context, vincoli) => SizedBox(
@@ -483,9 +517,36 @@ class _BarraConRitmo extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 10,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: (base * 1000).round(),
+                      child: ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    ),
+                    if (base < 1)
+                      Expanded(
+                        flex: ((1 - base) * 1000).round(),
+                        child: ColoredBox(
+                          // ⚠️ Tenue: e' lo sfondo di quello che **puoi ancora**
+                          // mangiare, non un valore raggiunto. Pieno
+                          // competerebbe con il riempimento vero.
+                          color: BarraDelConsumo.fuoco.withValues(alpha: 0.28),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
                 value: percentualeMangiata.clamp(0.0, 1.0),
                 minHeight: 10,
+                backgroundColor: Colors.transparent,
                 color: sfora
                     ? theme.colorScheme.error
                     : theme.colorScheme.primary,
@@ -507,6 +568,45 @@ class _BarraConRitmo extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Chi legge la barra deve sapere dove finisce l'obiettivo — 26/08/2026.
+///
+/// 🚨 **Due colori senza legenda sono un indovinello.** Il colore del fuoco nel
+/// fondo della barra vuol dire «questo e' l'allenamento di oggi», e non c'e'
+/// modo di dedurlo guardandolo.
+class _LegendaDelMargine extends StatelessWidget {
+  const _LegendaDelMargine({required this.obiettivo, required this.margine});
+
+  final int obiettivo;
+  final int margine;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    Widget voce(Color colore, String testo) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: colore, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: Gap.xs),
+        Text(testo, style: tema.textTheme.labelSmall),
+      ],
+    );
+
+    return Wrap(
+      spacing: Gap.md,
+      runSpacing: Gap.xs,
+      children: [
+        voce(tema.colorScheme.primary, 'obiettivo $obiettivo'),
+        voce(BarraDelConsumo.fuoco, 'allenamento +$margine'),
+      ],
     );
   }
 }

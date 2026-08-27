@@ -15,8 +15,10 @@ import '../../progress/ui/progress_screen.dart';
 import '../data/calorie_allenamento.dart';
 import '../data/catalogo_esercizi.dart';
 import '../data/limiti_delle_schede.dart';
+import '../data/progressione.dart';
 import '../data/stima_della_scheda.dart';
 import '../muscoli_allenati.dart';
+import '../progressione_controller.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
@@ -556,6 +558,19 @@ class _DettaglioScheda extends ConsumerWidget {
 
             _SchedaInNumeri(scheda: p),
 
+            /*
+             * ══ 📈 I PROGRESSI — 3b-I.A, 27/08/2026 ═══════════════════════
+             *
+             * 📌 *«nella pagina della scheda possiamo mettere un grafico che
+             * indica i progressi solo a chi è abbonato, con sotto un'analisi da
+             * parte dell'ai»*.
+             *
+             * 🚨 **Il pulsante sta in cima, le righe sotto ogni esercizio.**
+             * Sono due cose: qui si *chiede* l'analisi — una volta, per tutta
+             * la scheda — e là la si *legge*, accanto a ciò di cui parla.
+             */
+            _ProgressiDellaScheda(scheda: p),
+
             const SizedBox(height: Gap.md),
 
             if (p.attribuzione.isNotEmpty)
@@ -589,7 +604,15 @@ class _DettaglioScheda extends ConsumerWidget {
              * dato si scrive, si salva, entra nel backup, e a schermo continua
              * a comparire quello di prima.
              */
-            for (final e in p.exercises) EsercizioDellaScheda(esercizio: e),
+            /*
+             * ⚠️ `p.id` e' l'id **del server**: e' lo stesso che il player
+             * scrive in `sedute_allenamento.scheda_server_id` quando si
+             * comincia (`SessionActions.start(planId: …)`). 🚨 Passare l'id
+             * locale qui vorrebbe dire cercare uno storico che non esiste, e
+             * la progressione non comparirebbe mai — senza nessun errore.
+             */
+            for (final e in p.exercises)
+              EsercizioDellaScheda(esercizio: e, schedaServerId: p.id),
           ],
         ),
       ),
@@ -927,3 +950,189 @@ Future<void> nuovaScheda(BuildContext context) async {
 
   await context.push(AppRoutes.planNew, extra: tipo);
 }
+
+
+/// Il pulsante che chiede l'analisi, e cosa dice quando non si può — 3b-I.A.
+///
+/// ══ 🔒 IL PULSANTE C'È ANCHE PER CHI NON PUÒ ══════════════════════════════
+///
+/// 📌 *«i tasti per fare quella cosa ci devono essere e si deve capire che sono
+/// bloccati dietro un abbonamento»*. ⛔ Toccandolo si apre la modale, non un
+/// messaggio di errore: un limite che si può superare va mostrato insieme al
+/// modo di superarlo.
+class _ProgressiDellaScheda extends ConsumerStatefulWidget {
+  const _ProgressiDellaScheda({required this.scheda});
+
+  final WorkoutPlan scheda;
+
+  @override
+  ConsumerState<_ProgressiDellaScheda> createState() =>
+      _ProgressiDellaSchedaState();
+}
+
+class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
+  bool _inCorso = false;
+
+  Future<void> _chiedi({bool forza = false}) async {
+    if (!ref.read(puoVedereIProgressiProvider)) {
+      ModaleAcquisti.mostra(context);
+
+      return;
+    }
+
+    setState(() => _inCorso = true);
+
+    /*
+     * ⚠️ **`ref.read` e non `ref.watch` dentro l'azione**, e il `mounted` dopo
+     * l'`await`: questa schermata si può chiudere mentre il modello risponde,
+     * e un `setState` su un widget morto è un errore rosso a schermo per una
+     * cosa che è andata bene.
+     */
+    final esito = await chiediLAnalisi(
+      ref,
+      schedaServerId: widget.scheda.id,
+      // ⚠️ Solo quelli che stanno nel catalogo: gli altri non hanno storico
+      // (vedi la nota in `EsercizioDellaScheda`), quindi non c'è niente da
+      // nominare.
+      nomiDegliEsercizi: {
+        for (final e in widget.scheda.exercises) ?e.exerciseId: e.name,
+      },
+      forza: forza,
+    );
+
+    if (!mounted) return;
+
+    setState(() => _inCorso = false);
+
+    if (esito == EsitoAnalisi.serveAbbonamento) {
+      ModaleAcquisti.mostra(context);
+
+      return;
+    }
+
+    if (esito == EsitoAnalisi.fatta) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_spiegazione(esito))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final puo = ref.watch(puoVedereIProgressiProvider);
+
+    final storia = ref
+        .watch(storiaDellaSchedaProvider(widget.scheda.id))
+        .valueOrNull;
+
+    /*
+     * ⛔ **Senza storico la card non compare affatto.** 🚨 Non è il gate
+     * dell'abbonamento: è che non c'è niente da analizzare, e mostrare un
+     * pulsante che risponderà «troppo poco storico» sarebbe un invito a
+     * scoprire un rifiuto. 💡 Chi non è abbonato la vede comparire il giorno in
+     * cui ha fatto la scheda due volte, che è il momento giusto per proporgliela.
+     */
+    if (storia == null || !valeLaPenaAnalizzare(storia)) {
+      return const SizedBox.shrink();
+    }
+
+    final analisi = ref
+        .watch(analisiDellaSchedaProvider(widget.scheda.id))
+        .valueOrNull;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: Gap.md),
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  puo ? Icons.insights_rounded : Icons.lock_rounded,
+                  size: 18,
+                  color: tema.colorScheme.primary,
+                ),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    'I tuoi progressi',
+                    style: tema.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.xs),
+            Text(
+              puo
+                  ? 'Sotto ogni esercizio trovi come è andata nelle ultime '
+                        'sedute. L\'analisi la scrive l\'AI, e costa 1 gettone.'
+                  : 'Con l\'abbonamento vedi l\'andamento di ogni esercizio e '
+                        'un\'analisi scritta per te.',
+              style: tema.textTheme.bodySmall,
+            ),
+
+            if (analisi != null) ...[
+              const SizedBox(height: Gap.xs),
+              Text(
+                /*
+                 * 💡 **«Superata» e «vecchia» sono due cose diverse**, ed è il
+                 * motivo per cui l'impronta esiste: un'analisi di un mese fa è
+                 * ancora vera se da allora non ti sei allenato.
+                 */
+                analisi.superata
+                    ? 'Da quando è stata scritta hai fatto altre sedute.'
+                    : 'Aggiornata al ${_giorno(analisi.fattaIl)}.',
+                style: tema.textTheme.labelSmall?.copyWith(
+                  color: analisi.superata
+                      ? tema.colorScheme.tertiary
+                      : tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: Gap.sm),
+
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _inCorso ? null : () => _chiedi(),
+                icon: _inCorso
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(puo ? Icons.auto_awesome_rounded : Icons.lock_rounded),
+                label: Text(
+                  analisi == null ? 'Analizza la scheda' : 'Rifai l\'analisi',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _spiegazione(EsitoAnalisi esito) => switch (esito) {
+  EsitoAnalisi.fatta => '',
+  EsitoAnalisi.serveAbbonamento => 'Serve l\'abbonamento.',
+  EsitoAnalisi.troppoPocoStorico =>
+    'Serve almeno una seconda seduta per avere qualcosa da raccontare.',
+
+  // ⚠️ Si dice **quando**, non «riprova più tardi»: un limite senza una data è
+  // indistinguibile da un guasto.
+  EsitoAnalisi.troppoPresto =>
+    'L\'analisi è recente: si può rifare dopo una settimana.',
+  EsitoAnalisi.senzaGettoni => 'Gettoni finiti.',
+  EsitoAnalisi.nonRiuscita => 'Non è riuscita. Riprova fra poco.',
+};
+
+String _giorno(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';

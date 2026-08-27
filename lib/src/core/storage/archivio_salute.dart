@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../features/health/dati_salute.dart';
 import '../../features/health/sessioni_di_sonno.dart';
+import '../../features/training/data/progressione.dart';
 
 part 'archivio_salute.g.dart';
 
@@ -39,6 +40,7 @@ part 'archivio_salute.g.dart';
     SeduteAllenamento,
     SerieDelleSedute,
     SettimanaProgrammata,
+    AnalisiDelleSchede,
     BruciateDichiarate,
     SchedeSulTelefono,
   ],
@@ -58,7 +60,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -444,6 +446,21 @@ class ArchivioSalute extends _$ArchivioSalute {
        */
       if (da < 21) {
         await m.createTable(settimanaProgrammata);
+      }
+
+      /*
+       * v21 → v22 (3b-I.A): l'analisi della progressione, scritta dall'AI.
+       *
+       * 🚨 **Una tabella e non `SharedPreferences`.** Le preferenze sono un
+       * file **in chiaro** — sta scritto in `LocalCache` — e qui dentro
+       * finiscono frasi che parlano di quanto solleva una persona. ⛔ Non è
+       * roba da lasciare leggibile a chiunque prenda in mano il telefono.
+       *
+       * 💡 E così entra nel backup da sola: `esportaPerBackup()` enumera
+       * `allTables`, e questo è il motivo per cui l'elenco non si scrive a mano.
+       */
+      if (da < 22) {
+        await m.createTable(analisiDelleSchede);
       }
     },
   );
@@ -942,6 +959,105 @@ class ArchivioSalute extends _$ArchivioSalute {
       );
     }
   });
+
+  /// La storia di ogni esercizio di una scheda — 3b-I.A, 27/08/2026.
+  ///
+  /// ══ 🚨 UNA SERIE PER SEDUTA, NON TUTTE ════════════════════════════════
+  ///
+  /// Di ogni seduta si tiene la **serie migliore** — il carico più alto, e a
+  /// pari carico le ripetizioni più alte. ⛔ Mandare tutte le serie di otto
+  /// sedute per quaranta esercizi vorrebbe dire una richiesta da migliaia di
+  /// numeri per farne uscire quaranta righe: si pagherebbe il contesto, non la
+  /// risposta.
+  ///
+  /// 💡 Ed è anche **la cosa giusta da guardare**: «sono migliorato» si legge
+  /// sulla serie di punta, non sulla media di un riscaldamento e di un
+  /// cedimento.
+  ///
+  /// ⚠️ **Solo le sedute finite.** Una seduta ancora aperta (`finitaIl == null`)
+  /// ha le serie a metà: entrerebbe come un calo che non è successo.
+  ///
+  /// 🚨 Il filtro è su `schedaServerId` e non sull'id locale: quello cambia da
+  /// telefono a telefono, e questa storia deve dire la stessa cosa dopo un
+  /// ripristino da backup.
+  ///
+  /// Torna, per ogni `esercizioId`, i punti **dal più vecchio al più recente**.
+  Future<Map<int, List<PuntoDiProgressione>>> storiaDegliEsercizi(
+    int schedaServerId, {
+    int quanteSedute = 8,
+  }) async {
+    final righe = await customSelect(
+      'SELECT s.esercizio_id AS eid, a.finita_il AS quando, '
+      '       s.peso_kg AS peso, s.ripetizioni AS reps '
+      '  FROM serie_delle_sedute s '
+      '  JOIN sedute_allenamento a ON a.id = s.seduta_id '
+      ' WHERE a.scheda_server_id = ?1 AND a.finita_il IS NOT NULL '
+      ' ORDER BY a.finita_il ASC',
+      variables: [Variable<int>(schedaServerId)],
+      readsFrom: {serieDelleSedute, seduteAllenamento},
+    ).get();
+
+    /*
+     * ⚠️ **Il raggruppamento si fa qui e non in SQL.** Un `GROUP BY` con un
+     * `MAX(peso)` non porta con sé le ripetizioni di *quella* riga: SQLite
+     * risponderebbe con le ripetizioni di una riga qualsiasi del gruppo, senza
+     * dire niente. È il difetto che legge bene e produce un numero sbagliato.
+     */
+    final perEsercizio = <int, Map<int, PuntoDiProgressione>>{};
+
+    for (final r in righe) {
+      final eid = r.read<int>('eid');
+      final quando = r.read<DateTime>('quando');
+      final peso = r.readNullable<double>('peso');
+      final reps = r.readNullable<int>('reps');
+
+      // 💡 Una serie senza carico **e** senza ripetizioni non dice niente: è il
+      // caso dell'esercizio a tempo, che qui non ha nessuna progressione da
+      // raccontare.
+      if (peso == null && reps == null) continue;
+
+      final sedute = perEsercizio.putIfAbsent(eid, () => {});
+
+      // La chiave è il giorno: due sedute nello stesso giorno restano due punti
+      // solo se sono davvero due allenamenti diversi.
+      final chiave = quando.millisecondsSinceEpoch;
+      final prima = sedute[chiave];
+
+      final punto = PuntoDiProgressione(
+        data: quando,
+        carico: peso,
+        ripetizioni: reps,
+      );
+
+      if (prima == null || punto.batte(prima)) sedute[chiave] = punto;
+    }
+
+    return {
+      for (final voce in perEsercizio.entries)
+        voce.key: (voce.value.values.toList()
+              ..sort((a, b) => a.data.compareTo(b.data)))
+            // ⚠️ `takeLast`: si tengono le **ultime** sedute, non le prime.
+            // Con `take()` l'analisi parlerebbe di com'era sei mesi fa.
+            .reversed
+            .take(quanteSedute)
+            .toList()
+            .reversed
+            .toList(),
+    };
+  }
+
+  /// L'analisi già scritta per una scheda, se c'è.
+  Future<AnalisiScheda?> analisiDellaScheda(int schedaServerId) =>
+      (select(analisiDelleSchede)
+            ..where((t) => t.schedaServerId.equals(schedaServerId)))
+          .getSingleOrNull();
+
+  /// Scrive (o riscrive) l'analisi di una scheda.
+  ///
+  /// 💡 `insertOnConflictUpdate` e non `insert`: di una scheda ne esiste **una**,
+  /// e una seconda riga vorrebbe dire che l'app ne mostrerebbe una a caso.
+  Future<void> scriviLAnalisi(AnalisiDelleSchedeCompanion riga) =>
+      into(analisiDelleSchede).insertOnConflictUpdate(riga);
 
   /// Le sedute dell'orologio **di un giorno**, per contarne le calorie —
   /// 3b-G.3, 26/08/2026.
@@ -2701,4 +2817,49 @@ class SettimanaProgrammata extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {giorno};
+}
+
+
+/// L'analisi della progressione di una scheda — 3b-I.A, 27/08/2026.
+///
+/// ══ 🚨 UNA RIGA PER SCHEDA, E IL JSON DENTRO ══════════════════════════════
+///
+/// ⛔ **Non una tabella con una riga per esercizio**, ed è deliberato:
+/// l'analisi è **una risposta sola** (una chiamata per scheda), si scrive
+/// insieme e si butta insieme. Spezzarla vorrebbe dire poterne avere metà
+/// vecchia e metà nuova — cioè una scheda che racconta due storie diverse a
+/// seconda dell'esercizio che guardi.
+///
+/// 💡 E il JSON qui dentro non è pigrizia: nessuna query dovrà mai cercare «gli
+/// esercizi in salita». Si legge tutto o niente, che è la definizione di quando
+/// una colonna di testo va bene.
+///
+/// ══ ⚠️ [impronta] È QUELLO CHE RENDE L'ANALISI RIGENERABILE ══════════════
+///
+/// È l'impronta dello storico su cui l'analisi è stata scritta. 🚨 Serve a
+/// rispondere alla sola domanda che conta — *«è ancora attuale?»* — senza
+/// chiedere niente a nessuno: se da allora sono state fatte altre sedute
+/// l'impronta cambia, e l'app può dirlo. Con la sola data non si distinguerebbe
+/// «vecchia di un mese ma ancora vera» da «di ieri e già superata».
+///
+/// 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
+@DataClassName('AnalisiScheda')
+class AnalisiDelleSchede extends Table {
+  /// L'id **del server** della scheda.
+  ///
+  /// ⚠️ Non l'id locale: quello cambia da telefono a telefono, e un'analisi
+  /// ripristinata da backup finirebbe attaccata a un'altra scheda — cioè
+  /// mostrerebbe frasi vere su un esercizio sbagliato.
+  IntColumn get schedaServerId => integer()();
+
+  /// Le righe, come sono arrivate dal server: `[{id, andamento, riga}, …]`.
+  TextColumn get righe => text()();
+
+  /// L'impronta dello storico al momento dell'analisi. Vedi la nota in testa.
+  TextColumn get impronta => text()();
+
+  DateTimeColumn get fattaIl => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {schedaServerId};
 }

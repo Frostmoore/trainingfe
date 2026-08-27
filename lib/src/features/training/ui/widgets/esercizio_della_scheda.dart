@@ -32,13 +32,26 @@ import '../../../../core/ui/miniatura.dart';
 import '../../data/catalogo_esercizi.dart';
 import '../../data/serie_prevista.dart';
 import '../../training_controller.dart';
+import 'progresso_dell_esercizio.dart';
 
 class EsercizioDellaScheda extends ConsumerWidget {
-  const EsercizioDellaScheda({required this.esercizio, super.key});
+  const EsercizioDellaScheda({
+    required this.esercizio,
+    this.schedaServerId,
+    super.key,
+  });
 
   static const _lato = 64.0;
 
   final PlanExercise esercizio;
+
+  /// La scheda a cui questo esercizio appartiene — 3b-I.A.
+  ///
+  /// ⚠️ **Opzionale**, e quando manca la progressione non compare: questa card
+  /// la usa anche l'elenco delle schede, dove non c'è nessuna scheda aperta a
+  /// cui riferire uno storico. 💡 Un parametro obbligatorio avrebbe costretto
+  /// quel chiamante a inventarsi un id.
+  final int? schedaServerId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,6 +123,36 @@ class EsercizioDellaScheda extends ConsumerWidget {
                       ),
                     ),
                   ],
+
+                  /*
+                   * ══ 📈 LA PROGRESSIONE — 3b-I.A, 27/08/2026 ═══════════════
+                   *
+                   * 📌 *«deve essere una per esercizio e deve essere renderata
+                   * sotto quell'esercizio»*.
+                   *
+                   * 🚨 **Dentro la colonna, non sotto la card.** Sotto la card
+                   * la riga si allineerebbe con la foto, cioè partirebbe più a
+                   * sinistra del nome dell'esercizio: sembrerebbe riferirsi a
+                   * tutto, non a questo.
+                   *
+                   * ⛔ Sparisce da sola quando l'esercizio non ha uno storico:
+                   * il widget torna `SizedBox.shrink()`, e non c'è nessun ramo
+                   * da scrivere qui.
+                   */
+                  /*
+                   * ⛔ **Serve l'id del catalogo**, e non tutti ce l'hanno: un
+                   * esercizio scritto a mano dalla palestra non sta nel
+                   * catalogo, e le serie in `SerieDelleSedute` sono indicizzate
+                   * proprio su quell'id. 🚨 Senza, non esiste nessuno storico
+                   * da cercare — non è un caso da gestire, è un caso che non
+                   * esiste.
+                   */
+                  if (schedaServerId case final scheda?)
+                    if (esercizio.exerciseId case final eid?)
+                      ProgressoDellEsercizio(
+                        schedaServerId: scheda,
+                        esercizioId: eid,
+                      ),
                 ],
               ),
             ),

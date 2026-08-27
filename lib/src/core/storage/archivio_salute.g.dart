@@ -5209,6 +5209,324 @@ class SettimanaProgrammataCompanion extends UpdateCompanion<GiornoProgrammato> {
   }
 }
 
+class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
+    with TableInfo<$AnalisiDelleSchedeTable, AnalisiScheda> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AnalisiDelleSchedeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _schedaServerIdMeta = const VerificationMeta(
+    'schedaServerId',
+  );
+  @override
+  late final GeneratedColumn<int> schedaServerId = GeneratedColumn<int>(
+    'scheda_server_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _righeMeta = const VerificationMeta('righe');
+  @override
+  late final GeneratedColumn<String> righe = GeneratedColumn<String>(
+    'righe',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _improntaMeta = const VerificationMeta(
+    'impronta',
+  );
+  @override
+  late final GeneratedColumn<String> impronta = GeneratedColumn<String>(
+    'impronta',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fattaIlMeta = const VerificationMeta(
+    'fattaIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fattaIl = GeneratedColumn<DateTime>(
+    'fatta_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    schedaServerId,
+    righe,
+    impronta,
+    fattaIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'analisi_delle_schede';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AnalisiScheda> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scheda_server_id')) {
+      context.handle(
+        _schedaServerIdMeta,
+        schedaServerId.isAcceptableOrUnknown(
+          data['scheda_server_id']!,
+          _schedaServerIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('righe')) {
+      context.handle(
+        _righeMeta,
+        righe.isAcceptableOrUnknown(data['righe']!, _righeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_righeMeta);
+    }
+    if (data.containsKey('impronta')) {
+      context.handle(
+        _improntaMeta,
+        impronta.isAcceptableOrUnknown(data['impronta']!, _improntaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_improntaMeta);
+    }
+    if (data.containsKey('fatta_il')) {
+      context.handle(
+        _fattaIlMeta,
+        fattaIl.isAcceptableOrUnknown(data['fatta_il']!, _fattaIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fattaIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {schedaServerId};
+  @override
+  AnalisiScheda map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AnalisiScheda(
+      schedaServerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scheda_server_id'],
+      )!,
+      righe: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}righe'],
+      )!,
+      impronta: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}impronta'],
+      )!,
+      fattaIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fatta_il'],
+      )!,
+    );
+  }
+
+  @override
+  $AnalisiDelleSchedeTable createAlias(String alias) {
+    return $AnalisiDelleSchedeTable(attachedDatabase, alias);
+  }
+}
+
+class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
+  /// L'id **del server** della scheda.
+  ///
+  /// ⚠️ Non l'id locale: quello cambia da telefono a telefono, e un'analisi
+  /// ripristinata da backup finirebbe attaccata a un'altra scheda — cioè
+  /// mostrerebbe frasi vere su un esercizio sbagliato.
+  final int schedaServerId;
+
+  /// Le righe, come sono arrivate dal server: `[{id, andamento, riga}, …]`.
+  final String righe;
+
+  /// L'impronta dello storico al momento dell'analisi. Vedi la nota in testa.
+  final String impronta;
+  final DateTime fattaIl;
+  const AnalisiScheda({
+    required this.schedaServerId,
+    required this.righe,
+    required this.impronta,
+    required this.fattaIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scheda_server_id'] = Variable<int>(schedaServerId);
+    map['righe'] = Variable<String>(righe);
+    map['impronta'] = Variable<String>(impronta);
+    map['fatta_il'] = Variable<DateTime>(fattaIl);
+    return map;
+  }
+
+  AnalisiDelleSchedeCompanion toCompanion(bool nullToAbsent) {
+    return AnalisiDelleSchedeCompanion(
+      schedaServerId: Value(schedaServerId),
+      righe: Value(righe),
+      impronta: Value(impronta),
+      fattaIl: Value(fattaIl),
+    );
+  }
+
+  factory AnalisiScheda.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AnalisiScheda(
+      schedaServerId: serializer.fromJson<int>(json['schedaServerId']),
+      righe: serializer.fromJson<String>(json['righe']),
+      impronta: serializer.fromJson<String>(json['impronta']),
+      fattaIl: serializer.fromJson<DateTime>(json['fattaIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'schedaServerId': serializer.toJson<int>(schedaServerId),
+      'righe': serializer.toJson<String>(righe),
+      'impronta': serializer.toJson<String>(impronta),
+      'fattaIl': serializer.toJson<DateTime>(fattaIl),
+    };
+  }
+
+  AnalisiScheda copyWith({
+    int? schedaServerId,
+    String? righe,
+    String? impronta,
+    DateTime? fattaIl,
+  }) => AnalisiScheda(
+    schedaServerId: schedaServerId ?? this.schedaServerId,
+    righe: righe ?? this.righe,
+    impronta: impronta ?? this.impronta,
+    fattaIl: fattaIl ?? this.fattaIl,
+  );
+  AnalisiScheda copyWithCompanion(AnalisiDelleSchedeCompanion data) {
+    return AnalisiScheda(
+      schedaServerId: data.schedaServerId.present
+          ? data.schedaServerId.value
+          : this.schedaServerId,
+      righe: data.righe.present ? data.righe.value : this.righe,
+      impronta: data.impronta.present ? data.impronta.value : this.impronta,
+      fattaIl: data.fattaIl.present ? data.fattaIl.value : this.fattaIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalisiScheda(')
+          ..write('schedaServerId: $schedaServerId, ')
+          ..write('righe: $righe, ')
+          ..write('impronta: $impronta, ')
+          ..write('fattaIl: $fattaIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(schedaServerId, righe, impronta, fattaIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AnalisiScheda &&
+          other.schedaServerId == this.schedaServerId &&
+          other.righe == this.righe &&
+          other.impronta == this.impronta &&
+          other.fattaIl == this.fattaIl);
+}
+
+class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
+  final Value<int> schedaServerId;
+  final Value<String> righe;
+  final Value<String> impronta;
+  final Value<DateTime> fattaIl;
+  const AnalisiDelleSchedeCompanion({
+    this.schedaServerId = const Value.absent(),
+    this.righe = const Value.absent(),
+    this.impronta = const Value.absent(),
+    this.fattaIl = const Value.absent(),
+  });
+  AnalisiDelleSchedeCompanion.insert({
+    this.schedaServerId = const Value.absent(),
+    required String righe,
+    required String impronta,
+    required DateTime fattaIl,
+  }) : righe = Value(righe),
+       impronta = Value(impronta),
+       fattaIl = Value(fattaIl);
+  static Insertable<AnalisiScheda> custom({
+    Expression<int>? schedaServerId,
+    Expression<String>? righe,
+    Expression<String>? impronta,
+    Expression<DateTime>? fattaIl,
+  }) {
+    return RawValuesInsertable({
+      if (schedaServerId != null) 'scheda_server_id': schedaServerId,
+      if (righe != null) 'righe': righe,
+      if (impronta != null) 'impronta': impronta,
+      if (fattaIl != null) 'fatta_il': fattaIl,
+    });
+  }
+
+  AnalisiDelleSchedeCompanion copyWith({
+    Value<int>? schedaServerId,
+    Value<String>? righe,
+    Value<String>? impronta,
+    Value<DateTime>? fattaIl,
+  }) {
+    return AnalisiDelleSchedeCompanion(
+      schedaServerId: schedaServerId ?? this.schedaServerId,
+      righe: righe ?? this.righe,
+      impronta: impronta ?? this.impronta,
+      fattaIl: fattaIl ?? this.fattaIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (schedaServerId.present) {
+      map['scheda_server_id'] = Variable<int>(schedaServerId.value);
+    }
+    if (righe.present) {
+      map['righe'] = Variable<String>(righe.value);
+    }
+    if (impronta.present) {
+      map['impronta'] = Variable<String>(impronta.value);
+    }
+    if (fattaIl.present) {
+      map['fatta_il'] = Variable<DateTime>(fattaIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalisiDelleSchedeCompanion(')
+          ..write('schedaServerId: $schedaServerId, ')
+          ..write('righe: $righe, ')
+          ..write('impronta: $impronta, ')
+          ..write('fattaIl: $fattaIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $BruciateDichiarateTable extends BruciateDichiarate
     with TableInfo<$BruciateDichiarateTable, BruciatoDichiarato> {
   @override
@@ -6176,6 +6494,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   );
   late final $SettimanaProgrammataTable settimanaProgrammata =
       $SettimanaProgrammataTable(this);
+  late final $AnalisiDelleSchedeTable analisiDelleSchede =
+      $AnalisiDelleSchedeTable(this);
   late final $BruciateDichiarateTable bruciateDichiarate =
       $BruciateDichiarateTable(this);
   late final $SchedeSulTelefonoTable schedeSulTelefono =
@@ -6195,6 +6515,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     seduteAllenamento,
     serieDelleSedute,
     settimanaProgrammata,
+    analisiDelleSchede,
     bruciateDichiarate,
     schedeSulTelefono,
   ];
@@ -9016,6 +9337,196 @@ typedef $$SettimanaProgrammataTableProcessedTableManager =
       GiornoProgrammato,
       PrefetchHooks Function()
     >;
+typedef $$AnalisiDelleSchedeTableCreateCompanionBuilder =
+    AnalisiDelleSchedeCompanion Function({
+      Value<int> schedaServerId,
+      required String righe,
+      required String impronta,
+      required DateTime fattaIl,
+    });
+typedef $$AnalisiDelleSchedeTableUpdateCompanionBuilder =
+    AnalisiDelleSchedeCompanion Function({
+      Value<int> schedaServerId,
+      Value<String> righe,
+      Value<String> impronta,
+      Value<DateTime> fattaIl,
+    });
+
+class $$AnalisiDelleSchedeTableFilterComposer
+    extends Composer<_$ArchivioSalute, $AnalisiDelleSchedeTable> {
+  $$AnalisiDelleSchedeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get righe => $composableBuilder(
+    column: $table.righe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get impronta => $composableBuilder(
+    column: $table.impronta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fattaIl => $composableBuilder(
+    column: $table.fattaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AnalisiDelleSchedeTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $AnalisiDelleSchedeTable> {
+  $$AnalisiDelleSchedeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get righe => $composableBuilder(
+    column: $table.righe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get impronta => $composableBuilder(
+    column: $table.impronta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fattaIl => $composableBuilder(
+    column: $table.fattaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AnalisiDelleSchedeTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $AnalisiDelleSchedeTable> {
+  $$AnalisiDelleSchedeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get schedaServerId => $composableBuilder(
+    column: $table.schedaServerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get righe =>
+      $composableBuilder(column: $table.righe, builder: (column) => column);
+
+  GeneratedColumn<String> get impronta =>
+      $composableBuilder(column: $table.impronta, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fattaIl =>
+      $composableBuilder(column: $table.fattaIl, builder: (column) => column);
+}
+
+class $$AnalisiDelleSchedeTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $AnalisiDelleSchedeTable,
+          AnalisiScheda,
+          $$AnalisiDelleSchedeTableFilterComposer,
+          $$AnalisiDelleSchedeTableOrderingComposer,
+          $$AnalisiDelleSchedeTableAnnotationComposer,
+          $$AnalisiDelleSchedeTableCreateCompanionBuilder,
+          $$AnalisiDelleSchedeTableUpdateCompanionBuilder,
+          (
+            AnalisiScheda,
+            BaseReferences<
+              _$ArchivioSalute,
+              $AnalisiDelleSchedeTable,
+              AnalisiScheda
+            >,
+          ),
+          AnalisiScheda,
+          PrefetchHooks Function()
+        > {
+  $$AnalisiDelleSchedeTableTableManager(
+    _$ArchivioSalute db,
+    $AnalisiDelleSchedeTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AnalisiDelleSchedeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AnalisiDelleSchedeTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AnalisiDelleSchedeTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> schedaServerId = const Value.absent(),
+                Value<String> righe = const Value.absent(),
+                Value<String> impronta = const Value.absent(),
+                Value<DateTime> fattaIl = const Value.absent(),
+              }) => AnalisiDelleSchedeCompanion(
+                schedaServerId: schedaServerId,
+                righe: righe,
+                impronta: impronta,
+                fattaIl: fattaIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> schedaServerId = const Value.absent(),
+                required String righe,
+                required String impronta,
+                required DateTime fattaIl,
+              }) => AnalisiDelleSchedeCompanion.insert(
+                schedaServerId: schedaServerId,
+                righe: righe,
+                impronta: impronta,
+                fattaIl: fattaIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AnalisiDelleSchedeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $AnalisiDelleSchedeTable,
+      AnalisiScheda,
+      $$AnalisiDelleSchedeTableFilterComposer,
+      $$AnalisiDelleSchedeTableOrderingComposer,
+      $$AnalisiDelleSchedeTableAnnotationComposer,
+      $$AnalisiDelleSchedeTableCreateCompanionBuilder,
+      $$AnalisiDelleSchedeTableUpdateCompanionBuilder,
+      (
+        AnalisiScheda,
+        BaseReferences<
+          _$ArchivioSalute,
+          $AnalisiDelleSchedeTable,
+          AnalisiScheda
+        >,
+      ),
+      AnalisiScheda,
+      PrefetchHooks Function()
+    >;
 typedef $$BruciateDichiarateTableCreateCompanionBuilder =
     BruciateDichiarateCompanion Function({
       Value<int> id,
@@ -9515,6 +10026,8 @@ class $ArchivioSaluteManager {
       $$SerieDelleSeduteTableTableManager(_db, _db.serieDelleSedute);
   $$SettimanaProgrammataTableTableManager get settimanaProgrammata =>
       $$SettimanaProgrammataTableTableManager(_db, _db.settimanaProgrammata);
+  $$AnalisiDelleSchedeTableTableManager get analisiDelleSchede =>
+      $$AnalisiDelleSchedeTableTableManager(_db, _db.analisiDelleSchede);
   $$BruciateDichiarateTableTableManager get bruciateDichiarate =>
       $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
   $$SchedeSulTelefonoTableTableManager get schedeSulTelefono =>

@@ -34,17 +34,21 @@ import 'data/limiti_delle_schede.dart';
 import 'data/progressione.dart';
 import 'data/storia_della_scheda.dart';
 
-/// Quanto può stare ferma un'analisi prima di poterla rifare.
+/// L'ora della sera in cui l'analisi si fa da sola, se oggi non ti sei allenato.
 ///
-/// 📌 Corretto il 27/08/2026: *«deve avvenire in automatico, max 1 volta al
-/// giorno per chi è abbonato»*.
+/// ══ 📌 LA REGOLA, IN UNA RIGA ═════════════════════════════════════════════
 ///
-/// ⛔ **Erano sette giorni**, ed era una scelta mia: pensavo che un'analisi
-/// rifatta dopo una sola seduta avrebbe raccontato la stessa cosa con altre
-/// parole. 💡 Con il tetto a un giorno quel rischio lo tiene [_valePagarla],
-/// che guarda **se lo storico è cambiato** invece di guardare il calendario —
-/// che è la domanda giusta, e che avevo già in mano.
-const attesaFraDueAnalisi = Duration(days: 1);
+/// 📌 *«in automatico lo fa una volta sola al giorno dopo l'allenamento (se c'è
+/// un allenamento oggi, altrimenti intorno alle 20)»*.
+///
+/// 💡 **Dopo l'allenamento** perché è il momento in cui c'è qualcosa di nuovo da
+/// dire: farla prima vorrebbe dire raccontare la giornata di ieri.
+///
+/// ⚠️ **Non c'è nessun lavoro in sottofondo**: l'app non ha un job che gira alle
+/// 20. Vuol dire «dalle 20 in poi, la prima volta che apri quella scheda» — che
+/// è l'unico momento in cui possiamo fare qualcosa, e anche l'unico in cui
+/// serve, perché è quando la stai guardando.
+const oraDellaSera = 20;
 
 /// Se questa persona può vedere progressione e analisi.
 ///
@@ -155,11 +159,21 @@ class AnalisiInCorso {
   /// Da quando è stata scritta sono state fatte altre sedute.
   final bool superata;
 
-  /// Quando si potrà rifare, o `null` se si può già.
-  DateTime? get rifacibileDal {
-    final quando = fattaIl.add(attesaFraDueAnalisi);
+  /// Se è già stata fatta **oggi**.
+  ///
+  /// ⚠️ **Il giorno di calendario, non ventiquattr'ore**: «una volta al giorno»
+  /// vuol dire questo. ⛔ Con una finestra mobile, un'analisi fatta alle 23 di
+  /// ieri bloccherebbe quella di stasera alle 20 — e chi guarda direbbe che non
+  /// funziona, perché per lui è un altro giorno.
+  ///
+  /// 🚨 **Vale solo per l'automatico.** Chi tocca il pulsante paga, e chi paga
+  /// rifà quante volte vuole.
+  bool get fattaOggi {
+    final adesso = DateTime.now();
 
-    return quando.isAfter(DateTime.now()) ? quando : null;
+    return fattaIl.year == adesso.year &&
+        fattaIl.month == adesso.month &&
+        fattaIl.day == adesso.day;
   }
 
   ProgressoEsercizio? per(int esercizioId) {
@@ -181,9 +195,6 @@ enum EsitoAnalisi {
   /// ⚠️ Non ci sono abbastanza sedute: non è un guasto, è che non c'è niente
   /// da raccontare.
   troppoPocoStorico,
-
-  /// 💡 È stata fatta da poco. Il limite è nostro, e va detto senza scusarsi.
-  troppoPresto,
 
   /// ⛔ **C'è già, e da allora non è successo niente.** ⚠️ Non è un errore e non
   /// è un limite: è la risposta giusta a una domanda che non andava fatta. 💡 Su
@@ -230,25 +241,22 @@ Future<EsitoAnalisi> chiediLAnalisi(
     analisiDellaSchedaProvider(schedaLocale).future,
   );
 
-  if (gia != null && gia.rifacibileDal != null) {
-    return EsitoAnalisi.troppoPresto;
-  }
-
   /*
-   * ══ 🚨 L'AUTOMATICO È PIÙ PRUDENTE DEL PULSANTE ═══════════════════════
+   * ══ 🚨 IL LIMITE VALE SOLO PER L'AUTOMATICO ═══════════════════════════
    *
-   * ⚠️ Il tetto di un giorno da solo non basterebbe: chi apre cinque schede
-   * ogni mattina spenderebbe **cinque gettoni al giorno** per farsi riscrivere
-   * cinque frasi identiche, e se ne accorgerebbe dal saldo.
+   * 📌 *«se pago 1 gettone lo devo poter rifare eh»*.
    *
-   * 💡 [_valePagarla] guarda **se è successo qualcosa** — l'impronta dello
-   * storico — invece del calendario. Chi non si è allenato non paga niente.
+   * ⛔ **Prima il tetto valeva anche per il pulsante**, ed era sbagliato:
+   * mettere un limite a chi sta pagando vuol dire prendergli i soldi e
+   * decidere al posto suo quando può spenderli. 🚨 Chi tocca ha deciso lui —
+   * e ha anche letto «1 gettone» sul pulsante.
    *
-   * ⛔ Il pulsante invece passa comunque: chi lo tocca ha deciso lui, e negargli
-   * la rigenerazione dopo un errore di rete vorrebbe dire lasciarlo senza modo
-   * di riprovare.
+   * 💡 Sull'automatico invece un limite ci vuole, perché nessuno l'ha chiesto:
+   * lo decide [_quandoDaSola].
    */
-  if (automatica && !_valePagarla(gia)) return EsitoAnalisi.giaAggiornata;
+  if (automatica && !await _quandoDaSola(ref, gia, schedaLocale)) {
+    return EsitoAnalisi.giaAggiornata;
+  }
 
   /*
    * ══ 📐 I CAMBI DELLA SCHEDA VANNO INSIEME ALLE SEDUTE — 3b-I.E ═════════
@@ -365,15 +373,66 @@ Future<EsitoAnalisi> chiediLAnalisi(
   }
 }
 
-/// 💰 Vale la pena spendere un gettone per rifarla?
+/// ⏰ È il momento in cui l'analisi si fa da sola? — 3b-I.G, 27/08/2026.
 ///
-/// 🚨 **La domanda non è «quanto è vecchia», è «cosa è cambiato».** Un'analisi
-/// di un mese fa è ancora vera se da allora non ti sei allenato; una di ieri è
-/// già superata se ieri sera hai fatto quella scheda.
+/// ══ 📌 LA REGOLA ══════════════════════════════════════════════════════════
 ///
-/// 💡 È esattamente per questo che [AnalisiScheda.impronta] esiste, e il
-/// percorso automatico è il posto dove serviva davvero.
-bool _valePagarla(AnalisiInCorso? gia) => gia == null || gia.superata;
+/// 📌 *«in automatico lo fa una volta sola al giorno dopo l'allenamento (se c'è
+/// un allenamento oggi, altrimenti intorno alle 20)»*.
+///
+/// | | Condizione |
+/// |---|---|
+/// | 1 | non è già stata fatta **oggi** |
+/// | 2 | ti sei allenato oggi con questa scheda **oppure** sono passate le [oraDellaSera] |
+///
+/// ── 💡 Perché il momento conta, e non solo il numero ─────────────────────
+///
+/// **Dopo l'allenamento** c'è qualcosa di nuovo da dire; prima no. ⛔ Un'analisi
+/// che parte alle 8 del mattino racconta la giornata di ieri, e poi non si
+/// rifà: chi si allena alle 19 la trova vecchia proprio quando gli servirebbe.
+///
+/// ⚠️ **La prima analisi in assoluto non aspetta niente.** Chi apre la scheda
+/// per la prima volta deve vedere la funzione, non un riquadro vuoto con la
+/// promessa che stasera arriva qualcosa.
+Future<bool> _quandoDaSola(
+  WidgetRef ref,
+  AnalisiInCorso? gia,
+  int schedaLocale,
+) async {
+  if (gia == null) return true;
+
+  if (gia.fattaOggi) return false;
+
+  final oggi = await ref.read(allenatoOggiProvider(schedaLocale).future);
+
+  return oggi || DateTime.now().hour >= oraDellaSera;
+}
+
+/// Ti sei allenato **oggi** con questa scheda?
+///
+/// ⚠️ **Solo le sedute finite**: una ancora aperta è un allenamento in corso, e
+/// analizzarlo a metà racconterebbe un calo che non è successo. 💡 È la stessa
+/// regola di `storiaDegliEsercizi`, ed è il motivo per cui l'analisi arriva
+/// quando chiudi la seduta e non quando la apri.
+final allenatoOggiProvider = FutureProvider.autoDispose.family<bool, int>((
+  ref,
+  schedaLocale,
+) async {
+  final storia = await ref.watch(storiaDellaSchedaProvider(schedaLocale).future);
+  final adesso = DateTime.now();
+
+  for (final punti in storia.values) {
+    for (final p in punti) {
+      if (p.data.year == adesso.year &&
+          p.data.month == adesso.month &&
+          p.data.day == adesso.day) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+});
 
 /// @nodoc
 List<ProgressoEsercizio> _daJson(String testo) {

@@ -1180,8 +1180,8 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
               Text(
                 puo
                     ? 'Sotto ogni esercizio trovi come è andata nelle ultime '
-                          'sedute. L\'analisi si aggiorna da sola quando ti '
-                          'alleni, al massimo una volta al giorno.'
+                          'sedute. L\'analisi si aggiorna da sola una volta '
+                          'al giorno, dopo l\'allenamento o in serata.'
                     : 'Con l\'abbonamento vedi l\'andamento di ogni esercizio e '
                           'un\'analisi scritta per te.',
                 style: tema.textTheme.bodySmall,
@@ -1294,10 +1294,6 @@ String _spiegazione(EsitoAnalisi esito) => switch (esito) {
   EsitoAnalisi.troppoPocoStorico =>
     'Serve almeno una seconda seduta per avere qualcosa da raccontare.',
 
-  // ⚠️ Si dice **quando**, non «riprova più tardi»: un limite senza una data è
-  // indistinguibile da un guasto.
-  EsitoAnalisi.troppoPresto =>
-    'L\'hai già rifatta oggi: si può di nuovo domani.',
   EsitoAnalisi.senzaGettoni => 'Gettoni finiti.',
   EsitoAnalisi.nonRiuscita => 'Non è riuscita. Riprova fra poco.',
 };

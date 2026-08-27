@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/training/data/progressione.dart';
+import 'package:training_companion/src/features/training/progressione_controller.dart';
 
 /// La progressione degli esercizi — 3b-I.A, 27/08/2026.
 ///
@@ -164,6 +165,41 @@ void main() {
 
     test('con un punto solo non c\'è niente da dire', () {
       expect(andamentoDaiPunti([p(1, kg: 60, reps: 8)]), Andamento.pocoStorico);
+    });
+  });
+
+  group('quando l\'analisi si rifa\' da sola', () {
+    AnalisiInCorso analisi(DateTime quando) =>
+        AnalisiInCorso(righe: const [], fattaIl: quando, superata: true);
+
+    test('una fatta stamattina e\' «fatta oggi»', () {
+      final adesso = DateTime.now();
+
+      expect(
+        analisi(DateTime(adesso.year, adesso.month, adesso.day, 7)).fattaOggi,
+        isTrue,
+      );
+    });
+
+    test('una fatta ieri sera tardi NON e\' «fatta oggi»', () {
+      /*
+       * 🚨 **Il giorno di calendario, non ventiquattr'ore.** ⛔ Con una finestra
+       * mobile un'analisi delle 23 di ieri bloccherebbe quella di stasera alle
+       * 20 — e chi guarda direbbe che non funziona, perché per lui è un altro
+       * giorno.
+       */
+      final ieri = DateTime.now().subtract(const Duration(days: 1));
+
+      expect(
+        analisi(DateTime(ieri.year, ieri.month, ieri.day, 23, 30)).fattaOggi,
+        isFalse,
+      );
+    });
+
+    test('l\'ora della sera e\' un\'ora vera, non un promemoria', () {
+      // ⚠️ Non c'è nessun lavoro in sottofondo: `oraDellaSera` vuol dire «da
+      // quest'ora in poi, la prima volta che apri la scheda».
+      expect(oraDellaSera, inInclusiveRange(0, 23));
     });
   });
 

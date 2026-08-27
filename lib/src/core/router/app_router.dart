@@ -21,7 +21,7 @@ import '../../features/nutrition/ui/compositore_consigli.dart';
 import '../../features/nutrition/ui/importa_piano_screen.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
-import '../../features/onboarding/ui/gym_code_screen.dart';
+import '../../features/onboarding/ui/schermata_benvenuto.dart';
 import '../../features/privacy/ui/schermata_consensi.dart';
 import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
@@ -344,7 +344,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.gymCode,
-        builder: (_, _) => const GymCodeScreen(),
+        builder: (_, _) => const SchermataBenvenuto(),
       ),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(

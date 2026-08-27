@@ -56,11 +56,26 @@ final dettagliPalestraProvider = FutureProvider.autoDispose<DettagliPalestra?>((
 /// stessa scelta fatta per `join-gym`.
 final esciDallaPalestraProvider = Provider<Future<void> Function()>((ref) {
   return () async {
-    await ref
+    final risposta = await ref
         .read(apiClientProvider)
-        .post<Map<String, dynamic>>('/account/leave-gym');
+        .post<Map<String, dynamic>>('/account/leave-gym', unwrap: false);
 
-    await ref.read(brandingControllerProvider.notifier).refreshQuietly();
+    /*
+     * ══ ⛔ SI ADOTTA LA RISPOSTA, NON SI RILEGGE IL CODICE — 3b-J.1 ═══════
+     *
+     * 🚨 Qui c'era `refreshQuietly()`, che rileggeva `/branding/lookup` con il
+     * codice in cache. ⚠️ Quel codice lo scriveva **solo** la vecchia schermata
+     * d'ingresso: chi era entrato dal profilo non ce l'aveva già prima, e da
+     * 3b-J.1 non ce l'ha più nessuno. Il metodo tornava subito senza fare
+     * niente, e uscire dalla palestra **lasciava addosso i suoi colori**.
+     *
+     * 💡 Il server risponde già con il branding nuovo — quello personale — e lo
+     * faceva apposta: era scritto anche nel commento di prima, e nessuno lo
+     * leggeva. È la stessa scelta di `join-gym`.
+     */
+    await ref
+        .read(brandingControllerProvider.notifier)
+        .adottaDalServer(risposta['branding']);
 
     ref.invalidate(dettagliPalestraProvider);
   };

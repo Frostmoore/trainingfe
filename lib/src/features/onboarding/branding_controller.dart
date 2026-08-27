@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/storage/local_cache.dart';
 import 'data/gym_branding.dart';
@@ -47,7 +45,7 @@ class BrandingState {
 /// secondo di bianco a ogni apertura, ed è la prima cosa che si nota di un'app
 /// white-label — proprio la cosa che deve funzionare bene.
 class BrandingController extends StateNotifier<BrandingState> {
-  BrandingController(this._api, this._cache)
+  BrandingController(this._cache)
     : super(
         BrandingState(
           // Avvio a caldo: se c'è una cache, si parte da lì.
@@ -62,7 +60,16 @@ class BrandingController extends StateNotifier<BrandingState> {
         ),
       );
 
-  final ApiClient _api;
+  /*
+   * ⛔ **Non c'è più un `ApiClient`** — 27/08/2026, e vale la pena dirlo.
+   *
+   * 🚨 Questo controller **non parla più con la rete**: legge e scrive la cache,
+   * e basta. L'unica chiamata che faceva era `/branding/lookup`, cioè la ricerca
+   * del codice palestra prima del login — che da 3b-J.1 non esiste più.
+   *
+   * 💡 Il branding adesso arriva da chi ce l'ha per davvero: la risposta del
+   * server all'utente autenticato, passata a [adottaDalServer].
+   */
   final LocalCache _cache;
 
   /// 🆕 **Si prosegue senza palestra** — F3.
@@ -109,79 +116,55 @@ class BrandingController extends StateNotifier<BrandingState> {
     state = BrandingState(branding: GymBranding.fromJson(branding));
   }
 
-  /// Cerca la palestra da un codice d'invito.
+  /// 🏷️ Adotta il branding che il **server** ha mandato insieme all'utente.
   ///
-  /// Lancia `NotFoundException` se il codice non esiste **o** se la palestra è
-  /// sospesa: il backend risponde allo stesso modo di proposito, per non far
-  /// diventare questo endpoint un modo per enumerare i clienti. L'app quindi
-  /// mostra un solo messaggio, e va bene così.
-  Future<GymBranding> lookup(String code) async {
-    final normalizzato = code.trim().toUpperCase();
+  /// ══ 🚨 PERCHÉ ESISTE, DA 3b-J.1 ═══════════════════════════════════════
+  ///
+  /// 📌 Tolto il codice palestra dalla prima schermata, non c'è più nessun
+  /// momento *prima* del login in cui l'app possa sapere di che colore essere.
+  ///
+  /// ⛔ Senza questo metodo, un iscritto che reinstalla l'app resterebbe
+  /// **neutro per sempre** — con il server che sa benissimo in che palestra sta,
+  /// e glielo stava già dicendo: `/auth/login` e `/auth/me` rispondono
+  /// `{token, data, branding}`, e quel `branding` non lo leggeva nessuno.
+  ///
+  /// 💡 Ed è anche più giusto di prima: la palestra è **un fatto dell'utente**,
+  /// non di un codice rimasto in cache su un telefono.
+  ///
+  /// ⚠️ **`null` vuol dire «nessuna palestra», e va gestito come tale**: chi
+  /// esce da una palestra deve tornare neutro. ⛔ Ignorare il `null` lascerebbe
+  /// addosso i colori di una palestra da cui si è appena usciti, che è il modo
+  /// più diretto di far credere che l'operazione non abbia funzionato.
+  Future<void> adottaDalServer(Object? branding) async {
+    if (branding is Map<String, dynamic>) {
+      await adotta(branding);
 
-    state = BrandingState(
-      branding: state.branding,
-      joinCode: state.joinCode,
-      senzaPalestra: state.senzaPalestra,
-      isLoading: true,
-    );
-
-    try {
-      final data = await _api.get<Map<String, dynamic>>(
-        '/branding/lookup',
-        query: {'code': normalizzato},
-      );
-
-      final branding = GymBranding.fromJson(data);
-
-      await _cache.setBranding(data);
-      await _cache.setJoinCode(normalizzato);
-
-      state = BrandingState(branding: branding, joinCode: normalizzato);
-
-      return branding;
-    } finally {
-      if (state.isLoading) {
-        state = BrandingState(
-          branding: state.branding,
-          joinCode: state.joinCode,
-          senzaPalestra: state.senzaPalestra,
-        );
-      }
+      return;
     }
+
+    await senzaPalestra();
   }
 
-  /// Riallinea il branding all'avvio, **senza far fallire niente**.
-  ///
-  /// Se la palestra ha cambiato colori si aggiorna; se il telefono è offline si
-  /// tiene quello in cache. Un errore qui non deve impedire l'avvio: i colori
-  /// sbagliati sono un problema estetico, un'app che non parte no.
-  Future<void> refreshQuietly() async {
-    final code = state.joinCode;
-
-    if (code == null || code.isEmpty) return;
-
-    try {
-      final data = await _api.get<Map<String, dynamic>>(
-        '/branding/lookup',
-        query: {'code': code},
-      );
-
-      await _cache.setBranding(data);
-
-      state = BrandingState(
-        branding: GymBranding.fromJson(data),
-        joinCode: code,
-      );
-    } on Object catch (error) {
-      final tradotto = ApiClient.unwrapError(error);
-
-      // 🚨 Un 404 qui non è un problema di rete: vuol dire che la palestra è
-      // stata sospesa o cancellata. Si tiene comunque il branding in cache —
-      // chi ha già un account deve poter arrivare alla schermata che gli spiega
-      // cosa è successo, non a una schermata neutra che sembra un'altra app.
-      if (tradotto is NetworkException || tradotto is NotFoundException) return;
-    }
-  }
+  /*
+   * ══ ⛔ QUI VIVEVANO `lookup()` E `refreshQuietly()` — tolti il 27/08/2026 ══
+   *
+   * 📌 *«al primo accesso, rimuovi l'opzione di registrarsi con una palestra»*.
+   *
+   * Servivano tutti e due allo stesso mondo: un **codice palestra digitato
+   * prima del login**, tenuto in cache, e riletto ogni tanto per aggiornare i
+   * colori. ⛔ Quel mondo non c'è più: il codice si digita da dentro l'app, e la
+   * palestra si legge dall'utente autenticato.
+   *
+   * 🚨 **Erano già diventati bugie prima di essere tolti**: chi entrava in
+   * palestra dal profilo non ha mai avuto un `joinCode` in cache — `adotta()`
+   * non lo scrive, e lo dice nel suo commento — quindi `refreshQuietly()` per
+   * lui tornava subito senza fare niente. ⚠️ E siccome è quello che chiamava
+   * l'uscita dalla palestra, uscire **lasciava addosso i colori**. Il codice
+   * c'era, girava, e non faceva la cosa che il suo nome prometteva.
+   *
+   * 💡 Al loro posto c'è [adottaDalServer], che prende il branding da chi ce
+   * l'ha davvero: la risposta del server.
+   */
 
   /// Dimentica la palestra: si usa al «cambia palestra», non al logout.
   Future<void> forget() async {
@@ -193,8 +176,5 @@ class BrandingController extends StateNotifier<BrandingState> {
 
 final brandingControllerProvider =
     StateNotifierProvider<BrandingController, BrandingState>(
-      (ref) => BrandingController(
-        ref.watch(apiClientProvider),
-        ref.watch(localCacheProvider),
-      ),
+      (ref) => BrandingController(ref.watch(localCacheProvider)),
     );

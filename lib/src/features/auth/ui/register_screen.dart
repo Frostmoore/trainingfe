@@ -16,9 +16,20 @@ import 'widgets/social_buttons.dart';
 
 /// L'iscrizione — A2.3.
 ///
-/// Il `join_code` non si chiede: è già stato inserito nella schermata
-/// precedente e sta nella cache. Richiederlo qui sarebbe far ridigitare a mano
-/// una cosa che l'app già sa — il modo più rapido per far sbagliare qualcuno.
+/// ══ ⛔ IL CODICE PALESTRA NON SI CHIEDE, E DA 3b-J.1 NON C'È PROPRIO ══════
+///
+/// 📌 *«al primo accesso, rimuovi l'opzione di registrarsi con una palestra …
+/// per accedere con una palestra si farà dopo che l'utente si è già
+/// registrato»*.
+///
+/// ⚠️ **Qui c'era scritto che il codice «è già stato inserito nella schermata
+/// precedente»**, ed era vero fino al 27/08/2026: la prima schermata lo
+/// chiedeva. Adesso la prima schermata è `SchermataBenvenuto` — accedi o
+/// registrati — e in palestra si entra **dopo**, da Profilo › Entra in una
+/// palestra.
+///
+/// 💡 Quindi ci si registra sempre **senza palestra**, e il server la sa
+/// gestire: fa nascere un tenant personale.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -131,9 +142,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
      * palestra», ed era giusto finché ogni utente doveva appartenere a una: chi
      * arrivava senza codice ci era arrivato per sbaglio.
      *
-     * ⚠️ Da F3 «nessun codice» è una scelta esplicita — il pulsante «continuo
+     * ⚠️ Da F3 «nessun codice» era una scelta esplicita — il pulsante «continuo
      * senza palestra» della schermata precedente — e il server la sa gestire:
      * fa nascere un tenant personale.
+     *
+     * ⛔ **Da 3b-J.1 non è più nemmeno una scelta: è l'unica strada.** Nessuno
+     * scrive più `joinCode`, quindi qui vale sempre `null`.
+     *
+     * 🚨 **La riga resta**, e non è codice morto per sbaglio: è il punto in cui
+     * un domani si riattacca un invito che arriva da fuori — un link, un QR
+     * sul volantino della palestra. 💡 Toglierla vorrebbe dire dover ritrovare
+     * *tutti e tre* i punti che lo mandano al server (accesso, iscrizione,
+     * social) invece di riempirne uno solo.
      */
     final code = ref.read(brandingControllerProvider).joinCode;
 

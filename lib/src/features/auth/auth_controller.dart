@@ -10,6 +10,7 @@ import '../../core/storage/local_cache.dart';
 import '../../core/storage/token_store.dart';
 import '../../core/tempo/fuso_del_dispositivo.dart';
 import '../health/health_controller.dart';
+import '../onboarding/branding_controller.dart';
 import 'data/app_user.dart';
 import 'data/social_sign_in.dart';
 
@@ -66,6 +67,7 @@ class AuthController extends StateNotifier<AuthState> {
     this._svuotaLArchivio,
     this._blocco,
     this._cache,
+    this._adottaIlBranding,
   ]) : super(const AuthState.unknown()) {
     // 🚨 Il 401 arriva da **qualunque** richiesta, non solo da quelle di
     // autenticazione: una schermata qualsiasi può essere la prima ad accorgersi
@@ -118,6 +120,14 @@ class AuthController extends StateNotifier<AuthState> {
   /// controller non hanno `shared_preferences` sotto. `null` = nessuna pulizia
   /// al cambio di persona, cioè il comportamento di prima.
   final LocalCache? _cache;
+
+  /// 🏷️ Adotta il branding che arriva insieme all'utente — 3b-J.1.
+  ///
+  /// ⚠️ **Un gancio e non il controller del branding**, per la stessa ragione
+  /// scritta su `_svuotaLArchivio`: dipendere da un altro provider vorrebbe dire
+  /// farsi ricostruire — cioè **perdere la sessione** — ogni volta che quello
+  /// cambia. 🚨 È già successo con l'archivio locale il 19/08.
+  final Future<void> Function(Object? branding)? _adottaIlBranding;
 
   StreamSubscription<void>? _sessionSub;
 
@@ -412,6 +422,18 @@ class AuthController extends StateNotifier<AuthState> {
         ? AppUser.fromJson(utente)
         : null;
 
+    /*
+     * 🏷️ **I colori della palestra arrivano con l'utente** — 3b-J.1.
+     *
+     * 🚨 Da quando il codice non si chiede più prima del login, questo è
+     * l'**unico** momento in cui l'app scopre in che palestra si trova chi sta
+     * entrando. ⛔ Senza, un iscritto che reinstalla l'app resta vestito di
+     * neutro dentro una palestra che ha i suoi colori.
+     *
+     * 💡 Il campo c'era già nella risposta e non lo leggeva nessuno.
+     */
+    await _adottaIlBranding?.call(data['branding']);
+
     // 🚨 **Prima di dichiarare la sessione aperta.** Se la pulizia avvenisse
     // dopo, per un istante lo stato sarebbe `loggedIn` con dentro l'archivio
     // della persona precedente — e basta una schermata che si ricostruisce in
@@ -433,6 +455,16 @@ class AuthController extends StateNotifier<AuthState> {
       final persona = utente is Map<String, dynamic>
           ? AppUser.fromJson(utente)
           : null;
+
+      /*
+       * 🏷️ **E anche alla riapertura** — 3b-J.1.
+       *
+       * 💡 Non è una ripetizione del login: qui si passa a **ogni avvio**, ed è
+       * il punto in cui l'app si accorge che nel frattempo la palestra è
+       * cambiata — qualcuno è entrato da un altro telefono, o il trainer l'ha
+       * spostato. ⛔ Solo al login vorrebbe dire scoprirlo al prossimo logout.
+       */
+      await _adottaIlBranding?.call(risposta['branding']);
 
       // ⚠️ Anche qui, e **prima** dello stato: `restore()` passa da questa
       // strada, quindi è il punto in cui un telefono che ha cambiato padrone se
@@ -595,6 +627,16 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
 
     ref.watch(bloccoBiometricoProvider),
     ref.watch(localCacheProvider),
+
+    /*
+     * 🏷️ **`ref.read` dentro la funzione**, come sopra: con `ref.watch` questo
+     * controller dipenderebbe dal branding, e ogni cambio di palestra
+     * ricostruirebbe l'autenticazione — cioè butterebbe la sessione di chi ha
+     * appena finito di entrare in palestra.
+     */
+    (branding) => ref
+        .read(brandingControllerProvider.notifier)
+        .adottaDalServer(branding),
   ),
 );
 

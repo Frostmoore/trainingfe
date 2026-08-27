@@ -16,7 +16,6 @@ import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
 import 'src/features/aggiornamento/aggiornamento_controller.dart';
 import 'src/features/auth/auth_controller.dart';
-import 'src/features/onboarding/branding_controller.dart';
 
 /// L'avvio — A1.1.
 ///
@@ -135,12 +134,17 @@ Future<void> main() async {
 
     unawaited(container.read(authControllerProvider.notifier).restore());
 
-    // Il branding si riallinea in sottofondo: se fallisce, resta quello in
-    // cache. I colori sbagliati sono un problema estetico, un'app che non
-    // parte no.
-    unawaited(
-      container.read(brandingControllerProvider.notifier).refreshQuietly(),
-    );
+    /*
+     * ⛔ **Qui c'era il riallineamento del branding** — tolto il 27/08/2026.
+     *
+     * Chiamava `refreshQuietly()`, che rileggeva `/branding/lookup` con il
+     * codice palestra in cache. 🚨 Da 3b-J.1 quel codice non lo scrive più
+     * nessuno: il branding arriva insieme all'utente, e `restore()` — la riga
+     * qui sopra — passa da `/auth/me`, che lo restituisce già.
+     *
+     * 💡 Una richiesta in meno a ogni avvio, e una fonte sola invece di due che
+     * potevano dire cose diverse.
+     */
 
     /*
        * 🧹 **La spazzata delle foto scadute** — N11.6.

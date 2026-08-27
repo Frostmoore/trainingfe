@@ -29,8 +29,12 @@ void main() {
     bool aperta = false,
     int? kcal,
     bool aMano = false,
+    int? scheda,
+    String? nomeScheda,
   }) => WorkoutSession(
     id: id,
+    planId: scheda,
+    planName: nomeScheda,
     startedAt: inizio,
     endedAt: durataMinuti == null
         ? null
@@ -452,6 +456,111 @@ void main() {
       );
 
       expect(voci.single.seduta!.id, 1);
+    });
+  });
+
+  group('di che scheda era', () {
+    /*
+     * ══ ⛔ IL DIFETTO DEL 27/08/2026 ═══════════════════════════════════════
+     *
+     * 📌 *«la card "Questa scheda" mi dice che l'ho fatta una sola volta,
+     * mentre gli esercizi mi dicono che li ho fatti più volte»*.
+     *
+     * 🚨 `schedaId` veniva riempito **soltanto** da `schedaAssegnata`, cioè
+     * dagli allenamenti dell'orologio: le sedute fatte col player non lo
+     * popolavano mai, e «quante volte l'ho fatta» ne contava una su tre.
+     *
+     * ⚠️ **E non dava nessun errore**: dava un numero più basso, che sembra un
+     * conto.
+     */
+    test('una seduta del player dice la sua scheda', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(9), scheda: 7, nomeScheda: 'Full body A'),
+        ],
+        dallOrologio: const [],
+
+        // ⚠️ La mappa serve: l'id si tiene **solo se la scheda esiste ancora**,
+        // ed è la stessa regola già in vigore per il polso.
+        nomiDelleSchede: const {7: 'Full body A'},
+      );
+
+      expect(voci.single.schedaId, 7);
+      expect(voci.single.nomeScheda, 'Full body A');
+    });
+
+    test('tre sedute della stessa scheda si contano tre', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: DateTime(2026, 8, 10, 9), scheda: 7),
+          seduta(id: 2, inizio: DateTime(2026, 8, 14, 9), scheda: 7),
+          seduta(id: 3, inizio: DateTime(2026, 8, 18, 9), scheda: 7),
+        ],
+        dallOrologio: const [],
+        nomiDelleSchede: const {7: 'Full body A'},
+      );
+
+      // 💡 È esattamente il conto che fa `_SchedaInNumeri`.
+      expect(voci.where((v) => v.schedaId == 7).length, 3);
+    });
+
+    test('una seduta ancora aperta non perde la sua scheda', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(9), aperta: true, scheda: 7),
+        ],
+        dallOrologio: const [],
+        nomiDelleSchede: const {7: 'Full body A'},
+      );
+
+      // ⚠️ Esce dalla porta di servizio — non si raggruppa — ed è la strada in
+      // cui è più facile dimenticarsi un campo.
+      expect(voci.single.schedaId, 7);
+    });
+
+    test('il player vince sull\'attribuzione fatta al polso', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [seduta(id: 1, inizio: alle(9), scheda: 7)],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(9), schedaAssegnata: 9)],
+        nomiDelleSchede: const {7: 'Full body A', 9: 'Full body B'},
+      );
+
+      /*
+       * 💡 `planId` è una **dichiarazione**: qualcuno ha premuto «inizia» su
+       * quella scheda. `schedaAssegnata` è un'attribuzione fatta **dopo**, a un
+       * allenamento che il polso ha registrato da solo.
+       */
+      expect(voci.single.schedaId, 7);
+    });
+
+    test('senza seduta del player vale ancora l\'attribuzione al polso', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: const [],
+        dallOrologio: [dalPolso(id: 10, inizio: alle(9), schedaAssegnata: 9)],
+        nomiDelleSchede: const {9: 'Full body B'},
+      );
+
+      // ⛔ La correzione non deve togliere quello che funzionava.
+      expect(voci.single.schedaId, 9);
+    });
+
+    test('il nome copiato sulla seduta sopravvive alla scheda cancellata', () {
+      final voci = StoricoUnificato.fondi(
+        sessioni: [
+          seduta(id: 1, inizio: alle(9), scheda: 7, nomeScheda: 'Sparita'),
+        ],
+        dallOrologio: const [],
+
+        // 🚨 La scheda non c'è più: `nomiDelleSchede` non la conosce.
+        nomiDelleSchede: const {},
+      );
+
+      // 💡 Lo storico deve continuare a dire cosa stavi facendo allora.
+      expect(voci.single.nomeScheda, 'Sparita');
+
+      // ⚠️ Ma l'id no: puntare a una scheda che non c'è vorrebbe dire cercarla
+      // invano a ogni ridisegno. È la regola già scritta per il polso.
+      expect(voci.single.schedaId, isNull);
     });
   });
 

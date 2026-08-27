@@ -351,7 +351,17 @@ abstract final class StoricoUnificato {
 
     for (final s in sessioni) {
       if (s.isOpen || fineDi(s) == null) {
-        voci.add(VoceStorico(sedute: [s], dalPolso: const []));
+        voci.add(
+          VoceStorico(
+            sedute: [s],
+            dalPolso: const [],
+
+            // ⚠️ Anche qui la scheda: una seduta aperta è comunque una seduta
+            // **di quella scheda**, e chi conta le righe non deve saltarla.
+            nomeScheda: s.planName ?? nomiDelleSchede[s.planId],
+            schedaId: nomiDelleSchede.containsKey(s.planId) ? s.planId : null,
+          ),
+        );
 
         continue;
       }
@@ -401,18 +411,58 @@ abstract final class StoricoUnificato {
             ..sort((a, b) => a.iniziatoIl.compareTo(b.iniziatoIl));
 
       /*
-       * 💡 La prima scheda assegnata del gruppo. ⚠️ Non si mostrano tutte: se
-       * qualcuno ne ha assegnate due a pezzi dello stesso allenamento, mostrarne
-       * due direbbe che sono due allenamenti — cioè il contrario di quello che
-       * il raggruppamento ha appena stabilito.
+       * ══ 🚨 LA SCHEDA LA DICE ANCHE LA SEDUTA DELL'APP ═══════════════════
+       *
+       * ⛔ **Difetto riferito il 27/08/2026**: *«la card "Questa scheda" mi dice
+       * che l'ho fatta una sola volta, mentre gli esercizi mi dicono che li ho
+       * fatti più volte»*.
+       *
+       * 🚨 `schedaId` veniva riempito **soltanto** da `schedaAssegnata`, cioè
+       * dagli allenamenti dell'orologio. Una seduta fatta col player — che la
+       * scheda ce l'ha in `planId`, ed è il modo più diretto di dire «sto
+       * facendo questa scheda» — non lo popolava mai.
+       *
+       * ⚠️ **E non dava nessun errore**: dava «1 volta fatta», che sembra un
+       * conto. È la stessa contraddizione dentro la stessa schermata già pagata
+       * il 21/08 sulla card «Allenamento», e nata dalla stessa causa — due
+       * risposte alla stessa domanda prese da due posti diversi.
+       *
+       * 💡 **La seduta dell'app viene prima**: `planId` è una dichiarazione —
+       * qualcuno ha premuto «inizia» su quella scheda — mentre `schedaAssegnata`
+       * è un'attribuzione fatta dopo, a un allenamento che il polso ha
+       * registrato da solo.
+       *
+       * ⚠️ Non si mostrano tutte: se qualcuno ne ha assegnate due a pezzi dello
+       * stesso allenamento, mostrarne due direbbe che sono due allenamenti —
+       * cioè il contrario di quello che il raggruppamento ha appena stabilito.
        */
       String? nomeScheda;
       int? schedaId;
 
+      for (final s in sedute) {
+        if (s.planId == null || nomeScheda != null) continue;
+
+        /*
+         * 💡 **Il nome copiato sulla seduta vince**: sopravvive alla
+         * cancellazione della scheda, e lo storico deve continuare a dire cosa
+         * stavi facendo allora.
+         */
+        nomeScheda = s.planName ?? nomiDelleSchede[s.planId];
+
+        /*
+         * ⚠️ **L'id solo se la scheda esiste ancora**, come per il polso: un id
+         * che non sta fra le schede è un riferimento a qualcosa che non c'è
+         * più, e portarselo dietro vorrebbe dire cercarlo invano a ogni
+         * ridisegno. 🚨 Il nome resta lo stesso: sono due cose diverse — uno
+         * serve a **raccontare**, l'altro a **collegare**.
+         */
+        if (nomiDelleSchede.containsKey(s.planId)) schedaId = s.planId;
+      }
+
       for (final a in polso) {
         final nome = nomiDelleSchede[a.schedaAssegnata];
 
-        if (nome == null || nomeScheda != null) continue;
+        if (nome == null || schedaId != null) continue;
 
         nomeScheda = nome;
         schedaId = a.schedaAssegnata;

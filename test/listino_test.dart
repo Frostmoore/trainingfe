@@ -163,4 +163,39 @@ void main() {
       expect(modale.toLowerCase().contains('disdic'), isFalse);
     });
   });
+  group('🔁 l\'abbonamento in corso', () {
+    Listino con(Object? attivo) =>
+        Listino.fromJson({'abbonato': true, 'abbonamento_attivo': attivo});
+
+    test('si legge scadenza, rinnovo e gestibilita', () {
+      final a = con({
+        'fino_al': '2026-09-27',
+        'rinnova': true,
+        'gestibile': true,
+      }).inCorso!;
+
+      expect(a.finoAl, DateTime(2026, 9, 27));
+      expect(a.rinnova, isTrue);
+      expect(a.gestibile, isTrue);
+    });
+
+    /// ⛔ Gli abbonamenti delle palestre non scadono e non passano da
+    /// Stripe: senza data non si scrive niente, e senza cliente il pulsante
+    /// «gestisci» non deve comparire — aprirebbe una pagina vuota.
+    test('e un abbonamento che non scade non ha data ne gestione', () {
+      final a = con({
+        'fino_al': null,
+        'rinnova': true,
+        'gestibile': false,
+      }).inCorso!;
+
+      expect(a.finoAl, isNull);
+      expect(a.gestibile, isFalse);
+    });
+
+    test('e senza abbonamento in corso non c\'e niente', () {
+      expect(con(null).inCorso, isNull);
+      expect(Listino.fromJson(const {}).inCorso, isNull);
+    });
+  });
 }

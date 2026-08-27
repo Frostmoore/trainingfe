@@ -41,6 +41,44 @@ class PacchettoGettoni {
   double get centPerGettone => gettoni == 0 ? 0 : prezzoCent / gettoni;
 }
 
+/// L'abbonamento in corso: quando scade, e cosa succede dopo.
+///
+/// ══ 🚨 LE DUE COSE INSIEME, O LA FRASE MENTE ══════════════════════════════
+///
+/// «Fino al 27 settembre» detto a chi si rinnova **suona come una scadenza** e
+/// fa disdire per sbaglio. «Si rinnova il 27» detto a chi ha già disdetto è
+/// peggio: gli dice che il gesto non è servito.
+class AbbonamentoInCorso {
+  const AbbonamentoInCorso({
+    required this.finoAl,
+    required this.rinnova,
+    required this.gestibile,
+  });
+
+  static AbbonamentoInCorso? daJson(Object? j) {
+    if (j is! Map) return null;
+
+    final m = j.cast<String, dynamic>();
+
+    return AbbonamentoInCorso(
+      finoAl: DateTime.tryParse(m['fino_al']?.toString() ?? ''),
+      rinnova: m['rinnova'] as bool? ?? false,
+      gestibile: m['gestibile'] as bool? ?? false,
+    );
+  }
+
+  /// ⚠️ `null` per gli abbonamenti che non scadono — quelli delle palestre.
+  final DateTime? finoAl;
+
+  final bool rinnova;
+
+  /// Se c'è un cliente Stripe dietro, cioè se il portale ha senso.
+  ///
+  /// ⛔ Alle palestre il pulsante non deve comparire: aprirebbe una pagina
+  /// vuota, e una pagina vuota si legge come un guasto.
+  final bool gestibile;
+}
+
 /// Cosa si può comprare, e cosa si ha già.
 class Listino {
   const Listino({
@@ -50,6 +88,7 @@ class Listino {
     required this.chiamateMensili,
     required this.pacchetti,
     required this.gettoniDisponibili,
+    this.inCorso,
   });
 
   factory Listino.fromJson(Map<String, dynamic> j) {
@@ -65,6 +104,7 @@ class Listino {
           .map((e) => PacchettoGettoni.fromJson((e as Map).cast()))
           .toList(),
       gettoniDisponibili: (j['gettoni_disponibili'] as num?)?.toInt() ?? 0,
+      inCorso: AbbonamentoInCorso.daJson(j['abbonamento_attivo']),
     );
   }
 
@@ -77,6 +117,9 @@ class Listino {
   final int chiamateMensili;
   final List<PacchettoGettoni> pacchetti;
   final int gettoniDisponibili;
+
+  /// `null` se non c'è nessun abbonamento in corso.
+  final AbbonamentoInCorso? inCorso;
 
   /// Il taglio con il prezzo per gettone più basso.
   ///
@@ -146,6 +189,29 @@ Future<EsitoPagamento> apriIlPagamento(
     return errore.toString().contains('409')
         ? 'Hai già un abbonamento attivo.'
         : 'Il pagamento non si è aperto. Riprova fra poco.';
+  }
+}
+
+/// Apre il **portale di Stripe**: disdetta, carta, ricevute — 3b-H.9.
+///
+/// ⛔ **Non è il posto dove si disdice: è il posto dove si va a disdire.** Tutto
+/// quello che succede là dentro torna indietro dai webhook, non da qui — ed è
+/// il motivo per cui al ritorno il listino si ributta via e si richiede.
+Future<EsitoPagamento> apriIlPortale(WidgetRef ref) async {
+  try {
+    final risposta = await ref
+        .read(apiClientProvider)
+        .post<Map<String, dynamic>>('/billing/portale');
+
+    final url = Uri.tryParse(risposta['url']?.toString() ?? '');
+
+    if (url == null) return 'Non sono riuscito ad aprire la gestione.';
+
+    final partito = await launchUrl(url, mode: LaunchMode.externalApplication);
+
+    return partito ? null : 'Non sono riuscito ad aprire il browser.';
+  } on Object {
+    return 'Non sono riuscito ad aprire la gestione. Riprova fra poco.';
   }
 }
 

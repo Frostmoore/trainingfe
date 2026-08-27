@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
@@ -99,6 +100,34 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
     if (widget.dentroUnaModale) Navigator.of(context).pop();
   }
 
+  /// Va al portale di Stripe: disdetta, carta, ricevute.
+  ///
+  /// ⚠️ **Non si chiude la modale.** Chi torna dal browser senza aver toccato
+  /// niente la ritrova aperta, che è il verso giusto: la disdetta non è
+  /// un'azione che si conclude qui.
+  Future<void> _gestisci() async {
+    setState(() => _inCorso = 'portale');
+
+    final errore = await apriIlPortale(ref);
+
+    if (!mounted) return;
+
+    setState(() => _inCorso = null);
+
+    if (errore != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errore)));
+
+      return;
+    }
+
+    // 💡 Quello che succede su Stripe torna dai webhook: al rientro il listino
+    // va richiesto, o l'app continuerebbe a dire «si rinnova» a chi ha appena
+    // disdetto.
+    ref.invalidate(listinoProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final listino = ref.watch(listinoProvider);
@@ -127,6 +156,23 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
             const SizedBox(height: Gap.md),
           ] else ...[
             _GiaAbbonato(listino: l),
+
+            // 🔁 Il pulsante compare solo se c'è davvero qualcosa da gestire:
+            // l'abbonamento di una palestra non passa da Stripe.
+            if (l.inCorso?.gestibile ?? false) ...[
+              const SizedBox(height: Gap.sm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _inCorso == 'portale' ? null : _gestisci,
+                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                  label: Text(
+                    _inCorso == 'portale' ? 'Apro…' : 'Gestisci l\'abbonamento',
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: Gap.lg),
             Text(
               'Altri gettoni',
@@ -406,6 +452,29 @@ class _GiaAbbonato extends StatelessWidget {
                     color: tema.colorScheme.onSecondaryContainer,
                   ),
                 ),
+
+                /*
+                 * ══ 🔁 «SI RINNOVA» O «FINISCE» — 3b-H.9 ══════════════════
+                 *
+                 * 🚨 **Le due frasi non sono intercambiabili.** «Fino al 27
+                 * settembre» detto a chi si rinnova suona come una scadenza e
+                 * fa disdire per sbaglio; «si rinnova il 27» detto a chi ha
+                 * già disdetto gli dice che il gesto non è servito.
+                 *
+                 * ⛔ E se non si sa la data non si scrive niente: gli
+                 * abbonamenti delle palestre non scadono, e inventargli una
+                 * scadenza sarebbe un allarme falso.
+                 */
+                if (listino.inCorso?.finoAl case final scadenza?)
+                  Text(
+                    listino.inCorso!.rinnova
+                        ? 'Si rinnova il ${_giorno(scadenza)}'
+                        : 'Attivo fino al ${_giorno(scadenza)}, poi finisce',
+                    style: tema.textTheme.labelSmall?.copyWith(
+                      color: tema.colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -572,3 +641,11 @@ class _NotaLegale extends StatelessWidget {
     );
   }
 }
+
+/// «27 settembre» — senza l'anno.
+///
+/// 💡 Su una scadenza fra trenta giorni l'anno e' rumore, e su una fra undici
+/// mesi non ci si arriva mai. ⚠️ La lingua italiana e' gia' inizializzata in
+/// `main.dart` con `initializeDateFormatting('it')`: senza, i mesi tornerebbero
+/// in inglese in mezzo a una frase italiana.
+String _giorno(DateTime d) => DateFormat('d MMMM', 'it').format(d);

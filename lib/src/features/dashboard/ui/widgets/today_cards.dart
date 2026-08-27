@@ -23,6 +23,7 @@ import '../../../training/bruciate_locali.dart';
 import '../../../training/data/storico_unificato.dart';
 import '../../../training/settimana_controller.dart';
 import '../../../training/training_controller.dart';
+import '../../../training/ui/plans_screen.dart';
 import '../../data/dashboard_models.dart';
 import '../../giorno_scelto.dart';
 import '../../riassunto_settimana.dart';
@@ -1720,37 +1721,83 @@ class _CosaToccaOggi extends ConsumerWidget {
     if (scheda == null) return const SizedBox.shrink();
 
     final tema = Theme.of(context);
+    final suo = scheda;
 
     return Padding(
-      padding: const EdgeInsets.only(top: Gap.sm),
+      padding: const EdgeInsets.only(top: Gap.md, bottom: Gap.xs),
       child: Material(
         color: tema.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(Gap.radiusSm),
+        borderRadius: BorderRadius.circular(Gap.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(Gap.radiusSm),
-          onTap: () => context.push(AppRoutes.training),
+          borderRadius: BorderRadius.circular(Gap.radius),
+
+          /*
+           * 🎯 **A QUELLA scheda, non alla sezione** — corretto il 27/08/2026.
+           *
+           * 📌 *«deve rimandare direttamente a quella scheda, non allo storico
+           * in generale»*.
+           *
+           * ⛔ Prima portava a `AppRoutes.training`, cioè all'elenco: chi
+           * toccava si trovava a cercare da solo la scheda di cui aveva appena
+           * letto il nome. 🚨 Una riga che dice **il nome** e poi non ci porta
+           * è peggio di una riga generica — promette una cosa e ne fa un'altra.
+           *
+           * ⚠️ **La stessa `MaterialPageRoute` della card nell'elenco**, non
+           * una rotta nuova: due strade per la stessa pagina sono due posti
+           * dove un domani si comportano diversamente.
+           */
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => DettaglioScheda(id: suo.id, nome: suo.name),
+            ),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(Gap.sm),
+            // 📌 *«dovrebbe avere un po' più di aria»*: il riquadro era stretto
+            // come una riga di elenco, ed è invece la prima cosa che si guarda.
+            padding: const EdgeInsets.symmetric(
+              horizontal: Gap.md,
+              vertical: Gap.md,
+            ),
             child: Row(
               children: [
                 Icon(
                   Icons.today_rounded,
-                  size: 18,
+                  size: 22,
                   color: tema.colorScheme.onPrimaryContainer,
                 ),
-                const SizedBox(width: Gap.sm),
+                const SizedBox(width: Gap.md),
                 Expanded(
-                  child: Text(
-                    'Oggi tocca a ${scheda.name}',
-                    style: tema.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: tema.colorScheme.onPrimaryContainer,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      /*
+                       * 💡 **Due righe invece di una frase sola.** «Oggi tocca
+                       * a Full Body B» su una riga sola fa sparire il nome
+                       * dentro la frase; così il nome è la cosa grossa, e
+                       * «oggi tocca a» è l'etichetta che lo spiega.
+                       */
+                      Text(
+                        'Oggi tocca a',
+                        style: tema.textTheme.labelSmall?.copyWith(
+                          color: tema.colorScheme.onPrimaryContainer
+                              .withValues(alpha: 0.75),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        suo.name,
+                        style: tema.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: tema.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: Gap.sm),
                 Icon(
                   Icons.chevron_right_rounded,
-                  size: 18,
+                  size: 22,
                   color: tema.colorScheme.onPrimaryContainer,
                 ),
               ],

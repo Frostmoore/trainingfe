@@ -394,7 +394,7 @@ class _SchedaCard extends StatelessWidget {
               ? () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) =>
-                        _DettaglioScheda(id: scheda.id, nome: scheda.name),
+                        DettaglioScheda(id: scheda.id, nome: scheda.name),
                   ),
                 )
               /*
@@ -530,8 +530,23 @@ class _MuscoliDellaCard extends ConsumerWidget {
   }
 }
 
-class _DettaglioScheda extends ConsumerWidget {
-  const _DettaglioScheda({required this.id, required this.nome});
+/// La pagina di una scheda: cosa allena, i numeri, i progressi, gli esercizi.
+///
+/// ══ ⚠️ PUBBLICA DAL 27/08/2026, E NON PER COMODITÀ ════════════════════════
+///
+/// 📌 *«il tasto "Oggi tocca a" deve rimandare direttamente a quella scheda,
+/// non allo storico in generale»*.
+///
+/// ⛔ Era privata, e la riga in «Oggi» poteva solo mandare **alla sezione**
+/// Allenamento: chi la toccava si trovava davanti all'elenco e doveva cercare
+/// da solo la scheda di cui aveva appena letto il nome.
+///
+/// 🚨 **Aprirla da qui e dall'elenco deve essere la stessa cosa**, e per questo
+/// non è nata una rotta nuova: due strade per la stessa pagina sono due posti
+/// dove un domani si comportano diversamente. È la stessa `MaterialPageRoute`
+/// che usa la card dell'elenco.
+class DettaglioScheda extends ConsumerWidget {
+  const DettaglioScheda({required this.id, required this.nome, super.key});
 
   final int id;
   final String nome;

@@ -139,6 +139,25 @@ class SchermataConsensi extends ConsumerWidget {
               // ⚖️ 3b-J.3 — vedi `presa_d_atto_ai.dart`.
               presaDAtto: true,
             ),
+
+            const SizedBox(height: Gap.md),
+
+            /*
+             * ══ ⚖️ LA PRESA D'ATTO SI VEDE — 3b-J.3, secondo giro ═════════
+             *
+             * 📌 *«tra i consensi mettiamo anche un consenso obbligatorio»* ·
+             * poi, provando: *«non c'è il nuovo consenso»*.
+             *
+             * ⛔ **Al primo giro esisteva solo come finestra** che compare
+             * accendendo l'AI. 🚨 Chi l'AI ce l'ha già accesa non la vedeva mai
+             * — cioè proprio chi, a database, risulta con l'AI attiva e la
+             * presa d'atto mancante: lo stato che si è creato con la migrazione,
+             * e l'unico che andava mostrato.
+             *
+             * 💡 E un consenso che non si può rileggere non è un consenso: la
+             * schermata dei consensi serve a **ricordarsi cosa si è deciso**.
+             */
+            _PresaDAtto(concessoIl: dati.aiPresaDAtto, aiAccesa: dati.aiDato),
             const SizedBox(height: Gap.md),
 
             /*
@@ -414,6 +433,143 @@ class _InterruttoreConsiglioState
               'Ogni aggiornamento costa un gettone. Se lo spegni, il consiglio '
               'resta quello dell\'ultima volta e lo aggiorni tu quando vuoi.',
               style: testo.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// ⚖️ La riga della presa d'atto — 3b-J.3.
+///
+/// ══ ⛔ NON È UN INTERRUTTORE, ED È IL PUNTO ═══════════════════════════════
+///
+/// 🚨 Un interruttore si accende con un tocco, e questa cosa **si accende
+/// leggendo**. ⚠️ Con uno `Switch` si potrebbe dichiarare di aver capito senza
+/// aver visto una parola — che è esattamente il contrario della richiesta.
+///
+/// 💡 Quindi: se manca, un pulsante che **apre il testo**; se c'è, la data. E
+/// si può rileggere quando si vuole.
+class _PresaDAtto extends ConsumerStatefulWidget {
+  const _PresaDAtto({required this.concessoIl, required this.aiAccesa});
+
+  final DateTime? concessoIl;
+  final bool aiAccesa;
+
+  @override
+  ConsumerState<_PresaDAtto> createState() => _PresaDAttoState();
+}
+
+class _PresaDAttoState extends ConsumerState<_PresaDAtto> {
+  bool _inCorso = false;
+
+  Future<void> _leggi() async {
+    final accettata = await chiediLaPresaDAtto(context);
+
+    if (!accettata || !mounted) return;
+
+    setState(() => _inCorso = true);
+
+    try {
+      /*
+       * ⚠️ **Si manda `ai: true` insieme**, e non la sola presa d'atto: chi è
+       * qui o l'AI ce l'ha già accesa — e allora la riga non cambia niente — o
+       * la sta accendendo adesso. 🚨 Mandare la sola presa d'atto lascerebbe
+       * chi la accetta da qui con l'AI ancora spenta e nessun modo di capire
+       * perché.
+       */
+      await ref.read(cambiaConsensoProvider)('ai', true, presaDAtto: true);
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Non ha funzionato: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final presa = widget.concessoIl != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  presa ? Icons.gavel_rounded : Icons.warning_amber_rounded,
+                  color: presa
+                      ? tema.colorScheme.onSurfaceVariant
+                      : tema.colorScheme.error,
+                ),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    'Cosa l\'AI non è',
+                    style: tema.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.sm),
+
+            Text(
+              presa
+                  ? 'Hai preso atto che quello che l\'AI produce non è mai un '
+                        'parere medico, ma una stima statistica che può '
+                        'sbagliare.'
+                  /*
+                   * 🚨 **Questo è lo stato che si è creato con la migrazione**:
+                   * l'AI accesa da prima che la presa d'atto esistesse. ⛔ Non
+                   * si spegne l'AI da soli per farlo notare — sarebbe togliere
+                   * una funzione che qualcuno sta usando — ma non si può
+                   * nemmeno far finta di niente.
+                   */
+                  : 'Non hai ancora preso atto di cosa l\'AI non è. '
+                        'Serve per usarla: è una lettura di un minuto.',
+              style: tema.textTheme.bodyMedium,
+            ),
+
+            if (presa) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Accettato il ${DateFormat('d MMMM y', 'it').format(widget.concessoIl!.toLocal())}',
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: Gap.md),
+
+            SizedBox(
+              width: double.infinity,
+              child: presa
+                  ? OutlinedButton.icon(
+                      // 💡 Rileggere non ricambia niente: la finestra si apre,
+                      // si legge, e se si accetta di nuovo si aggiorna la data.
+                      onPressed: _inCorso ? null : _leggi,
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: const Text('Rileggi'),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _inCorso ? null : _leggi,
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: Text(
+                        widget.aiAccesa ? 'Leggi adesso' : 'Leggi e attiva l\'AI',
+                      ),
+                    ),
             ),
           ],
         ),

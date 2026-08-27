@@ -10,6 +10,7 @@ class BrandingState {
     required this.branding,
     this.joinCode,
     this.senzaPalestra = false,
+    this.sceltaFatta = false,
     this.isLoading = false,
   });
 
@@ -34,7 +35,15 @@ class BrandingState {
   ///
   /// 💡 Le due domande sono diverse e vanno tenute separate: *«di che colore mi
   /// vesto?»* la risponde `hasGym`; *«posso andare avanti?»* la risponde questa.
-  bool get sceltaFatta => hasGym || senzaPalestra;
+  ///
+  /// ⛔ **E non è più nemmeno `hasGym || senzaPalestra`** — 3b-J.1. Quella
+  /// deduzione
+  /// valeva quando entrambi gli stati nascevano dalla schermata del codice;
+  /// adesso `joinCode` non lo scrive più nessuno e `senzaPalestra` torna
+  /// `false` appena si adotta il branding del server. 🚨 Risultato: dopo il
+  /// login «la scelta è fatta» diventava falsa, e il router rimandava al
+  /// benvenuto chi era appena entrato.
+  final bool sceltaFatta;
 }
 
 /// Il branding della palestra: dalla cache subito, dalla rete dopo.
@@ -57,6 +66,18 @@ class BrandingController extends StateNotifier<BrandingState> {
           // ⚠️ Si rilegge dal disco all'avvio: la scelta deve sopravvivere a
           // una chiusura dell'app a metà registrazione.
           senzaPalestra: _cache.senzaPalestra,
+
+          /*
+           * ⚠️ **Il ripiego è la vecchia deduzione**, e serve: chi aveva già
+           * l'app installata non ha la chiave nuova, e mandarlo alla schermata
+           * di benvenuto vorrebbe dire farlo ripartire da capo per una
+           * modifica che non lo riguarda.
+           */
+          sceltaFatta: _cache.sceltaFatta(
+            oppure:
+                _cache.senzaPalestra ||
+                (_cache.joinCode?.isNotEmpty ?? false),
+          ),
         ),
       );
 
@@ -91,10 +112,12 @@ class BrandingController extends StateNotifier<BrandingState> {
   Future<void> senzaPalestra() async {
     await _cache.forgetGym();
     await _cache.setSenzaPalestra(true);
+    await _cache.setSceltaFatta();
 
     state = const BrandingState(
       branding: GymBranding.neutral,
       senzaPalestra: true,
+      sceltaFatta: true,
     );
   }
 
@@ -113,7 +136,19 @@ class BrandingController extends StateNotifier<BrandingState> {
     await _cache.setBranding(branding);
     await _cache.setSenzaPalestra(false);
 
-    state = BrandingState(branding: GymBranding.fromJson(branding));
+    /*
+     * 🚪 **Adottare una palestra è anche «la scelta è fatta»** — 3b-J.1.
+     *
+     * ⛔ Senza questa riga, chi entra in palestra — o chi si limita a fare
+     * l'accesso, visto che il branding arriva col login — tornava a essere uno
+     * che «non ha ancora scelto», e il router lo rimandava al benvenuto.
+     */
+    await _cache.setSceltaFatta();
+
+    state = BrandingState(
+      branding: GymBranding.fromJson(branding),
+      sceltaFatta: true,
+    );
   }
 
   /// 🏷️ Adotta il branding che il **server** ha mandato insieme all'utente.

@@ -30,6 +30,23 @@ class LocalCache {
   static const _joinCode = 'gym.join_code';
   static const _branding = 'gym.branding';
   static const _senzaPalestra = 'gym.senza_palestra';
+
+  /// 🚪 «La schermata di benvenuto è stata superata» — 3b-J.1, 27/08/2026.
+  ///
+  /// ══ 🚨 PERCHÉ UNA CHIAVE SUA, E NON UNA DEDUZIONE ══════════════════════
+  ///
+  /// ⛔ Prima si deduceva: *«ha una palestra **o** ha detto di non averne»*.
+  /// Funzionava perché tutti e due gli stati nascevano dalla stessa schermata —
+  /// quella del codice, che non esiste più.
+  ///
+  /// 🚨 **E si è rotta subito**: adottando il branding che arriva col login,
+  /// `senzaPalestra` torna `false` e `joinCode` non lo scrive più nessuno —
+  /// quindi «la scelta è fatta» diventava **falsa dopo aver fatto l'accesso**,
+  /// e il router rimandava al benvenuto chi era appena entrato.
+  ///
+  /// 💡 Adesso è un fatto suo: *«questa persona ha visto la porta d'ingresso»*.
+  /// Non dipende da dove sta, e non cambia quando cambia la palestra.
+  static const _sceltaFatta = 'gym.scelta_fatta';
   static const _ultimaPersona = 'sessione.ultima_persona';
   static const _accoglienzaFatta = 'sessione.accoglienza_fatta';
   static const _schedePortateGiu = 'schede.portate_giu';
@@ -114,6 +131,15 @@ class LocalCache {
   /// Tenuta solo nello stato, chi chiudeva l'app durante la registrazione si
   /// ritrovava di nuovo davanti al codice palestra.
   bool get senzaPalestra => _prefs.getBool(_senzaPalestra) ?? false;
+
+  /// ⚠️ **Il ripiego non è `false`**: chi aveva già l'app installata non ha
+  /// questa chiave, e mandarlo alla schermata di benvenuto sarebbe farlo
+  /// ripartire da capo. 💡 Per lui vale la vecchia deduzione — se aveva scelto,
+  /// una delle due chiavi c'è.
+  bool sceltaFatta({required bool oppure}) =>
+      _prefs.getBool(_sceltaFatta) ?? oppure;
+
+  Future<void> setSceltaFatta() => _prefs.setBool(_sceltaFatta, true);
 
   Future<void> setSenzaPalestra(bool valore) =>
       _prefs.setBool(_senzaPalestra, valore);

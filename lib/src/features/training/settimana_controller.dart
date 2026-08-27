@@ -15,7 +15,6 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_controller.dart';
-import '../dashboard/gettoni_controller.dart';
 import '../health/health_controller.dart';
 import 'data/catalogo_esercizi.dart';
 import 'data/gruppo_muscolare.dart';
@@ -25,14 +24,17 @@ import 'muscoli_allenati.dart';
 import 'training_controller.dart';
 
 /// Se questa persona può usare la settimana programmata.
-final puoProgrammareProvider = Provider.autoDispose<bool>((ref) {
-  final gettoni = ref.watch(gettoniProvider).valueOrNull;
-
-  return senzaLimiti(
-    abbonato: ref.watch(authControllerProvider).user?.abbonato,
-    illimitata: gettoni?.illimitata,
-  );
-});
+///
+/// ⛔ **Corretta il 27/08/2026 insieme ai progressi**, e non era stata
+/// contestata: apriva anche a chi ha l'AI illimitata senza abbonamento.
+///
+/// 🚨 **È lo stesso gate, quindi dev'essere la stessa porta.** Due funzioni
+/// della stessa fase che rispondono in modo diverso alla domanda «sei abbonato?»
+/// sono il modo per scoprire fra un mese che una delle due non era stata
+/// aggiornata — e non si scopre guardando il codice, si scopre da un cliente.
+final puoProgrammareProvider = Provider.autoDispose<bool>(
+  (ref) => soloSeAbbonato(ref.watch(authControllerProvider).user?.abbonato),
+);
 
 /// Le sette caselle, da lunedì. `null` = riposo.
 ///

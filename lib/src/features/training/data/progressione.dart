@@ -182,3 +182,71 @@ String improntaDelloStorico(Map<int, List<PuntoDiProgressione>> storia) {
 /// guarda sa già.
 bool valeLaPenaAnalizzare(Map<int, List<PuntoDiProgressione>> storia) =>
     storia.values.any((punti) => punti.length >= 2);
+
+/// L'andamento letto dai punti, **sul telefono** — 3b-I.A.
+///
+/// ══ 🚨 GUARDA IL CARICO **E** LE RIPETIZIONI ══════════════════════════════
+///
+/// ⛔ **Difetto riferito il 27/08/2026**: *«oggi ho cambiato le rep di un
+/// esercizio e mi scrive "Stabile"»*.
+///
+/// La prima versione guardava `valore`, cioè **il carico se c'era**: alzare le
+/// ripetizioni a parità di bilanciere non cambiava niente, e la freccia diceva
+/// «stabile» davanti a una progressione vera. 🚨 Il tipo di difetto peggiore —
+/// il numero è giusto, la risposta è sbagliata, e a schermo sembra che la
+/// funzione non funzioni.
+///
+/// 💡 **L'ordine è quello di [PuntoDiProgressione.batte]**: prima il carico, e
+/// **solo a carico pari** le ripetizioni. Un volume calcolato (`kg × reps`)
+/// direbbe che 40×12 batte 60×6 — vero per la fisica, falso per come le persone
+/// leggono i propri progressi.
+///
+/// ⛔ **E non è un consiglio**: confronta il primo punto con l'ultimo e dice
+/// cosa è successo. Non prescrive niente, quindi non tocca il confine legale —
+/// che riguarda il **futuro**, non il passato.
+Andamento andamentoDaiPunti(List<PuntoDiProgressione> punti) {
+  if (punti.length < 2) return Andamento.pocoStorico;
+
+  final primo = punti.first;
+  final ultimo = punti.last;
+
+  final verso = _verso(primo.carico, ultimo.carico);
+
+  // 🚨 Il carico decide **solo se si è mosso**. A parità di carico la
+  // progressione sono le ripetizioni, ed è il caso che mancava.
+  if (verso != 0) return verso > 0 ? Andamento.inSalita : Andamento.inCalo;
+
+  final reps = _verso(
+    primo.ripetizioni?.toDouble(),
+    ultimo.ripetizioni?.toDouble(),
+  );
+
+  if (reps != 0) return reps > 0 ? Andamento.inSalita : Andamento.inCalo;
+
+  /*
+   * ⚠️ **Fermi tutti e due non è sempre «fermo».** Se non c'è né carico né
+   * ripetizioni non stiamo guardando niente — è l'esercizio a tempo — e dire
+   * «stabile» sarebbe un'affermazione su un dato che non abbiamo.
+   */
+  if (primo.valore == null || ultimo.valore == null) {
+    return Andamento.pocoStorico;
+  }
+
+  return Andamento.fermo;
+}
+
+/// `1` se è cresciuto, `-1` se è sceso, `0` se è fermo o non si sa.
+///
+/// 💡 **Una soglia dell'1%**: i mezzi chili di un manubrio non sono una
+/// tendenza, e una freccia che cambia verso a ogni seduta non la guarda più
+/// nessuno.
+int _verso(double? da, double? a) {
+  if (da == null || a == null) return 0;
+
+  final soglia = da.abs() * 0.01;
+
+  if (a > da + soglia) return 1;
+  if (a < da - soglia) return -1;
+
+  return 0;
+}

@@ -65,6 +65,34 @@ const quanteSenzaAbbonamento = 3;
 bool senzaLimiti({required bool? abbonato, required bool? illimitata}) =>
     illimitata != false || abbonato != false;
 
+/// 🔒 Se questa persona **è abbonata**, e basta — 3b-I, corretto il 27/08/2026.
+///
+/// ══ 🚨 NON È [senzaLimiti], ED È IL PUNTO ═════════════════════════════════
+///
+/// 📌 Il committente, provando l'app: *«io ho AI illimitata ma non
+/// l'abbonamento, quindi quella cosa non la dovrei vedere»*.
+///
+/// ⛔ **Avevo riusato [senzaLimiti], e sbagliava.** Quella funzione dice «chi è
+/// abbonato **o** chi ha l'AI illimitata», ed è giusta **per le schede**: lì il
+/// limite delle tre schede è un limite sull'*uso dell'AI*, e chi l'AI ce l'ha
+/// senza abbonarsi deve poterle usare.
+///
+/// 🚨 Qui la domanda è un'altra: **le funzioni del gate si comprano con
+/// l'abbonamento**, non con i gettoni. 📌 *«la versione gratuita NON DEVE
+/// guadagnare niente»* — e l'AI illimitata data a mano dal pannello non è un
+/// abbonamento, è un interruttore per provare.
+///
+/// ⚠️ **Ed erano già in disaccordo con il server**: `AiController` fa
+/// `PianoAttivo::eAbbonato()`, cioè guarda **solo** l'abbonamento. L'app
+/// mostrava un pulsante che il server avrebbe rifiutato — il difetto peggiore,
+/// perché sembra un guasto invece di un limite.
+///
+/// 💡 **`!= false` come [senzaLimiti]**: `null` vuol dire «non lo so» — il
+/// profilo non è ancora arrivato, o la rete non va — e un flag che non c'è non
+/// deve chiudere fuori chi ha pagato.
+bool soloSeAbbonato(bool? abbonato) => abbonato != false;
+
+
 /// Quali schede sono bloccate, e perché.
 ///
 /// ══ 🚨 DUE CONDIZIONI DIVERSE, E NON VANNO CONFUSE ════════════════════════

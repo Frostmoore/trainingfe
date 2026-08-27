@@ -105,7 +105,7 @@ class _Corpo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final andamento = riga?.andamento ?? _andamentoDaiPunti(punti);
+    final andamento = riga?.andamento ?? andamentoDaiPunti(punti);
     final colore = _colore(tema.colorScheme, andamento);
 
     final dentro = Column(
@@ -177,31 +177,6 @@ class _Corpo extends StatelessWidget {
   }
 }
 
-/// L'andamento calcolato **sul telefono**, quando l'AI non ha ancora parlato.
-///
-/// ══ 🚨 PERCHÉ ESISTE, VISTO CHE L'AI LO DICE ══════════════════════════════
-///
-/// Perché la sparkline si vede **prima** di aver speso un gettone, e una linea
-/// che sale disegnata in grigio direbbe una cosa diversa da quello che mostra.
-///
-/// ⛔ **E non è un consiglio**: guarda i due estremi e dice se il numero è più
-/// alto o più basso di prima. Non prescrive niente, quindi non tocca il confine
-/// legale — che riguarda il **futuro**, non il passato.
-Andamento _andamentoDaiPunti(List<PuntoDiProgressione> punti) {
-  final primo = punti.first.valore;
-  final ultimo = punti.last.valore;
-
-  if (primo == null || ultimo == null) return Andamento.pocoStorico;
-
-  // 💡 Una soglia dell'1%: i mezzi chili di un manubrio non sono una tendenza,
-  // e una freccia che cambia verso a ogni seduta non si guarda più.
-  final soglia = primo.abs() * 0.01;
-
-  if (ultimo > primo + soglia) return Andamento.inSalita;
-  if (ultimo < primo - soglia) return Andamento.inCalo;
-
-  return Andamento.fermo;
-}
 
 IconData _icona(Andamento a) => switch (a) {
   Andamento.inSalita => Icons.trending_up_rounded,

@@ -29,35 +29,37 @@ import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../auth/auth_controller.dart';
-import '../dashboard/gettoni_controller.dart';
 import '../health/health_controller.dart';
 import 'data/limiti_delle_schede.dart';
 import 'data/progressione.dart';
 
 /// Quanto può stare ferma un'analisi prima di poterla rifare.
 ///
-/// 📌 *«facciamoglielo fare una sola volta per scheda»*: qui la regola è più
-/// larga — si può rifare, ma non subito.
+/// 📌 Corretto il 27/08/2026: *«deve avvenire in automatico, max 1 volta al
+/// giorno per chi è abbonato»*.
 ///
-/// ⚠️ **Sette giorni e non uno**: una scheda si fa due o tre volte a settimana,
-/// e un'analisi rifatta dopo una sola seduta racconta la stessa cosa con altre
-/// parole. 💡 Il limite non protegge noi, protegge il saldo di chi tocca.
-const attesaFraDueAnalisi = Duration(days: 7);
+/// ⛔ **Erano sette giorni**, ed era una scelta mia: pensavo che un'analisi
+/// rifatta dopo una sola seduta avrebbe raccontato la stessa cosa con altre
+/// parole. 💡 Con il tetto a un giorno quel rischio lo tiene [_valePagarla],
+/// che guarda **se lo storico è cambiato** invece di guardare il calendario —
+/// che è la domanda giusta, e che avevo già in mano.
+const attesaFraDueAnalisi = Duration(days: 1);
 
 /// Se questa persona può vedere progressione e analisi.
 ///
-/// 🚨 **La stessa funzione delle schede** (`senzaLimiti`), non una copia: il
-/// giorno in cui la regola dell'abbonamento cambia, deve cambiare in un posto
-/// solo. ⛔ La seconda stesura della stessa condizione l'ho già sbagliata due
-/// volte — è scritto in `limiti_delle_schede.dart`.
-final puoVedereIProgressiProvider = Provider.autoDispose<bool>((ref) {
-  final gettoni = ref.watch(gettoniProvider).valueOrNull;
-
-  return senzaLimiti(
-    abbonato: ref.watch(authControllerProvider).user?.abbonato,
-    illimitata: gettoni?.illimitata,
-  );
-});
+/// ⛔ **`soloSeAbbonato` e NON `senzaLimiti`** — corretto il 27/08/2026.
+///
+/// 📌 *«io ho AI illimitata ma non l'abbonamento, quindi quella cosa non la
+/// dovrei vedere»*. 🚨 Avevo riusato la regola delle schede, che apre anche a
+/// chi ha l'AI illimitata: è la regola giusta **per quel limite**, e quella
+/// sbagliata per **questo gate**.
+///
+/// ⚠️ **E l'app diceva una cosa che il server negava**: `AiController` guarda
+/// `PianoAttivo::eAbbonato()`. Il pulsante c'era e la chiamata sarebbe stata
+/// rifiutata — che a schermo si legge come un guasto, non come un limite.
+final puoVedereIProgressiProvider = Provider.autoDispose<bool>(
+  (ref) => soloSeAbbonato(ref.watch(authControllerProvider).user?.abbonato),
+);
 
 /// La storia degli esercizi di una scheda, dal telefono.
 ///
@@ -147,6 +149,12 @@ enum EsitoAnalisi {
   /// 💡 È stata fatta da poco. Il limite è nostro, e va detto senza scusarsi.
   troppoPresto,
 
+  /// ⛔ **C'è già, e da allora non è successo niente.** ⚠️ Non è un errore e non
+  /// è un limite: è la risposta giusta a una domanda che non andava fatta. 💡 Su
+  /// questo esito non si dice niente a nessuno — l'analisi che si sta guardando
+  /// è quella buona.
+  giaAggiornata,
+
   /// Gettoni finiti, o quota del mese esaurita.
   senzaGettoni,
 
@@ -170,7 +178,7 @@ Future<EsitoAnalisi> chiediLAnalisi(
   WidgetRef ref, {
   required int schedaServerId,
   required Map<int, String> nomiDegliEsercizi,
-  bool forza = false,
+  bool automatica = false,
 }) async {
   if (!ref.read(puoVedereIProgressiProvider)) {
     return EsitoAnalisi.serveAbbonamento;
@@ -182,15 +190,29 @@ Future<EsitoAnalisi> chiediLAnalisi(
 
   if (!valeLaPenaAnalizzare(storia)) return EsitoAnalisi.troppoPocoStorico;
 
-  if (!forza) {
-    final gia = await ref.read(
-      analisiDellaSchedaProvider(schedaServerId).future,
-    );
+  final gia = await ref.read(
+    analisiDellaSchedaProvider(schedaServerId).future,
+  );
 
-    if (gia != null && gia.rifacibileDal != null) {
-      return EsitoAnalisi.troppoPresto;
-    }
+  if (gia != null && gia.rifacibileDal != null) {
+    return EsitoAnalisi.troppoPresto;
   }
+
+  /*
+   * ══ 🚨 L'AUTOMATICO È PIÙ PRUDENTE DEL PULSANTE ═══════════════════════
+   *
+   * ⚠️ Il tetto di un giorno da solo non basterebbe: chi apre cinque schede
+   * ogni mattina spenderebbe **cinque gettoni al giorno** per farsi riscrivere
+   * cinque frasi identiche, e se ne accorgerebbe dal saldo.
+   *
+   * 💡 [_valePagarla] guarda **se è successo qualcosa** — l'impronta dello
+   * storico — invece del calendario. Chi non si è allenato non paga niente.
+   *
+   * ⛔ Il pulsante invece passa comunque: chi lo tocca ha deciso lui, e negargli
+   * la rigenerazione dopo un errore di rete vorrebbe dire lasciarlo senza modo
+   * di riprovare.
+   */
+  if (automatica && !_valePagarla(gia)) return EsitoAnalisi.giaAggiornata;
 
   /*
    * ⚠️ **Si mandano solo gli esercizi che hanno una storia.** Mandare anche
@@ -261,6 +283,16 @@ Future<EsitoAnalisi> chiediLAnalisi(
     return EsitoAnalisi.nonRiuscita;
   }
 }
+
+/// 💰 Vale la pena spendere un gettone per rifarla?
+///
+/// 🚨 **La domanda non è «quanto è vecchia», è «cosa è cambiato».** Un'analisi
+/// di un mese fa è ancora vera se da allora non ti sei allenato; una di ieri è
+/// già superata se ieri sera hai fatto quella scheda.
+///
+/// 💡 È esattamente per questo che [AnalisiScheda.impronta] esiste, e il
+/// percorso automatico è il posto dove serviva davvero.
+bool _valePagarla(AnalisiInCorso? gia) => gia == null || gia.superata;
 
 /// @nodoc
 List<ProgressoEsercizio> _daJson(String testo) {

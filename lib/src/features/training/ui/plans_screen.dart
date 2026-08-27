@@ -973,9 +973,19 @@ class _ProgressiDellaScheda extends ConsumerStatefulWidget {
 class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
   bool _inCorso = false;
 
-  Future<void> _chiedi({bool forza = false}) async {
+  /// 🚨 **Una volta sola per apertura della schermata.** ⛔ Senza, ogni
+  /// ricostruzione — e ce n'è una a ogni provider che si risolve — riproverebbe.
+  bool _giaTentata = false;
+
+  Future<void> _chiedi({bool automatica = false}) async {
+    /*
+     * ⛔ **L'automatico non apre mai la modale.** ⚠️ Comparirebbe da sola
+     * aprendo una scheda, senza che nessuno abbia toccato niente: è la
+     * definizione di una finestra invadente. 💡 Chi non è abbonato la card la
+     * vede lo stesso, e la modale la apre **toccando**.
+     */
     if (!ref.read(puoVedereIProgressiProvider)) {
-      ModaleAcquisti.mostra(context);
+      if (!automatica) ModaleAcquisti.mostra(context);
 
       return;
     }
@@ -997,7 +1007,7 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
       nomiDegliEsercizi: {
         for (final e in widget.scheda.exercises) ?e.exerciseId: e.name,
       },
-      forza: forza,
+      automatica: automatica,
     );
 
     if (!mounted) return;
@@ -1005,16 +1015,49 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
     setState(() => _inCorso = false);
 
     if (esito == EsitoAnalisi.serveAbbonamento) {
-      ModaleAcquisti.mostra(context);
+      if (!automatica) ModaleAcquisti.mostra(context);
 
       return;
     }
 
-    if (esito == EsitoAnalisi.fatta) return;
+    /*
+     * ⛔ **L'automatico non parla mai.** ⚠️ Un avviso che compare da solo
+     * aprendo una scheda — «non è riuscita», «gettoni finiti» — dà la colpa a
+     * chi sta guardando per una cosa che non ha chiesto. 💡 Quello che c'è già
+     * resta a schermo, e la card dice da quando è aggiornata.
+     */
+    if (automatica || esito == EsitoAnalisi.fatta) return;
+
+    final spiegazione = _spiegazione(esito);
+
+    if (spiegazione.isEmpty) return;
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(_spiegazione(esito))));
+    ).showSnackBar(SnackBar(content: Text(spiegazione)));
+  }
+
+  /// 📌 *«deve avvenire in automatico, max 1 volta al giorno per chi è
+  /// abbonato»* — 27/08/2026.
+  ///
+  /// ══ ⚠️ PERCHÉ NON IN `initState` ══════════════════════════════════════
+  ///
+  /// Perché lì lo storico **non c'è ancora**: arriva da una lettura del
+  /// database, e partire prima vorrebbe dire chiedere l'analisi di una scheda
+  /// che risulta senza sedute. 🚨 Qui si parte quando i dati ci sono davvero, e
+  /// [_giaTentata] garantisce che succeda una volta sola.
+  ///
+  /// 💡 `addPostFrameCallback` perché una chiamata di rete non si lancia
+  /// **dentro** un `build`: il `setState` dell'indicatore arriverebbe mentre
+  /// l'albero si sta ancora costruendo.
+  void _analisiDaSola() {
+    if (_giaTentata) return;
+
+    _giaTentata = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _chiedi(automatica: true);
+    });
   }
 
   @override
@@ -1041,8 +1084,22 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
         .watch(analisiDellaSchedaProvider(widget.scheda.id))
         .valueOrNull;
 
+    /*
+     * ⚠️ **Dopo aver letto anche l'analisi, non solo lo storico.** 🚨 Partendo
+     * con `analisi` ancora in caricamento, `chiediLAnalisi` la rileggerebbe da
+     * capo e non troverebbe niente: si spenderebbe un gettone per riscrivere
+     * un'analisi che era già lì.
+     */
+    if (puo) _analisiDaSola();
+
+    /*
+     * ⚠️ **Il margine di serie, come la card qui sopra.** ⛔ Difetto riferito il
+     * 27/08: `margin: only(bottom:)` azzera anche i **lati**, e questa card
+     * risultava larga quattro pixel per parte più di `_SchedaInNumeri` —
+     * appoggiata al bordo mentre l'altra no. 💡 Lo stacco verticale lo dà già
+     * il margine di serie della `Card`.
+     */
     return Card(
-      margin: const EdgeInsets.only(bottom: Gap.md),
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
         child: Column(
@@ -1070,7 +1127,8 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
             Text(
               puo
                   ? 'Sotto ogni esercizio trovi come è andata nelle ultime '
-                        'sedute. L\'analisi la scrive l\'AI, e costa 1 gettone.'
+                        'sedute. L\'analisi si aggiorna da sola quando ti '
+                        'alleni, al massimo una volta al giorno.'
                   : 'Con l\'abbonamento vedi l\'andamento di ogni esercizio e '
                         'un\'analisi scritta per te.',
               style: tema.textTheme.bodySmall,
@@ -1109,7 +1167,10 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
                       )
                     : Icon(puo ? Icons.auto_awesome_rounded : Icons.lock_rounded),
                 label: Text(
-                  analisi == null ? 'Analizza la scheda' : 'Rifai l\'analisi',
+                  // 💡 «Adesso» perché il pulsante non è più il modo normale di
+                  // averla: è il modo di **non aspettare**, o di riprovare dopo
+                  // un errore di rete.
+                  analisi == null ? 'Analizza adesso' : 'Rifai adesso',
                 ),
               ),
             ),
@@ -1122,6 +1183,11 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
 
 String _spiegazione(EsitoAnalisi esito) => switch (esito) {
   EsitoAnalisi.fatta => '',
+
+  // ⛔ Silenzio: l'analisi a schermo è già quella buona, e dirlo sarebbe
+  // rispondere a una domanda che nessuno ha fatto.
+  EsitoAnalisi.giaAggiornata => '',
+
   EsitoAnalisi.serveAbbonamento => 'Serve l\'abbonamento.',
   EsitoAnalisi.troppoPocoStorico =>
     'Serve almeno una seconda seduta per avere qualcosa da raccontare.',
@@ -1129,7 +1195,7 @@ String _spiegazione(EsitoAnalisi esito) => switch (esito) {
   // ⚠️ Si dice **quando**, non «riprova più tardi»: un limite senza una data è
   // indistinguibile da un guasto.
   EsitoAnalisi.troppoPresto =>
-    'L\'analisi è recente: si può rifare dopo una settimana.',
+    'L\'hai già rifatta oggi: si può di nuovo domani.',
   EsitoAnalisi.senzaGettoni => 'Gettoni finiti.',
   EsitoAnalisi.nonRiuscita => 'Non è riuscita. Riprova fra poco.',
 };

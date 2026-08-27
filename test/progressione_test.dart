@@ -93,6 +93,80 @@ void main() {
     });
   });
 
+  group('l\'andamento letto dai punti', () {
+    PuntoDiProgressione p(int giorno, {double? kg, int? reps}) =>
+        PuntoDiProgressione(
+          data: DateTime(2026, 8, giorno),
+          carico: kg,
+          ripetizioni: reps,
+        );
+
+    test('a carico fermo, le ripetizioni che salgono sono una salita', () {
+      /*
+       * ⛔ **Il difetto riferito il 27/08/2026**: «oggi ho cambiato le rep di un
+       * esercizio e mi scrive "Stabile"».
+       *
+       * 🚨 La prima versione guardava `valore`, cioè **il carico se c'era**: a
+       * parità di bilanciere le ripetizioni non contavano niente. Il numero era
+       * giusto e la risposta sbagliata — e a schermo sembrava che la funzione
+       * non funzionasse affatto.
+       */
+      expect(
+        andamentoDaiPunti([p(1, kg: 60, reps: 6), p(8, kg: 60, reps: 9)]),
+        Andamento.inSalita,
+      );
+    });
+
+    test('a carico fermo, le ripetizioni che scendono sono un calo', () {
+      expect(
+        andamentoDaiPunti([p(1, kg: 60, reps: 10), p(8, kg: 60, reps: 6)]),
+        Andamento.inCalo,
+      );
+    });
+
+    test('il carico batte le ripetizioni, come nella serie migliore', () {
+      // 💡 Meno ripetizioni ma più carico è una salita: è così che le persone
+      // leggono i propri progressi, e un volume calcolato direbbe il contrario.
+      expect(
+        andamentoDaiPunti([p(1, kg: 60, reps: 10), p(8, kg: 70, reps: 6)]),
+        Andamento.inSalita,
+      );
+    });
+
+    test('fermi tutti e due è «stabile» davvero', () {
+      expect(
+        andamentoDaiPunti([p(1, kg: 60, reps: 8), p(8, kg: 60, reps: 8)]),
+        Andamento.fermo,
+      );
+    });
+
+    test('a corpo libero contano solo le ripetizioni', () {
+      expect(
+        andamentoDaiPunti([p(1, reps: 8), p(8, reps: 12)]),
+        Andamento.inSalita,
+      );
+    });
+
+    test('senza carico e senza ripetizioni non si dice «stabile»', () {
+      // ⛔ È l'esercizio a tempo: dire «stabile» sarebbe un'affermazione su un
+      // dato che non abbiamo.
+      expect(andamentoDaiPunti([p(1), p(8)]), Andamento.pocoStorico);
+    });
+
+    test('mezzo chilo su cento non è una tendenza', () {
+      // 💡 La soglia dell'1%: una freccia che cambia verso a ogni seduta non la
+      // guarda più nessuno.
+      expect(
+        andamentoDaiPunti([p(1, kg: 100, reps: 8), p(8, kg: 100.5, reps: 8)]),
+        Andamento.fermo,
+      );
+    });
+
+    test('con un punto solo non c\'è niente da dire', () {
+      expect(andamentoDaiPunti([p(1, kg: 60, reps: 8)]), Andamento.pocoStorico);
+    });
+  });
+
   group('l\'impronta dello storico', () {
     Map<int, List<PuntoDiProgressione>> storia({double ultimo = 60}) => {
       7: [

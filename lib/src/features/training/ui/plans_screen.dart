@@ -20,6 +20,7 @@ import '../data/stima_della_scheda.dart';
 import '../muscoli_allenati.dart';
 import '../progressione_controller.dart';
 import '../session_controller.dart';
+import '../settimana_controller.dart';
 import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -236,23 +237,49 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               ),
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
-                itemCount: elenco.length + 1,
+
+                /*
+                 * ══ 📅 LA SETTIMANA STA IN CIMA — corretto il 27/08/2026 ═══
+                 *
+                 * 📌 *«Come faccio a fargli programmare le schede nei
+                 * giorni?»*.
+                 *
+                 * ⛔ **L'unico ingresso era nella dashboard**, dentro la card
+                 * «Allenamento» di «Oggi». 🚨 Ma chi vuole programmare le
+                 * schede va nella **sezione Allenamento**, dove ci sono
+                 * Storico, Schede e Foto — e lì non c'era niente. La funzione
+                 * esisteva e non si trovava, che per chi guarda è identico al
+                 * non averla.
+                 *
+                 * 💡 **Qui e non in un quarto segmento**: programmare la
+                 * settimana è una cosa che si fa *alle schede*, e la riga sta
+                 * sopra l'elenco di quelle che si stanno per distribuire.
+                 * ⚠️ Un quarto segmento accanto a Storico/Schede/Foto avrebbe
+                 * stretto tutti e quattro i nomi per una schermata che si apre
+                 * una volta ogni tanto.
+                 *
+                 * ⛔ Quello della dashboard **resta**: là è «cosa tocca oggi»,
+                 * qui è «come voglio la settimana». Sono due momenti diversi.
+                 */
+                itemCount: elenco.length + 2,
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: Gap.md),
-                itemBuilder: (context, index) => index == elenco.length
-                    ? OutlinedButton.icon(
-                        onPressed: () => nuovaScheda(context),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Nuova scheda'),
-                      )
-                    : _SchedaCard(
-                        scheda: elenco[index],
-                        // 💡 La regola sta in `schedeBloccateProvider`, non
-                        // qui: la stessa domanda la fa anche il dettaglio.
-                        bloccata: ref
-                            .watch(schedeBloccateProvider)
-                            .valueOrNull?[elenco[index].id],
-                      ),
+                itemBuilder: (context, index) => switch (index) {
+                  0 => const _ProgrammaLaSettimana(),
+                  _ when index == elenco.length + 1 => OutlinedButton.icon(
+                    onPressed: () => nuovaScheda(context),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Nuova scheda'),
+                  ),
+                  _ => _SchedaCard(
+                    scheda: elenco[index - 1],
+                    // 💡 La regola sta in `schedeBloccateProvider`, non
+                    // qui: la stessa domanda la fa anche il dettaglio.
+                    bloccata: ref
+                        .watch(schedeBloccateProvider)
+                        .valueOrNull?[elenco[index - 1].id],
+                  ),
+                },
               ),
             ),
     );
@@ -1202,3 +1229,68 @@ String _spiegazione(EsitoAnalisi esito) => switch (esito) {
 
 String _giorno(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+
+
+/// 📅 L'ingresso alla settimana programmata, in cima alle schede — 27/08/2026.
+///
+/// ══ ⛔ IL DIFETTO CHE CHIUDE ══════════════════════════════════════════════
+///
+/// 📌 *«Come faccio a fargli programmare le schede nei giorni?»*.
+///
+/// 🚨 L'unico ingresso era nella card «Allenamento» della **dashboard**. Chi
+/// cerca di programmare le schede però apre la **sezione Allenamento** — quella
+/// con Storico, Schede e Foto — e lì non c'era niente. ⛔ Una funzione che
+/// esiste e non si trova, per chi guarda, è identica a una che non c'è.
+///
+/// 💡 **Dice anche cosa c'è già**: senza, sarebbe un pulsante che non promette
+/// niente. Con la riga sotto si sa, senza aprirla, se la settimana è vuota o
+/// no — e chi ce l'ha piena non ha nessun motivo di entrare.
+class _ProgrammaLaSettimana extends ConsumerWidget {
+  const _ProgrammaLaSettimana();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final puo = ref.watch(puoProgrammareProvider);
+
+    final settimana =
+        ref.watch(settimanaProvider).valueOrNull ?? const <int?>[];
+
+    final quanti = settimana.whereType<int>().length;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        onTap: () => context.push(AppRoutes.settimana),
+        leading: Icon(
+          Icons.event_repeat_rounded,
+          color: tema.colorScheme.primary,
+        ),
+        title: Text(
+          'Programma la settimana',
+          style: tema.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          /*
+           * ⚠️ **Tre frasi e non due.** ⛔ Chi non è abbonato deve leggere
+           * *cosa serve*, non «non hai programmato niente» — che sarebbe vero e
+           * lo manderebbe a cercare un difetto che non c'è.
+           */
+          !puo
+              ? 'Serve l\'abbonamento'
+              : quanti == 0
+              ? 'Nessun giorno programmato'
+              : '$quanti ${quanti == 1 ? 'giorno' : 'giorni'} a settimana',
+          style: tema.textTheme.bodySmall,
+        ),
+        trailing: Icon(
+          puo ? Icons.chevron_right_rounded : Icons.lock_outline_rounded,
+          size: 20,
+          color: puo ? null : tema.colorScheme.error,
+        ),
+      ),
+    );
+  }
+}

@@ -38,6 +38,7 @@ part 'archivio_salute.g.dart';
     AllenamentiDaOrologio,
     SeduteAllenamento,
     SerieDelleSedute,
+    SettimanaProgrammata,
     BruciateDichiarate,
     SchedeSulTelefono,
   ],
@@ -57,7 +58,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -432,6 +433,17 @@ class ArchivioSalute extends _$ArchivioSalute {
           allenamentiDaOrologio.contaComeExtra,
         );
         await m.addColumn(seduteAllenamento, seduteAllenamento.contaComeExtra);
+      }
+
+      /*
+       * 📅 v20 → v21 (3b-I.B): la settimana programmata.
+       *
+       * 💡 Tabella nuova, quindi `createTable` e basta: non c'e' niente da
+       * convertire, e chi aggiorna si trova sette caselle vuote — che e'
+       * esattamente lo stato «non ho ancora programmato niente».
+       */
+      if (da < 21) {
+        await m.createTable(settimanaProgrammata);
       }
     },
   );
@@ -894,6 +906,42 @@ class ArchivioSalute extends _$ArchivioSalute {
             ..orderBy([(t) => OrderingTerm.desc(t.iniziatoIl)])
             ..limit(quanti))
           .get();
+
+  /// La settimana programmata, sette caselle da lunedì — 3b-I.B.
+  ///
+  /// ⚠️ **Sempre sette**, anche se nel database ce ne sono meno: chi la disegna
+  /// non deve avere un caso «la riga di giovedì non esiste» diverso da «giovedì
+  /// è riposo». 💡 Sono la stessa cosa per chi guarda, e devono esserlo anche
+  /// per chi scrive il widget.
+  Future<List<int?>> settimanaDelPiano() async {
+    final righe = await select(settimanaProgrammata).get();
+    final fuori = List<int?>.filled(7, null);
+
+    for (final r in righe) {
+      if (r.giorno >= 1 && r.giorno <= 7) fuori[r.giorno - 1] = r.schedaLocale;
+    }
+
+    return fuori;
+  }
+
+  /// Riscrive la settimana intera.
+  ///
+  /// 🚨 **Tutta insieme, in una transazione.** Salvarla giorno per giorno
+  /// vorrebbe dire che un'interruzione a metà lascia mezza settimana vecchia e
+  /// mezza nuova — e nessuno se ne accorgerebbe, perché entrambe sono
+  /// settimane plausibili.
+  Future<void> scriviLaSettimana(List<int?> giorni) => transaction(() async {
+    await delete(settimanaProgrammata).go();
+
+    for (var i = 0; i < giorni.length && i < 7; i++) {
+      await into(settimanaProgrammata).insert(
+        SettimanaProgrammataCompanion.insert(
+          giorno: Value(i + 1),
+          schedaLocale: Value(giorni[i]),
+        ),
+      );
+    }
+  });
 
   /// Le sedute dell'orologio **di un giorno**, per contarne le calorie —
   /// 3b-G.3, 26/08/2026.
@@ -2620,4 +2668,37 @@ class BruciateDichiarate extends Table {
   BoolColumn get daServer => boolean().withDefault(const Constant(false))();
 
   // 💡 `giorno` ha già il suo `.unique()`: niente `uniqueKeys`.
+}
+
+/// La settimana programmata — 3b-I.B, 27/08/2026.
+///
+/// ══ 📌 COS'E' ═════════════════════════════════════════════════════════════
+///
+/// Sette righe, una per giorno: quale scheda tocca, o `null` per il riposo.
+///
+/// ⛔ **Non è «una lista di appuntamenti con le date»**, ed è una scelta: la
+/// settimana **si ripete**, e con le date bisognerebbe rigenerarla ogni
+/// domenica — cioè avere qualcosa che gira di notte per tenere in piedi una
+/// funzione che non ne ha bisogno.
+///
+/// ⚠️ **`schedaLocale` non ha un vincolo di chiave esterna**, e non è una
+/// dimenticanza: se la scheda viene cancellata il giorno deve **restare**,
+/// vuoto, e dirlo. 🚨 Con una cascata sparirebbe la riga e il giorno tornerebbe
+/// «riposo» — cioè l'app direbbe che quel giorno non ti alleni, invece di dire
+/// che la scheda che avevi messo non c'è più.
+///
+/// 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
+@DataClassName('GiornoProgrammato')
+class SettimanaProgrammata extends Table {
+  /// 1 = lunedì … 7 = domenica.
+  ///
+  /// 💡 **La convenzione di `DateTime.weekday`**, non una nostra: così
+  /// `adesso.weekday` è già la chiave, senza nessuna conversione da ricordare.
+  IntColumn get giorno => integer()();
+
+  /// L'id in `SchedeSulTelefono`, o `null` per il riposo.
+  IntColumn get schedaLocale => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {giorno};
 }

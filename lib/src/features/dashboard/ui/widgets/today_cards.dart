@@ -21,6 +21,8 @@ import '../../../profile/ui/widgets/manca_per_il_target.dart';
 import '../../../sleep/sleep_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../../training/data/storico_unificato.dart';
+import '../../../training/settimana_controller.dart';
+import '../../../training/training_controller.dart';
 import '../../data/dashboard_models.dart';
 import '../../giorno_scelto.dart';
 import '../../riassunto_settimana.dart';
@@ -1054,12 +1056,42 @@ class TrainingCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+                /*
+                 * 📅 **L'ingresso alla settimana** — 3b-I.B.
+                 *
+                 * 🚨 C'e' **anche per chi non e' abbonato**, ed e' il punto: la
+                 * schermata si apre, si legge, e dice cosa serve per usarla.
+                 * ⛔ Nasconderla vorrebbe dire che la funzione la scopre solo
+                 * chi e' gia' abbonato, cioe' chi non serve convincere.
+                 */
+                TextButton(
+                  onPressed: () => context.push(AppRoutes.settimana),
+                  child: const Text('Settimana'),
+                ),
                 TextButton(
                   onPressed: () => context.push(AppRoutes.history),
                   child: const Text('Storico'),
                 ),
               ],
             ),
+
+            /*
+             * ══ 📅 COSA TOCCA OGGI — 3b-I.B, 27/08/2026 ═══════════════════
+             *
+             * 🚨 **Sta in cima alla card, e non in fondo.** È stato deciso di
+             * NON fare notifiche (D.6): chi non apre l'app quel giorno non sa
+             * che tocca a lui, quindi quando l'app la apre questa riga deve
+             * essere fra le prime cose che vede — non l'ultima.
+             *
+             * ⛔ E **non giudica**: dice cosa c'è in programma. «Hai saltato tre
+             * giorni» non motiva nessuno, accusa — e chi salta due settimane va
+             * lasciato in pace da solo.
+             *
+             * 💡 Compare solo a chi ha programmato qualcosa **e** può farlo: a
+             * un non abbonato una riga vuota qui non spiegherebbe niente. Il
+             * ponte verso l'abbonamento è la schermata, non questa riga.
+             */
+            const _CosaToccaOggi(),
 
             /*
              * ══ 🚨 UNA FONTE SOLA PER TUTTA LA SCHEDA ═══════════════════════
@@ -1652,6 +1684,79 @@ class WeightCard extends ConsumerWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// «Oggi tocca a Full Body B» — 3b-I.B, 27/08/2026.
+///
+/// 💡 Compare solo a chi ha programmato qualcosa **e** può farlo: a un non
+/// abbonato una riga vuota qui non spiegherebbe niente. Il ponte verso
+/// l'abbonamento è la schermata della settimana, non questa riga.
+class _CosaToccaOggi extends ConsumerWidget {
+  const _CosaToccaOggi();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = ref.watch(schedaDiOggiProvider).valueOrNull;
+
+    if (id == null) return const SizedBox.shrink();
+
+    final schede = ref.watch(schedeUniteProvider).valueOrNull ?? const [];
+
+    WorkoutPlan? scheda;
+
+    for (final s in schede) {
+      if (s.id == id) scheda = s;
+    }
+
+    /*
+     * ⛔ **La scheda programmata è stata cancellata.** Non si inventa un nome e
+     * non si scrive «riposo»: meglio non dire niente che dire una cosa falsa.
+     * 💡 Nella schermata della settimana invece il giorno resta e lo dichiara —
+     * là c'è spazio per spiegarlo, e c'è il modo di rimediare.
+     */
+    if (scheda == null) return const SizedBox.shrink();
+
+    final tema = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.sm),
+      child: Material(
+        color: tema.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(Gap.radiusSm),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+          onTap: () => context.push(AppRoutes.training),
+          child: Padding(
+            padding: const EdgeInsets.all(Gap.sm),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.today_rounded,
+                  size: 18,
+                  color: tema.colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: Gap.sm),
+                Expanded(
+                  child: Text(
+                    'Oggi tocca a ${scheda.name}',
+                    style: tema.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: tema.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: tema.colorScheme.onPrimaryContainer,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

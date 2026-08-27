@@ -41,6 +41,7 @@ import '../../features/training/ui/mie_schede_screen.dart';
 import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
 import '../../features/training/ui/player_screen.dart';
+import '../../features/training/ui/schermata_settimana.dart';
 import '../../features/training/ui/session_summary_screen.dart';
 import '../../features/training/ui/widgets/scelta_tipo_scheda.dart';
 
@@ -181,6 +182,9 @@ class AppRoutes {
   static const acquisti = '/acquisti';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
+
+  /// 📅 La settimana programmata — 3b-I.B.
+  static const settimana = '/allenamento/settimana';
   static const planNew = '/schede/nuova';
 
   /// `/allenamento/:id` — il player. `/schede/:id/modifica` — l'editor.
@@ -531,6 +535,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.history,
         builder: (_, _) => const HistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settimana,
+        builder: (_, _) => const SchermataSettimana(),
       ),
       GoRoute(
         path: AppRoutes.planNew,

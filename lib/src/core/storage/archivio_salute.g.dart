@@ -4991,6 +4991,224 @@ class SerieDelleSeduteCompanion extends UpdateCompanion<SerieSeduta> {
   }
 }
 
+class $SettimanaProgrammataTable extends SettimanaProgrammata
+    with TableInfo<$SettimanaProgrammataTable, GiornoProgrammato> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettimanaProgrammataTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _giornoMeta = const VerificationMeta('giorno');
+  @override
+  late final GeneratedColumn<int> giorno = GeneratedColumn<int>(
+    'giorno',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _schedaLocaleMeta = const VerificationMeta(
+    'schedaLocale',
+  );
+  @override
+  late final GeneratedColumn<int> schedaLocale = GeneratedColumn<int>(
+    'scheda_locale',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [giorno, schedaLocale];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settimana_programmata';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GiornoProgrammato> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('giorno')) {
+      context.handle(
+        _giornoMeta,
+        giorno.isAcceptableOrUnknown(data['giorno']!, _giornoMeta),
+      );
+    }
+    if (data.containsKey('scheda_locale')) {
+      context.handle(
+        _schedaLocaleMeta,
+        schedaLocale.isAcceptableOrUnknown(
+          data['scheda_locale']!,
+          _schedaLocaleMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {giorno};
+  @override
+  GiornoProgrammato map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GiornoProgrammato(
+      giorno: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}giorno'],
+      )!,
+      schedaLocale: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scheda_locale'],
+      ),
+    );
+  }
+
+  @override
+  $SettimanaProgrammataTable createAlias(String alias) {
+    return $SettimanaProgrammataTable(attachedDatabase, alias);
+  }
+}
+
+class GiornoProgrammato extends DataClass
+    implements Insertable<GiornoProgrammato> {
+  /// 1 = lunedì … 7 = domenica.
+  ///
+  /// 💡 **La convenzione di `DateTime.weekday`**, non una nostra: così
+  /// `adesso.weekday` è già la chiave, senza nessuna conversione da ricordare.
+  final int giorno;
+
+  /// L'id in `SchedeSulTelefono`, o `null` per il riposo.
+  final int? schedaLocale;
+  const GiornoProgrammato({required this.giorno, this.schedaLocale});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['giorno'] = Variable<int>(giorno);
+    if (!nullToAbsent || schedaLocale != null) {
+      map['scheda_locale'] = Variable<int>(schedaLocale);
+    }
+    return map;
+  }
+
+  SettimanaProgrammataCompanion toCompanion(bool nullToAbsent) {
+    return SettimanaProgrammataCompanion(
+      giorno: Value(giorno),
+      schedaLocale: schedaLocale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedaLocale),
+    );
+  }
+
+  factory GiornoProgrammato.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GiornoProgrammato(
+      giorno: serializer.fromJson<int>(json['giorno']),
+      schedaLocale: serializer.fromJson<int?>(json['schedaLocale']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'giorno': serializer.toJson<int>(giorno),
+      'schedaLocale': serializer.toJson<int?>(schedaLocale),
+    };
+  }
+
+  GiornoProgrammato copyWith({
+    int? giorno,
+    Value<int?> schedaLocale = const Value.absent(),
+  }) => GiornoProgrammato(
+    giorno: giorno ?? this.giorno,
+    schedaLocale: schedaLocale.present ? schedaLocale.value : this.schedaLocale,
+  );
+  GiornoProgrammato copyWithCompanion(SettimanaProgrammataCompanion data) {
+    return GiornoProgrammato(
+      giorno: data.giorno.present ? data.giorno.value : this.giorno,
+      schedaLocale: data.schedaLocale.present
+          ? data.schedaLocale.value
+          : this.schedaLocale,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GiornoProgrammato(')
+          ..write('giorno: $giorno, ')
+          ..write('schedaLocale: $schedaLocale')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(giorno, schedaLocale);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GiornoProgrammato &&
+          other.giorno == this.giorno &&
+          other.schedaLocale == this.schedaLocale);
+}
+
+class SettimanaProgrammataCompanion extends UpdateCompanion<GiornoProgrammato> {
+  final Value<int> giorno;
+  final Value<int?> schedaLocale;
+  const SettimanaProgrammataCompanion({
+    this.giorno = const Value.absent(),
+    this.schedaLocale = const Value.absent(),
+  });
+  SettimanaProgrammataCompanion.insert({
+    this.giorno = const Value.absent(),
+    this.schedaLocale = const Value.absent(),
+  });
+  static Insertable<GiornoProgrammato> custom({
+    Expression<int>? giorno,
+    Expression<int>? schedaLocale,
+  }) {
+    return RawValuesInsertable({
+      if (giorno != null) 'giorno': giorno,
+      if (schedaLocale != null) 'scheda_locale': schedaLocale,
+    });
+  }
+
+  SettimanaProgrammataCompanion copyWith({
+    Value<int>? giorno,
+    Value<int?>? schedaLocale,
+  }) {
+    return SettimanaProgrammataCompanion(
+      giorno: giorno ?? this.giorno,
+      schedaLocale: schedaLocale ?? this.schedaLocale,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (giorno.present) {
+      map['giorno'] = Variable<int>(giorno.value);
+    }
+    if (schedaLocale.present) {
+      map['scheda_locale'] = Variable<int>(schedaLocale.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettimanaProgrammataCompanion(')
+          ..write('giorno: $giorno, ')
+          ..write('schedaLocale: $schedaLocale')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $BruciateDichiarateTable extends BruciateDichiarate
     with TableInfo<$BruciateDichiarateTable, BruciatoDichiarato> {
   @override
@@ -5956,6 +6174,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   late final $SerieDelleSeduteTable serieDelleSedute = $SerieDelleSeduteTable(
     this,
   );
+  late final $SettimanaProgrammataTable settimanaProgrammata =
+      $SettimanaProgrammataTable(this);
   late final $BruciateDichiarateTable bruciateDichiarate =
       $BruciateDichiarateTable(this);
   late final $SchedeSulTelefonoTable schedeSulTelefono =
@@ -5974,6 +6194,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     allenamentiDaOrologio,
     seduteAllenamento,
     serieDelleSedute,
+    settimanaProgrammata,
     bruciateDichiarate,
     schedeSulTelefono,
   ];
@@ -8640,6 +8861,161 @@ typedef $$SerieDelleSeduteTableProcessedTableManager =
       SerieSeduta,
       PrefetchHooks Function({bool sedutaId})
     >;
+typedef $$SettimanaProgrammataTableCreateCompanionBuilder =
+    SettimanaProgrammataCompanion Function({
+      Value<int> giorno,
+      Value<int?> schedaLocale,
+    });
+typedef $$SettimanaProgrammataTableUpdateCompanionBuilder =
+    SettimanaProgrammataCompanion Function({
+      Value<int> giorno,
+      Value<int?> schedaLocale,
+    });
+
+class $$SettimanaProgrammataTableFilterComposer
+    extends Composer<_$ArchivioSalute, $SettimanaProgrammataTable> {
+  $$SettimanaProgrammataTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SettimanaProgrammataTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $SettimanaProgrammataTable> {
+  $$SettimanaProgrammataTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get giorno => $composableBuilder(
+    column: $table.giorno,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SettimanaProgrammataTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $SettimanaProgrammataTable> {
+  $$SettimanaProgrammataTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get giorno =>
+      $composableBuilder(column: $table.giorno, builder: (column) => column);
+
+  GeneratedColumn<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => column,
+  );
+}
+
+class $$SettimanaProgrammataTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $SettimanaProgrammataTable,
+          GiornoProgrammato,
+          $$SettimanaProgrammataTableFilterComposer,
+          $$SettimanaProgrammataTableOrderingComposer,
+          $$SettimanaProgrammataTableAnnotationComposer,
+          $$SettimanaProgrammataTableCreateCompanionBuilder,
+          $$SettimanaProgrammataTableUpdateCompanionBuilder,
+          (
+            GiornoProgrammato,
+            BaseReferences<
+              _$ArchivioSalute,
+              $SettimanaProgrammataTable,
+              GiornoProgrammato
+            >,
+          ),
+          GiornoProgrammato,
+          PrefetchHooks Function()
+        > {
+  $$SettimanaProgrammataTableTableManager(
+    _$ArchivioSalute db,
+    $SettimanaProgrammataTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettimanaProgrammataTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettimanaProgrammataTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SettimanaProgrammataTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> giorno = const Value.absent(),
+                Value<int?> schedaLocale = const Value.absent(),
+              }) => SettimanaProgrammataCompanion(
+                giorno: giorno,
+                schedaLocale: schedaLocale,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> giorno = const Value.absent(),
+                Value<int?> schedaLocale = const Value.absent(),
+              }) => SettimanaProgrammataCompanion.insert(
+                giorno: giorno,
+                schedaLocale: schedaLocale,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SettimanaProgrammataTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $SettimanaProgrammataTable,
+      GiornoProgrammato,
+      $$SettimanaProgrammataTableFilterComposer,
+      $$SettimanaProgrammataTableOrderingComposer,
+      $$SettimanaProgrammataTableAnnotationComposer,
+      $$SettimanaProgrammataTableCreateCompanionBuilder,
+      $$SettimanaProgrammataTableUpdateCompanionBuilder,
+      (
+        GiornoProgrammato,
+        BaseReferences<
+          _$ArchivioSalute,
+          $SettimanaProgrammataTable,
+          GiornoProgrammato
+        >,
+      ),
+      GiornoProgrammato,
+      PrefetchHooks Function()
+    >;
 typedef $$BruciateDichiarateTableCreateCompanionBuilder =
     BruciateDichiarateCompanion Function({
       Value<int> id,
@@ -9137,6 +9513,8 @@ class $ArchivioSaluteManager {
       $$SeduteAllenamentoTableTableManager(_db, _db.seduteAllenamento);
   $$SerieDelleSeduteTableTableManager get serieDelleSedute =>
       $$SerieDelleSeduteTableTableManager(_db, _db.serieDelleSedute);
+  $$SettimanaProgrammataTableTableManager get settimanaProgrammata =>
+      $$SettimanaProgrammataTableTableManager(_db, _db.settimanaProgrammata);
   $$BruciateDichiarateTableTableManager get bruciateDichiarate =>
       $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
   $$SchedeSulTelefonoTableTableManager get schedeSulTelefono =>

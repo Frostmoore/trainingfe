@@ -5215,12 +5215,12 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AnalisiDelleSchedeTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _schedaServerIdMeta = const VerificationMeta(
-    'schedaServerId',
+  static const VerificationMeta _schedaLocaleMeta = const VerificationMeta(
+    'schedaLocale',
   );
   @override
-  late final GeneratedColumn<int> schedaServerId = GeneratedColumn<int>(
-    'scheda_server_id',
+  late final GeneratedColumn<int> schedaLocale = GeneratedColumn<int>(
+    'scheda_locale',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -5259,7 +5259,7 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
   );
   @override
   List<GeneratedColumn> get $columns => [
-    schedaServerId,
+    schedaLocale,
     righe,
     impronta,
     fattaIl,
@@ -5276,12 +5276,12 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('scheda_server_id')) {
+    if (data.containsKey('scheda_locale')) {
       context.handle(
-        _schedaServerIdMeta,
-        schedaServerId.isAcceptableOrUnknown(
-          data['scheda_server_id']!,
-          _schedaServerIdMeta,
+        _schedaLocaleMeta,
+        schedaLocale.isAcceptableOrUnknown(
+          data['scheda_locale']!,
+          _schedaLocaleMeta,
         ),
       );
     }
@@ -5313,14 +5313,14 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {schedaServerId};
+  Set<GeneratedColumn> get $primaryKey => {schedaLocale};
   @override
   AnalisiScheda map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AnalisiScheda(
-      schedaServerId: attachedDatabase.typeMapping.read(
+      schedaLocale: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}scheda_server_id'],
+        data['${effectivePrefix}scheda_locale'],
       )!,
       righe: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -5344,12 +5344,20 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
 }
 
 class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
-  /// L'id **del server** della scheda.
+  /// L'id della scheda **su questo telefono** — `SchedeSulTelefono.id`.
   ///
-  /// ⚠️ Non l'id locale: quello cambia da telefono a telefono, e un'analisi
-  /// ripristinata da backup finirebbe attaccata a un'altra scheda — cioè
-  /// mostrerebbe frasi vere su un esercizio sbagliato.
-  final int schedaServerId;
+  /// ══ ⚠️ SI CHIAMAVA `schedaServerId`, ED ERA SBAGLIATO ═══════════════════
+  ///
+  /// 🚨 `schedeUniteProvider` costruisce ogni `WorkoutPlan` con `'id': r.id`,
+  /// cioè con l'id **locale**: quello che arriva qui non è mai stato l'id del
+  /// server. ⛔ Il codice funzionava — tutti e due i lati usavano lo stesso
+  /// numero — ma il nome raccontava un'altra cosa, ed è il tipo di bugia che si
+  /// paga quando qualcuno ci costruisce sopra.
+  ///
+  /// 💡 Rinominata alla v23, quando è arrivata [VersioniDelleSchede] che si
+  /// aggancia **allo stesso id**: due tabelle vicine non potevano chiamarlo in
+  /// due modi diversi.
+  final int schedaLocale;
 
   /// Le righe, come sono arrivate dal server: `[{id, andamento, riga}, …]`.
   final String righe;
@@ -5358,7 +5366,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   final String impronta;
   final DateTime fattaIl;
   const AnalisiScheda({
-    required this.schedaServerId,
+    required this.schedaLocale,
     required this.righe,
     required this.impronta,
     required this.fattaIl,
@@ -5366,7 +5374,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['scheda_server_id'] = Variable<int>(schedaServerId);
+    map['scheda_locale'] = Variable<int>(schedaLocale);
     map['righe'] = Variable<String>(righe);
     map['impronta'] = Variable<String>(impronta);
     map['fatta_il'] = Variable<DateTime>(fattaIl);
@@ -5375,7 +5383,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
 
   AnalisiDelleSchedeCompanion toCompanion(bool nullToAbsent) {
     return AnalisiDelleSchedeCompanion(
-      schedaServerId: Value(schedaServerId),
+      schedaLocale: Value(schedaLocale),
       righe: Value(righe),
       impronta: Value(impronta),
       fattaIl: Value(fattaIl),
@@ -5388,7 +5396,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AnalisiScheda(
-      schedaServerId: serializer.fromJson<int>(json['schedaServerId']),
+      schedaLocale: serializer.fromJson<int>(json['schedaLocale']),
       righe: serializer.fromJson<String>(json['righe']),
       impronta: serializer.fromJson<String>(json['impronta']),
       fattaIl: serializer.fromJson<DateTime>(json['fattaIl']),
@@ -5398,7 +5406,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'schedaServerId': serializer.toJson<int>(schedaServerId),
+      'schedaLocale': serializer.toJson<int>(schedaLocale),
       'righe': serializer.toJson<String>(righe),
       'impronta': serializer.toJson<String>(impronta),
       'fattaIl': serializer.toJson<DateTime>(fattaIl),
@@ -5406,21 +5414,21 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   }
 
   AnalisiScheda copyWith({
-    int? schedaServerId,
+    int? schedaLocale,
     String? righe,
     String? impronta,
     DateTime? fattaIl,
   }) => AnalisiScheda(
-    schedaServerId: schedaServerId ?? this.schedaServerId,
+    schedaLocale: schedaLocale ?? this.schedaLocale,
     righe: righe ?? this.righe,
     impronta: impronta ?? this.impronta,
     fattaIl: fattaIl ?? this.fattaIl,
   );
   AnalisiScheda copyWithCompanion(AnalisiDelleSchedeCompanion data) {
     return AnalisiScheda(
-      schedaServerId: data.schedaServerId.present
-          ? data.schedaServerId.value
-          : this.schedaServerId,
+      schedaLocale: data.schedaLocale.present
+          ? data.schedaLocale.value
+          : this.schedaLocale,
       righe: data.righe.present ? data.righe.value : this.righe,
       impronta: data.impronta.present ? data.impronta.value : this.impronta,
       fattaIl: data.fattaIl.present ? data.fattaIl.value : this.fattaIl,
@@ -5430,7 +5438,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   @override
   String toString() {
     return (StringBuffer('AnalisiScheda(')
-          ..write('schedaServerId: $schedaServerId, ')
+          ..write('schedaLocale: $schedaLocale, ')
           ..write('righe: $righe, ')
           ..write('impronta: $impronta, ')
           ..write('fattaIl: $fattaIl')
@@ -5439,30 +5447,30 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
   }
 
   @override
-  int get hashCode => Object.hash(schedaServerId, righe, impronta, fattaIl);
+  int get hashCode => Object.hash(schedaLocale, righe, impronta, fattaIl);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AnalisiScheda &&
-          other.schedaServerId == this.schedaServerId &&
+          other.schedaLocale == this.schedaLocale &&
           other.righe == this.righe &&
           other.impronta == this.impronta &&
           other.fattaIl == this.fattaIl);
 }
 
 class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
-  final Value<int> schedaServerId;
+  final Value<int> schedaLocale;
   final Value<String> righe;
   final Value<String> impronta;
   final Value<DateTime> fattaIl;
   const AnalisiDelleSchedeCompanion({
-    this.schedaServerId = const Value.absent(),
+    this.schedaLocale = const Value.absent(),
     this.righe = const Value.absent(),
     this.impronta = const Value.absent(),
     this.fattaIl = const Value.absent(),
   });
   AnalisiDelleSchedeCompanion.insert({
-    this.schedaServerId = const Value.absent(),
+    this.schedaLocale = const Value.absent(),
     required String righe,
     required String impronta,
     required DateTime fattaIl,
@@ -5470,13 +5478,13 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
        impronta = Value(impronta),
        fattaIl = Value(fattaIl);
   static Insertable<AnalisiScheda> custom({
-    Expression<int>? schedaServerId,
+    Expression<int>? schedaLocale,
     Expression<String>? righe,
     Expression<String>? impronta,
     Expression<DateTime>? fattaIl,
   }) {
     return RawValuesInsertable({
-      if (schedaServerId != null) 'scheda_server_id': schedaServerId,
+      if (schedaLocale != null) 'scheda_locale': schedaLocale,
       if (righe != null) 'righe': righe,
       if (impronta != null) 'impronta': impronta,
       if (fattaIl != null) 'fatta_il': fattaIl,
@@ -5484,13 +5492,13 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
   }
 
   AnalisiDelleSchedeCompanion copyWith({
-    Value<int>? schedaServerId,
+    Value<int>? schedaLocale,
     Value<String>? righe,
     Value<String>? impronta,
     Value<DateTime>? fattaIl,
   }) {
     return AnalisiDelleSchedeCompanion(
-      schedaServerId: schedaServerId ?? this.schedaServerId,
+      schedaLocale: schedaLocale ?? this.schedaLocale,
       righe: righe ?? this.righe,
       impronta: impronta ?? this.impronta,
       fattaIl: fattaIl ?? this.fattaIl,
@@ -5500,8 +5508,8 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (schedaServerId.present) {
-      map['scheda_server_id'] = Variable<int>(schedaServerId.value);
+    if (schedaLocale.present) {
+      map['scheda_locale'] = Variable<int>(schedaLocale.value);
     }
     if (righe.present) {
       map['righe'] = Variable<String>(righe.value);
@@ -5518,10 +5526,380 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
   @override
   String toString() {
     return (StringBuffer('AnalisiDelleSchedeCompanion(')
-          ..write('schedaServerId: $schedaServerId, ')
+          ..write('schedaLocale: $schedaLocale, ')
           ..write('righe: $righe, ')
           ..write('impronta: $impronta, ')
           ..write('fattaIl: $fattaIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $VersioniDelleSchedeTable extends VersioniDelleSchede
+    with TableInfo<$VersioniDelleSchedeTable, VersioneSchedaSalvata> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $VersioniDelleSchedeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _schedaLocaleMeta = const VerificationMeta(
+    'schedaLocale',
+  );
+  @override
+  late final GeneratedColumn<int> schedaLocale = GeneratedColumn<int>(
+    'scheda_locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quandoMeta = const VerificationMeta('quando');
+  @override
+  late final GeneratedColumn<DateTime> quando = GeneratedColumn<DateTime>(
+    'quando',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _improntaMeta = const VerificationMeta(
+    'impronta',
+  );
+  @override
+  late final GeneratedColumn<String> impronta = GeneratedColumn<String>(
+    'impronta',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contenutoMeta = const VerificationMeta(
+    'contenuto',
+  );
+  @override
+  late final GeneratedColumn<String> contenuto = GeneratedColumn<String>(
+    'contenuto',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    schedaLocale,
+    quando,
+    impronta,
+    contenuto,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'versioni_delle_schede';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<VersioneSchedaSalvata> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('scheda_locale')) {
+      context.handle(
+        _schedaLocaleMeta,
+        schedaLocale.isAcceptableOrUnknown(
+          data['scheda_locale']!,
+          _schedaLocaleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_schedaLocaleMeta);
+    }
+    if (data.containsKey('quando')) {
+      context.handle(
+        _quandoMeta,
+        quando.isAcceptableOrUnknown(data['quando']!, _quandoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quandoMeta);
+    }
+    if (data.containsKey('impronta')) {
+      context.handle(
+        _improntaMeta,
+        impronta.isAcceptableOrUnknown(data['impronta']!, _improntaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_improntaMeta);
+    }
+    if (data.containsKey('contenuto')) {
+      context.handle(
+        _contenutoMeta,
+        contenuto.isAcceptableOrUnknown(data['contenuto']!, _contenutoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contenutoMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  VersioneSchedaSalvata map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return VersioneSchedaSalvata(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      schedaLocale: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scheda_locale'],
+      )!,
+      quando: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}quando'],
+      )!,
+      impronta: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}impronta'],
+      )!,
+      contenuto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contenuto'],
+      )!,
+    );
+  }
+
+  @override
+  $VersioniDelleSchedeTable createAlias(String alias) {
+    return $VersioniDelleSchedeTable(attachedDatabase, alias);
+  }
+}
+
+class VersioneSchedaSalvata extends DataClass
+    implements Insertable<VersioneSchedaSalvata> {
+  final int id;
+
+  /// L'id in `SchedeSulTelefono`.
+  ///
+  /// ⚠️ **Nessuna chiave esterna**, come per `SettimanaProgrammata`: se la
+  /// scheda viene cancellata queste righe restano orfane e vengono ignorate.
+  /// ⛔ Una cascata cancellerebbe la storia di una scheda cancellata per
+  /// sbaglio, che è l'unico momento in cui quella storia servirebbe davvero.
+  final int schedaLocale;
+  final DateTime quando;
+
+  /// L'impronta di [improntaDellaScheda]: serve a non riscrivere due volte lo
+  /// stesso contenuto.
+  final String impronta;
+
+  /// Il JSON della scheda, com'era.
+  final String contenuto;
+  const VersioneSchedaSalvata({
+    required this.id,
+    required this.schedaLocale,
+    required this.quando,
+    required this.impronta,
+    required this.contenuto,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['scheda_locale'] = Variable<int>(schedaLocale);
+    map['quando'] = Variable<DateTime>(quando);
+    map['impronta'] = Variable<String>(impronta);
+    map['contenuto'] = Variable<String>(contenuto);
+    return map;
+  }
+
+  VersioniDelleSchedeCompanion toCompanion(bool nullToAbsent) {
+    return VersioniDelleSchedeCompanion(
+      id: Value(id),
+      schedaLocale: Value(schedaLocale),
+      quando: Value(quando),
+      impronta: Value(impronta),
+      contenuto: Value(contenuto),
+    );
+  }
+
+  factory VersioneSchedaSalvata.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return VersioneSchedaSalvata(
+      id: serializer.fromJson<int>(json['id']),
+      schedaLocale: serializer.fromJson<int>(json['schedaLocale']),
+      quando: serializer.fromJson<DateTime>(json['quando']),
+      impronta: serializer.fromJson<String>(json['impronta']),
+      contenuto: serializer.fromJson<String>(json['contenuto']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'schedaLocale': serializer.toJson<int>(schedaLocale),
+      'quando': serializer.toJson<DateTime>(quando),
+      'impronta': serializer.toJson<String>(impronta),
+      'contenuto': serializer.toJson<String>(contenuto),
+    };
+  }
+
+  VersioneSchedaSalvata copyWith({
+    int? id,
+    int? schedaLocale,
+    DateTime? quando,
+    String? impronta,
+    String? contenuto,
+  }) => VersioneSchedaSalvata(
+    id: id ?? this.id,
+    schedaLocale: schedaLocale ?? this.schedaLocale,
+    quando: quando ?? this.quando,
+    impronta: impronta ?? this.impronta,
+    contenuto: contenuto ?? this.contenuto,
+  );
+  VersioneSchedaSalvata copyWithCompanion(VersioniDelleSchedeCompanion data) {
+    return VersioneSchedaSalvata(
+      id: data.id.present ? data.id.value : this.id,
+      schedaLocale: data.schedaLocale.present
+          ? data.schedaLocale.value
+          : this.schedaLocale,
+      quando: data.quando.present ? data.quando.value : this.quando,
+      impronta: data.impronta.present ? data.impronta.value : this.impronta,
+      contenuto: data.contenuto.present ? data.contenuto.value : this.contenuto,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VersioneSchedaSalvata(')
+          ..write('id: $id, ')
+          ..write('schedaLocale: $schedaLocale, ')
+          ..write('quando: $quando, ')
+          ..write('impronta: $impronta, ')
+          ..write('contenuto: $contenuto')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, schedaLocale, quando, impronta, contenuto);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is VersioneSchedaSalvata &&
+          other.id == this.id &&
+          other.schedaLocale == this.schedaLocale &&
+          other.quando == this.quando &&
+          other.impronta == this.impronta &&
+          other.contenuto == this.contenuto);
+}
+
+class VersioniDelleSchedeCompanion
+    extends UpdateCompanion<VersioneSchedaSalvata> {
+  final Value<int> id;
+  final Value<int> schedaLocale;
+  final Value<DateTime> quando;
+  final Value<String> impronta;
+  final Value<String> contenuto;
+  const VersioniDelleSchedeCompanion({
+    this.id = const Value.absent(),
+    this.schedaLocale = const Value.absent(),
+    this.quando = const Value.absent(),
+    this.impronta = const Value.absent(),
+    this.contenuto = const Value.absent(),
+  });
+  VersioniDelleSchedeCompanion.insert({
+    this.id = const Value.absent(),
+    required int schedaLocale,
+    required DateTime quando,
+    required String impronta,
+    required String contenuto,
+  }) : schedaLocale = Value(schedaLocale),
+       quando = Value(quando),
+       impronta = Value(impronta),
+       contenuto = Value(contenuto);
+  static Insertable<VersioneSchedaSalvata> custom({
+    Expression<int>? id,
+    Expression<int>? schedaLocale,
+    Expression<DateTime>? quando,
+    Expression<String>? impronta,
+    Expression<String>? contenuto,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (schedaLocale != null) 'scheda_locale': schedaLocale,
+      if (quando != null) 'quando': quando,
+      if (impronta != null) 'impronta': impronta,
+      if (contenuto != null) 'contenuto': contenuto,
+    });
+  }
+
+  VersioniDelleSchedeCompanion copyWith({
+    Value<int>? id,
+    Value<int>? schedaLocale,
+    Value<DateTime>? quando,
+    Value<String>? impronta,
+    Value<String>? contenuto,
+  }) {
+    return VersioniDelleSchedeCompanion(
+      id: id ?? this.id,
+      schedaLocale: schedaLocale ?? this.schedaLocale,
+      quando: quando ?? this.quando,
+      impronta: impronta ?? this.impronta,
+      contenuto: contenuto ?? this.contenuto,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (schedaLocale.present) {
+      map['scheda_locale'] = Variable<int>(schedaLocale.value);
+    }
+    if (quando.present) {
+      map['quando'] = Variable<DateTime>(quando.value);
+    }
+    if (impronta.present) {
+      map['impronta'] = Variable<String>(impronta.value);
+    }
+    if (contenuto.present) {
+      map['contenuto'] = Variable<String>(contenuto.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VersioniDelleSchedeCompanion(')
+          ..write('id: $id, ')
+          ..write('schedaLocale: $schedaLocale, ')
+          ..write('quando: $quando, ')
+          ..write('impronta: $impronta, ')
+          ..write('contenuto: $contenuto')
           ..write(')'))
         .toString();
   }
@@ -6496,6 +6874,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $SettimanaProgrammataTable(this);
   late final $AnalisiDelleSchedeTable analisiDelleSchede =
       $AnalisiDelleSchedeTable(this);
+  late final $VersioniDelleSchedeTable versioniDelleSchede =
+      $VersioniDelleSchedeTable(this);
   late final $BruciateDichiarateTable bruciateDichiarate =
       $BruciateDichiarateTable(this);
   late final $SchedeSulTelefonoTable schedeSulTelefono =
@@ -6516,6 +6896,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     serieDelleSedute,
     settimanaProgrammata,
     analisiDelleSchede,
+    versioniDelleSchede,
     bruciateDichiarate,
     schedeSulTelefono,
   ];
@@ -9339,14 +9720,14 @@ typedef $$SettimanaProgrammataTableProcessedTableManager =
     >;
 typedef $$AnalisiDelleSchedeTableCreateCompanionBuilder =
     AnalisiDelleSchedeCompanion Function({
-      Value<int> schedaServerId,
+      Value<int> schedaLocale,
       required String righe,
       required String impronta,
       required DateTime fattaIl,
     });
 typedef $$AnalisiDelleSchedeTableUpdateCompanionBuilder =
     AnalisiDelleSchedeCompanion Function({
-      Value<int> schedaServerId,
+      Value<int> schedaLocale,
       Value<String> righe,
       Value<String> impronta,
       Value<DateTime> fattaIl,
@@ -9361,8 +9742,8 @@ class $$AnalisiDelleSchedeTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get schedaServerId => $composableBuilder(
-    column: $table.schedaServerId,
+  ColumnFilters<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9391,8 +9772,8 @@ class $$AnalisiDelleSchedeTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get schedaServerId => $composableBuilder(
-    column: $table.schedaServerId,
+  ColumnOrderings<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9421,8 +9802,8 @@ class $$AnalisiDelleSchedeTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get schedaServerId => $composableBuilder(
-    column: $table.schedaServerId,
+  GeneratedColumn<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
     builder: (column) => column,
   );
 
@@ -9476,24 +9857,24 @@ class $$AnalisiDelleSchedeTableTableManager
               ),
           updateCompanionCallback:
               ({
-                Value<int> schedaServerId = const Value.absent(),
+                Value<int> schedaLocale = const Value.absent(),
                 Value<String> righe = const Value.absent(),
                 Value<String> impronta = const Value.absent(),
                 Value<DateTime> fattaIl = const Value.absent(),
               }) => AnalisiDelleSchedeCompanion(
-                schedaServerId: schedaServerId,
+                schedaLocale: schedaLocale,
                 righe: righe,
                 impronta: impronta,
                 fattaIl: fattaIl,
               ),
           createCompanionCallback:
               ({
-                Value<int> schedaServerId = const Value.absent(),
+                Value<int> schedaLocale = const Value.absent(),
                 required String righe,
                 required String impronta,
                 required DateTime fattaIl,
               }) => AnalisiDelleSchedeCompanion.insert(
-                schedaServerId: schedaServerId,
+                schedaLocale: schedaLocale,
                 righe: righe,
                 impronta: impronta,
                 fattaIl: fattaIl,
@@ -9525,6 +9906,218 @@ typedef $$AnalisiDelleSchedeTableProcessedTableManager =
         >,
       ),
       AnalisiScheda,
+      PrefetchHooks Function()
+    >;
+typedef $$VersioniDelleSchedeTableCreateCompanionBuilder =
+    VersioniDelleSchedeCompanion Function({
+      Value<int> id,
+      required int schedaLocale,
+      required DateTime quando,
+      required String impronta,
+      required String contenuto,
+    });
+typedef $$VersioniDelleSchedeTableUpdateCompanionBuilder =
+    VersioniDelleSchedeCompanion Function({
+      Value<int> id,
+      Value<int> schedaLocale,
+      Value<DateTime> quando,
+      Value<String> impronta,
+      Value<String> contenuto,
+    });
+
+class $$VersioniDelleSchedeTableFilterComposer
+    extends Composer<_$ArchivioSalute, $VersioniDelleSchedeTable> {
+  $$VersioniDelleSchedeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get quando => $composableBuilder(
+    column: $table.quando,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get impronta => $composableBuilder(
+    column: $table.impronta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contenuto => $composableBuilder(
+    column: $table.contenuto,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$VersioniDelleSchedeTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $VersioniDelleSchedeTable> {
+  $$VersioniDelleSchedeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get quando => $composableBuilder(
+    column: $table.quando,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get impronta => $composableBuilder(
+    column: $table.impronta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contenuto => $composableBuilder(
+    column: $table.contenuto,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$VersioniDelleSchedeTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $VersioniDelleSchedeTable> {
+  $$VersioniDelleSchedeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get schedaLocale => $composableBuilder(
+    column: $table.schedaLocale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get quando =>
+      $composableBuilder(column: $table.quando, builder: (column) => column);
+
+  GeneratedColumn<String> get impronta =>
+      $composableBuilder(column: $table.impronta, builder: (column) => column);
+
+  GeneratedColumn<String> get contenuto =>
+      $composableBuilder(column: $table.contenuto, builder: (column) => column);
+}
+
+class $$VersioniDelleSchedeTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $VersioniDelleSchedeTable,
+          VersioneSchedaSalvata,
+          $$VersioniDelleSchedeTableFilterComposer,
+          $$VersioniDelleSchedeTableOrderingComposer,
+          $$VersioniDelleSchedeTableAnnotationComposer,
+          $$VersioniDelleSchedeTableCreateCompanionBuilder,
+          $$VersioniDelleSchedeTableUpdateCompanionBuilder,
+          (
+            VersioneSchedaSalvata,
+            BaseReferences<
+              _$ArchivioSalute,
+              $VersioniDelleSchedeTable,
+              VersioneSchedaSalvata
+            >,
+          ),
+          VersioneSchedaSalvata,
+          PrefetchHooks Function()
+        > {
+  $$VersioniDelleSchedeTableTableManager(
+    _$ArchivioSalute db,
+    $VersioniDelleSchedeTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$VersioniDelleSchedeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$VersioniDelleSchedeTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$VersioniDelleSchedeTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> schedaLocale = const Value.absent(),
+                Value<DateTime> quando = const Value.absent(),
+                Value<String> impronta = const Value.absent(),
+                Value<String> contenuto = const Value.absent(),
+              }) => VersioniDelleSchedeCompanion(
+                id: id,
+                schedaLocale: schedaLocale,
+                quando: quando,
+                impronta: impronta,
+                contenuto: contenuto,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int schedaLocale,
+                required DateTime quando,
+                required String impronta,
+                required String contenuto,
+              }) => VersioniDelleSchedeCompanion.insert(
+                id: id,
+                schedaLocale: schedaLocale,
+                quando: quando,
+                impronta: impronta,
+                contenuto: contenuto,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$VersioniDelleSchedeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $VersioniDelleSchedeTable,
+      VersioneSchedaSalvata,
+      $$VersioniDelleSchedeTableFilterComposer,
+      $$VersioniDelleSchedeTableOrderingComposer,
+      $$VersioniDelleSchedeTableAnnotationComposer,
+      $$VersioniDelleSchedeTableCreateCompanionBuilder,
+      $$VersioniDelleSchedeTableUpdateCompanionBuilder,
+      (
+        VersioneSchedaSalvata,
+        BaseReferences<
+          _$ArchivioSalute,
+          $VersioniDelleSchedeTable,
+          VersioneSchedaSalvata
+        >,
+      ),
+      VersioneSchedaSalvata,
       PrefetchHooks Function()
     >;
 typedef $$BruciateDichiarateTableCreateCompanionBuilder =
@@ -10028,6 +10621,8 @@ class $ArchivioSaluteManager {
       $$SettimanaProgrammataTableTableManager(_db, _db.settimanaProgrammata);
   $$AnalisiDelleSchedeTableTableManager get analisiDelleSchede =>
       $$AnalisiDelleSchedeTableTableManager(_db, _db.analisiDelleSchede);
+  $$VersioniDelleSchedeTableTableManager get versioniDelleSchede =>
+      $$VersioniDelleSchedeTableTableManager(_db, _db.versioniDelleSchede);
   $$BruciateDichiarateTableTableManager get bruciateDichiarate =>
       $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
   $$SchedeSulTelefonoTableTableManager get schedeSulTelefono =>

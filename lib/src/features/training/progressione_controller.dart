@@ -32,6 +32,7 @@ import '../auth/auth_controller.dart';
 import '../health/health_controller.dart';
 import 'data/limiti_delle_schede.dart';
 import 'data/progressione.dart';
+import 'data/storia_della_scheda.dart';
 
 /// Quanto può stare ferma un'analisi prima di poterla rifare.
 ///
@@ -63,27 +64,35 @@ final puoVedereIProgressiProvider = Provider.autoDispose<bool>(
 
 /// La storia degli esercizi di una scheda, dal telefono.
 ///
-/// ⚠️ **Sull'id del server**, non su quello locale: le sedute lo registrano
-/// così, e l'id locale cambia da telefono a telefono.
+/// ⚠️ **L'id è quello locale** (`SchedeSulTelefono.id`), che è quello che
+/// `WorkoutPlan.id` porta davvero — vedi la nota su `storiaDegliEsercizi`.
 final storiaDellaSchedaProvider = FutureProvider.autoDispose
     .family<Map<int, List<PuntoDiProgressione>>, int>(
-      (ref, schedaServerId) =>
-          ref.watch(archivioSaluteProvider).storiaDegliEsercizi(schedaServerId),
+      (ref, schedaLocale) =>
+          ref.watch(archivioSaluteProvider).storiaDegliEsercizi(schedaLocale),
+    );
+
+/// Le versioni della scheda, dalla più vecchia — 3b-I.E.
+final versioniDellaSchedaProvider = FutureProvider.autoDispose
+    .family<List<VersioneDellaScheda>, int>(
+      (ref, schedaLocale) => ref
+          .watch(archivioSaluteProvider)
+          .versioniDellaScheda(schedaLocale),
     );
 
 /// L'analisi già scritta, se c'è.
 final analisiDellaSchedaProvider = FutureProvider.autoDispose
-    .family<AnalisiInCorso?, int>((ref, schedaServerId) async {
+    .family<AnalisiInCorso?, int>((ref, schedaLocale) async {
       ref.watch(revisioneDellAnalisiProvider);
 
       final riga = await ref
           .watch(archivioSaluteProvider)
-          .analisiDellaScheda(schedaServerId);
+          .analisiDellaScheda(schedaLocale);
 
       if (riga == null) return null;
 
       final storia = await ref.watch(
-        storiaDellaSchedaProvider(schedaServerId).future,
+        storiaDellaSchedaProvider(schedaLocale).future,
       );
 
       return AnalisiInCorso(
@@ -176,7 +185,7 @@ enum EsitoAnalisi {
 /// la stessa firma di `salvaLaSettimana`, per la stessa ragione.
 Future<EsitoAnalisi> chiediLAnalisi(
   WidgetRef ref, {
-  required int schedaServerId,
+  required int schedaLocale,
   required Map<int, String> nomiDegliEsercizi,
   bool automatica = false,
 }) async {
@@ -185,13 +194,13 @@ Future<EsitoAnalisi> chiediLAnalisi(
   }
 
   final storia = await ref.read(
-    storiaDellaSchedaProvider(schedaServerId).future,
+    storiaDellaSchedaProvider(schedaLocale).future,
   );
 
   if (!valeLaPenaAnalizzare(storia)) return EsitoAnalisi.troppoPocoStorico;
 
   final gia = await ref.read(
-    analisiDellaSchedaProvider(schedaServerId).future,
+    analisiDellaSchedaProvider(schedaLocale).future,
   );
 
   if (gia != null && gia.rifacibileDal != null) {
@@ -215,6 +224,25 @@ Future<EsitoAnalisi> chiediLAnalisi(
   if (automatica && !_valePagarla(gia)) return EsitoAnalisi.giaAggiornata;
 
   /*
+   * ══ 📐 I CAMBI DELLA SCHEDA VANNO INSIEME ALLE SEDUTE — 3b-I.E ═════════
+   *
+   * 📌 *«deve vedere com'era prima e com'era dopo»*.
+   *
+   * 🚨 **È la differenza fra una lettura e un'osservazione.** Senza, il modello
+   * vede solo dei numeri che salgono o scendono e può soltanto ripeterli — è
+   * esattamente il *«15 ripetizioni in entrambe le sedute»* che non serviva a
+   * niente. ⛔ Con i cambi può dire perché: una serie in più, un recupero
+   * accorciato, un peso alzato la settimana scorsa.
+   *
+   * ⚠️ **E previene una frase falsa detta con sicurezza**: ripetizioni scese
+   * dopo aver aggiunto una quarta serie non sono un peggioramento, e senza
+   * questo pezzo il modello non ha modo di saperlo.
+   */
+  final versioni = await ref.read(
+    versioniDellaSchedaProvider(schedaLocale).future,
+  );
+
+  /*
    * ⚠️ **Si mandano solo gli esercizi che hanno una storia.** Mandare anche
    * quelli mai fatti vorrebbe dire pagare del contesto per farsi rispondere
    * «poco storico» — una cosa che sappiamo già senza chiedere a nessuno.
@@ -224,10 +252,17 @@ Future<EsitoAnalisi> chiediLAnalisi(
   for (final voce in storia.entries) {
     if (voce.value.length < 2) continue;
 
+    final cambi = cambiDellEsercizio(versioni, voce.key);
+
     corpo.add({
       'id': voce.key,
       'nome': nomiDegliEsercizi[voce.key] ?? 'Esercizio',
       'sedute': [for (final p in voce.value) p.versoIlServer()],
+
+      // 💡 Assente quando non è cambiato niente, invece di una lista vuota: un
+      // campo che c'è sempre invita il modello a parlarne comunque.
+      if (cambi.isNotEmpty)
+        'cambi_alla_scheda': [for (final c in cambi) c.versoIlServer()],
     });
   }
 
@@ -250,7 +285,7 @@ Future<EsitoAnalisi> chiediLAnalisi(
         .read(archivioSaluteProvider)
         .scriviLAnalisi(
           AnalisiDelleSchedeCompanion.insert(
-            schedaServerId: Value(schedaServerId),
+            schedaLocale: Value(schedaLocale),
             righe: jsonEncode([for (final r in righe) r.aJson()]),
 
             /*

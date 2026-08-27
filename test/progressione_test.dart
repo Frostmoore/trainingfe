@@ -237,6 +237,10 @@ void main() {
       required List<(int esercizio, double? peso, int? reps)> serie,
       bool chiusa = true,
     }) async {
+      // ⚠️ Qui resta `schedaServerId`: e' il nome della colonna in
+      // `SeduteAllenamento`, che non e' stata rinominata (ci scrive il player a
+      // ogni seduta). Il valore pero' e' l'id locale — vedi la nota su
+      // `storiaDegliEsercizi`.
       final id = await archivio.apriSeduta(
         schedaServerId: scheda,
         quando: quando,
@@ -379,7 +383,7 @@ void main() {
     test('l\'analisi si riscrive, non si affianca', () async {
       await archivio.scriviLAnalisi(
         AnalisiDelleSchedeCompanion.insert(
-          schedaServerId: const Value(3),
+          schedaLocale: const Value(3),
           righe: '[]',
           impronta: 'prima',
           fattaIl: DateTime(2026, 8, 20),
@@ -388,7 +392,7 @@ void main() {
 
       await archivio.scriviLAnalisi(
         AnalisiDelleSchedeCompanion.insert(
-          schedaServerId: const Value(3),
+          schedaLocale: const Value(3),
           righe: '[]',
           impronta: 'dopo',
           fattaIl: DateTime(2026, 8, 27),

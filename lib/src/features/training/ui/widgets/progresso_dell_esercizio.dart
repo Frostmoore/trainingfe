@@ -36,12 +36,12 @@ import '../../progressione_controller.dart';
 
 class ProgressoDellEsercizio extends ConsumerWidget {
   const ProgressoDellEsercizio({
-    required this.schedaServerId,
+    required this.schedaLocale,
     required this.esercizioId,
     super.key,
   });
 
-  final int schedaServerId;
+  final int schedaLocale;
   final int esercizioId;
 
   @override
@@ -57,7 +57,7 @@ class ProgressoDellEsercizio extends ConsumerWidget {
      * niente e non esce niente.
      */
     final storia = ref
-        .watch(storiaDellaSchedaProvider(schedaServerId))
+        .watch(storiaDellaSchedaProvider(schedaLocale))
         .valueOrNull;
 
     final punti = storia?[esercizioId] ?? const <PuntoDiProgressione>[];
@@ -67,7 +67,7 @@ class ProgressoDellEsercizio extends ConsumerWidget {
     if (punti.length < 2) return const SizedBox.shrink();
 
     final riga = ref
-        .watch(analisiDellaSchedaProvider(schedaServerId))
+        .watch(analisiDellaSchedaProvider(schedaLocale))
         .valueOrNull
         ?.per(esercizioId);
 

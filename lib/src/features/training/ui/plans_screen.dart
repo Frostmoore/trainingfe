@@ -654,7 +654,7 @@ class DettaglioScheda extends ConsumerWidget {
              * la progressione non comparirebbe mai — senza nessun errore.
              */
             for (final e in p.exercises)
-              EsercizioDellaScheda(esercizio: e, schedaServerId: p.id),
+              EsercizioDellaScheda(esercizio: e, schedaLocale: p.id),
           ],
         ),
       ),
@@ -993,7 +993,6 @@ Future<void> nuovaScheda(BuildContext context) async {
   await context.push(AppRoutes.planNew, extra: tipo);
 }
 
-
 /// Il pulsante che chiede l'analisi, e cosa dice quando non si può — 3b-I.A.
 ///
 /// ══ 🔒 IL PULSANTE C'È ANCHE PER CHI NON PUÒ ══════════════════════════════
@@ -1042,7 +1041,7 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
      */
     final esito = await chiediLAnalisi(
       ref,
-      schedaServerId: widget.scheda.id,
+      schedaLocale: widget.scheda.id,
       // ⚠️ Solo quelli che stanno nel catalogo: gli altri non hanno storico
       // (vedi la nota in `EsercizioDellaScheda`), quindi non c'è niente da
       // nominare.
@@ -1135,88 +1134,113 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
     if (puo) _analisiDaSola();
 
     /*
-     * ⚠️ **Il margine di serie, come la card qui sopra.** ⛔ Difetto riferito il
-     * 27/08: `margin: only(bottom:)` azzera anche i **lati**, e questa card
-     * risultava larga quattro pixel per parte più di `_SchedaInNumeri` —
-     * appoggiata al bordo mentre l'altra no. 💡 Lo stacco verticale lo dà già
-     * il margine di serie della `Card`.
+     * ══ ⚠️ L'ARIA, AL SECONDO TENTATIVO — 27/08/2026 ══════════════════════
+     *
+     * 📌 *«la card "I Tuoi Progressi" è ancora senza aria (controlla con uno
+     * screenshot, lo vedi)»*. Ed era vero: guardandola, era **incollata** a
+     * «Questa scheda».
+     *
+     * ⛔ **Il primo tentativo aveva corretto la cosa sbagliata.** Avevo tolto
+     * `margin: only(bottom:)` perché azzerava i lati — vero, ma il margine di
+     * serie di `Card` è **4 pixel**, e fra due schede vicine fa 8: a schermo
+     * non è uno stacco, è un difetto di allineamento.
+     *
+     * 💡 Adesso `Padding(top: Gap.md)` **fuori** dalla card, come fa
+     * `_CosaAllena` due righe più su. 🚨 Il modo giusto era già lì accanto: se
+     * avessi guardato lo schermo invece del codice l'avrei visto al primo giro.
      */
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  puo ? Icons.insights_rounded : Icons.lock_rounded,
-                  size: 18,
-                  color: tema.colorScheme.primary,
-                ),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Text(
-                    'I tuoi progressi',
-                    style: tema.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.md, bottom: Gap.xs),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    puo ? Icons.insights_rounded : Icons.lock_rounded,
+                    size: 18,
+                    color: tema.colorScheme.primary,
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
+                      'I tuoi progressi',
+                      style: tema.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Gap.xs),
-            Text(
-              puo
-                  ? 'Sotto ogni esercizio trovi come è andata nelle ultime '
-                        'sedute. L\'analisi si aggiorna da sola quando ti '
-                        'alleni, al massimo una volta al giorno.'
-                  : 'Con l\'abbonamento vedi l\'andamento di ogni esercizio e '
-                        'un\'analisi scritta per te.',
-              style: tema.textTheme.bodySmall,
-            ),
-
-            if (analisi != null) ...[
+                ],
+              ),
               const SizedBox(height: Gap.xs),
               Text(
-                /*
+                puo
+                    ? 'Sotto ogni esercizio trovi come è andata nelle ultime '
+                          'sedute. L\'analisi si aggiorna da sola quando ti '
+                          'alleni, al massimo una volta al giorno.'
+                    : 'Con l\'abbonamento vedi l\'andamento di ogni esercizio e '
+                          'un\'analisi scritta per te.',
+                style: tema.textTheme.bodySmall,
+              ),
+
+              if (analisi != null) ...[
+                const SizedBox(height: Gap.xs),
+                Text(
+                  /*
                  * 💡 **«Superata» e «vecchia» sono due cose diverse**, ed è il
                  * motivo per cui l'impronta esiste: un'analisi di un mese fa è
                  * ancora vera se da allora non ti sei allenato.
                  */
-                analisi.superata
-                    ? 'Da quando è stata scritta hai fatto altre sedute.'
-                    : 'Aggiornata al ${_giorno(analisi.fattaIl)}.',
-                style: tema.textTheme.labelSmall?.copyWith(
-                  color: analisi.superata
-                      ? tema.colorScheme.tertiary
-                      : tema.colorScheme.onSurfaceVariant,
+                  analisi.superata
+                      ? 'Da quando è stata scritta hai fatto altre sedute.'
+                      : 'Aggiornata al ${_giorno(analisi.fattaIl)}.',
+                  style: tema.textTheme.labelSmall?.copyWith(
+                    color: analisi.superata
+                        ? tema.colorScheme.tertiary
+                        : tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: Gap.sm),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: _inCorso ? null : () => _chiedi(),
+                  icon: _inCorso
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          puo ? Icons.auto_awesome_rounded : Icons.lock_rounded,
+                        ),
+                  label: Text(
+                    /*
+                   * 💰 **Il prezzo sta sul pulsante** — 📌 *«il tasto deve avere
+                   * scritto che costa 1 gettone»*.
+                   *
+                   * 🚨 È l'unico posto onesto per scriverlo: chi tocca sta
+                   * spendendo, e leggerlo **dopo** nel saldo è il modo per non
+                   * fidarsi più di nessun altro pulsante dell'app.
+                   *
+                   * ⛔ E non c'è nel percorso automatico: là non c'è niente da
+                   * toccare, e il prezzo lo spiega la riga sopra.
+                   */
+                    analisi == null
+                        ? 'Analizza adesso · 1 gettone'
+                        : 'Rifai adesso · 1 gettone',
+                  ),
                 ),
               ),
             ],
-
-            const SizedBox(height: Gap.sm),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonalIcon(
-                onPressed: _inCorso ? null : () => _chiedi(),
-                icon: _inCorso
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(puo ? Icons.auto_awesome_rounded : Icons.lock_rounded),
-                label: Text(
-                  // 💡 «Adesso» perché il pulsante non è più il modo normale di
-                  // averla: è il modo di **non aspettare**, o di riprovare dopo
-                  // un errore di rete.
-                  analisi == null ? 'Analizza adesso' : 'Rifai adesso',
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1244,7 +1268,6 @@ String _spiegazione(EsitoAnalisi esito) => switch (esito) {
 
 String _giorno(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-
 
 /// 📅 L'ingresso alla settimana programmata, in cima alle schede — 27/08/2026.
 ///

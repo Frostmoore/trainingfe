@@ -37,7 +37,7 @@ import 'progresso_dell_esercizio.dart';
 class EsercizioDellaScheda extends ConsumerWidget {
   const EsercizioDellaScheda({
     required this.esercizio,
-    this.schedaServerId,
+    this.schedaLocale,
     super.key,
   });
 
@@ -51,7 +51,7 @@ class EsercizioDellaScheda extends ConsumerWidget {
   /// la usa anche l'elenco delle schede, dove non c'è nessuna scheda aperta a
   /// cui riferire uno storico. 💡 Un parametro obbligatorio avrebbe costretto
   /// quel chiamante a inventarsi un id.
-  final int? schedaServerId;
+  final int? schedaLocale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -147,10 +147,10 @@ class EsercizioDellaScheda extends ConsumerWidget {
                    * da cercare — non è un caso da gestire, è un caso che non
                    * esiste.
                    */
-                  if (schedaServerId case final scheda?)
+                  if (schedaLocale case final scheda?)
                     if (esercizio.exerciseId case final eid?)
                       ProgressoDellEsercizio(
-                        schedaServerId: scheda,
+                        schedaLocale: scheda,
                         esercizioId: eid,
                       ),
                 ],

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/health/dati_salute.dart';
 import '../../features/health/sessioni_di_sonno.dart';
 import '../../features/training/data/progressione.dart';
+import '../../features/training/data/storia_della_scheda.dart';
 
 part 'archivio_salute.g.dart';
 
@@ -41,6 +42,7 @@ part 'archivio_salute.g.dart';
     SerieDelleSedute,
     SettimanaProgrammata,
     AnalisiDelleSchede,
+    VersioniDelleSchede,
     BruciateDichiarate,
     SchedeSulTelefono,
   ],
@@ -60,7 +62,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -460,6 +462,32 @@ class ArchivioSalute extends _$ArchivioSalute {
        * `allTables`, e questo è il motivo per cui l'elenco non si scrive a mano.
        */
       if (da < 22) {
+        await m.createTable(analisiDelleSchede);
+      }
+
+      /*
+       * ══ 📐 v22 → v23 (3b-I.E): le versioni della scheda ═══════════════════
+       *
+       * 📌 *«ci deve essere qualcosa che tiene traccia del modo in cui cambia la
+       * scheda nel corso del tempo»*.
+       *
+       * ── ⛔ E `analisiDelleSchede` si rifà, invece di essere aggiornata ─────
+       *
+       * 🚨 **La colonna si chiamava `scheda_server_id` e teneva un id LOCALE.**
+       * `schedeUniteProvider` costruisce ogni scheda con `'id': r.id`, cioè con
+       * l'id di `SchedeSulTelefono`: quel nome era sbagliato dal giorno in cui
+       * l'ho scritto, e con una tabella nuova che si aggancia allo stesso id
+       * sarebbe diventato **due posti che si chiamano diversamente per la stessa
+       * cosa**.
+       *
+       * 💡 Si può buttare **perché è una cache**: l'analisi si rigenera. ⚠️ Costa
+       * un gettone a chi ce l'aveva, ed è l'unica ragione per cui vale la pena
+       * dirlo qui invece di farlo in silenzio.
+       */
+      if (da < 23) {
+        await m.createTable(versioniDelleSchede);
+
+        await customStatement('DROP TABLE IF EXISTS analisi_delle_schede');
         await m.createTable(analisiDelleSchede);
       }
     },
@@ -977,13 +1005,22 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ **Solo le sedute finite.** Una seduta ancora aperta (`finitaIl == null`)
   /// ha le serie a metà: entrerebbe come un calo che non è successo.
   ///
-  /// 🚨 Il filtro è su `schedaServerId` e non sull'id locale: quello cambia da
-  /// telefono a telefono, e questa storia deve dire la stessa cosa dopo un
-  /// ripristino da backup.
+  /// ══ ⚠️ IL FILTRO È SULL'ID **LOCALE**, E IL NOME DELLA COLONNA MENTE ═══
+  ///
+  /// 🚨 `sedute_allenamento.scheda_server_id` si chiama così dai tempi in cui le
+  /// schede stavano sul server, ma quello che ci finisce dentro è
+  /// `SessionActions.start(planId: …)` — cioè `WorkoutPlan.id`, che
+  /// `schedeUniteProvider` riempie con **l'id locale**.
+  ///
+  /// ⛔ Non è stata rinominata perché la usa il player e la scrive ogni seduta:
+  /// una rinomina lì è una migrazione con dentro tutto lo storico degli
+  /// allenamenti, per un guadagno di sola leggibilità. 💡 Questo commento è il
+  /// compromesso — e l'altra tabella nata dopo ([AnalisiDelleSchede]) il nome
+  /// giusto ce l'ha.
   ///
   /// Torna, per ogni `esercizioId`, i punti **dal più vecchio al più recente**.
   Future<Map<int, List<PuntoDiProgressione>>> storiaDegliEsercizi(
-    int schedaServerId, {
+    int schedaLocale, {
     int quanteSedute = 8,
   }) async {
     final righe = await customSelect(
@@ -993,7 +1030,7 @@ class ArchivioSalute extends _$ArchivioSalute {
       '  JOIN sedute_allenamento a ON a.id = s.seduta_id '
       ' WHERE a.scheda_server_id = ?1 AND a.finita_il IS NOT NULL '
       ' ORDER BY a.finita_il ASC',
-      variables: [Variable<int>(schedaServerId)],
+      variables: [Variable<int>(schedaLocale)],
       readsFrom: {serieDelleSedute, seduteAllenamento},
     ).get();
 
@@ -1047,9 +1084,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   }
 
   /// L'analisi già scritta per una scheda, se c'è.
-  Future<AnalisiScheda?> analisiDellaScheda(int schedaServerId) =>
+  Future<AnalisiScheda?> analisiDellaScheda(int schedaLocale) =>
       (select(analisiDelleSchede)
-            ..where((t) => t.schedaServerId.equals(schedaServerId)))
+            ..where((t) => t.schedaLocale.equals(schedaLocale)))
           .getSingleOrNull();
 
   /// Scrive (o riscrive) l'analisi di una scheda.
@@ -1058,6 +1095,181 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// e una seconda riga vorrebbe dire che l'app ne mostrerebbe una a caso.
   Future<void> scriviLAnalisi(AnalisiDelleSchedeCompanion riga) =>
       into(analisiDelleSchede).insertOnConflictUpdate(riga);
+
+  /// Le versioni di una scheda, **dalla più vecchia** — 3b-I.E, 27/08/2026.
+  Future<List<VersioneDellaScheda>> versioniDellaScheda(
+    int schedaLocale, {
+    int quante = 12,
+  }) async {
+    /*
+     * ══ 🚨 `id` COME SECONDO CRITERIO, E NON È PIGNOLERIA ═════════════════
+     *
+     * ⛔ **Due versioni possono avere lo stesso istante.** Con il solo `quando`
+     * l'ordine fra loro lo decide SQLite come gli pare, e la storia di una
+     * scheda si legge **al contrario** — cioè «da 12 a 8» invece di «da 8 a
+     * 12».
+     *
+     * ⚠️ Non è un caso di laboratorio: `aggiungiScheda` scrive la versione zero
+     * e una modifica subito dopo cade nello stesso millisecondo. 💡 L'ha trovato
+     * il test, non lo schermo — ed è esattamente il tipo di difetto che a
+     * schermo si sarebbe visto come una frase dell'AI che dice il contrario del
+     * vero.
+     */
+    final righe =
+        await (select(versioniDelleSchede)
+              ..where((t) => t.schedaLocale.equals(schedaLocale))
+              ..orderBy([
+                (t) => OrderingTerm.desc(t.quando),
+                (t) => OrderingTerm.desc(t.id),
+              ])
+              ..limit(quante))
+            .get();
+
+    // ⚠️ Si legge dalla più recente per prendere **le ultime** `quante`, e poi si
+    // gira: chi confronta le versioni ha bisogno dell'ordine del tempo.
+    return [
+      for (final r in righe.reversed)
+        VersioneDellaScheda(quando: r.quando, contenuto: r.contenuto),
+    ];
+  }
+
+  /// Butta la storia di una scheda.
+  ///
+  /// 💡 Serve a **una cosa sola**: costruire nei test lo stato di una scheda
+  /// nata prima della v23 — la riga c'è, la sua storia no. ⚠️ Non lo chiama
+  /// nessuno in produzione, e non deve: la storia di una scheda si perde solo
+  /// insieme alla scheda.
+  Future<void> dimenticaLeVersioni(int schedaLocale) =>
+      (delete(versioniDelleSchede)
+            ..where((t) => t.schedaLocale.equals(schedaLocale)))
+          .go();
+
+  /// Registra com'è fatta una scheda **adesso**, se è cambiata.
+  ///
+  /// ══ 🚨 LE TRE REGOLE, E NESSUNA È UN'OTTIMIZZAZIONE ═══════════════════
+  ///
+  /// **1. Niente riga se l'impronta è la stessa.** `aggiornaScheda` si chiama a
+  /// **ogni** modifica — è scritto nel suo docblock — e salvare due volte lo
+  /// stesso contenuto (rinominare, correggere una nota) riempirebbe la tabella
+  /// di versioni identiche. ⛔ E più avanti l'analisi direbbe «la scheda è
+  /// cambiata» davanti a una virgola spostata.
+  ///
+  /// **2. Dentro [finestraDiModifica] si SOSTITUISCE.** 🚨 Chi compone una
+  /// scheda salva venti volte in cinque minuti: senza questa regola una serata
+  /// di lavoro diventerebbe venti versioni, e il «com'era prima» vero — quello
+  /// di ieri — finirebbe sepolto in fondo. 💡 Così una sessione di modifica è
+  /// **una** versione: quella finale.
+  ///
+  /// **3. La prima non si tocca mai.** È l'originale, ed è l'unico confronto che
+  /// vale ancora fra sei mesi.
+  ///
+  /// ⚠️ **[quando] è quello di chi salva**, non `DateTime.now()`: se
+  /// `aggiornaScheda` riceve una data — il ripristino di un backup, un test che
+  /// viaggia nel tempo — la versione deve portare **quella**, o la storia
+  /// risulterebbe tutta scritta nell'istante del ripristino.
+  Future<void> segnaLaVersione(
+    int schedaLocale,
+    String scheda, {
+    DateTime? quando,
+  }) async {
+    final impronta = improntaDellaScheda(scheda);
+
+    final ultima =
+        await (select(versioniDelleSchede)
+              ..where((t) => t.schedaLocale.equals(schedaLocale))
+              ..orderBy([
+                (t) => OrderingTerm.desc(t.quando),
+                (t) => OrderingTerm.desc(t.id),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (ultima != null && ultima.impronta == impronta) return;
+
+    final adesso = quando ?? DateTime.now();
+
+    final quante = await (selectOnly(versioniDelleSchede)
+          ..addColumns([versioniDelleSchede.id.count()])
+          ..where(versioniDelleSchede.schedaLocale.equals(schedaLocale)))
+        .getSingle()
+        .then((r) => r.read(versioniDelleSchede.id.count()) ?? 0);
+
+    final dentroLaFinestra =
+        ultima != null &&
+        quante > 1 &&
+        adesso.difference(ultima.quando) < finestraDiModifica;
+
+    if (dentroLaFinestra) {
+      await (update(versioniDelleSchede)
+            ..where((t) => t.id.equals(ultima.id))).write(
+        VersioniDelleSchedeCompanion(
+          quando: Value(adesso),
+          impronta: Value(impronta),
+          contenuto: Value(scheda),
+        ),
+      );
+
+      return;
+    }
+
+    await into(versioniDelleSchede).insert(
+      VersioniDelleSchedeCompanion.insert(
+        schedaLocale: schedaLocale,
+        quando: adesso,
+        impronta: impronta,
+        contenuto: scheda,
+      ),
+    );
+
+    await _potaLeVersioni(schedaLocale);
+  }
+
+  /// ⚠️ **Tiene la prima e le ultime [quanteVersioni]**, e butta quelle in
+  /// mezzo. 💡 La prima è l'originale: senza, fra un anno non ci sarebbe più
+  /// niente con cui confrontare. ⛔ Quelle in mezzo invece invecchiano davvero:
+  /// «com'era a marzo» non serve a nessuno se c'è aprile.
+  Future<void> _potaLeVersioni(int schedaLocale) async {
+    final tutte =
+        await (select(versioniDelleSchede)
+              ..where((t) => t.schedaLocale.equals(schedaLocale))
+              ..orderBy([
+                (t) => OrderingTerm.asc(t.quando),
+                (t) => OrderingTerm.asc(t.id),
+              ]))
+            .get();
+
+    if (tutte.length <= quanteVersioni + 1) return;
+
+    /*
+     * ══ 🚨 «LA PRIMA» È LA PRIMA **SCRITTA**, NON LA PIÙ VECCHIA DI DATA ══
+     *
+     * ⛔ Prima teneva `tutte.first`, cioè la più vecchia in ordine di `quando`.
+     * ⚠️ Ma `quando` lo passa chi salva — il ripristino di un backup, una scheda
+     * arrivata via chat con la data del messaggio — e può benissimo essere
+     * **anteriore** alla versione zero. In quel caso l'originale veniva buttato
+     * e al suo posto restava una versione qualsiasi che aveva solo la data più
+     * bassa.
+     *
+     * 💡 L'`id` è l'unica cosa che dice davvero **cosa è arrivato per primo**,
+     * perché lo assegna il database in ordine di scrittura.
+     */
+    var originale = tutte.first.id;
+
+    for (final r in tutte) {
+      if (r.id < originale) originale = r.id;
+    }
+
+    final daTenere = {
+      originale,
+      for (final r in tutte.skip(tutte.length - quanteVersioni)) r.id,
+    };
+
+    await (delete(versioniDelleSchede)..where(
+          (t) =>
+              t.schedaLocale.equals(schedaLocale) & t.id.isNotIn(daTenere),
+        ))
+        .go();
+  }
 
   /// Le sedute dell'orologio **di un giorno**, per contarne le calorie —
   /// 3b-G.3, 26/08/2026.
@@ -1606,20 +1818,32 @@ class ArchivioSalute extends _$ArchivioSalute {
     int? idOrigine,
     String? origineIdStabile,
     DateTime? quando,
-  }) => into(schedeSulTelefono).insert(
-    SchedeSulTelefonoCompanion.insert(
-      nome: nome,
-      scheda: scheda,
-      aggiornataIl: quando ?? DateTime.now(),
-      // 💡 Nasce adesso, e da qui in poi non si tocca più: `aggiornaScheda` non
-      // la sfiora.
-      creataIl: Value(quando ?? DateTime.now()),
-      mia: Value(mia),
-      origine: origine,
-      idOrigine: Value(idOrigine),
-      origineIdStabile: Value(origineIdStabile),
-    ),
-  );
+  }) async {
+    final id = await into(schedeSulTelefono).insert(
+      SchedeSulTelefonoCompanion.insert(
+        nome: nome,
+        scheda: scheda,
+        aggiornataIl: quando ?? DateTime.now(),
+        // 💡 Nasce adesso, e da qui in poi non si tocca più: `aggiornaScheda`
+        // non la sfiora.
+        creataIl: Value(quando ?? DateTime.now()),
+        mia: Value(mia),
+        origine: origine,
+        idOrigine: Value(idOrigine),
+        origineIdStabile: Value(origineIdStabile),
+      ),
+    );
+
+    /*
+     * 📐 **La versione zero — 3b-I.E.** 🚨 Va scritta alla nascita e non alla
+     * prima modifica: registrandola solo quando si cambia qualcosa, il
+     * «com'era prima» del primo cambio sarebbe **già perduto** — cioè
+     * mancherebbe proprio il confronto che serve la prima volta.
+     */
+    await segnaLaVersione(id, scheda, quando: quando);
+
+    return id;
+  }
 
   /// Riscrive una scheda che c'è già.
   ///
@@ -1635,13 +1859,50 @@ class ArchivioSalute extends _$ArchivioSalute {
     required String nome,
     required String scheda,
     DateTime? quando,
-  }) => (update(schedeSulTelefono)..where((t) => t.id.equals(id))).write(
-    SchedeSulTelefonoCompanion(
-      nome: Value(nome),
-      scheda: Value(scheda),
-      aggiornataIl: Value(quando ?? DateTime.now()),
-    ),
-  );
+  }) async {
+    /*
+     * 📐 **Prima si mette al sicuro com'era — 3b-I.E.**
+     *
+     * 🚨 Se non c'è ancora nessuna versione, quella che sta per essere
+     * sovrascritta è **l'unica copia del "prima"**: le schede che esistevano
+     * prima della v23 non hanno una versione zero, e senza questa riga la loro
+     * storia comincerebbe dal secondo cambio.
+     *
+     * ⚠️ Con la data di `aggiornataIl` e non con quella di adesso: quella
+     * versione risale a quando è stata scritta, e datarla oggi farebbe sembrare
+     * due modifiche nello stesso istante.
+     */
+    final prima = await (select(
+      schedeSulTelefono,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+    if (prima != null) {
+      final quante = await (select(
+        versioniDelleSchede,
+      )..where((t) => t.schedaLocale.equals(id))).get();
+
+      if (quante.isEmpty) {
+        await into(versioniDelleSchede).insert(
+          VersioniDelleSchedeCompanion.insert(
+            schedaLocale: id,
+            quando: prima.aggiornataIl,
+            impronta: improntaDellaScheda(prima.scheda),
+            contenuto: prima.scheda,
+          ),
+        );
+      }
+    }
+
+    await (update(schedeSulTelefono)..where((t) => t.id.equals(id))).write(
+      SchedeSulTelefonoCompanion(
+        nome: Value(nome),
+        scheda: Value(scheda),
+        aggiornataIl: Value(quando ?? DateTime.now()),
+      ),
+    );
+
+    await segnaLaVersione(id, scheda, quando: quando);
+  }
 
   /// Salva una scheda arrivata via chat.
   ///
@@ -2845,12 +3106,20 @@ class SettimanaProgrammata extends Table {
 /// 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
 @DataClassName('AnalisiScheda')
 class AnalisiDelleSchede extends Table {
-  /// L'id **del server** della scheda.
+  /// L'id della scheda **su questo telefono** — `SchedeSulTelefono.id`.
   ///
-  /// ⚠️ Non l'id locale: quello cambia da telefono a telefono, e un'analisi
-  /// ripristinata da backup finirebbe attaccata a un'altra scheda — cioè
-  /// mostrerebbe frasi vere su un esercizio sbagliato.
-  IntColumn get schedaServerId => integer()();
+  /// ══ ⚠️ SI CHIAMAVA `schedaServerId`, ED ERA SBAGLIATO ═══════════════════
+  ///
+  /// 🚨 `schedeUniteProvider` costruisce ogni `WorkoutPlan` con `'id': r.id`,
+  /// cioè con l'id **locale**: quello che arriva qui non è mai stato l'id del
+  /// server. ⛔ Il codice funzionava — tutti e due i lati usavano lo stesso
+  /// numero — ma il nome raccontava un'altra cosa, ed è il tipo di bugia che si
+  /// paga quando qualcuno ci costruisce sopra.
+  ///
+  /// 💡 Rinominata alla v23, quando è arrivata [VersioniDelleSchede] che si
+  /// aggancia **allo stesso id**: due tabelle vicine non potevano chiamarlo in
+  /// due modi diversi.
+  IntColumn get schedaLocale => integer()();
 
   /// Le righe, come sono arrivate dal server: `[{id, andamento, riga}, …]`.
   TextColumn get righe => text()();
@@ -2861,5 +3130,65 @@ class AnalisiDelleSchede extends Table {
   DateTimeColumn get fattaIl => dateTime()();
 
   @override
-  Set<Column<Object>> get primaryKey => {schedaServerId};
+  Set<Column<Object>> get primaryKey => {schedaLocale};
+}
+
+
+/// Quanto dura una «sessione di modifica»: dentro, la versione si sostituisce.
+///
+/// 💡 Venti minuti perché chi compone una scheda salva molte volte di fila —
+/// `aggiornaScheda` si chiama **a ogni modifica** — e una serata di lavoro deve
+/// restare **una** versione. ⚠️ Più lunga seppellirebbe il «com'era stamattina»
+/// di chi corregge la scheda fra due allenamenti dello stesso giorno.
+const finestraDiModifica = Duration(minutes: 20);
+
+/// Quante versioni si tengono, oltre alla prima.
+const quanteVersioni = 20;
+
+/// Com'era fatta una scheda, prima — 3b-I.E, 27/08/2026.
+///
+/// ══ 📌 PERCHÉ ESISTE ══════════════════════════════════════════════════════
+///
+/// 📌 *«devi fare in modo che siamo sicuri che le modifiche il programma le
+/// veda: cioè deve vedere com'era prima e com'era dopo … ci deve essere
+/// qualcosa che tiene traccia del modo in cui cambia la scheda nel corso del
+/// tempo»*.
+///
+/// 🚨 **`SerieDelleSedute` dice cosa hai fatto, questa dice cosa ti eri
+/// prescritto.** ⛔ Senza, un calo di ripetizioni e una serie aggiunta alla
+/// scheda sono indistinguibili — e l'analisi racconterebbe un peggioramento
+/// dove c'è un cambio di programma.
+///
+/// ══ 💡 IL CONTENUTO INTERO, NON IL DIFF ═══════════════════════════════════
+///
+/// ⛔ Salvare le differenze invece degli scatti sarebbe più compatto e
+/// **irrecuperabile**: un difetto nel calcolo del diff, un giorno, renderebbe
+/// illeggibile tutta la catena all'indietro. 🚨 Con gli scatti il diff si
+/// ricalcola quando serve, e si corregge quando sbaglia.
+///
+/// 💡 Costa poco: una scheda è qualche kB di JSON, e ne teniamo al massimo
+/// [quanteVersioni] più l'originale. 📌 *«tanto è tutto in locale, non ci costa
+/// niente»*.
+///
+/// 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
+@DataClassName('VersioneSchedaSalvata')
+class VersioniDelleSchede extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// L'id in `SchedeSulTelefono`.
+  ///
+  /// ⚠️ **Nessuna chiave esterna**, come per `SettimanaProgrammata`: se la
+  /// scheda viene cancellata queste righe restano orfane e vengono ignorate.
+  /// ⛔ Una cascata cancellerebbe la storia di una scheda cancellata per
+  /// sbaglio, che è l'unico momento in cui quella storia servirebbe davvero.
+  IntColumn get schedaLocale => integer()();
+
+  DateTimeColumn get quando => dateTime()();
+
+  /// L'impronta di [improntaDellaScheda]: serve a non riscrivere due volte lo
+  /// stesso contenuto.
+  TextColumn get impronta => text()();
+
+  /// Il JSON della scheda, com'era.
+  TextColumn get contenuto => text()();
 }

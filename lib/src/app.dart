@@ -6,8 +6,10 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
+import 'features/auth/auth_controller.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/profile/colore_accento.dart';
+import 'features/training/data/limiti_delle_schede.dart';
 
 /// La radice dell'app.
 ///
@@ -36,11 +38,27 @@ class TrainingCompanionApp extends ConsumerWidget {
      * 💡 `palestra.name` vuoto è il segno che una palestra non c'è: è lo
      * stesso controllo che l'intestazione usa per decidere quale nome scrivere.
      */
+    /*
+     * 🎨 **Il colore scelto è dell'abbonato** — 3b-J.2, 27/08/2026.
+     *
+     * 📌 *«Chi non è abbonato ha il teal normale»*.
+     *
+     * 🚨 **Il controllo sta QUI, non solo nella schermata che lo sceglie.** Chi
+     * ha scelto un colore da abbonato e poi ha smesso di pagare ha ancora la
+     * sua preferenza salvata sul telefono: senza questa riga se la terrebbe,
+     * e il gate sarebbe una porta che si chiude quando sei già dentro.
+     *
+     * 💡 **La preferenza non si cancella**, si smette di applicarla: chi si
+     * riabbona ritrova il colore che aveva, senza doverlo ricordare.
+     */
     // 🚨 `haPalestra` e non il nome: [neutral] ha un nome non vuoto, e questa
     // riga con il controllo sul nome spegneva il colore scelto. 21/08/2026.
-    final senzaPalestra = !palestra.haPalestra;
+    final puoScegliere = puoScegliereIlColore(
+      haPalestra: palestra.haPalestra,
+      abbonato: ref.watch(authControllerProvider).user?.abbonato,
+    );
 
-    final scelto = senzaPalestra
+    final scelto = puoScegliere
         ? ColoreAccento.daNome(ref.watch(accentoSceltoProvider))
         : null;
 

@@ -7,6 +7,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../health/ui/widgets/connessione_salute.dart';
 import '../consensi_controller.dart';
 import 'widgets/dove_vanno_i_dati.dart';
+import 'widgets/presa_d_atto_ai.dart';
 
 /// I consensi facoltativi — S9.1.
 ///
@@ -134,6 +135,9 @@ class SchermataConsensi extends ConsumerWidget {
                   'te lo chiediamo a parte.',
               concessoIl: dati.ai,
               chiave: 'ai',
+
+              // ⚖️ 3b-J.3 — vedi `presa_d_atto_ai.dart`.
+              presaDAtto: true,
             ),
             const SizedBox(height: Gap.md),
 
@@ -210,6 +214,7 @@ class _Interruttore extends ConsumerStatefulWidget {
     required this.concessoIl,
     required this.chiave,
     this.abilitato = true,
+    this.presaDAtto = false,
   });
 
   final String titolo;
@@ -226,6 +231,16 @@ class _Interruttore extends ConsumerStatefulWidget {
   /// nasca.
   final bool abilitato;
 
+  /// ⚖️ Accendere questo consenso richiede la **presa d'atto** — 3b-J.3.
+  ///
+  /// 📌 *«l'importante è che chi attiva l'ai legga questa cosa e vi
+  /// acconsenta»*.
+  ///
+  /// 💡 Solo in accensione: spegnere non richiede di leggere niente, e chiedere
+  /// una conferma a chi sta revocando un consenso sarebbe un ostacolo alla
+  /// revoca — che l'art. 7(3) vieta.
+  final bool presaDAtto;
+
   @override
   ConsumerState<_Interruttore> createState() => _InterruttoreState();
 }
@@ -234,10 +249,33 @@ class _InterruttoreState extends ConsumerState<_Interruttore> {
   bool _inCorso = false;
 
   Future<void> _cambia(bool dato) async {
+    /*
+     * ══ ⚖️ CHI ACCENDE L'AI SI FERMA A LEGGERE — 3b-J.3 ═══════════════════
+     *
+     * ⛔ **Prima della chiamata, non dopo**: una finestra che compare a
+     * consenso già dato non è una condizione, è un avviso.
+     *
+     * 💡 E se non si accetta non succede **niente** — nessuna chiamata, nessun
+     * interruttore che si muove e torna indietro.
+     */
+    if (dato && widget.presaDAtto) {
+      final accettata = await chiediLaPresaDAtto(context);
+
+      if (!accettata) return;
+    }
+
     setState(() => _inCorso = true);
 
     try {
-      await ref.read(cambiaConsensoProvider)(widget.chiave, dato);
+      await ref.read(cambiaConsensoProvider)(
+        widget.chiave,
+        dato,
+
+        // ⚠️ Viaggia nella **stessa** richiesta: il server rifiuta `ai: true`
+        // senza, e due chiamate separate lascerebbero una finestra in cui l'AI
+        // è accesa e la presa d'atto no.
+        presaDAtto: dato && widget.presaDAtto,
+      );
     } on Object catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

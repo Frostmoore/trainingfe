@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/etichetta_ai.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
@@ -1167,11 +1168,27 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
                   ),
                   const SizedBox(width: Gap.sm),
                   Expanded(
-                    child: Text(
-                      'I tuoi progressi',
-                      style: tema.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'I tuoi progressi',
+                          style: tema.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+
+                        /*
+                         * 🤖 3b-J.4 — l'etichetta sta **sotto il titolo della
+                         * card**, cioè sopra tutto quello che l'AI ha scritto:
+                         * il riassunto qui, e le righe sotto ogni esercizio.
+                         *
+                         * ⚠️ Compare **solo se qualcosa c'è**: su una card che
+                         * non ha ancora nessuna analisi etichetterebbe il
+                         * nulla.
+                         */
+                        if (analisi != null) const EtichettaAi(),
+                      ],
                     ),
                   ),
                 ],

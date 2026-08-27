@@ -12,6 +12,7 @@ class Consensi {
   const Consensi({
     this.salute,
     this.ai,
+    this.aiPresaDAtto,
     this.recupero,
     this.consiglioAutomatico = true,
     this.chiestiIl,
@@ -20,6 +21,7 @@ class Consensi {
   factory Consensi.fromJson(Map<String, dynamic> j) => Consensi(
     salute: DateTime.tryParse(j['health']?.toString() ?? ''),
     ai: DateTime.tryParse(j['ai']?.toString() ?? ''),
+    aiPresaDAtto: DateTime.tryParse(j['ai_disclaimer']?.toString() ?? ''),
     recupero: DateTime.tryParse(j['sleep_ai']?.toString() ?? ''),
     consiglioAutomatico: j['consiglio_automatico'] as bool? ?? true,
     chiestiIl: DateTime.tryParse(j['chiesti_il']?.toString() ?? ''),
@@ -28,6 +30,15 @@ class Consensi {
   /// Quando è stato concesso, oppure `null` se non lo è.
   final DateTime? salute;
   final DateTime? ai;
+
+  /// ⚖️ Quando si è preso atto che l'AI **non è un parere medico** — 3b-J.3.
+  ///
+  /// ⛔ **Non è un permesso, è una dichiarazione.** [ai] è la base giuridica per
+  /// mandare dati al fornitore; questa dice «ho capito cosa esce di là».
+  ///
+  /// 🚨 Il server **rifiuta** di accendere [ai] senza — e la revoca insieme,
+  /// perché chi riaccende deve rileggere: è tutto il senso della richiesta.
+  final DateTime? aiPresaDAtto;
 
   /// 🚨 Il consenso a mandare **sonno, battito e variabilità** ad Anthropic,
   /// dentro il consiglio del giorno — 16/08/2026.
@@ -65,6 +76,8 @@ class Consensi {
   bool get saluteDato => salute != null;
 
   bool get aiDato => ai != null;
+
+  bool get presaDAttoData => aiPresaDAtto != null;
 
   bool get recuperoDato => recupero != null;
 }
@@ -105,14 +118,32 @@ final consensoSaluteProvider = FutureProvider<bool>((ref) async {
 /// chiamata, lo stesso campo, `false` invece di `true`. Un consenso che si dà
 /// con un tocco e si toglie scrivendo un'email non è liberamente revocabile —
 /// e quindi, a rigore, non è mai stato valido.
-final cambiaConsensoProvider = Provider<Future<void> Function(String, bool)>((
-  ref,
-) {
-  return (String quale, bool dato) async {
-    await ref
-        .read(apiClientProvider)
-        .patch<Map<String, dynamic>>('/account/consents', body: {quale: dato});
+final cambiaConsensoProvider =
+    Provider<Future<void> Function(String, bool, {bool presaDAtto})>((ref) {
+      return (String quale, bool dato, {bool presaDAtto = false}) async {
+        await ref
+            .read(apiClientProvider)
+            .patch<Map<String, dynamic>>(
+              '/account/consents',
+              body: {
+                quale: dato,
 
-    ref.invalidate(consensiProvider);
-  };
-});
+                /*
+                 * ⚖️ **La presa d'atto viaggia INSIEME all'accensione** —
+                 * 3b-J.3.
+                 *
+                 * 🚨 Due chiamate separate vorrebbero dire che fra la prima e
+                 * la seconda esiste un istante in cui l'AI è accesa senza. ⛔ E
+                 * se la seconda fallisce — rete che cade, app chiusa — quello
+                 * stato resta.
+                 *
+                 * 💡 Il server la pretende nella stessa richiesta proprio per
+                 * questo: `ai: true` senza `ai_disclaimer: true` risponde 422.
+                 */
+                if (presaDAtto) 'ai_disclaimer': true,
+              },
+            );
+
+        ref.invalidate(consensiProvider);
+      };
+    });

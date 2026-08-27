@@ -184,33 +184,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
 
                     /*
-                     * 🚨 **Stessa dignità dell'accesso** — difetto riferito il
-                     * 13/08/2026.
+                     * ══ ⛔ QUI C'ERA «CAMBIA PALESTRA» — tolto il 27/08/2026 ═══
                      *
-                     * ⚠️ Era un `TextButton` in fondo, largo quanto il suo
-                     * testo. Ma «cambia palestra» è la via d'uscita di chi si
-                     * trova nel posto sbagliato — un iscritto che ha digitato
-                     * il codice di un'altra palestra, o chi vuole passare
-                     * all'accesso senza palestra — e chi è nel posto sbagliato
-                     * non deve cercare l'uscita scritta più piccola.
+                     * 📌 *«Nella schermata di accesso non devi proprio parlare
+                     * di palestre. Se c'è una palestra, l'utente lo saprà»*.
+                     *
+                     * ⚠️ Il pulsante aveva un senso quando il codice palestra si
+                     * digitava **prima** del login: era la via d'uscita di chi
+                     * aveva sbagliato codice. 🚨 Da 3b-J.1 non c'è più niente da
+                     * sbagliare prima di entrare — la palestra si aggiunge dopo,
+                     * dal profilo — e quel pulsante era rimasto a nominare una
+                     * cosa che qui non esiste.
+                     *
+                     * 💡 Chi è iscritto a una palestra **lo sa già**: è la
+                     * palestra che gli ha dato il codice. Ricordarglielo mentre
+                     * digita la password è rumore, e a chi una palestra non ce
+                     * l'ha fa credere di doverne avere una.
                      */
-                    const SizedBox(height: Gap.md),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await ref
-                            .read(brandingControllerProvider.notifier)
-                            .forget();
-                      },
-                      icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                      label: Text(
-                        ref.watch(brandingControllerProvider).hasGym
-                            ? 'Cambia palestra'
-                            : 'Entra con una palestra',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                    ),
                   ],
                 ),
               ),

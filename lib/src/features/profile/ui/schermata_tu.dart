@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../acquisti/ui/modale_acquisti.dart';
+import '../../auth/auth_controller.dart';
 import '../../onboarding/branding_controller.dart';
 import '../../scoperta/ui/scelta_citta.dart';
+import '../../training/data/limiti_delle_schede.dart';
 import '../colore_accento.dart';
 import 'widgets/voce_avatar.dart';
 
@@ -104,6 +107,25 @@ class SelettoreColore extends ConsumerWidget {
     final theme = Theme.of(context);
     final scelto = ref.watch(accentoSceltoProvider);
 
+    /*
+     * 🔒 **Dietro l'abbonamento** — 3b-J.2, 27/08/2026.
+     *
+     * 📌 *«mettiamo anche la scelta dei colori dell'app dietro al gate
+     * dell'abbonamento. Chi non è abbonato ha il teal normale»*.
+     *
+     * ⛔ **Non si nasconde**: si vede, si capisce cos'è, e toccando si arriva
+     * alla modale. È la stessa regola di tutta la fase — *«i tasti per fare
+     * quella cosa ci devono essere e si deve capire che sono bloccati»*.
+     *
+     * ⚠️ Qui basta il flag dell'abbonamento: questa scheda la mostra soltanto
+     * chi **non ha una palestra**, e chi ce l'ha non la vede affatto (il colore
+     * è l'identità del cliente). Le due condizioni stanno insieme in
+     * `puoScegliereIlColore`, che è quella che decide davvero il tema.
+     */
+    final puo = soloSeAbbonato(
+      ref.watch(authControllerProvider).user?.abbonato,
+    );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
@@ -112,7 +134,7 @@ class SelettoreColore extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.palette_outlined),
+                Icon(puo ? Icons.palette_outlined : Icons.lock_outline_rounded),
                 const SizedBox(width: Gap.md),
                 Expanded(
                   child: Text(
@@ -128,8 +150,10 @@ class SelettoreColore extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(left: 40),
               child: Text(
-                'Cambia le tinte di tutta l\'app. Resta su questo telefono e '
-                'finisce nella copia di sicurezza.',
+                puo
+                    ? 'Cambia le tinte di tutta l\'app. Resta su questo '
+                          'telefono e finisce nella copia di sicurezza.'
+                    : 'Con l\'abbonamento scegli le tinte di tutta l\'app.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -151,9 +175,16 @@ class SelettoreColore extends ConsumerWidget {
                     selected: scelto == voce.key,
                     button: true,
                     child: GestureDetector(
-                      onTap: () => ref
-                          .read(accentoSceltoProvider.notifier)
-                          .scegli(voce.key),
+                      /*
+                       * ⛔ **Toccando si apre la modale, non si sceglie.** Un
+                       * cerchio che non fa niente si legge come un guasto; uno
+                       * che porta all'abbonamento si legge come un limite.
+                       */
+                      onTap: () => puo
+                          ? ref
+                                .read(accentoSceltoProvider.notifier)
+                                .scegli(voce.key)
+                          : ModaleAcquisti.mostra(context),
                       child: Container(
                         width: 40,
                         height: 40,
@@ -161,7 +192,14 @@ class SelettoreColore extends ConsumerWidget {
                           color: voce.value,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: scelto == voce.key
+                            /*
+                             * ⚠️ **`puo &&`**: chi non è abbonato vede il teal,
+                             * e un segno su un colore diverso direbbe che è
+                             * quello attivo. 🚨 La preferenza resta salvata —
+                             * chi si riabbona la ritrova — ma finché non vale
+                             * non deve nemmeno sembrare che valga.
+                             */
+                            color: puo && scelto == voce.key
                                 ? theme.colorScheme.onSurface
                                 : Colors.transparent,
                             width: 3,
@@ -170,7 +208,7 @@ class SelettoreColore extends ConsumerWidget {
                         // 💡 Il segno di spunta oltre al bordo: chi non
                         // distingue bene i colori non vedrebbe quale è
                         // selezionato.
-                        child: scelto == voce.key
+                        child: puo && scelto == voce.key
                             ? const Icon(
                                 Icons.check_rounded,
                                 size: 20,

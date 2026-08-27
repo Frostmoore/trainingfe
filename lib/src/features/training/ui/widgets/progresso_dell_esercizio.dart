@@ -30,6 +30,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/etichetta_ai.dart';
 import '../../../acquisti/ui/modale_acquisti.dart';
 import '../../data/progressione.dart';
 import '../../progressione_controller.dart';
@@ -144,6 +145,21 @@ class _Corpo extends StatelessWidget {
         if (riga != null && riga!.riga.isNotEmpty) ...[
           const SizedBox(height: Gap.xs),
           Text(riga!.riga, style: tema.textTheme.bodySmall),
+
+          /*
+           * 🤖 **Anche qui, e non solo sulla card** — 3b-J.4.
+           *
+           * ⚠️ Queste righe stanno **lontane** dalla card che le ha chieste:
+           * chi scorre l'elenco degli esercizi legge una frase in italiano
+           * sotto la panca piana senza aver mai visto il titolo in cima. ⛔ Per
+           * lui l'etichetta sulla card non esiste.
+           *
+           * 💡 La sparkline invece **non** è generata: la disegna il telefono
+           * con i dati che ha già. L'etichetta sta sotto la frase, non sopra il
+           * grafico.
+           */
+          const SizedBox(height: 2),
+          const EtichettaAi(),
         ],
       ],
     );

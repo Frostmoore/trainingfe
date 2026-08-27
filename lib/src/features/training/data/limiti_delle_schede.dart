@@ -92,6 +92,26 @@ bool senzaLimiti({required bool? abbonato, required bool? illimitata}) =>
 /// deve chiudere fuori chi ha pagato.
 bool soloSeAbbonato(bool? abbonato) => abbonato != false;
 
+/// 🎨 Se questa persona può scegliere il colore dell'app — 3b-J.2, 27/08/2026.
+///
+/// 📌 *«mettiamo anche la scelta dei colori dell'app dietro al gate
+/// dell'abbonamento. Chi non è abbonato ha il teal normale»*.
+///
+/// ══ ⚠️ DUE CONDIZIONI, E LA PRIMA NON È IL GATE ═══════════════════════════
+///
+/// 🚨 **Chi ha una palestra non sceglie comunque**, abbonato o no: il colore è
+/// l'identità del cliente (ADR-A01), e lasciarlo cambiare a un iscritto vorrebbe
+/// dire che può spegnere il marchio della palestra che lo paga. ⛔ È una regola
+/// più vecchia del gate e vale ancora — se un giorno il gate cadesse, questa
+/// resterebbe.
+///
+/// 💡 È il motivo per cui sono due condizioni e non una: chiunque le legga dopo
+/// deve capire che rispondono a due domande diverse.
+bool puoScegliereIlColore({
+  required bool haPalestra,
+  required bool? abbonato,
+}) => !haPalestra && soloSeAbbonato(abbonato);
+
 
 /// Quali schede sono bloccate, e perché.
 ///

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/etichetta_ai.dart';
 import '../../data/stima_ai.dart';
 import '../../diary_controller.dart';
 
@@ -255,6 +256,19 @@ class _Intestazione extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+
+              /*
+               * 🤖 **Chi ha capito, l'ha capito un modello** — 3b-J.4.
+               *
+               * 📌 *«dovunque ci sia qualcosa di generato da ai, ci deve essere
+               * chiaramente scritto»*.
+               *
+               * ⚠️ Qui serve più che altrove: «Ecco cosa ho capito» è scritto
+               * in prima persona, e senza l'etichetta quel «ho» sembra l'app —
+               * cioè qualcosa che ha letto un'etichetta, non che ha indovinato.
+               */
+              const EtichettaAi(),
+
               const SizedBox(height: Gap.xs),
               Text(
                 '${stima.kcal.round()} kcal · '

@@ -62,6 +62,23 @@ final puoVedereIProgressiProvider = Provider.autoDispose<bool>(
   (ref) => soloSeAbbonato(ref.watch(authControllerProvider).user?.abbonato),
 );
 
+/// I primati di ogni esercizio, su **tutto** lo storico — 3b-I.F.
+///
+/// 🚨 Una lettura a parte da [storiaDellaSchedaProvider], che è tagliata a otto
+/// sedute: qui serve il contrario, cioè tutto. ⛔ Allargare la finestra avrebbe
+/// fatto crescere anche quello che si manda al modello — dieci volte i token per
+/// fargli fare un `max` che il telefono fa in un millisecondo, e che sbaglierebbe.
+final primatiDellaSchedaProvider = FutureProvider.autoDispose
+    .family<Map<int, PrimatiDellEsercizio>, int>((ref, schedaLocale) async {
+      final tutto = await ref
+          .watch(archivioSaluteProvider)
+          .storiaDegliEsercizi(schedaLocale, quanteSedute: 500);
+
+      return {
+        for (final voce in tutto.entries) voce.key: primatiDaiPunti(voce.value),
+      };
+    });
+
 /// La storia degli esercizi di una scheda, dal telefono.
 ///
 /// ⚠️ **L'id è quello locale** (`SchedeSulTelefono.id`), che è quello che
@@ -97,6 +114,7 @@ final analisiDellaSchedaProvider = FutureProvider.autoDispose
 
       return AnalisiInCorso(
         righe: _daJson(riga.righe),
+        riassunto: riga.riassunto ?? '',
         fattaIl: riga.fattaIl,
 
         /*
@@ -120,7 +138,16 @@ class AnalisiInCorso {
     required this.righe,
     required this.fattaIl,
     required this.superata,
+    this.riassunto = '',
   });
+
+  /// La frase che guarda gli esercizi **insieme** — 3b-I.F.
+  ///
+  /// 💡 È la sola cosa che una riga per esercizio non può dire, e per questo è
+  /// la più utile delle due. ⚠️ Può essere vuota: il setaccio la svuota se
+  /// prescriveva, e il modello la lascia vuota quando non c'è niente da dire su
+  /// tutta la scheda.
+  final String riassunto;
 
   final List<ProgressoEsercizio> righe;
   final DateTime fattaIl;
@@ -242,6 +269,10 @@ Future<EsitoAnalisi> chiediLAnalisi(
     versioniDellaSchedaProvider(schedaLocale).future,
   );
 
+  final primati = await ref.read(
+    primatiDellaSchedaProvider(schedaLocale).future,
+  );
+
   /*
    * ⚠️ **Si mandano solo gli esercizi che hanno una storia.** Mandare anche
    * quelli mai fatti vorrebbe dire pagare del contesto per farsi rispondere
@@ -263,6 +294,18 @@ Future<EsitoAnalisi> chiediLAnalisi(
       // campo che c'è sempre invita il modello a parlarne comunque.
       if (cambi.isNotEmpty)
         'cambi_alla_scheda': [for (final c in cambi) c.versoIlServer()],
+
+      /*
+       * 🏆 **I primati, calcolati qui e non dal modello** — 3b-I.F.
+       *
+       * 📌 *«Mi deve dire qualcosa di utile, sennò che cazzo lo pago a fare?»*.
+       *
+       * 🚨 I modelli linguistici sbagliano i confronti fra numeri, e un «è il
+       * tuo record» falso è **una bugia detta con entusiasmo** — peggio di una
+       * frase banale. ⛔ Quindi il massimo di sempre e da quante sedute il
+       * carico è fermo li conta il telefono, e il modello li racconta.
+       */
+      if (primati[voce.key] case final p?) 'primati': p.versoIlServer(),
     });
   }
 
@@ -271,15 +314,17 @@ Future<EsitoAnalisi> chiediLAnalisi(
   try {
     final risposta = await ref
         .read(apiClientProvider)
-        .post<List<dynamic>>(
+        .post<Map<String, dynamic>>(
           '/ai/scheda/progresso',
           body: {'esercizi': corpo},
         );
 
     final righe = [
-      for (final r in risposta)
-        ProgressoEsercizio.daJson(Map<String, Object?>.from(r as Map)),
+      for (final r in (risposta['esercizi'] as List? ?? const []))
+        if (r is Map) ProgressoEsercizio.daJson(Map<String, Object?>.from(r)),
     ];
+
+    final riassunto = (risposta['riassunto'] as String?) ?? '';
 
     await ref
         .read(archivioSaluteProvider)
@@ -295,6 +340,7 @@ Future<EsitoAnalisi> chiediLAnalisi(
              * l'analisi resterebbe a dire che quell'esercizio non c'è.
              */
             impronta: improntaDelloStorico(storia),
+            riassunto: Value(riassunto),
             fattaIl: DateTime.now(),
           ),
         );

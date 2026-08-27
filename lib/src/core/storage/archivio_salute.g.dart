@@ -5246,6 +5246,17 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _riassuntoMeta = const VerificationMeta(
+    'riassunto',
+  );
+  @override
+  late final GeneratedColumn<String> riassunto = GeneratedColumn<String>(
+    'riassunto',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _fattaIlMeta = const VerificationMeta(
     'fattaIl',
   );
@@ -5262,6 +5273,7 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
     schedaLocale,
     righe,
     impronta,
+    riassunto,
     fattaIl,
   ];
   @override
@@ -5301,6 +5313,12 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
     } else if (isInserting) {
       context.missing(_improntaMeta);
     }
+    if (data.containsKey('riassunto')) {
+      context.handle(
+        _riassuntoMeta,
+        riassunto.isAcceptableOrUnknown(data['riassunto']!, _riassuntoMeta),
+      );
+    }
     if (data.containsKey('fatta_il')) {
       context.handle(
         _fattaIlMeta,
@@ -5330,6 +5348,10 @@ class $AnalisiDelleSchedeTable extends AnalisiDelleSchede
         DriftSqlType.string,
         data['${effectivePrefix}impronta'],
       )!,
+      riassunto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}riassunto'],
+      ),
       fattaIl: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fatta_il'],
@@ -5364,11 +5386,19 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
 
   /// L'impronta dello storico al momento dell'analisi. Vedi la nota in testa.
   final String impronta;
+
+  /// La frase su **tutta** la scheda — 3b-I.F.
+  ///
+  /// ⚠️ **Nullable**, e non «vuota di serie»: le analisi scritte prima che
+  /// questo campo esistesse non ne hanno una, e riempirle con una stringa vuota
+  /// direbbe «il modello non ha trovato niente da dire» — che è un'altra cosa.
+  final String? riassunto;
   final DateTime fattaIl;
   const AnalisiScheda({
     required this.schedaLocale,
     required this.righe,
     required this.impronta,
+    this.riassunto,
     required this.fattaIl,
   });
   @override
@@ -5377,6 +5407,9 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
     map['scheda_locale'] = Variable<int>(schedaLocale);
     map['righe'] = Variable<String>(righe);
     map['impronta'] = Variable<String>(impronta);
+    if (!nullToAbsent || riassunto != null) {
+      map['riassunto'] = Variable<String>(riassunto);
+    }
     map['fatta_il'] = Variable<DateTime>(fattaIl);
     return map;
   }
@@ -5386,6 +5419,9 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
       schedaLocale: Value(schedaLocale),
       righe: Value(righe),
       impronta: Value(impronta),
+      riassunto: riassunto == null && nullToAbsent
+          ? const Value.absent()
+          : Value(riassunto),
       fattaIl: Value(fattaIl),
     );
   }
@@ -5399,6 +5435,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
       schedaLocale: serializer.fromJson<int>(json['schedaLocale']),
       righe: serializer.fromJson<String>(json['righe']),
       impronta: serializer.fromJson<String>(json['impronta']),
+      riassunto: serializer.fromJson<String?>(json['riassunto']),
       fattaIl: serializer.fromJson<DateTime>(json['fattaIl']),
     );
   }
@@ -5409,6 +5446,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
       'schedaLocale': serializer.toJson<int>(schedaLocale),
       'righe': serializer.toJson<String>(righe),
       'impronta': serializer.toJson<String>(impronta),
+      'riassunto': serializer.toJson<String?>(riassunto),
       'fattaIl': serializer.toJson<DateTime>(fattaIl),
     };
   }
@@ -5417,11 +5455,13 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
     int? schedaLocale,
     String? righe,
     String? impronta,
+    Value<String?> riassunto = const Value.absent(),
     DateTime? fattaIl,
   }) => AnalisiScheda(
     schedaLocale: schedaLocale ?? this.schedaLocale,
     righe: righe ?? this.righe,
     impronta: impronta ?? this.impronta,
+    riassunto: riassunto.present ? riassunto.value : this.riassunto,
     fattaIl: fattaIl ?? this.fattaIl,
   );
   AnalisiScheda copyWithCompanion(AnalisiDelleSchedeCompanion data) {
@@ -5431,6 +5471,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
           : this.schedaLocale,
       righe: data.righe.present ? data.righe.value : this.righe,
       impronta: data.impronta.present ? data.impronta.value : this.impronta,
+      riassunto: data.riassunto.present ? data.riassunto.value : this.riassunto,
       fattaIl: data.fattaIl.present ? data.fattaIl.value : this.fattaIl,
     );
   }
@@ -5441,13 +5482,15 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
           ..write('schedaLocale: $schedaLocale, ')
           ..write('righe: $righe, ')
           ..write('impronta: $impronta, ')
+          ..write('riassunto: $riassunto, ')
           ..write('fattaIl: $fattaIl')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(schedaLocale, righe, impronta, fattaIl);
+  int get hashCode =>
+      Object.hash(schedaLocale, righe, impronta, riassunto, fattaIl);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5455,6 +5498,7 @@ class AnalisiScheda extends DataClass implements Insertable<AnalisiScheda> {
           other.schedaLocale == this.schedaLocale &&
           other.righe == this.righe &&
           other.impronta == this.impronta &&
+          other.riassunto == this.riassunto &&
           other.fattaIl == this.fattaIl);
 }
 
@@ -5462,17 +5506,20 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
   final Value<int> schedaLocale;
   final Value<String> righe;
   final Value<String> impronta;
+  final Value<String?> riassunto;
   final Value<DateTime> fattaIl;
   const AnalisiDelleSchedeCompanion({
     this.schedaLocale = const Value.absent(),
     this.righe = const Value.absent(),
     this.impronta = const Value.absent(),
+    this.riassunto = const Value.absent(),
     this.fattaIl = const Value.absent(),
   });
   AnalisiDelleSchedeCompanion.insert({
     this.schedaLocale = const Value.absent(),
     required String righe,
     required String impronta,
+    this.riassunto = const Value.absent(),
     required DateTime fattaIl,
   }) : righe = Value(righe),
        impronta = Value(impronta),
@@ -5481,12 +5528,14 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
     Expression<int>? schedaLocale,
     Expression<String>? righe,
     Expression<String>? impronta,
+    Expression<String>? riassunto,
     Expression<DateTime>? fattaIl,
   }) {
     return RawValuesInsertable({
       if (schedaLocale != null) 'scheda_locale': schedaLocale,
       if (righe != null) 'righe': righe,
       if (impronta != null) 'impronta': impronta,
+      if (riassunto != null) 'riassunto': riassunto,
       if (fattaIl != null) 'fatta_il': fattaIl,
     });
   }
@@ -5495,12 +5544,14 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
     Value<int>? schedaLocale,
     Value<String>? righe,
     Value<String>? impronta,
+    Value<String?>? riassunto,
     Value<DateTime>? fattaIl,
   }) {
     return AnalisiDelleSchedeCompanion(
       schedaLocale: schedaLocale ?? this.schedaLocale,
       righe: righe ?? this.righe,
       impronta: impronta ?? this.impronta,
+      riassunto: riassunto ?? this.riassunto,
       fattaIl: fattaIl ?? this.fattaIl,
     );
   }
@@ -5517,6 +5568,9 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
     if (impronta.present) {
       map['impronta'] = Variable<String>(impronta.value);
     }
+    if (riassunto.present) {
+      map['riassunto'] = Variable<String>(riassunto.value);
+    }
     if (fattaIl.present) {
       map['fatta_il'] = Variable<DateTime>(fattaIl.value);
     }
@@ -5529,6 +5583,7 @@ class AnalisiDelleSchedeCompanion extends UpdateCompanion<AnalisiScheda> {
           ..write('schedaLocale: $schedaLocale, ')
           ..write('righe: $righe, ')
           ..write('impronta: $impronta, ')
+          ..write('riassunto: $riassunto, ')
           ..write('fattaIl: $fattaIl')
           ..write(')'))
         .toString();
@@ -9723,6 +9778,7 @@ typedef $$AnalisiDelleSchedeTableCreateCompanionBuilder =
       Value<int> schedaLocale,
       required String righe,
       required String impronta,
+      Value<String?> riassunto,
       required DateTime fattaIl,
     });
 typedef $$AnalisiDelleSchedeTableUpdateCompanionBuilder =
@@ -9730,6 +9786,7 @@ typedef $$AnalisiDelleSchedeTableUpdateCompanionBuilder =
       Value<int> schedaLocale,
       Value<String> righe,
       Value<String> impronta,
+      Value<String?> riassunto,
       Value<DateTime> fattaIl,
     });
 
@@ -9754,6 +9811,11 @@ class $$AnalisiDelleSchedeTableFilterComposer
 
   ColumnFilters<String> get impronta => $composableBuilder(
     column: $table.impronta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get riassunto => $composableBuilder(
+    column: $table.riassunto,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9787,6 +9849,11 @@ class $$AnalisiDelleSchedeTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get riassunto => $composableBuilder(
+    column: $table.riassunto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get fattaIl => $composableBuilder(
     column: $table.fattaIl,
     builder: (column) => ColumnOrderings(column),
@@ -9812,6 +9879,9 @@ class $$AnalisiDelleSchedeTableAnnotationComposer
 
   GeneratedColumn<String> get impronta =>
       $composableBuilder(column: $table.impronta, builder: (column) => column);
+
+  GeneratedColumn<String> get riassunto =>
+      $composableBuilder(column: $table.riassunto, builder: (column) => column);
 
   GeneratedColumn<DateTime> get fattaIl =>
       $composableBuilder(column: $table.fattaIl, builder: (column) => column);
@@ -9860,11 +9930,13 @@ class $$AnalisiDelleSchedeTableTableManager
                 Value<int> schedaLocale = const Value.absent(),
                 Value<String> righe = const Value.absent(),
                 Value<String> impronta = const Value.absent(),
+                Value<String?> riassunto = const Value.absent(),
                 Value<DateTime> fattaIl = const Value.absent(),
               }) => AnalisiDelleSchedeCompanion(
                 schedaLocale: schedaLocale,
                 righe: righe,
                 impronta: impronta,
+                riassunto: riassunto,
                 fattaIl: fattaIl,
               ),
           createCompanionCallback:
@@ -9872,11 +9944,13 @@ class $$AnalisiDelleSchedeTableTableManager
                 Value<int> schedaLocale = const Value.absent(),
                 required String righe,
                 required String impronta,
+                Value<String?> riassunto = const Value.absent(),
                 required DateTime fattaIl,
               }) => AnalisiDelleSchedeCompanion.insert(
                 schedaLocale: schedaLocale,
                 righe: righe,
                 impronta: impronta,
+                riassunto: riassunto,
                 fattaIl: fattaIl,
               ),
           withReferenceMapper: (p0) => p0

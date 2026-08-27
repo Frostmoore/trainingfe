@@ -62,7 +62,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   ArchivioSalute.su(super.e);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -489,6 +489,36 @@ class ArchivioSalute extends _$ArchivioSalute {
 
         await customStatement('DROP TABLE IF EXISTS analisi_delle_schede');
         await m.createTable(analisiDelleSchede);
+      }
+
+      /*
+       * ══ v23 → v24 (3b-I.F): il riassunto di tutta la scheda ═══════════════
+       *
+       * 💡 **Una colonna e non una tabella**: è una frase sola, che nasce e
+       * muore con l'analisi di cui fa parte. ⚠️ Nullable, perché le analisi già
+       * scritte non ce l'hanno — e una stringa vuota direbbe «il modello non ha
+       * trovato niente», che è un'altra cosa.
+       *
+       * ── 🚨 `da >= 23`, E NON È UNA CONDIZIONE DI TROPPO ──────────────────
+       *
+       * ⛔ **`m.createTable` crea sempre la forma di OGGI**, non quella che la
+       * tabella aveva a quella versione. Chi arriva dalla v14 passa dal `da <
+       * 23`, che ricrea `analisiDelleSchede` — e se la ritrova **già con questa
+       * colonna**. Un `addColumn` subito dopo esplode con `duplicate column
+       * name: riassunto`, e l'aggiornamento si spezza a metà.
+       *
+       * ⚠️ **Chi invece è già alla v23** — chi ha installato l'app fra le due
+       * versioni — la colonna non ce l'ha, e per lui l'`addColumn` serve
+       * davvero. 💡 Sono due strade diverse verso la stessa forma, ed è il caso
+       * normale ogni volta che un passo *ricrea* una tabella che un passo
+       * successivo *modifica*.
+       *
+       * 🚨 L'ha trovato `migrazione_schede_unite_test.dart`, che parte dalla
+       * v14: senza quel test il difetto si sarebbe visto solo sul telefono di
+       * chi aggiorna da lontano — cioè mai sui nostri.
+       */
+      if (da < 24 && da >= 23) {
+        await m.addColumn(analisiDelleSchede, analisiDelleSchede.riassunto);
       }
     },
   );
@@ -3126,6 +3156,13 @@ class AnalisiDelleSchede extends Table {
 
   /// L'impronta dello storico al momento dell'analisi. Vedi la nota in testa.
   TextColumn get impronta => text()();
+
+  /// La frase su **tutta** la scheda — 3b-I.F.
+  ///
+  /// ⚠️ **Nullable**, e non «vuota di serie»: le analisi scritte prima che
+  /// questo campo esistesse non ne hanno una, e riempirle con una stringa vuota
+  /// direbbe «il modello non ha trovato niente da dire» — che è un'altra cosa.
+  TextColumn get riassunto => text().nullable()();
 
   DateTimeColumn get fattaIl => dateTime()();
 

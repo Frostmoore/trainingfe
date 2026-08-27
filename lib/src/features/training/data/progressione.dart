@@ -250,3 +250,107 @@ int _verso(double? da, double? a) {
 
   return 0;
 }
+
+
+/// Quello che le ultime otto sedute **non possono dire** — 3b-I.F, 27/08/2026.
+///
+/// ══ 🚨 PERCHÉ NON BASTAVA LA FINESTRA ═════════════════════════════════════
+///
+/// 📌 *«dirmi che le ripetizioni o i pesi sono rimasti uguali o sono cambiati
+/// non mi serve a niente. Mi deve dire qualcosa di utile»*.
+///
+/// ⛔ Con otto sedute in mano il modello può solo confrontarle fra loro, e ne
+/// esce «sei salito» oppure «sei fermo» — cioè quello che si vede guardando la
+/// sparkline, gratis.
+///
+/// 💡 Quello che una persona **non** sa a colpo d'occhio è: *è il mio massimo di
+/// sempre? da quanto sono fermo? quanto tempo è passato dall'ultima volta?* Sono
+/// domande sullo storico **intero**, e la risposta la calcola il telefono in un
+/// millisecondo — mandare mesi di sedute al modello costerebbe dieci volte
+/// tanto per fargli fare un `max`.
+///
+/// 🚨 **E il modello non deve calcolarlo**: i modelli linguistici sbagliano i
+/// confronti fra numeri, e un «è il tuo record» falso è una bugia detta con
+/// entusiasmo.
+class PrimatiDellEsercizio {
+  const PrimatiDellEsercizio({
+    required this.sedute,
+    required this.dalPrimo,
+    this.caricoMassimo,
+    this.quandoIlMassimo,
+    this.seduteAlloStessoCarico = 0,
+  });
+
+  /// Quante sedute in tutto, non solo nella finestra.
+  final int sedute;
+
+  /// Da quando lo fai.
+  final DateTime? dalPrimo;
+
+  /// Il carico più alto **mai** fatto, e quando.
+  final double? caricoMassimo;
+  final DateTime? quandoIlMassimo;
+
+  /// Da quante sedute di fila il carico non si muove.
+  ///
+  /// 💡 **È il numero più utile di tutti**, e nessuno lo tiene a mente: «fermo
+  /// da tre sedute» è normale, «fermo da undici» è un'informazione.
+  final int seduteAlloStessoCarico;
+
+  Map<String, Object?> versoIlServer() => {
+    'sedute_totali': sedute,
+    'dal': dalPrimo?.toIso8601String().substring(0, 10),
+    'carico_massimo': caricoMassimo,
+    'quando_il_massimo': quandoIlMassimo?.toIso8601String().substring(0, 10),
+    'sedute_allo_stesso_carico': seduteAlloStessoCarico,
+  };
+}
+
+/// I primati, calcolati sui punti di **tutto** lo storico.
+///
+/// ⚠️ Vuole i punti in ordine, dal più vecchio: è l'ordine in cui li restituisce
+/// `storiaDegliEsercizi`.
+PrimatiDellEsercizio primatiDaiPunti(List<PuntoDiProgressione> tutti) {
+  if (tutti.isEmpty) {
+    return const PrimatiDellEsercizio(sedute: 0, dalPrimo: null);
+  }
+
+  double? massimo;
+  DateTime? quando;
+
+  for (final p in tutti) {
+    final c = p.carico;
+
+    if (c == null) continue;
+
+    if (massimo == null || c > massimo) {
+      massimo = c;
+      quando = p.data;
+    }
+  }
+
+  /*
+   * ⚠️ **Si conta all'indietro dall'ultima**, non in avanti. 💡 «Da quante
+   * sedute sei fermo» è una domanda sul presente: contare la serie più lunga
+   * di sempre risponderebbe a un'altra domanda — e sarebbe un numero più
+   * grande, quindi sembrerebbe più giusto.
+   */
+  var fermo = 0;
+  final ultimo = tutti.last.carico;
+
+  if (ultimo != null) {
+    for (final p in tutti.reversed) {
+      if (p.carico != ultimo) break;
+
+      fermo++;
+    }
+  }
+
+  return PrimatiDellEsercizio(
+    sedute: tutti.length,
+    dalPrimo: tutti.first.data,
+    caricoMassimo: massimo,
+    quandoIlMassimo: quando,
+    seduteAlloStessoCarico: fermo,
+  );
+}

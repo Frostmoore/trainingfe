@@ -1187,6 +1187,42 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
                 style: tema.textTheme.bodySmall,
               ),
 
+              /*
+               * ══ 🗣️ IL RIASSUNTO — 3b-I.F, 27/08/2026 ══════════════════════
+               *
+               * 📌 *«Mi deve dire qualcosa di utile, sennò che cazzo lo pago a
+               * fare?»*.
+               *
+               * 🚨 **È la sola cosa che guarda gli esercizi insieme**, e per
+               * questo è la più utile: una riga sotto un esercizio, per
+               * costruzione, non può dire «cresci sulle spinte e sei fermo sulle
+               * trazioni». ⛔ E costa **zero in più**: stessa chiamata, stesso
+               * gettone, contesto già tutto davanti al modello.
+               *
+               * 💡 Sta **sopra** la spiegazione e il pulsante, perché è la cosa
+               * per cui si è pagato: la spiegazione dice come funziona, questa è
+               * il risultato.
+               */
+              if (analisi?.riassunto case final r? when r.isNotEmpty) ...[
+                const SizedBox(height: Gap.sm),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(Gap.sm),
+                  decoration: BoxDecoration(
+                    color: tema.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(Gap.radiusSm),
+                  ),
+                  child: Text(
+                    r,
+                    style: tema.textTheme.bodyMedium?.copyWith(
+                      color: tema.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Gap.sm),
+              ],
+
               if (analisi != null) ...[
                 const SizedBox(height: Gap.xs),
                 Text(

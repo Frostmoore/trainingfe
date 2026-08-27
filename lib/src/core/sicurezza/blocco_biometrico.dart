@@ -2,6 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
+/// Cosa sappiamo del blocco — 3b-J.5, 27/08/2026.
+///
+/// 🚨 **Tre stati e non due**, perché «non riesco a leggere» non è «spento»:
+/// confonderli è ciò che ha fatto entrare l'app senza chiedere niente.
+enum StatoDelBlocco {
+  acceso,
+  spento,
+
+  /// ⛔ L'archivio cifrato non risponde. Vedi `BloccoBiometrico.stato()`.
+  illeggibile,
+}
+
 /// Il blocco con l'impronta — A1.
 ///
 /// ── 🚨 Cos'è, e soprattutto cosa NON è ────────────────────────────────────
@@ -73,15 +85,51 @@ class BloccoBiometrico {
     }
   }
 
-  Future<bool> attivo() async {
+  /// Lo stato del blocco, **con il terzo caso** — 3b-J.5, 27/08/2026.
+  ///
+  /// ══ ⛔ IL DIFETTO: UN CONTROLLO CHE FALLIVA IN SILENZIO ════════════════
+  ///
+  /// 📌 Riferito il 27/08: *«Neanche adesso mi chiede l'accesso con l'impronta.
+  /// Mi fa accedere senza chiedermi nulla, che non va per niente bene»*.
+  ///
+  /// 🚨 **E il telefono aveva ragione a lamentarsi.** Nel log di sistema, a ogni
+  /// avvio:
+  ///
+  /// ```
+  /// keystore2: Finish failed for uid 10354
+  ///            Error::Km(r#VERIFICATION_FAILED)
+  /// ```
+  ///
+  /// L'archivio cifrato non riusciva più a decifrare — succede quando la chiave
+  /// nel keystore viene invalidata: un aggiornamento del sistema, una biometria
+  /// ri-registrata, un ripristino. ⛔ E `attivo()` catturava **qualunque**
+  /// errore rispondendo `false`: il blocco risultava spento, e l'app entrava.
+  ///
+  /// ⚠️ **Il commento che c'era diceva una cosa non vera**: *«il contrario
+  /// bloccherebbe l'app, e la via d'uscita sarebbe reinstallarla»*. La via
+  /// d'uscita c'è ed è nella schermata di blocco — «Entra con la password». 🚨 È
+  /// il tipo di ragionamento che giustifica un fallimento aperto con un pericolo
+  /// che non esiste.
+  ///
+  /// 💡 Adesso il dubbio è **un terzo stato**, e chi chiama decide: vedi
+  /// `AuthController.restore()`, che di fronte a [StatoDelBlocco.illeggibile]
+  /// **blocca**.
+  Future<StatoDelBlocco> stato() async {
     try {
-      return await _storage.read(key: _chiave) == '1';
-    } on Object {
-      // ⚠️ In dubbio si risponde «spento». Il contrario bloccherebbe l'app per
-      // un errore di lettura, e la via d'uscita sarebbe reinstallarla.
-      return false;
+      return await _storage.read(key: _chiave) == '1'
+          ? StatoDelBlocco.acceso
+          : StatoDelBlocco.spento;
+    } on Object catch (e) {
+      debugPrint('blocco biometrico: non si riesce a leggere lo stato — $e');
+
+      return StatoDelBlocco.illeggibile;
     }
   }
+
+  /// ⚠️ **Solo per chi non deve decidere niente**, come l'interruttore nel
+  /// profilo: `illeggibile` vale «non acceso». ⛔ Non usarlo dove si decide se
+  /// far entrare qualcuno — là serve [stato].
+  Future<bool> attivo() async => await stato() == StatoDelBlocco.acceso;
 
   /// Accende o spegne il blocco.
   ///
@@ -186,6 +234,26 @@ class BloccoBiometrico {
       await _storage.write(key: _chiaveProposto, value: '1');
     } on Object {
       // Al peggio si riproporrà: non vale un errore a schermo.
+    }
+  }
+
+  /// 🔧 Ripara un archivio che non si riesce più a leggere — 3b-J.5.
+  ///
+  /// 🚨 **Senza, il difetto sarebbe eterno**: la chiave resta illeggibile a ogni
+  /// avvio, e chi entra si vedrebbe la schermata di blocco per sempre.
+  ///
+  /// 💡 Cancella quello che non si legge e **dimentica di aver proposto**, così
+  /// l'app torna a offrire il blocco invece di lasciarlo spento in silenzio. ⚠️ È
+  /// la stessa cosa che fa [azzera] all'uscita, e per la stessa ragione: uno
+  /// stato che non si può leggere non è uno stato.
+  Future<void> riparaSeIlleggibile() async {
+    try {
+      await _storage.delete(key: _chiave);
+      await _storage.delete(key: _chiaveProposto);
+    } on Object catch (e) {
+      // ⚠️ Se non si riesce nemmeno a cancellare non c'è altro da fare: al
+      // prossimo avvio si ricade nello stesso ramo, che almeno **blocca**.
+      debugPrint('blocco biometrico: non si riesce nemmeno a ripulire — $e');
     }
   }
 

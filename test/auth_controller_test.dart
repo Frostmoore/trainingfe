@@ -478,8 +478,54 @@ void main() {
       expect(blocco.acceso, isFalse);
     });
 
-    /// 💡 Un blocco rimasto acceso su un account che non c'è più chiederebbe
-    /// l'impronta per sbloccare il nulla, subito prima di mandare al login.
+    /*
+     * ══ ⛔ IL DIFETTO DEL 27/08/2026 ══════════════════════════════════════
+     *
+     * 📌 *«Neanche adesso mi chiede l'accesso con l'impronta. Mi fa accedere
+     * senza chiedermi nulla, che non va per niente bene»*.
+     *
+     * 🚨 Sul telefono il keystore rispondeva `VERIFICATION_FAILED` a ogni
+     * avvio: `attivo()` catturava l'errore, rispondeva «spento», e l'app
+     * entrava. Un controllo di sicurezza che fallisce **non deve lasciar
+     * passare**.
+     */
+    test('se non si riesce a leggere lo stato, si blocca', () async {
+      blocco.illeggibile = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(auth.state.status, AuthStatus.locked);
+    });
+
+    test('e si ripara, o il difetto sarebbe eterno', () async {
+      blocco.illeggibile = true;
+
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      expect(blocco.riparazioni, 1);
+
+      /*
+       * 💡 Riparato, il prossimo avvio legge «spento» pulito: chi non aveva il
+       * blocco non se lo ritrova addosso per sempre, e l'app torna a
+       * **proporlo** invece di lasciarlo spento in silenzio.
+       */
+      expect(await blocco.stato(), StatoDelBlocco.spento);
+    });
+
+    test('spento davvero non blocca niente', () async {
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      // ⛔ La correzione non deve trasformare l'app in una che chiede
+      // l'impronta a chi non l'ha mai voluta.
+      expect(auth.state.status, isNot(AuthStatus.locked));
+    });
+
     test('anche l\'uscita normale spegne il blocco', () async {
       blocco.acceso = true;
 
@@ -500,8 +546,25 @@ class _BloccoFinto implements BloccoBiometrico {
   /// Cosa risponde il lettore.
   bool apre = true;
 
+  /// ⛔ L'archivio cifrato non si legge — 3b-J.5. Vedi `StatoDelBlocco`.
+  bool illeggibile = false;
+
+  /// Quante volte si è provato a riparare.
+  int riparazioni = 0;
+
   @override
   Future<bool> disponibile() async => true;
+
+  @override
+  Future<StatoDelBlocco> stato() async => illeggibile
+      ? StatoDelBlocco.illeggibile
+      : (acceso ? StatoDelBlocco.acceso : StatoDelBlocco.spento);
+
+  @override
+  Future<void> riparaSeIlleggibile() async {
+    riparazioni++;
+    illeggibile = false;
+  }
 
   @override
   Future<bool> attivo() async => acceso;

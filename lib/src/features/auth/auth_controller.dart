@@ -190,10 +190,42 @@ class AuthController extends StateNotifier<AuthState> {
      * trappola: se l'utente annulla, l'app resterebbe su uno stato senza
      * schermata, cioè bloccata davvero.
      */
-    if (_blocco != null && await _blocco.attivo()) {
-      state = const AuthState(status: AuthStatus.locked);
+    /*
+     * ══ ⛔ NEL DUBBIO SI BLOCCA — 3b-J.5, 27/08/2026 ═══════════════════════
+     *
+     * 📌 *«Neanche adesso mi chiede l'accesso con l'impronta. Mi fa accedere
+     * senza chiedermi nulla, che non va per niente bene»*.
+     *
+     * 🚨 **Il difetto era qui**, e non nell'impostazione: `attivo()` catturava
+     * l'errore di lettura dell'archivio cifrato e rispondeva «spento». Sul
+     * telefono del committente il keystore restituiva `VERIFICATION_FAILED` a
+     * ogni avvio — e l'app entrava senza chiedere niente.
+     *
+     * ⚠️ **Un controllo di sicurezza che fallisce non deve lasciar passare.** Se
+     * non sappiamo se il blocco era acceso, l'unica risposta che non tradisce
+     * nessuno è comportarsi come se lo fosse: chi non l'aveva acceso perde un
+     * gesto, chi l'aveva acceso non perde la protezione.
+     *
+     * 💡 **E la via d'uscita c'è**: la schermata di blocco ha «Entra con la
+     * password». Il vecchio commento diceva che l'alternativa era reinstallare
+     * l'app — non era vero, ed è quello che giustificava il fallimento aperto.
+     *
+     * 🔧 Si ripara subito, o il difetto sarebbe eterno: cancellata la chiave
+     * illeggibile, il prossimo avvio legge «spento» pulito e l'app torna a
+     * **proporre** il blocco invece di lasciarlo spento in silenzio.
+     */
+    if (_blocco != null) {
+      final stato = await _blocco.stato();
 
-      return;
+      if (stato == StatoDelBlocco.illeggibile) {
+        await _blocco.riparaSeIlleggibile();
+      }
+
+      if (stato != StatoDelBlocco.spento) {
+        state = const AuthState(status: AuthStatus.locked);
+
+        return;
+      }
     }
 
     await _loadMe();

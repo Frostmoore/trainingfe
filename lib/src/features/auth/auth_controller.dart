@@ -226,6 +226,37 @@ class AuthController extends StateNotifier<AuthState> {
 
         return;
       }
+
+      /*
+       * ══ 🔐 SENZA SBLOCCO RAPIDO SI RIENTRA CON LE CREDENZIALI ═══════════
+       *
+       * 📌 27/08/2026: *«sblocco rapido con impronta va bene, ma se non è
+       * toggled allora mi deve chiedere proprio di accedere con le credenziali
+       * sennò tutto un cazzo»*.
+       *
+       * 🚨 **Ed è la stessa cosa detta prima, portata fino in fondo.** Un token
+       * che resta valido sul telefono e apre l'app senza chiedere niente è una
+       * sessione che non ha nessuna porta: chi prende in mano il telefono
+       * sbloccato entra nel diario, nelle foto e nella chat di qualcun altro.
+       * ⛔ L'impronta non era «una comodità in più»: era **l'unica** porta, e
+       * chi non l'accendeva restava senza.
+       *
+       * 💡 Adesso le porte sono due e sono entrambe vere: o lo sblocco rapido,
+       * o le credenziali. Non esiste più il caso «nessuna delle due».
+       *
+       * ⚠️ **Il token si butta**, non si tiene da parte: tenerlo vorrebbe dire
+       * lasciare sul telefono una credenziale valida che nessuna porta protegge
+       * — cioè esattamente la cosa che questa riga esiste per togliere.
+       *
+       * ⛔ `cancellaIDati: false`: si chiude la **sessione**, non si cancella
+       * l'archivio. Peso, sonno, allenamenti e foto restano dove sono: chi
+       * rientra fra un minuto ritrova tutto.
+       */
+      if (stato == StatoDelBlocco.spento) {
+        await _forgetSession();
+
+        return;
+      }
     }
 
     await _loadMe();

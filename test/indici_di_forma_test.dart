@@ -135,7 +135,7 @@ void main() {
     /// 💡 Tutto nella media personale = metà scala. È il punto di riferimento da
     /// cui si legge tutto il resto.
     test('tutto nella media dà 50', () {
-      final i = IndiciDiForma.carica(
+      final i = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 0,
         zSonno: 0,
@@ -146,7 +146,7 @@ void main() {
     });
 
     test('sopra la propria media si sale', () {
-      final i = IndiciDiForma.carica(
+      final i = IndiciDiForma.prontezza(
         zHrv: 1,
         zBattito: -1,
         zSonno: 1,
@@ -164,14 +164,14 @@ void main() {
     /// ⚠️ Sbagliare questo segno darebbe un indice che **sale proprio quando
     /// dovrebbe scendere**, e nessuno se ne accorgerebbe guardando il numero.
     test('un battito ALTO abbassa la carica', () {
-      final normale = IndiciDiForma.carica(
+      final normale = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 0,
         zSonno: 0,
         nottiDiStoria: 30,
       );
 
-      final battitoAlto = IndiciDiForma.carica(
+      final battitoAlto = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 2,
         zSonno: 0,
@@ -189,14 +189,14 @@ void main() {
     /// beneficio di mangiare tanto non sappiamo niente, del danno di mangiare
     /// troppo poco un po' sì.
     test('mangiare tanto NON alza la carica', () {
-      final senza = IndiciDiForma.carica(
+      final senza = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 0,
         zSonno: 0,
         nottiDiStoria: 30,
       );
 
-      final mangiandoTanto = IndiciDiForma.carica(
+      final mangiandoTanto = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 0,
         zSonno: 0,
@@ -208,7 +208,7 @@ void main() {
     });
 
     test('ma mangiare troppo poco la abbassa', () {
-      final i = IndiciDiForma.carica(
+      final i = IndiciDiForma.prontezza(
         zHrv: 0,
         zBattito: 0,
         zSonno: 0,
@@ -223,7 +223,7 @@ void main() {
     /// Un 50 vorrebbe dire «perfettamente nella media», che è una conclusione e
     /// non un dato mancante.
     test('senza nessun ingrediente il numero non esiste', () {
-      final i = IndiciDiForma.carica(
+      final i = IndiciDiForma.prontezza(
         zHrv: null,
         zBattito: null,
         zSonno: null,
@@ -237,7 +237,7 @@ void main() {
     /// non di esistenza. È la differenza con la stanchezza, che invece ha un
     /// caso in cui il numero non può proprio esserci.
     test('un ingrediente solo basta', () {
-      final i = IndiciDiForma.carica(
+      final i = IndiciDiForma.prontezza(
         zHrv: 1,
         zBattito: null,
         zSonno: null,
@@ -250,14 +250,14 @@ void main() {
     });
 
     test('la scala non esce mai da 0–100', () {
-      final altissimo = IndiciDiForma.carica(
+      final altissimo = IndiciDiForma.prontezza(
         zHrv: 99,
         zBattito: -99,
         zSonno: 99,
         nottiDiStoria: 30,
       );
 
-      final bassissimo = IndiciDiForma.carica(
+      final bassissimo = IndiciDiForma.prontezza(
         zHrv: -99,
         zBattito: 99,
         zSonno: -99,

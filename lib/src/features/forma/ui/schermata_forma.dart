@@ -262,15 +262,15 @@ class _Carica extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final valore = forma.carica.valore;
+    final valore = forma.prontezza.valore;
     final ci = forma.ingredienti.where((i) => i.ceLo).length;
 
     return _Sezione(
       icona: Icons.battery_charging_full_rounded,
-      titolo: 'Carica',
+      titolo: 'Prontezza',
       grande: valore == null ? '—' : valore.round().toString(),
       sotto: valore == null ? 'non calcolabile' : 'su 100',
-      indice: forma.carica,
+      indice: forma.prontezza,
       figli: [
         /*
          * ══ 🚨 SI DICE SU QUANTI INGREDIENTI È FATTA ═════════════════════════

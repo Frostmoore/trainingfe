@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../carica_batteria.dart';
+import '../carica_controller.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
 import 'barra_carico.dart';
+import 'tachimetro_prontezza.dart';
 
 /// La scheda di stanchezza e carica — FASE 2-sexies.
 ///
@@ -94,7 +97,25 @@ class SchedaForma extends ConsumerWidget {
 
               const Divider(height: Gap.lg),
 
-              _SezioneCarica(forma: forma),
+              _SezioneProntezza(forma: forma),
+
+              /*
+               * ══ 🔋 E POI LA CARICA VERA — 3b-K, 28/08/2026 ═══════════════
+               *
+               * 📌 *«poi voglio che sotto ci metti una vera e propria "Carica"
+               * con la batteria»*.
+               *
+               * 🚨 **Sono due domande diverse, e adesso hanno due forme
+               * diverse.** La Prontezza è un tachimetro perché ha un centro —
+               * il 50 è il proprio normale; la Carica è una batteria perché ha
+               * un pieno e un vuoto, e si scarica davvero.
+               *
+               * ⛔ La card **non compare** se il TDEE non si sa: senza, non
+               * esiste un metro per dire se un allenamento è stato grande o
+               * piccolo *per questa persona*, e la batteria si muoverebbe a
+               * caso. 💡 Il widget si nasconde da solo.
+               */
+              const _SezioneCarica(),
             ],
           ),
         ),
@@ -214,21 +235,30 @@ class _SezioneCarico extends StatelessWidget {
   }
 }
 
-/// La carica: una batteria con il numero dentro — 3b-O.4.4.
-class _SezioneCarica extends StatelessWidget {
-  const _SezioneCarica({required this.forma});
+/// La Prontezza: un tachimetro col 50 all'apice — 3b-K.
+///
+/// ══ ⛔ SI CHIAMAVA «CARICA», ED ERA UNA BATTERIA ══════════════════════════
+///
+/// 📌 *«a ben vedere non analizza la carica vera e propria, ma quanto sto bene o
+/// male rispetto al solito, che è 50»*.
+///
+/// 🚨 **Una batteria al 50% dice «stai finendo»; questo 50 dice «sei nella tua
+/// norma»** — cioè il posto migliore in cui stare. La forma diceva una cosa
+/// diversa dal contenuto, ed è il tipo di errore che nessuno legge come tale.
+class _SezioneProntezza extends StatelessWidget {
+  const _SezioneProntezza({required this.forma});
 
   final Forma forma;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final v = forma.carica.valore;
+    final v = forma.prontezza.valore;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        BatteriaCarica(livello: v),
+        TachimetroProntezza(valore: v),
 
         const SizedBox(width: Gap.md),
 
@@ -236,24 +266,26 @@ class _SezioneCarica extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Carica', style: tema.textTheme.labelMedium),
+              Text('Prontezza', style: tema.textTheme.labelMedium),
               Text(
-                v == null ? 'non calcolabile' : 'su 100',
+                v == null
+                    ? 'non calcolabile'
+                    : 'come stai rispetto al tuo solito',
                 style: tema.textTheme.bodySmall,
               ),
 
               const SizedBox(height: Gap.xs),
 
               /*
-               * 🚨 **L'avvertenza sta ACCANTO alla batteria** — 3b-O.4.4.
+               * 🚨 **L'avvertenza sta ACCANTO al quadrante** — 3b-O.4.4.
                *
                * 📌 *«accanto le frasi necessarie per comunicare che non è un
                * parere medico eccetera»*.
                *
                * ⚠️ Si sposta dall'alto al fianco, e la regola di D-2s/B regge
                * lo stesso: quella diceva **sopra i numeri**, cioè *letta
-               * insieme al numero, non dopo*. Qui il numero è dentro la
-               * batteria e l'avvertenza le sta a fianco — si leggono nello
+               * insieme al numero, non dopo*. Qui il numero è dentro il
+               * quadrante e l'avvertenza gli sta a fianco — si leggono nello
                * stesso colpo d'occhio, che era il punto.
                */
               Text(
@@ -266,10 +298,10 @@ class _SezioneCarica extends StatelessWidget {
                 ),
               ),
 
-              if (v != null && !forma.carica.eAttendibile)
+              if (v != null && !forma.prontezza.eAttendibile)
                 Text(
                   'stima poco attendibile: mancano '
-                  '${forma.carica.giorniCheMancano} giorni di dati',
+                  '${forma.prontezza.giorniCheMancano} giorni di dati',
                   style: tema.textTheme.labelSmall?.copyWith(
                     color: tema.colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,
@@ -278,6 +310,145 @@ class _SezioneCarica extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+
+/// 🔋 La Carica vera: quanto stress si può ancora sostenere — 3b-K.
+///
+/// ══ 🚨 QUI LA BATTERIA È LA FORMA GIUSTA ══════════════════════════════════
+///
+/// Perché questo numero **si scarica davvero**: parte da un pieno, cala con
+/// l'attività, e la notte ne recupera una parte. ⚠️ E soprattutto **si
+/// trascina**: la fatica che una notte non recupera si somma a quella del giorno
+/// dopo. È l'unica cosa in tutta l'app che si comporta come una batteria.
+///
+/// ⛔ **Non compare se il TDEE non si sa.** Senza, non esiste un metro per dire
+/// se un allenamento è stato grande o piccolo *per questa persona*: la batteria
+/// si muoverebbe a caso. 💡 Meglio niente che un numero inventato.
+class _SezioneCarica extends ConsumerWidget {
+  const _SezioneCarica();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final carica = ref.watch(caricaProvider).valueOrNull;
+
+    if (carica == null) return const SizedBox.shrink();
+
+    final tema = Theme.of(context);
+
+    return Column(
+      children: [
+        const Divider(height: Gap.lg),
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            BatteriaCarica(livello: carica.adesso),
+
+            const SizedBox(width: Gap.md),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Carica', style: tema.textTheme.labelMedium),
+
+                  Text(
+                    'quanto ti resta per allenarti',
+                    style: tema.textTheme.bodySmall,
+                  ),
+
+                  const SizedBox(height: Gap.xs),
+
+                  /*
+                   * 💡 **«Stamattina eri a 86»**, e non solo il numero di
+                   * adesso: la Carica cala durante la giornata, e senza il
+                   * punto di partenza un 71 non si distingue da un 71 con cui
+                   * ci si è svegliati.
+                   *
+                   * ⚠️ Solo se è **calata davvero**: scriverlo quando i due
+                   * numeri coincidono sarebbe rumore.
+                   */
+                  if (carica.mattina - carica.adesso >= 1)
+                    Text(
+                      'stamattina eri a ${carica.mattina.round()}',
+                      style: tema.textTheme.labelSmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+
+                  const SizedBox(height: Gap.xs),
+
+                  _Affidabilita(carica: carica),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Quanto ci si può fidare, e **cosa manca** — 3b-K.
+///
+/// 📌 *«impedisce di presentare un 86% del secondo giorno come se avesse la
+/// stessa precisione di un 86% calcolato dopo sei mesi di storico»*.
+///
+/// 🚨 **Dice anche cosa manca**, non solo che la stima è debole: «manca il
+/// sonno» è una cosa a cui si può rimediare, «poco affidabile» no.
+class _Affidabilita extends StatelessWidget {
+  const _Affidabilita({required this.carica});
+
+  final Carica carica;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    final mancano = [
+      if (carica.senzaAttivita) 'le calorie di oggi',
+      if (carica.senzaSonno) 'il sonno di stanotte',
+      if (carica.senzaFisiologia) 'battito e variabilità',
+    ];
+
+    final parola = switch (carica.affidabilita) {
+      Affidabilita.bassa => 'bassa',
+      Affidabilita.media => 'media',
+      Affidabilita.alta => 'alta',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.speed_rounded,
+              size: 13,
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: Gap.xs),
+            Text(
+              'Affidabilità $parola · ${carica.giorniValidi} giorni di dati',
+              style: tema.textTheme.labelSmall?.copyWith(
+                color: tema.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+
+        if (mancano.isNotEmpty)
+          Text(
+            'manca ${mancano.join(", ")}',
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
       ],
     );
   }

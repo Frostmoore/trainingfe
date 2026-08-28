@@ -73,7 +73,7 @@ class IngredienteCarica {
 class Forma {
   const Forma({
     required this.stanchezza,
-    required this.carica,
+    required this.prontezza,
     this.acuto = 0,
     this.cronico = 0,
     this.ingredienti = const [],
@@ -81,7 +81,7 @@ class Forma {
   });
 
   final Indice stanchezza;
-  final Indice carica;
+  final Indice prontezza;
 
   /// Il carico degli ultimi 7 giorni, in `EWMA`.
   final double acuto;
@@ -371,7 +371,7 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
       ),
     ],
     stanchezza: IndiciDiForma.stanchezza(carico)._conStoria(storiaCarico),
-    carica: IndiciDiForma.carica(
+    prontezza: IndiciDiForma.prontezza(
       zHrv: zHrv,
       zBattito: zBattito,
       zSonno: zSonno,

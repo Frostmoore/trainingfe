@@ -248,9 +248,9 @@ class TodayHeader extends ConsumerWidget {
                     icona: Icons.trending_up_rounded,
                   ),
 
-                if (forma?.carica.valore != null)
+                if (forma?.prontezza.valore != null)
                   _Valore(
-                    valore: forma!.carica.valore!.round().toString(),
+                    valore: forma!.prontezza.valore!.round().toString(),
                     etichetta: 'carica',
                     icona: Icons.battery_charging_full_rounded,
                   ),

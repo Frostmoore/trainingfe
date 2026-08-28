@@ -465,6 +465,33 @@ class _PresaDAtto extends ConsumerStatefulWidget {
 class _PresaDAttoState extends ConsumerState<_PresaDAtto> {
   bool _inCorso = false;
 
+  /// ⚖️ Ritira la presa d'atto — 27/08/2026.
+  ///
+  /// 📌 *«se lo dis-flaggo, mi deve bloccare tutto quello che c'è con l'ai»*.
+  ///
+  /// 🚨 **E succede davvero, non solo a schermo**: il server revoca a cascata
+  /// anche il consenso all'AI, e `puoUsareAi()` pretende tutti e due — quindi da
+  /// quel momento ogni chiamata risponde 403.
+  ///
+  /// ⛔ **Non si chiede conferma.** Chiedere «sei sicuro?» a chi sta ritirando
+  /// un consenso è un ostacolo alla revoca, che l'art. 7(3) vieta: revocare
+  /// deve costare quanto concedere, o meno.
+  Future<void> _ritira() async {
+    setState(() => _inCorso = true);
+
+    try {
+      await ref.read(cambiaConsensoProvider)('ai_disclaimer', false);
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Non ha funzionato: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
   Future<void> _leggi() async {
     final accettata = await chiediLaPresaDAtto(context);
 
@@ -528,7 +555,8 @@ class _PresaDAttoState extends ConsumerState<_PresaDAtto> {
               presa
                   ? 'Hai preso atto che quello che l\'AI produce non è mai un '
                         'parere medico, ma una stima statistica che può '
-                        'sbagliare.'
+                        'sbagliare.\n\n'
+                        'Se la ritiri, tutte le funzioni con l\'AI si spengono.'
                   /*
                    * 🚨 **Questo è lo stato che si è creato con la migrazione**:
                    * l'AI accesa da prima che la presa d'atto esistesse. ⛔ Non
@@ -553,24 +581,48 @@ class _PresaDAttoState extends ConsumerState<_PresaDAtto> {
 
             const SizedBox(height: Gap.md),
 
-            SizedBox(
-              width: double.infinity,
-              child: presa
-                  ? OutlinedButton.icon(
+            if (presa)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
                       // 💡 Rileggere non ricambia niente: la finestra si apre,
                       // si legge, e se si accetta di nuovo si aggiorna la data.
                       onPressed: _inCorso ? null : _leggi,
                       icon: const Icon(Icons.menu_book_outlined, size: 18),
                       label: const Text('Rileggi'),
-                    )
-                  : FilledButton.icon(
-                      onPressed: _inCorso ? null : _leggi,
-                      icon: const Icon(Icons.menu_book_outlined, size: 18),
-                      label: Text(
-                        widget.aiAccesa ? 'Leggi adesso' : 'Leggi e attiva l\'AI',
+                    ),
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    /*
+                     * ⚖️ **Ritirare costa un tocco, come concedere.** ⛔ Niente
+                     * conferma, niente «sei sicuro?»: un ostacolo alla revoca lo
+                     * vieta l'art. 7(3). 💡 La conseguenza è scritta sopra, che è
+                     * il posto giusto — prima del gesto, non dopo.
+                     */
+                    child: TextButton.icon(
+                      onPressed: _inCorso ? null : _ritira,
+                      icon: const Icon(Icons.block_outlined, size: 18),
+                      label: const Text('Ritira'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: tema.colorScheme.error,
                       ),
                     ),
-            ),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _inCorso ? null : _leggi,
+                  icon: const Icon(Icons.menu_book_outlined, size: 18),
+                  label: Text(
+                    widget.aiAccesa ? 'Leggi adesso' : 'Leggi e attiva l\'AI',
+                  ),
+                ),
+              ),
           ],
         ),
       ),

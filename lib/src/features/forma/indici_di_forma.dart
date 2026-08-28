@@ -115,7 +115,7 @@ abstract final class IndiciDiForma {
   ///
   /// ⚠️ Sotto questa soglia il valore si calcola lo stesso (D-2s/A) ma la nota
   /// dice quanto manca.
-  static const nottiPerLaCarica = 7;
+  static const nottiPerLaProntezza = 7;
 
   /// ⚠️ Soglia della letteratura per lo z-score: fra `−0.5` e `+0.5` si è nella
   /// norma personale.
@@ -184,7 +184,21 @@ abstract final class IndiciDiForma {
     );
   }
 
-  /// **La carica**: come stai oggi rispetto al tuo normale.
+  /// **La prontezza**: come stai oggi rispetto al tuo normale.
+  ///
+  /// ══ 🚨 SI CHIAMAVA «CARICA», E NON LO ERA — 3b-K, 28/08/2026 ═══════════
+  ///
+  /// 📌 Il committente: *«a ben vedere non analizza la carica vera e propria, ma
+  /// quanto sto bene o male rispetto al solito, che è 50»*.
+  ///
+  /// ⛔ Ed è giusto: questo numero è uno **z-score contro le proprie medie**
+  /// portato su una scala 0–100 con il **50 al centro**. Non dice quanta
+  /// capacità resta — dice se oggi si sta sopra o sotto il proprio normale.
+  ///
+  /// 💡 La Carica vera, quella che si scarica e si ricarica, vive in
+  /// [CaricaBatteria] ed è **uno stato persistente**: quella di oggi dipende da
+  /// quella di ieri. 🚨 Due cose diverse che si chiamavano uguale sono il modo
+  /// più rapido per confonderle nel codice prima ancora che a schermo.
   ///
   /// Ogni ingrediente entra come **z-score** contro la propria media, poi si
   /// fa la media pesata e si porta su una scala `0–100`.
@@ -204,7 +218,7 @@ abstract final class IndiciDiForma {
   /// presentazione, e va detto.
   ///
   /// [cibo] è facoltativo e pesa poco: vedi [pesoDelCibo].
-  static Indice carica({
+  static Indice prontezza({
     required double? zHrv,
     required double? zBattito,
     required double? zSonno,
@@ -225,7 +239,7 @@ abstract final class IndiciDiForma {
       return Indice(
         valore: null,
         giorniDiStoria: nottiDiStoria,
-        giorniPerEsserePieno: nottiPerLaCarica,
+        giorniPerEsserePieno: nottiPerLaProntezza,
       );
     }
 
@@ -242,7 +256,7 @@ abstract final class IndiciDiForma {
     return Indice(
       valore: (zAlCentro + z * zQuantoPesa).clamp(0, 100).toDouble(),
       giorniDiStoria: nottiDiStoria,
-      giorniPerEsserePieno: nottiPerLaCarica,
+      giorniPerEsserePieno: nottiPerLaProntezza,
     );
   }
 

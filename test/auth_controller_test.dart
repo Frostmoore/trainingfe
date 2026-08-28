@@ -382,12 +382,40 @@ void main() {
       },
     );
 
-    test('con il blocco spento si entra come prima', () async {
+    /*
+     * ══ 🔐 LA REGOLA È CAMBIATA IL 27/08/2026 ═════════════════════════════
+     *
+     * 📌 *«sblocco rapido con impronta va bene, ma se non è toggled allora mi
+     * deve chiedere proprio di accedere con le credenziali»*.
+     *
+     * ⛔ **Qui c'era scritto «con il blocco spento si entra come prima»**, e
+     * quella era la regola vecchia: il token restava valido sul telefono e
+     * apriva l'app senza chiedere niente. 🚨 Cioè una sessione senza nessuna
+     * porta — chi prendeva in mano il telefono sbloccato entrava nel diario,
+     * nelle foto e nella chat di qualcun altro.
+     *
+     * 💡 Adesso le porte sono due e sono entrambe vere: o lo sblocco rapido, o
+     * le credenziali. Il caso «nessuna delle due» non esiste più.
+     */
+    test('col blocco spento la sessione non sopravvive', () async {
       final auth = AuthController(client, token, null, blocco);
 
       await auth.restore();
 
-      expect(auth.state.status, AuthStatus.loggedIn);
+      expect(auth.state.status, AuthStatus.loggedOut);
+    });
+
+    test('e il token si butta, non si tiene da parte', () async {
+      final auth = AuthController(client, token, null, blocco);
+
+      await auth.restore();
+
+      /*
+       * 🚨 **Tenerlo sarebbe il difetto travestito da correzione**: una
+       * credenziale valida che resta sul telefono e che nessuna porta protegge
+       * è esattamente la cosa che questa regola esiste per togliere.
+       */
+      expect(token.salvato, isNull);
     });
 
     /// 🚨 **Niente impronta senza una sessione da proteggere** — 13/08/2026.
@@ -516,14 +544,19 @@ void main() {
       expect(await blocco.stato(), StatoDelBlocco.spento);
     });
 
-    test('spento davvero non blocca niente', () async {
+    test('spento davvero non manda alla schermata di blocco', () async {
       final auth = AuthController(client, token, null, blocco);
 
       await auth.restore();
 
-      // ⛔ La correzione non deve trasformare l'app in una che chiede
-      // l'impronta a chi non l'ha mai voluta.
+      /*
+       * ⛔ **La correzione non deve trasformare l'app in una che chiede
+       * l'impronta a chi non l'ha mai voluta.** Chi non ha il blocco va al
+       * login — che è una porta che sa aprire — non davanti a un lettore che
+       * non ha mai configurato.
+       */
       expect(auth.state.status, isNot(AuthStatus.locked));
+      expect(auth.state.status, AuthStatus.loggedOut);
     });
 
     test('anche l\'uscita normale spegne il blocco', () async {

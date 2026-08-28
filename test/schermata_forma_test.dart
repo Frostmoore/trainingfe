@@ -56,10 +56,10 @@ void main() {
       giorniDiStoria: storiaCarico,
       giorniPerEsserePieno: IndiciDiForma.giorniCronici,
     ),
-    carica: Indice(
+    prontezza: Indice(
       valore: carica,
       giorniDiStoria: notti,
-      giorniPerEsserePieno: IndiciDiForma.nottiPerLaCarica,
+      giorniPerEsserePieno: IndiciDiForma.nottiPerLaProntezza,
     ),
     acuto: acuto,
     cronico: cronico,

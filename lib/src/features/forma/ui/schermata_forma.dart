@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../carica_batteria.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
 import 'scheda_forma.dart';
@@ -450,6 +451,76 @@ class _CardFormula extends StatelessWidget {
             color: tema.colorScheme.onSurfaceVariant,
           ),
         ),
+
+        /*
+         * ══ 🔋 E LA CARICA, CHE È LA PIÙ LUNGA DELLE TRE ═════════════════
+         *
+         * 📌 Richiesta il 28/08: *«nella pagina con le formule, ci va messa
+         * anche quella»*.
+         *
+         * 🚨 **Va scritta tutta**, come le altre due: è la formula con più
+         * costanti scelte da noi, cioè quella su cui chi legge ha più diritto
+         * di sapere da dove escono i numeri. ⛔ Scriverne metà «per non
+         * spaventare» sarebbe il contrario del motivo per cui questa pagina
+         * esiste.
+         */
+        const Divider(height: Gap.lg),
+
+        const _Formula(
+          'scarica = ${CaricaBatteria.scaricaDellAllenamento} × '
+          '(kcal allenamento ÷ riferimento)\n'
+          '        + ${CaricaBatteria.scaricaDellAttivita} × '
+          '(altre kcal ÷ riferimento)\n\n'
+          'sera   = mattina − scarica\n'
+          'domani = sera + (100 − sera) × recupero',
+        ),
+        const _Testo(
+          'La seconda riga è tutto il senso della Carica: la notte recupera una '
+          '**percentuale di quello che manca**, non un tot di punti. Così la '
+          'fatica che non recuperi resta, e si somma a quella del giorno dopo.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        const _Formula(
+          'recupero = ${CaricaBatteria.recuperoMinimo} + '
+          '${CaricaBatteria.recuperoDalSonno} × (sonno ÷ obiettivo)\n'
+          '         + ${CaricaBatteria.recuperoDallaFisiologia} × fisiologia',
+        ),
+        _Testo(
+          'Con un sonno nella norma il recupero è del '
+          '${((CaricaBatteria.recuperoMinimo + CaricaBatteria.recuperoDalSonno) * 100).round()}%. '
+          'La «fisiologia» è la media fra lo scarto della variabilità cardiaca e '
+          'quello del battito a riposo (col segno invertito), e conta solo dopo '
+          '${CaricaBatteria.giorniPerLaFisiologia} giorni. '
+          'Senza il sonno il recupero vale '
+          '${(CaricaBatteria.recuperoSenzaSonno * 100).round()}%, e la stima è '
+          'meno affidabile.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        const _Formula(
+          'riferimento allenamento = ${CaricaBatteria.quotaAllenamento} × TDEE\n'
+          'riferimento attività    = ${CaricaBatteria.quotaAttivita} × TDEE',
+        ),
+        const _Testo(
+          'Sono i valori di partenza. Dopo '
+          '${CaricaBatteria.giorniPerIRiferimenti} giorni diventano i **tuoi**: '
+          'la mediana delle calorie dei tuoi allenamenti e delle tue giornate. '
+          'Il passaggio è graduale, non da un giorno all\'altro.',
+        ),
+
+        const SizedBox(height: Gap.sm),
+        Text(
+          'La scarica di una giornata non supera mai '
+          '${CaricaBatteria.scaricaMassimaAlGiorno.round()} punti: serve a '
+          'impedire che un errore dell\'orologio azzeri una batteria che si '
+          'trascina da giorni.',
+          style: tema.textTheme.bodySmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
@@ -519,9 +590,50 @@ class _CardComeFunziona extends StatelessWidget {
 
         _Titoletto('Restano sul tuo telefono'),
         _Testo(
-          'Il calcolo lo fa il telefono, i due numeri non li mandiamo a nessuno '
+          'Il calcolo lo fa il telefono, i numeri non li mandiamo a nessuno '
           'e non finiscono nemmeno nel consiglio del giorno. Non li salviamo '
           'da nessuna parte: si rifanno ogni volta che apri questa pagina.',
+        ),
+
+        /*
+         * ══ 🔋 LA CARICA HA UNA SUA SEZIONE ══════════════════════════════
+         *
+         * 📌 *«va fatto anche il come funziona il calcolo anche per quello»*.
+         *
+         * 🚨 **E dice più delle altre che è un modello**, perché lo è di più:
+         * carico e prontezza escono da dati misurati, la Carica esce da una
+         * catena di parametri scelti da noi.
+         */
+        _Titoletto('La Carica è una batteria, e si trascina'),
+        _Testo(
+          'Carico e prontezza si rifanno ogni giorno da capo. La Carica no: '
+          'parte da quella di ieri, cala con quello che fai e ne recupera una '
+          'parte dormendo. Se una notte non recuperi tutto, quello che manca '
+          'te lo porti dietro — che è il motivo per cui esiste.',
+        ),
+
+        _Titoletto('I numeri di partenza li abbiamo scelti noi'),
+        _Testo(
+          'Un allenamento «pieno» vale 25 punti, una giornata attiva 10, una '
+          'notte normale recupera il 70% di quello che manca. Non sono costanti '
+          'fisiologiche: sono valori scelti perché il calcolo funzioni fin dal '
+          'primo giorno, e si affinano man mano che ci sono i tuoi dati.',
+        ),
+
+        _Titoletto('Le calorie del wearable non sono una misura precisa'),
+        _Testo(
+          'Sono utili come segnale relativo dentro la stessa persona — se oggi '
+          'ne segna il doppio di ieri, probabilmente hai fatto il doppio — ma il '
+          'numero assoluto è una stima. Per questo la Carica confronta te con te '
+          'stesso e mai con qualcun altro.',
+        ),
+
+        _Titoletto('Quello che manca non si inventa'),
+        _Testo(
+          'Se un giorno l\'orologio non manda le calorie, la Carica non scende: '
+          'non sappiamo cosa hai fatto, e dirti che sei stanco sarebbe '
+          'inventarlo. Se manca il sonno, il recupero prende un valore di mezzo '
+          'e te lo diciamo. Quello che manca lo trovi scritto sotto il numero.',
         ),
       ],
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/forma/forma_controller.dart';
+import 'package:training_companion/src/features/forma/carica_batteria.dart';
 import 'package:training_companion/src/features/forma/indici_di_forma.dart';
 import 'package:training_companion/src/features/forma/ui/schermata_forma.dart';
 
@@ -216,6 +217,45 @@ void main() {
 
     expect(find.text('La formula'), findsOneWidget);
     expect(find.text('Come funziona il calcolo'), findsOneWidget);
+  });
+
+  testWidgets('e anche quella della Carica', (tester) async {
+    await apri(tester, forma());
+
+    /*
+     * 🚨 **Stessa regola della formula sopra**, e qui vale di più: la Carica ha
+     * più costanti scelte da noi di tutti gli altri indici messi insieme. ⛔ Una
+     * pagina che spiega una formula diversa da quella che gira non è una
+     * spiegazione incompleta: è una spiegazione **falsa**, e su un numero che
+     * parla di fatica è peggio che non averla.
+     */
+    expect(
+      find.textContaining(
+        'scarica = ${CaricaBatteria.scaricaDellAllenamento} ×',
+      ),
+      findsOneWidget,
+    );
+
+    expect(
+      find.textContaining(
+        'recupero = ${CaricaBatteria.recuperoMinimo} + '
+        '${CaricaBatteria.recuperoDalSonno} ×',
+      ),
+      findsOneWidget,
+    );
+
+    expect(
+      find.textContaining(
+        'riferimento allenamento = ${CaricaBatteria.quotaAllenamento} × TDEE',
+      ),
+      findsOneWidget,
+    );
+
+    // 💡 E la riga che dice **perché** la Carica non è come gli altri due.
+    expect(
+      find.textContaining('La Carica è una batteria, e si trascina'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('la formula scritta è quella che il calcolo usa', (tester) async {

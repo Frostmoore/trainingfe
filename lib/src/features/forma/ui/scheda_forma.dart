@@ -267,10 +267,20 @@ class _SezioneProntezza extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Prontezza', style: tema.textTheme.labelMedium),
+
+              /*
+               * 💡 **La spiegazione sta qui e non dentro il quadrante.** ⛔ Là
+               * sotto restano una trentina di pixel, e una riga da nove punti
+               * è un'etichetta che nessuno legge — riferito il 28/08.
+               *
+               * ⚠️ E dice **50 e non «il centro»**: chi guarda ha in mano un
+               * numero, non una posizione.
+               */
               Text(
                 v == null
                     ? 'non calcolabile'
-                    : 'come stai rispetto al tuo solito',
+                    : '50 è il tuo normale: sopra stai meglio del solito, '
+                          'sotto peggio',
                 style: tema.textTheme.bodySmall,
               ),
 
@@ -359,6 +369,35 @@ class _SezioneCarica extends ConsumerWidget {
                   Text(
                     'quanto ti resta per allenarti',
                     style: tema.textTheme.bodySmall,
+                  ),
+
+                  const SizedBox(height: Gap.xs),
+
+                  /*
+                   * ══ ⚠️ L'AVVERTENZA, E QUI PESA PIÙ CHE ALTROVE ══════════
+                   *
+                   * 📌 Richiesta il 28/08: *«carica mi piace, ma ci va una
+                   * frase per capire che non è una stima affidabile»*.
+                   *
+                   * 🚨 **Questo numero è il più inventato dei tre.** Il carico
+                   * è un rapporto fra due medie di dati veri; la prontezza è
+                   * uno scarto dalle proprie medie. La Carica invece esce da
+                   * una **catena di parametri scelti da noi** — 25, 10, 0.55,
+                   * 0.08 — che la specifica stessa chiama *«parametri di
+                   * bootstrap progettuali, non costanti fisiologiche
+                   * universali»*.
+                   *
+                   * ⛔ E si trascina: un errore di oggi resta nel numero di
+                   * domani. Una batteria che sembra una misura, e non lo è.
+                   */
+                  Text(
+                    'È un modello, non una misura: i valori di partenza li '
+                    'abbiamo scelti noi e si affinano coi tuoi dati. '
+                    'Guardane l\'andamento nei giorni, non il numero preciso.',
+                    style: tema.textTheme.labelSmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                      height: 1.3,
+                    ),
                   ),
 
                   const SizedBox(height: Gap.xs),

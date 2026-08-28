@@ -31,9 +31,55 @@ class TachimetroProntezza extends StatelessWidget {
 
   final double lato;
 
+  /// Il verde di «sopra il tuo solito».
+  ///
+  /// ⚠️ **Non viene dal tema**: `primary` è il colore della palestra, e su una
+  /// palestra rossa il lato «bene» sarebbe rosso. 🚨 Qui il colore *è*
+  /// l'informazione, quindi non può dipendere dal marchio.
+  static const verde = Color(0xFF2E9E5B);
+
+  static const rosso = Color(0xFFC0392B);
+
+  /// A che colore corrisponde un valore.
+  ///
+  /// ══ 🚦 IL SEMAFORO QUI SI FA, E ALTROVE NO ══════════════════════════════
+  ///
+  /// 📌 Richiesto il 28/08/2026: *«lo vorrei colorato. Neutro al centro, verde a
+  /// dx e rosso a sx»*.
+  ///
+  /// ⚠️ **`BatteriaCarica` invece resta senza semaforo**, ed è una differenza
+  /// voluta: là il rosso starebbe su una carica **bassa**, e suggerirebbe un
+  /// allarme — che è esattamente ciò che l'avvertenza dice di non fare. 💡 Qui
+  /// il rosso sta su «sotto il tuo solito», che è uno scostamento da sé stessi,
+  /// non un livello.
+  ///
+  /// 💡 **Il colore è ridondante**, e va tenuto tale: la posizione dell'ago e il
+  /// numero dicono già tutto. ⛔ Rosso e verde sono la coppia peggiore per chi
+  /// non li distingue, e un'informazione affidata **solo** a quella sarebbe
+  /// persa per una persona su dodici.
+  static Color coloreDi(double valore, Color neutro) {
+    final scarto = (valore - 50) / 50;
+
+    if (scarto.abs() < 0.1) return neutro;
+
+    return Color.lerp(
+          neutro,
+          scarto > 0 ? verde : rosso,
+
+          // 💡 La saturazione cresce con la distanza dal centro: un 55 è appena
+          // tinto, un 90 è pieno.
+          (scarto.abs() - 0.1) / 0.9,
+        ) ??
+        neutro;
+  }
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+
+    final colore = valore == null
+        ? tema.colorScheme.outline
+        : coloreDi(valore!, tema.colorScheme.onSurfaceVariant);
 
     return SizedBox(
       width: lato,
@@ -44,41 +90,29 @@ class TachimetroProntezza extends StatelessWidget {
       child: CustomPaint(
         painter: _Quadrante(
           valore: valore,
-          arco: tema.colorScheme.primary.withValues(alpha: 0.18),
-          ago: valore == null
-              ? tema.colorScheme.outline
-              : tema.colorScheme.primary,
+          neutro: tema.colorScheme.onSurfaceVariant,
+          ago: colore,
           tacche: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
+        /*
+         * ⛔ **Dentro il quadrante ci sta solo il numero** — corretto il
+         * 28/08/2026: *«la scritta "50 è il tuo normale" sta dentro il
+         * tachimetro e non si legge bene»*.
+         *
+         * ⚠️ Ed era vero: sotto l'arco restano una trentina di pixel, e una
+         * riga da nove punti lì dentro è un'etichetta che nessuno legge. 💡 La
+         * spiegazione è passata **accanto** al quadrante, dove c'è la larghezza
+         * per scriverla in chiaro.
+         */
         child: Align(
           alignment: Alignment.bottomCenter,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                valore == null ? '—' : valore!.round().toString(),
-                style: tema.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: valore == null
-                      ? tema.colorScheme.outline
-                      : tema.colorScheme.primary,
-                  height: 1,
-                ),
-              ),
-
-              /*
-               * 💡 **«50 = normale» sta scritto sotto il numero**, non solo
-               * disegnato sul quadrante: il 50 in cima è un aiuto per chi
-               * guarda la forma, questa riga è per chi legge il numero e basta.
-               */
-              Text(
-                '50 è il tuo normale',
-                style: tema.textTheme.labelSmall?.copyWith(
-                  color: tema.colorScheme.onSurfaceVariant,
-                  fontSize: 9,
-                ),
-              ),
-            ],
+          child: Text(
+            valore == null ? '—' : valore!.round().toString(),
+            style: tema.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colore,
+              height: 1,
+            ),
           ),
         ),
       ),
@@ -89,13 +123,13 @@ class TachimetroProntezza extends StatelessWidget {
 class _Quadrante extends CustomPainter {
   const _Quadrante({
     required this.valore,
-    required this.arco,
+    required this.neutro,
     required this.ago,
     required this.tacche,
   });
 
   final double? valore;
-  final Color arco;
+  final Color neutro;
   final Color ago;
   final Color tacche;
 
@@ -114,13 +148,34 @@ class _Quadrante extends CustomPainter {
     final centro = Offset(size.width / 2, size.height - spessore * 0.4);
     final rettangolo = Rect.fromCircle(center: centro, radius: raggio);
 
+    /*
+     * 🌈 **L'arco è sfumato**, non a settori: rosso a sinistra, neutro in cima,
+     * verde a destra.
+     *
+     * ⛔ Tre settori netti disegnerebbero **tre categorie** — «male, normale,
+     * bene» — con due confini che non esistono: questo indice è continuo, e un
+     * 49 non è in una fascia diversa da un 51. 💡 La sfumatura dice «più a
+     * destra, meglio» senza inventare soglie.
+     */
     canvas.drawArc(
       rettangolo,
       _inizio,
       _ampiezza,
       false,
       Paint()
-        ..color = arco
+        ..shader = const SweepGradient(
+          // ⚠️ `startAngle`/`endAngle` seguono il mezzo giro del quadrante: un
+          // gradiente sul giro intero metterebbe il verde in basso a sinistra.
+          startAngle: _inizio,
+          endAngle: _inizio + _ampiezza,
+          colors: [
+            TachimetroProntezza.rosso,
+            Color(0x00000000),
+            TachimetroProntezza.verde,
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ).createShader(rettangolo)
+        ..color = neutro
         ..style = PaintingStyle.stroke
         ..strokeWidth = spessore
         ..strokeCap = StrokeCap.round,
@@ -182,5 +237,7 @@ class _Quadrante extends CustomPainter {
 
   @override
   bool shouldRepaint(_Quadrante vecchio) =>
-      vecchio.valore != valore || vecchio.ago != ago;
+      vecchio.valore != valore ||
+      vecchio.ago != ago ||
+      vecchio.neutro != neutro;
 }

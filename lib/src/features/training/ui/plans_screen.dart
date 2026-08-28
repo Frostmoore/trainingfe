@@ -61,6 +61,25 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
          * ⛔ Niente `BottoneProfilo` fra le azioni — 3b-O.1a.6: sta nella riga
          * d'identita', su ogni pagina.
          */
+        azioni: [
+          /*
+           * 📚 **La libreria esercizi** — 3b-N, 28/08/2026.
+           *
+           * 📌 *«Ci si deve accedere dalla pagina delle schede»*.
+           *
+           * ⚠️ **Nella barra e non dentro l'elenco**: dentro scorrerebbe via
+           * insieme alle schede, e una porta che sparisce quando si scorre è
+           * una porta che non si trova la seconda volta.
+           *
+           * 💡 Resta visibile anche su «Storico» e «Foto», ed è voluto: gli
+           * esercizi sono il vocabolario di tutte e tre le viste, non di una.
+           */
+          IconButton(
+            onPressed: () => context.push(AppRoutes.esercizi),
+            icon: const Icon(Icons.fitness_center_rounded),
+            tooltip: 'Esercizi',
+          ),
+        ],
         // Il selettore sta **nella barra**, sotto il titolo: è la posizione in
         // cui si cerca un cambio di vista, e non ruba una riga al contenuto.
         /*

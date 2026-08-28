@@ -53,6 +53,52 @@ void main() {
     });
   });
 
+  group('da dove viene l\'esercizio — 3b-N', () {
+    test('si legge dal server', () {
+      final j = riga()..['origine'] = 'mia';
+
+      expect(EsercizioDelCatalogo.fromJson(j).origine, OrigineEsercizio.mia);
+    });
+
+    test('un valore che non conosciamo ricade su «piattaforma»', () {
+      final j = riga()..['origine'] = 'qualcosa-di-nuovo';
+
+      expect(
+        EsercizioDelCatalogo.fromJson(j).origine,
+        OrigineEsercizio.piattaforma,
+        reason:
+            'Il caso innocuo è mostrarlo fra quelli di tutti, non dire «è tuo» '
+            'a qualcosa che non lo è.',
+      );
+    });
+
+    test('un server vecchio, che il campo non lo manda, non rompe niente', () {
+      final senza = riga()..remove('origine');
+
+      expect(
+        EsercizioDelCatalogo.fromJson(senza).origine,
+        OrigineEsercizio.piattaforma,
+      );
+    });
+
+    test('sopravvive alla copia locale', () {
+      final j = riga()..['origine'] = 'condivisa';
+      final partenza = EsercizioDelCatalogo.fromJson(j);
+
+      final riletto = EsercizioDelCatalogo.fromJson(
+        (jsonDecode(jsonEncode(partenza.toJson())) as Map).cast(),
+      );
+
+      expect(
+        riletto.origine,
+        OrigineEsercizio.condivisa,
+        reason:
+            'Se `toJson` lo dimentica, chi è offline vede tutti i propri '
+            'esercizi finire fra quelli della piattaforma.',
+      );
+    });
+  });
+
   group('il credito sopravvive alla copia locale', () {
     test('un giro completo di andata e ritorno non lo perde', () {
       final partenza = EsercizioDelCatalogo.fromJson(riga());

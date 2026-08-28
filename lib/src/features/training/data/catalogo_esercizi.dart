@@ -28,6 +28,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart';
 import 'gruppo_muscolare.dart';
 
+/// Da dove viene un esercizio — 3b-N, 28/08/2026.
+///
+/// ══ ⚠️ TRE CASI, NON DUE ══════════════════════════════════════════════════
+///
+/// ⛔ `is_global` diceva «della piattaforma o no», e da 3b-M quel «no»
+/// comprende due cose molto diverse: quelli che ho scritto **io** e quelli che
+/// vedo perché me li passa qualcuno.
+///
+/// 💡 «Condivisa» e non «del trainer»: può arrivare anche da una palestra da
+/// cui si è usciti, e chiamarla «del trainer» sarebbe una bugia in un caso su
+/// due.
+enum OrigineEsercizio {
+  piattaforma(
+    'Della piattaforma',
+    'Fa parte della libreria di base: ce l\'hanno tutti.',
+  ),
+  mia('I miei', 'L\'hai aggiunto tu. Lo vedi solo tu e chi alleni.'),
+  condivisa(
+    'Condivisi con me',
+    'Arriva da chi ti allena, o da una palestra in cui sei stato. '
+        'Resta tuo da leggere anche se quel rapporto finisce.',
+  );
+
+  const OrigineEsercizio(this.titolo, this.spiegazione);
+
+  /// Il titolo del gruppo nell'elenco.
+  final String titolo;
+
+  /// La riga sotto il nome, nel dettaglio.
+  ///
+  /// 💡 Serve a rispondere alla domanda che questa pagina fa nascere: «e questo
+  /// da dove salta fuori?». ⛔ Un'etichetta sola — «condiviso» — la lascerebbe
+  /// aperta, e una libreria di cui non si capisce la provenienza è una libreria
+  /// di cui non ci si fida.
+  final String spiegazione;
+
+  /// ⚠️ Un valore che non conosciamo ricade su **piattaforma**, che è il caso
+  /// innocuo: la pagina lo mostra fra quelli di tutti invece di dire «è tuo» a
+  /// qualcosa che non lo è.
+  static OrigineEsercizio da(Object? valore) => switch (valore?.toString()) {
+    'mia' => OrigineEsercizio.mia,
+    'condivisa' => OrigineEsercizio.condivisa,
+    _ => OrigineEsercizio.piattaforma,
+  };
+}
+
 /// Un esercizio come lo conosce il server.
 @immutable
 class EsercizioDelCatalogo {
@@ -39,6 +85,7 @@ class EsercizioDelCatalogo {
     this.met,
     this.immagine,
     this.credito,
+    this.origine = OrigineEsercizio.piattaforma,
   });
 
   factory EsercizioDelCatalogo.fromJson(Map<String, dynamic> j) =>
@@ -53,6 +100,7 @@ class EsercizioDelCatalogo {
         met: (j['met'] as num?)?.toDouble(),
         immagine: j['image_url']?.toString(),
         credito: j['image_credit']?.toString(),
+        origine: OrigineEsercizio.da(j['origine']),
       );
 
   final int id;
@@ -61,6 +109,12 @@ class EsercizioDelCatalogo {
   final List<GruppoMuscolare> secondari;
   final double? met;
   final String? immagine;
+
+  /// Da dove viene questo esercizio — 3b-N.
+  ///
+  /// 💡 Lo decide il **server**, che è l'unico a sapere di che tenant è la
+  /// riga: l'app non ha il `tenant_id` e non deve averlo.
+  final OrigineEsercizio origine;
 
   /// Chi ha fatto il disegno, quando l'attribuzione è dovuta — 3b-L.
   ///
@@ -114,6 +168,11 @@ class EsercizioDelCatalogo {
     'met': met,
     'image_url': immagine,
     'image_credit': credito,
+
+    // ⚠️ **I nomi dell'enum sono quelli che manda il server**, apposta: così
+    // la copia locale si rilegge con lo stesso `da()` della rete, e non c'è
+    // una seconda traduzione che può divergere.
+    'origine': origine.name,
   };
 }
 

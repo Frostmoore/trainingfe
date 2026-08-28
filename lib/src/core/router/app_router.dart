@@ -41,6 +41,7 @@ import '../../features/training/ui/mie_schede_screen.dart';
 import '../../features/training/ui/plan_editor_screen.dart';
 import '../../features/training/ui/plans_screen.dart';
 import '../../features/training/ui/player_screen.dart';
+import '../../features/training/ui/schermata_esercizi.dart';
 import '../../features/training/ui/schermata_settimana.dart';
 import '../../features/training/ui/session_summary_screen.dart';
 import '../../features/training/ui/widgets/scelta_tipo_scheda.dart';
@@ -182,6 +183,15 @@ class AppRoutes {
   static const acquisti = '/acquisti';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
+
+  /// La libreria esercizi — 3b-N.
+  ///
+  /// ⚠️ **Sopra la shell, non una quarta pasticca** accanto a Storico, Schede e
+  /// Foto: quelle tre sono tre viste della **stessa** cosa — cosa ho fatto e
+  /// cosa devo fare, per settimana. 🚨 Gli esercizi non sono una vista di
+  /// quello: sono il vocabolario con cui è scritto. Una pasticca in più
+  /// avrebbe fatto sembrare gli esercizi un quarto elenco di allenamenti.
+  static const esercizi = '/allenamento/esercizi';
 
   /// 📅 La settimana programmata — 3b-I.B.
   static const settimana = '/allenamento/settimana';
@@ -539,6 +549,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settimana,
         builder: (_, _) => const SchermataSettimana(),
+      ),
+      GoRoute(
+        path: AppRoutes.esercizi,
+        builder: (_, _) => const SchermataEsercizi(),
       ),
       GoRoute(
         path: AppRoutes.planNew,

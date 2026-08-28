@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
@@ -86,6 +88,153 @@ void main() {
     await serie(seduta: 1, esercizio: 900);
 
     expect(await archivio.applicaLeRiconciliazioni({}), 0);
+  });
+
+  // ═════════════════════════════════════════════════════════════════════
+  //  Le schede sul telefono — è qui che la fusione si vede davvero
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// Una scheda salvata sul telefono, con dentro quell'esercizio.
+  Future<int> scheda(Map<String, dynamic> contenuto) => archivio
+      .into(archivio.schedeSulTelefono)
+      .insert(
+        SchedeSulTelefonoCompanion.insert(
+          nome: 'La mia scheda',
+          scheda: jsonEncode(contenuto),
+          aggiornataIl: DateTime(2026, 8, 28),
+          origine: 'server',
+        ),
+      );
+
+  Future<Map<String, dynamic>> rileggi(int id) async {
+    final riga = await (archivio.select(
+      archivio.schedeSulTelefono,
+    )..where((t) => t.id.equals(id))).getSingle();
+
+    return jsonDecode(riga.scheda) as Map<String, dynamic>;
+  }
+
+  /// 🚨 **Il difetto che si è visto solo guardando il telefono.**
+  ///
+  /// ⛔ Le schede sono scese dal server **una volta sola** (3b-B.17): la copia
+  /// che conta è quella locale. Ripuntare `plan_exercises` sul server non
+  /// cambia niente di quello che si vede.
+  test('la scheda sul telefono passa al nuovo esercizio', () async {
+    final id = await scheda({
+      'name': 'Giorno 1',
+      'days': [
+        {
+          'exercises': [
+            {'id': 55, 'exercise_id': 900, 'name': 'Panca Piana (Bilanciere)'},
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni(
+      {900: 17},
+      nomi: {17: 'Panca piana'},
+    );
+
+    final dentro =
+        ((await rileggi(id))['days'] as List).first['exercises'].first
+            as Map<String, dynamic>;
+
+    expect(dentro['exercise_id'], 17);
+    expect(dentro['name'], 'Panca piana');
+    expect(
+      dentro['id'],
+      55,
+      reason:
+          '`id` è la riga della scheda, non l\'esercizio: due numeri che si '
+          'somigliano, e scambiarli non dà nessun errore.',
+    );
+  });
+
+  /// ⛔ Gli esercizi si annidano anche dentro `alternatives`: una passeggiata
+  /// scritta sulla forma di oggi le mancherebbe **senza dirlo**.
+  test('anche le alternative vengono riscritte', () async {
+    final id = await scheda({
+      'days': [
+        {
+          'exercises': [
+            {
+              'exercise_id': 901,
+              'name': 'Vecchio',
+              'alternatives': [
+                {'exercise_id': 900, 'name': 'Panca Piana (Bilanciere)'},
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni(
+      {900: 17},
+      nomi: {17: 'Panca piana'},
+    );
+
+    final alt =
+        (((await rileggi(id))['days'] as List).first['exercises'].first
+                as Map)['alternatives']
+            .first;
+
+    expect(alt['exercise_id'], 17);
+    expect(alt['name'], 'Panca piana');
+  });
+
+  /// ⚠️ Senza un nome per la destinazione si tiene quello che c'è: meglio
+  /// un'etichetta vecchia che una vuota.
+  test('senza il nome nuovo si cambia solo l\'id', () async {
+    final id = await scheda({
+      'days': [
+        {
+          'exercises': [
+            {'exercise_id': 900, 'name': 'Panca Piana (Bilanciere)'},
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni({900: 17});
+
+    final dentro =
+        ((await rileggi(id))['days'] as List).first['exercises'].first as Map;
+
+    expect(dentro['exercise_id'], 17);
+    expect(dentro['name'], 'Panca Piana (Bilanciere)');
+  });
+
+  test('una scheda illeggibile non ferma le altre', () async {
+    await archivio
+        .into(archivio.schedeSulTelefono)
+        .insert(
+          SchedeSulTelefonoCompanion.insert(
+            nome: 'Rotta',
+            scheda: 'questo non è json',
+            aggiornataIl: DateTime(2026, 8, 28),
+            origine: 'server',
+          ),
+        );
+
+    final buona = await scheda({
+      'days': [
+        {
+          'exercises': [
+            {'exercise_id': 900, 'name': 'Vecchio'},
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni({900: 17}, nomi: {17: 'Nuovo'});
+
+    final dentro =
+        ((await rileggi(buona))['days'] as List).first['exercises'].first
+            as Map;
+
+    expect(dentro['exercise_id'], 17);
   });
 
   /// 🚨 `SerieDelleSedute` è unica su `{seduta, esercizio, numero}`.

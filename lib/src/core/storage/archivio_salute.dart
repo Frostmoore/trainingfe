@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -1078,10 +1079,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// farebbe fallire **tutti** gli spostamenti, compresi quelli giusti.
   ///
   /// @return quante righe sono state spostate
-  Future<int> applicaLeRiconciliazioni(Map<int, int> rinvii) async {
+  Future<int> applicaLeRiconciliazioni(
+    Map<int, int> rinvii, {
+    Map<int, String> nomi = const {},
+  }) async {
     if (rinvii.isEmpty) return 0;
 
     var spostate = 0;
+
+    spostate += await _riscriviLeSchede(rinvii, nomi);
 
     for (final rinvio in rinvii.entries) {
       // ⛔ Un rinvio su sé stesso girerebbe a vuoto a ogni avvio.
@@ -1102,10 +1108,107 @@ class ArchivioSalute extends _$ArchivioSalute {
     }
 
     if (spostate > 0) {
-      debugPrint('riconciliazioni: spostate $spostate serie');
+      debugPrint('riconciliazioni: toccate $spostate righe');
     }
 
     return spostate;
+  }
+
+  /// Riscrive gli id dentro le **schede salvate sul telefono** — 3b-Q.
+  ///
+  /// ══ 🚨 SENZA QUESTO, LA FUSIONE NON SI VEDE PROPRIO ═══════════════════
+  ///
+  /// ⛔ Le schede sono scese dal server **una volta sola** (3b-B.17): da
+  /// allora *«di schede il server non ne sa più niente»*, e la copia che conta
+  /// è questa. 🚨 Ripuntare `plan_exercises` sul server non cambia **niente**
+  /// di quello che si vede: quella tabella nessuno la rilegge più.
+  ///
+  /// ⚠️ È il difetto che si è visto solo **guardando il telefono** dopo la
+  /// fusione: sul server tutto a posto, sullo schermo i nomi vecchi.
+  ///
+  /// ── ⚠️ Perché riscrive anche il nome ──────────────────────────────────
+  ///
+  /// 📌 *«vorrei che gli esercizi che ho io nelle schede siano quelli che
+  /// abbiamo nel database»*. Il nome scritto nella scheda **vince** su quello
+  /// del catalogo (3b-D.17): lasciandolo, si vedrebbe l'etichetta vecchia
+  /// sopra il disegno nuovo. 💡 Il nome si cambia **solo** se il catalogo ne
+  /// conosce uno per la destinazione: senza, si tiene quello che c'è.
+  ///
+  /// ── 💡 Perché la passeggiata è ricorsiva ──────────────────────────────
+  ///
+  /// L'id sta in `exercise_id`, ma nelle schede vecchie può stare in
+  /// `exercise.id`, e gli esercizi si annidano dentro `days` e dentro
+  /// `alternatives`. ⛔ Una passeggiata scritta sulla forma di oggi
+  /// mancherebbe le alternative senza dirlo.
+  Future<int> _riscriviLeSchede(
+    Map<int, int> rinvii,
+    Map<int, String> nomi,
+  ) async {
+    var toccate = 0;
+
+    for (final riga in await select(schedeSulTelefono).get()) {
+      Object? decodificata;
+
+      try {
+        decodificata = jsonDecode(riga.scheda);
+      } on Object catch (e) {
+        debugPrint('scheda ${riga.id} illeggibile, la lascio com\'è — $e');
+
+        continue;
+      }
+
+      var cambiata = false;
+
+      void passeggia(Object? nodo) {
+        if (nodo is List) {
+          nodo.forEach(passeggia);
+
+          return;
+        }
+
+        if (nodo is! Map) return;
+
+        for (final chiave in ['exercise_id', 'id']) {
+          // ⚠️ `id` si riscrive **solo dentro `exercise`**: al primo livello
+          // è la riga della scheda, non l'esercizio. Due numeri che si
+          // somigliano, e scambiarli non dà nessun errore.
+          if (chiave == 'id' && !nodo.containsKey('name')) continue;
+
+          final vecchio = nodo[chiave];
+
+          if (vecchio is! int || !rinvii.containsKey(vecchio)) continue;
+
+          final nuovo = rinvii[vecchio]!;
+          nodo[chiave] = nuovo;
+          cambiata = true;
+
+          if (nomi[nuovo] case final nome? when nodo.containsKey('name')) {
+            nodo['name'] = nome;
+          }
+        }
+
+        nodo.values.forEach(passeggia);
+      }
+
+      // ⛔ `exercise.id` porta `name` accanto, quindi la regola qui sopra lo
+      // lascerebbe passare: si scende solo dentro `exercise`.
+      passeggia(decodificata);
+
+      if (!cambiata) continue;
+
+      await (update(schedeSulTelefono)..where((t) => t.id.equals(riga.id)))
+          .write(
+            SchedeSulTelefonoCompanion(scheda: Value(jsonEncode(decodificata))),
+          );
+
+      toccate++;
+    }
+
+    if (toccate > 0) {
+      debugPrint('riconciliazioni: riscritte $toccate schede');
+    }
+
+    return toccate;
   }
 
   /// Torna, per ogni `esercizioId`, i punti **dal più vecchio al più recente**.

@@ -27,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../health/health_controller.dart';
+import '../training_controller.dart' show revisioneSchedeProvider;
 import 'gruppo_muscolare.dart';
 
 /// Da dove viene un esercizio — 3b-N, 28/08/2026.
@@ -298,8 +299,33 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
           r['da'] as int: r['a'] as int,
     };
 
+    final righe = dati
+        .map((e) => EsercizioDelCatalogo.fromJson((e as Map).cast()))
+        .toList(growable: false);
+
     if (rinvii.isNotEmpty) {
-      await ref.read(archivioSaluteProvider).applicaLeRiconciliazioni(rinvii);
+      /*
+       * 🚨 **Servono anche i nomi.** Il rinvio dice solo «questo id diventa
+       * quello»: senza il nome, la scheda sul telefono terrebbe l'etichetta
+       * vecchia sopra il disegno nuovo — e il nome scritto nella scheda vince
+       * su quello del catalogo (3b-D.17).
+       */
+      final toccate = await ref
+          .read(archivioSaluteProvider)
+          .applicaLeRiconciliazioni(
+            rinvii,
+            nomi: {for (final e in righe) e.id: e.nome},
+          );
+
+      /*
+       * 💡 **Le schede si ridisegnano solo se qualcosa è cambiato davvero.**
+       * `schedeUniteProvider` legge il telefono e non si accorge da solo che
+       * l'abbiamo riscritto sotto: senza questo, la fusione si vedrebbe al
+       * riavvio dopo — cioè sembrerebbe non aver funzionato.
+       */
+      if (toccate > 0) {
+        ref.read(revisioneSchedeProvider.notifier).state++;
+      }
     }
 
     /*
@@ -316,10 +342,6 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
         'richiedibile — molto probabilmente ne mancano. Serve la paginazione.',
       );
     }
-
-    final righe = dati
-        .map((e) => EsercizioDelCatalogo.fromJson((e as Map).cast()))
-        .toList(growable: false);
 
     await cache.setString(
       _chiaveCache,

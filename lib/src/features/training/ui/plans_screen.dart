@@ -74,9 +74,20 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
            * 💡 Resta visibile anche su «Storico» e «Foto», ed è voluto: gli
            * esercizi sono il vocabolario di tutte e tre le viste, non di una.
            */
+          /*
+           * 🚨 **Un libro, non un manubrio** — visto sullo schermo il 28/08.
+           *
+           * ⛔ Con `fitness_center_rounded` questa schermata mostrava **tre
+           * manubri identici**: il marchio della palestra in alto a sinistra,
+           * questo in alto a destra, e «Allenamento» nella barra in basso.
+           * Stesso disegno, tre significati diversi.
+           *
+           * 💡 Un libro dice «elenco di cose», che è quello che c'è dietro. E
+           * non somiglia a nient'altro in questa pagina.
+           */
           IconButton(
             onPressed: () => context.push(AppRoutes.esercizi),
-            icon: const Icon(Icons.fitness_center_rounded),
+            icon: const Icon(Icons.menu_book_rounded),
             tooltip: 'Esercizi',
           ),
         ],

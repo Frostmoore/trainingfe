@@ -26,6 +26,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../health/health_controller.dart';
 import 'gruppo_muscolare.dart';
 
 /// Da dove viene un esercizio — 3b-N, 28/08/2026.
@@ -262,12 +263,44 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
   }
 
   try {
-    final dati = await ref
+    /*
+     * ══ 🚨 `unwrap: false`, E NON SI PUÒ FARE ALTRIMENTI — 3b-O ═══════════
+     *
+     * La risposta porta **due** cose: `data` (il catalogo) e
+     * `riconciliazioni` (gli esercizi fusi in altri). ⛔ Con lo srotolamento
+     * automatico arriverebbe solo la prima, e i rinvii sparirebbero senza un
+     * errore — cioè lo storico resterebbe attaccato a id che non esistono più
+     * nell'elenco.
+     *
+     * ⚠️ E non si rende «più intelligente» `_unwrap`: il suo docblock spiega
+     * per esteso perché una regola implicita che indovina è costata un
+     * pomeriggio di login rotto. Chi non vuole l'inviluppo lo dice.
+     */
+    final risposta = await ref
         .watch(apiClientProvider)
-        .get<List<dynamic>>(
+        .get<Map<String, dynamic>>(
           '/exercises',
           query: {'limit': '$_quantiNeChiediamo'},
+          unwrap: false,
         );
+
+    final dati = (risposta['data'] as List?) ?? const [];
+
+    /*
+     * 🔁 **I rinvii si applicano prima di costruire il catalogo.** Chi legge
+     * subito dopo — la progressione per esercizio, i primati — deve trovare
+     * lo storico già spostato, o mostrerebbe una scheda «mai fatta» per un
+     * istante e poi cambierebbe idea da sola.
+     */
+    final rinvii = <int, int>{
+      for (final r in (risposta['riconciliazioni'] as List?) ?? const [])
+        if (r is Map && r['da'] is int && r['a'] is int)
+          r['da'] as int: r['a'] as int,
+    };
+
+    if (rinvii.isNotEmpty) {
+      await ref.read(archivioSaluteProvider).applicaLeRiconciliazioni(rinvii);
+    }
 
     /*
      * ⚠️ **Un troncamento non deve poter passare in silenzio.** Se ne

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -1048,6 +1049,65 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// compromesso — e l'altra tabella nata dopo ([AnalisiDelleSchede]) il nome
   /// giusto ce l'ha.
   ///
+  /// Sposta le serie già registrate dall'esercizio vecchio al nuovo — 3b-O.
+  ///
+  /// ══ 🚨 È QUI CHE «SENZA PERDERE NULLA» DIVENTA VERO ═══════════════════
+  ///
+  /// 📌 *«vorrei che gli esercizi che ho io nelle schede siano quelli che
+  /// abbiamo nel database. Senza farmi perdere nulla, naturalmente»*.
+  ///
+  /// ⛔ Il server può far puntare le schede a un altro esercizio, ma **lo
+  /// storico degli allenamenti sta qui**, e usa l'id vecchio. Senza questa
+  /// riscrittura le serie resterebbero sul telefono e non le troverebbe più
+  /// nessuno: non cancellate — **orfane**, che è peggio, perché la
+  /// progressione ripartirebbe da zero senza dire perché.
+  ///
+  /// ── 💡 Perché è ripetibile ────────────────────────────────────────────
+  ///
+  /// Gira a ogni lettura del catalogo, e la seconda volta non trova più
+  /// niente da spostare. ⚠️ Un'esecuzione «una sola volta» avrebbe avuto
+  /// bisogno di ricordarsi di averla fatta — cioè di un flag che, se si
+  /// perde, perde con sé lo storico.
+  ///
+  /// ── ⚠️ Perché ogni rinvio ha il suo `try` ─────────────────────────────
+  ///
+  /// `SerieDelleSedute` è unica su `{seduta, esercizio, numero}`. 🚨 Se due
+  /// esercizi vecchi finissero sullo **stesso** nuovo, e fossero stati fatti
+  /// nella stessa seduta con lo stesso numero di serie, la riscrittura
+  /// sbatterebbe contro il vincolo. ⛔ Con una transazione sola, quel caso
+  /// farebbe fallire **tutti** gli spostamenti, compresi quelli giusti.
+  ///
+  /// @return quante righe sono state spostate
+  Future<int> applicaLeRiconciliazioni(Map<int, int> rinvii) async {
+    if (rinvii.isEmpty) return 0;
+
+    var spostate = 0;
+
+    for (final rinvio in rinvii.entries) {
+      // ⛔ Un rinvio su sé stesso girerebbe a vuoto a ogni avvio.
+      if (rinvio.key == rinvio.value) continue;
+
+      try {
+        spostate +=
+            await (update(serieDelleSedute)
+                  ..where((t) => t.esercizioId.equals(rinvio.key)))
+                .write(
+                  SerieDelleSeduteCompanion(esercizioId: Value(rinvio.value)),
+                );
+      } on Object catch (e) {
+        debugPrint(
+          'riconciliazione ${rinvio.key}→${rinvio.value} non riuscita: $e',
+        );
+      }
+    }
+
+    if (spostate > 0) {
+      debugPrint('riconciliazioni: spostate $spostate serie');
+    }
+
+    return spostate;
+  }
+
   /// Torna, per ogni `esercizioId`, i punti **dal più vecchio al più recente**.
   Future<Map<int, List<PuntoDiProgressione>>> storiaDegliEsercizi(
     int schedaLocale, {

@@ -95,41 +95,48 @@ class TachimetroProntezza extends StatelessWidget {
         ? tema.colorScheme.outline
         : coloreDi(valore!, tema.colorScheme.onSurfaceVariant);
 
-    return SizedBox(
-      width: lato,
+    /*
+     * ══ ⛔ IL NUMERO STA SOTTO IL QUADRANTE, NON DENTRO ═══════════════════
+     *
+     * 📌 Corretto il 28/08/2026: *«il valore del tachimetro adesso sta sotto
+     * all'ago, non va bene, deve stare sopra al tachimetro o sotto di esso»*.
+     *
+     * ⚠️ **Dentro finiva addosso al perno dell'ago.** Con l'ago verso il basso
+     * — cioè agli estremi della scala, dove il numero conta di più — le due
+     * cose si sovrapponevano. 🚨 Un numero che si legge peggio proprio nei casi
+     * estremi è un numero che non si legge.
+     *
+     * 💡 Sotto e fuori: il quadrante fa il suo lavoro con la forma, il numero
+     * col testo, e nessuno dei due sta addosso all'altro.
+     */
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: lato,
 
-      // 💡 Un semicerchio: l'altezza è poco più della metà del lato, e lo spazio
-      // sotto ospita il numero.
-      height: lato * 0.66,
-      child: CustomPaint(
-        painter: _Quadrante(
-          valore: valore,
-          neutro: tema.colorScheme.onSurfaceVariant,
-          ago: colore,
-          tacche: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-        ),
-        /*
-         * ⛔ **Dentro il quadrante ci sta solo il numero** — corretto il
-         * 28/08/2026: *«la scritta "50 è il tuo normale" sta dentro il
-         * tachimetro e non si legge bene»*.
-         *
-         * ⚠️ Ed era vero: sotto l'arco restano una trentina di pixel, e una
-         * riga da nove punti lì dentro è un'etichetta che nessuno legge. 💡 La
-         * spiegazione è passata **accanto** al quadrante, dove c'è la larghezza
-         * per scriverla in chiaro.
-         */
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Text(
-            valore == null ? '—' : valore!.round().toString(),
-            style: tema.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colore,
-              height: 1,
+          // 💡 Poco più della metà del lato: è un semicerchio, e sotto non c'è
+          // più niente da ospitare.
+          height: lato * 0.56,
+          child: CustomPaint(
+            painter: _Quadrante(
+              valore: valore,
+              neutro: tema.colorScheme.onSurfaceVariant,
+              ago: colore,
+              tacche: tema.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           ),
         ),
-      ),
+
+        Text(
+          valore == null ? '—' : valore!.round().toString(),
+          style: tema.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: colore,
+            height: 1.1,
+          ),
+        ),
+      ],
     );
   }
 }

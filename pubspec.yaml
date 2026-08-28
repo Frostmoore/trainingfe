@@ -180,6 +180,16 @@ dev_dependencies:
   path_provider_platform_interface: ^2.1.3
   plugin_platform_interface: ^2.1.8
 
+  # 🎨 Icona e splash — 3b-T, 28/08/2026.
+  #
+  # ⚠️ Sono **strumenti di generazione**, non dipendenze dell'app: girano a
+  #    mano quando il marchio cambia e scrivono dentro `android/` e `ios/`.
+  #    Per questo stanno fra le dev, e per questo i file che producono si
+  #    committano — chi clona non deve rilanciarli per avere un'app con
+  #    l'icona giusta.
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
 flutter:
   uses-material-design: true
 
@@ -196,3 +206,48 @@ flutter:
   #    prepara e' documentato in §72 dell'atlante.
   assets:
     - assets/corpo/
+
+# ══════════════════════════════════════════════════════════════════════════
+# 🎨 L'icona dell'app — 3b-T
+#
+# 📌 *«Facciamo il logo e la splash dell'app con lo stesso logo del sito»*.
+#
+# 💡 La sorgente e' **la stessa** del sito: `trainingbe/public/img/sito/
+#    marchio.svg`, il monogramma TC. I PNG in `assets/marchio/` si
+#    rigenerano da quello — vedi §… dell'atlante — e non si disegnano a mano.
+#
+# ⚠️ **Segno bianco su fondo teal, non il contrario.** Il marchio del sito e'
+#    teal su bianco, ma un'icona chiara sparisce fra le altre sullo schermo:
+#    il fondo pieno e' quello che la fa riconoscere in mezzo a trenta app.
+#
+# 🚨 `adaptive_icon_foreground` e' **piu' piccolo** dell'icona intera (560px
+#    contro 640 su 1024): Android ritaglia l'icona adattiva in cerchio,
+#    quadrato o goccia a seconda del telefono, e un segno grande fino al bordo
+#    si ritroverebbe tagliato su meta' dei dispositivi.
+flutter_launcher_icons:
+  image_path: assets/marchio/icona.png
+  android: true
+  adaptive_icon_background: "#0F766E"
+  adaptive_icon_foreground: assets/marchio/icona_primo_piano.png
+  ios: true
+  remove_alpha_ios: true
+
+# ══════════════════════════════════════════════════════════════════════════
+# 🚀 La schermata d'avvio — 3b-T
+#
+# ⚠️ **Lo stesso teal dell'icona.** Quello che si vede all'apertura e' il
+#    passaggio fra l'icona toccata e l'app: due colori diversi si leggono
+#    come uno stacco, cioe' come lentezza.
+#
+# 💡 `android_12` a parte perche' da Android 12 la splash e' di sistema e
+#    prende **solo** un'icona su un colore: le regole le detta il sistema, e
+#    dichiararle qui evita che il telefono ci metta il suo grigio.
+flutter_native_splash:
+  color: "#0F766E"
+  image: assets/marchio/segno.png
+  android: true
+  ios: true
+  android_12:
+    color: "#0F766E"
+    image: assets/marchio/segno.png
+    icon_background_color: "#0F766E"

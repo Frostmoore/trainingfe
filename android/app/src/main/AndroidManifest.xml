@@ -1,5 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <!--
       Health Connect — S3.3 di plan_security_and_retention.md
 
@@ -12,10 +11,12 @@
       né il nostro, né quello di un modello AI. È la decisione D9, ed è anche
       ciò che la policy di Google su Health Connect pretende venga dichiarato.
     -->
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
-    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
-    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
-
+    <uses-permission
+        android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+    <uses-permission
+        android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+    <uses-permission
+        android:name="android.permission.health.READ_SLEEP"/>
     <!--
       🆕 FASE 1 (19/08/2026) — le calorie bruciate con l'attività.
 
@@ -34,9 +35,10 @@
       💡 READ_EXERCISE serve a leggere gli allenamenti registrati dall'orologio,
       per poterli mostrare e farci assegnare una scheda.
     -->
-    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
-    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
-
+    <uses-permission
+        android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission
+        android:name="android.permission.health.READ_EXERCISE"/>
     <!--
       🆕 FASE 1.8 — i tre permessi che gli ALLENAMENTI si portano dietro.
 
@@ -66,10 +68,12 @@
       💡 Avere il permesso non obbliga a usarlo. Questa nota esiste perché fra
       sei mesi qualcuno lo troverà disponibile e penserà che sia lì per quello.
     -->
-    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
-    <uses-permission android:name="android.permission.health.READ_STEPS"/>
-    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
-
+    <uses-permission
+        android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission
+        android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission
+        android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
     <!--
       🚨 LA RETE — 14/08/2026.
 
@@ -91,8 +95,8 @@
       alle build di sviluppo. `test/permesso_internet_test.dart` sta qui per
       questo.
     -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-
+    <uses-permission
+        android:name="android.permission.INTERNET"/>
     <!--
       Lo sblocco rapido — A1.
 
@@ -104,8 +108,8 @@
       di consenso e non va chiesto a runtime. L'unica cosa che l'utente vede è la
       richiesta dell'impronta quando accende l'interruttore.
     -->
-    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
-
+    <uses-permission
+        android:name="android.permission.USE_BIOMETRIC"/>
     <!--
       La fotocamera nostra - N10.1.
 
@@ -122,9 +126,11 @@
       dispositivi senza fotocamera. Il resto dell'app funziona benissimo lo
       stesso, e chi non ce l'ha usera' la galleria.
     -->
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-feature android:name="android.hardware.camera" android:required="false"/>
-
+    <uses-permission
+        android:name="android.permission.CAMERA"/>
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false"/>
     <!--
       ⚠️ Serve a sapere SE Health Connect esiste su questo telefono.
       Senza, su un dispositivo che non ce l'ha l'app non riesce nemmeno a
@@ -132,9 +138,9 @@
       e finirebbe per mostrare un errore al posto di una funzione assente.
     -->
     <queries>
-        <package android:name="com.google.android.apps.healthdata"/>
+        <package
+            android:name="com.google.android.apps.healthdata"/>
     </queries>
-
     <!--
       🚨 Il backup di sistema: acceso, ma con delle regole — 18/08/2026.
 
@@ -147,19 +153,46 @@
       💡 I due file di regole servono entrambi: `dataExtractionRules` vale da
       Android 12 in su, `fullBackupContent` sotto. Vanno tenuti allineati.
     -->
+    <!--
+      🏷️ Il nome sotto l'icona — 3b-T, 28/08/2026.
+
+      📌 *«cambiamo il nome dell'app che si visualizza sullo schermo con
+      Training Companion (tutto anche per apple)»*.
+
+      ⚠️ **Era `training_companion`**, cioe' il nome tecnico del pacchetto
+      Flutter finito a schermo per default. ⛔ Non e' un dettaglio estetico: e'
+      la prima cosa che si legge sotto l'icona, e un nome con l'underscore dice
+      «app di prova».
+
+      💡 Su iOS `CFBundleDisplayName` era gia' giusto: qui mancava.
+    -->
     <application
-        android:label="training_companion"
+        android:label="Training Companion"
         android:name="${applicationName}"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher">
+        <!--
+          🚨 `android:screenOrientation="portrait"` È STATO RIMESSO A MANO il
+          28/08/2026, e va ricontrollato a ogni giro dello strumento.
+
+          ⛔ `flutter_native_splash:create` **riscrive tutto questo file**, e in
+          quel giro si è portato via proprio quella riga. ⚠️ Nient'altro è
+          andato perso — il resto era solo riformattato — ma senza di lei l'app
+          torna a ruotare, che è la cosa che il committente aveva chiesto di
+          togliere: *«mi rompe troppo il cazzo che si gira»*.
+
+          💡 L'ha trovato `orientamento_verticale_test.dart`, ed è esattamente
+          il motivo per cui quel test esiste. **Chi rilancia lo strumento della
+          splash deve rilanciare anche i test prima di committare.**
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
             android:launchMode="singleTop"
             android:taskAffinity=""
+            android:screenOrientation="portrait"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -169,14 +202,12 @@
                  while the Flutter UI initializes. After that, this theme continues
                  to determine the Window background behind the Flutter UI. -->
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
             <!--
               🚨 OBBLIGATORIO per Health Connect: Google rifiuta la
               pubblicazione senza. È il punto in cui il sistema chiede all'app
@@ -189,10 +220,10 @@
               differenza che in prova su un dispositivo solo non si vede mai.
             -->
             <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+                <action
+                    android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
             </intent-filter>
         </activity>
-
         <!-- Android 14+ (API 34): la stessa spiegazione, per la via nuova. -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"
@@ -200,15 +231,17 @@
             android:targetActivity=".MainActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
-                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
-                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+                <action
+                    android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category
+                    android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
         </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
-            android:value="2" />
+            android:value="2"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -217,8 +250,10 @@
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action
+                android:name="android.intent.action.PROCESS_TEXT"/>
+            <data
+                android:mimeType="text/plain"/>
         </intent>
     </queries>
 </manifest>

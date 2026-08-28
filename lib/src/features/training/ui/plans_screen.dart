@@ -1142,14 +1142,59 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
         .valueOrNull;
 
     /*
-     * ⛔ **Senza storico la card non compare affatto.** 🚨 Non è il gate
-     * dell'abbonamento: è che non c'è niente da analizzare, e mostrare un
-     * pulsante che risponderà «troppo poco storico» sarebbe un invito a
-     * scoprire un rifiuto. 💡 Chi non è abbonato la vede comparire il giorno in
-     * cui ha fatto la scheda due volte, che è il momento giusto per proporgliela.
+     * ⚠️ **Mentre carica non si dice niente**: una riga che compare e sparisce
+     * dopo mezzo secondo è peggio del silenzio.
      */
-    if (storia == null || !valeLaPenaAnalizzare(storia)) {
-      return const SizedBox.shrink();
+    if (storia == null) return const SizedBox.shrink();
+
+    /*
+     * ══ 🚨 SI DICE PERCHÉ NON C'È, INVECE DI SPARIRE — 28/08/2026 ═════════
+     *
+     * 📌 *«la card per fare analisi scheda mi appare solo sulla scheda che si
+     * chiama defaticamento»*.
+     *
+     * ⛔ **E non era un difetto: era la regola.** L'analisi confronta due
+     * momenti, e con una volta sola non c'è niente da confrontare. Ma la card
+     * spariva **senza dirlo**, e il risultato era esattamente quello: una
+     * funzione che compare su una scheda e non sulle altre, senza motivo
+     * visibile.
+     *
+     * 🚨 Il ragionamento di prima — *«un pulsante che risponderà troppo poco
+     * storico è un invito a scoprire un rifiuto»* — restava vero per il
+     * **pulsante**. Ma da lì avevo concluso «allora niente», e sono due cose
+     * diverse: qui non c'è nessun pulsante da premere, c'è una riga che
+     * spiega. ⚠️ Il rifiuto si evita non offrendo l'azione, non nascondendo la
+     * ragione.
+     */
+    if (!valeLaPenaAnalizzare(storia)) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Gap.md, bottom: Gap.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.insights_rounded,
+              size: 16,
+              color: tema.colorScheme.outline,
+            ),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(
+                /*
+                 * 💡 **Si dice cosa manca, non «dati insufficienti».** La prima
+                 * è una cosa a cui si può rimediare — basta rifare la scheda —
+                 * la seconda è un muro.
+                 */
+                'L\'analisi arriva quando avrai fatto questa scheda una '
+                'seconda volta: serve un prima e un dopo da confrontare.',
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     final analisi = ref

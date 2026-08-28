@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../carica_batteria.dart';
+import '../carica_controller.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
 import 'scheda_forma.dart';
@@ -86,7 +87,19 @@ class SchermataForma extends ConsumerWidget {
   static List<Widget> _contenuto(BuildContext context, Forma forma) => [
     _Carico(forma: forma),
     const SizedBox(height: Gap.lg),
-    _Carica(forma: forma),
+    _Prontezza(forma: forma),
+
+    /*
+     * 🔋 **La terza card** — 28/08/2026: *«mettine anche una con i dettagli di
+     * Carica»*.
+     *
+     * ⚠️ Sta **fuori** da `_contenuto(forma)` come widget suo perché la Carica
+     * non viene da `formaProvider`: ha un provider proprio, e legarla a questo
+     * vorrebbe dire non mostrarla quando l'altro fallisce. 💡 Sono due calcoli
+     * indipendenti e devono poter fallire separatamente.
+     */
+    const SizedBox(height: Gap.lg),
+    const _DettaglioCarica(),
   ];
 }
 
@@ -256,8 +269,8 @@ class _Fasce extends StatelessWidget {
 // La carica
 // ══════════════════════════════════════════════════════════════════════════
 
-class _Carica extends StatelessWidget {
-  const _Carica({required this.forma});
+class _Prontezza extends StatelessWidget {
+  const _Prontezza({required this.forma});
 
   final Forma forma;
 
@@ -650,15 +663,24 @@ class _Sezione extends StatelessWidget {
     required this.titolo,
     required this.grande,
     required this.sotto,
-    required this.indice,
     required this.figli,
+    this.indice,
+    this.nota,
   });
 
   final IconData icona;
   final String titolo;
   final String grande;
   final String sotto;
-  final Indice indice;
+
+  /// ⚠️ **Facoltativo**: la Carica non è un [Indice] — non ha «giorni che
+  /// mancano», ha un'affidabilità che si racconta a parole. 💡 Chi non ce l'ha
+  /// passa [nota].
+  final Indice? indice;
+
+  /// La riga sotto il numero, quando non la scrive [indice].
+  final String? nota;
+
   final List<Widget> figli;
 
   @override
@@ -689,7 +711,7 @@ class _Sezione extends StatelessWidget {
                   grande,
                   style: tema.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: indice.esiste
+                    color: (indice?.esiste ?? true)
                         ? tema.colorScheme.primary
                         : tema.colorScheme.outline,
                   ),
@@ -702,12 +724,14 @@ class _Sezione extends StatelessWidget {
             // 💡 Stessa nota della scheda in dashboard, stesse parole: chi ha
             // cliccato sulla card ha letto «mancano 12 giorni» e deve ritrovare
             // la stessa frase, non una sua variante.
-            if (indice.esiste && !indice.eAttendibile)
+            if (nota != null ||
+                (indice != null && indice!.esiste && !indice!.eAttendibile))
               Padding(
                 padding: const EdgeInsets.only(top: Gap.xs),
                 child: Text(
-                  'stima poco attendibile: mancano '
-                  '${indice.giorniCheMancano} giorni di dati',
+                  nota ??
+                      'stima poco attendibile: mancano '
+                          '${indice!.giorniCheMancano} giorni di dati',
                   style: tema.textTheme.labelSmall?.copyWith(
                     color: tema.colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,
@@ -909,6 +933,101 @@ class _Formula extends StatelessWidget {
           height: 1.5,
         ),
       ),
+    );
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// La Carica
+// ══════════════════════════════════════════════════════════════════════════
+
+/// I dettagli della Carica — 3b-K, 28/08/2026.
+///
+/// ══ 🚨 COSA DEVE FAR CAPIRE ═══════════════════════════════════════════════
+///
+/// Che **non è una fotografia di oggi**: è la somma di quello che è successo
+/// nei giorni scorsi. ⛔ Senza questa card, un `71` è un numero che scende e
+/// sale senza che si veda perché — e un numero così, su un'app di allenamento,
+/// si finisce per crederci o per ignorarlo, mai per capirlo.
+///
+/// 💡 Per questo mostra **la mattina, quello che si è già speso, e cosa manca**:
+/// sono i tre pezzi con cui il numero si ricostruisce a mente.
+class _DettaglioCarica extends ConsumerWidget {
+  const _DettaglioCarica();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final carica = ref.watch(caricaProvider).valueOrNull;
+
+    /*
+     * ⛔ **Senza TDEE non compare.** È la stessa regola della card in dashboard:
+     * senza un metro personale la batteria si muoverebbe a caso, e mostrarla
+     * vuota inviterebbe a chiedersi cosa si è rotto.
+     */
+    if (carica == null) return const SizedBox.shrink();
+
+    final speso = carica.mattina - carica.adesso;
+
+    final mancano = [
+      if (carica.senzaAttivita) 'le calorie di oggi',
+      if (carica.senzaSonno) 'il sonno di stanotte',
+      if (carica.senzaFisiologia) 'battito e variabilità',
+    ];
+
+    return _Sezione(
+      icona: Icons.battery_charging_full_rounded,
+      titolo: 'Carica',
+      grande: carica.adesso.round().toString(),
+      sotto: 'su 100',
+      nota: switch (carica.affidabilita) {
+        Affidabilita.bassa =>
+          'affidabilità bassa: è ancora quasi tutta una stima di partenza',
+        Affidabilita.media =>
+          'affidabilità media: comincia a usare i tuoi dati',
+        Affidabilita.alta => null,
+      },
+      figli: [
+        _Riga(
+          nome: 'Stamattina',
+          valore: carica.mattina.round().toString(),
+          nota: 'con quanta ti sei svegliato',
+        ),
+
+        _Riga(
+          nome: 'Speso oggi',
+          valore: speso < 0.5 ? '—' : '−${speso.round()}',
+          nota: 'da allenamenti e movimento',
+        ),
+
+        _Riga(
+          nome: 'Giorni di dati',
+          valore: carica.giorniValidi.toString(),
+          nota: carica.giorniValidi >= CaricaBatteria.giorniPerIRiferimenti
+              ? 'i riferimenti sono i tuoi'
+              : 'dai ${CaricaBatteria.giorniPerIRiferimenti} giorni '
+                    'i riferimenti diventano i tuoi',
+        ),
+
+        if (mancano.isNotEmpty) ...[
+          const SizedBox(height: Gap.xs),
+          _Nota('Oggi manca ${mancano.join(", ")}.'),
+        ],
+
+        const SizedBox(height: Gap.sm),
+
+        /*
+         * ⚠️ **La frase più importante della card**, e sta in fondo perché è
+         * quella che si legge dopo aver capito i numeri: la Carica **si
+         * trascina**. 🚨 È l'unica cosa che la distingue dagli altri due indici,
+         * e senza saperlo un calo di oggi sembrerebbe colpa di oggi.
+         */
+        const _Nota(
+          'La Carica non riparte da capo ogni mattina: quello che una notte non '
+          'recupera te lo porti nel giorno dopo. Per questo conta più '
+          'l\'andamento su più giorni che il numero di adesso.',
+        ),
+      ],
     );
   }
 }

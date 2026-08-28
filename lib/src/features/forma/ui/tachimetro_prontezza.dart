@@ -31,46 +31,60 @@ class TachimetroProntezza extends StatelessWidget {
 
   final double lato;
 
-  /// Il verde di «sopra il tuo solito».
-  ///
-  /// ⚠️ **Non viene dal tema**: `primary` è il colore della palestra, e su una
-  /// palestra rossa il lato «bene» sarebbe rosso. 🚨 Qui il colore *è*
-  /// l'informazione, quindi non può dipendere dal marchio.
+  /// ⚠️ **I colori NON vengono dal tema**: `primary` è il colore della
+  /// palestra, e su una palestra rossa il lato «bene» sarebbe rosso. 🚨 Qui il
+  /// colore *è* l'informazione, quindi non può dipendere dal marchio.
   static const verde = Color(0xFF2E9E5B);
+
+  /// 💡 Il giallo sta **fra il neutro e il rosso**, non dall'altra parte: è la
+  /// zona «sotto il tuo solito ma non tanto».
+  static const giallo = Color(0xFFD9A404);
 
   static const rosso = Color(0xFFC0392B);
 
-  /// A che colore corrisponde un valore.
+  /// La scala, in un posto solo.
   ///
-  /// ══ 🚦 IL SEMAFORO QUI SI FA, E ALTROVE NO ══════════════════════════════
+  /// ══ 🚦 ASIMMETRICA, ED È IL PUNTO ═══════════════════════════════════════
   ///
-  /// 📌 Richiesto il 28/08/2026: *«lo vorrei colorato. Neutro al centro, verde a
-  /// dx e rosso a sx»*.
+  /// 📌 Corretta il 28/08/2026: *«al centro facciamolo neutro, un po' sotto
+  /// giallo e sopra verde. E poi perché ai margini è rosso anche a destra? A dx
+  /// deve essere solo verde, a sx solo rosso»*.
   ///
-  /// ⚠️ **`BatteriaCarica` invece resta senza semaforo**, ed è una differenza
-  /// voluta: là il rosso starebbe su una carica **bassa**, e suggerirebbe un
-  /// allarme — che è esattamente ciò che l'avvertenza dice di non fare. 💡 Qui
-  /// il rosso sta su «sotto il tuo solito», che è uno scostamento da sé stessi,
-  /// non un livello.
+  /// | Dove | Colore |
+  /// |---|---|
+  /// | `0` | 🔴 rosso |
+  /// | `30` | 🟡 giallo |
+  /// | `50` | ⚪ neutro |
+  /// | `100` | 🟢 verde |
   ///
-  /// 💡 **Il colore è ridondante**, e va tenuto tale: la posizione dell'ago e il
-  /// numero dicono già tutto. ⛔ Rosso e verde sono la coppia peggiore per chi
-  /// non li distingue, e un'informazione affidata **solo** a quella sarebbe
-  /// persa per una persona su dodici.
+  /// ⛔ **Il rosso a destra era un difetto vero**: il gradiente girava sul cerchio
+  /// intero invece di fermarsi sul mezzo giro, e il colore d'inizio ricompariva
+  /// alla fine. ⚠️ E il centro era **trasparente**, non neutro — da cui il
+  /// grigiume: sfumare verso il trasparente lascia vedere lo sfondo, non un
+  /// colore.
+  ///
+  /// 💡 **A destra non serve una seconda tinta**: stare sopra il proprio solito
+  /// non ha gradi di allarme. È sotto che ne ha due — «un po'» e «parecchio» —
+  /// ed è per questo che il giallo esiste solo di là.
+  ///
+  /// ⚠️ **`BatteriaCarica` resta senza semaforo**, ed è voluto: là il rosso
+  /// starebbe su una carica **bassa** e suggerirebbe un allarme. Qui sta su
+  /// «sotto il tuo solito», che è uno scostamento da sé stessi.
+  ///
+  /// 💡 **Il colore è ridondante**, e va tenuto tale: l'ago e il numero dicono
+  /// già tutto. ⛔ Un'informazione affidata **solo** al rosso-verde sarebbe persa
+  /// per una persona su dodici.
   static Color coloreDi(double valore, Color neutro) {
-    final scarto = (valore - 50) / 50;
+    final q = (valore / 100).clamp(0.0, 1.0);
 
-    if (scarto.abs() < 0.1) return neutro;
+    if (q >= 0.5) {
+      // 💡 Dal neutro al verde, e nient'altro: a destra c'è una cosa sola.
+      return Color.lerp(neutro, verde, (q - 0.5) / 0.5) ?? neutro;
+    }
 
-    return Color.lerp(
-          neutro,
-          scarto > 0 ? verde : rosso,
+    if (q >= 0.3) return Color.lerp(giallo, neutro, (q - 0.3) / 0.2) ?? neutro;
 
-          // 💡 La saturazione cresce con la distanza dal centro: un 55 è appena
-          // tinto, un 90 è pieno.
-          (scarto.abs() - 0.1) / 0.9,
-        ) ??
-        neutro;
+    return Color.lerp(rosso, giallo, q / 0.3) ?? rosso;
   }
 
   @override
@@ -149,37 +163,42 @@ class _Quadrante extends CustomPainter {
     final rettangolo = Rect.fromCircle(center: centro, radius: raggio);
 
     /*
-     * 🌈 **L'arco è sfumato**, non a settori: rosso a sinistra, neutro in cima,
-     * verde a destra.
+     * 🌈 **L'arco si disegna a pezzetti, non con un gradiente.**
      *
-     * ⛔ Tre settori netti disegnerebbero **tre categorie** — «male, normale,
-     * bene» — con due confini che non esistono: questo indice è continuo, e un
-     * 49 non è in una fascia diversa da un 51. 💡 La sfumatura dice «più a
-     * destra, meglio» senza inventare soglie.
+     * ⛔ Con `SweepGradient` il colore d'inizio ricompariva a destra: il
+     * gradiente è definito sul **giro intero**, e i bordi arrotondati del tratto
+     * escono dal mezzo giro e vanno a pescare di là. 🚨 Risultato: rosso anche
+     * sul lato buono — riferito il 28/08.
+     *
+     * 💡 Sessanta segmenti, ognuno col colore del suo punto: la sfumatura si
+     * vede uguale e **non c'è nessun giro da cui il colore possa tornare**.
+     *
+     * ⚠️ E resta sfumato, non a settori: tre fasce nette disegnerebbero tre
+     * categorie con due confini che non esistono — un 49 non sta in una fascia
+     * diversa da un 51.
      */
-    canvas.drawArc(
-      rettangolo,
-      _inizio,
-      _ampiezza,
-      false,
-      Paint()
-        ..shader = const SweepGradient(
-          // ⚠️ `startAngle`/`endAngle` seguono il mezzo giro del quadrante: un
-          // gradiente sul giro intero metterebbe il verde in basso a sinistra.
-          startAngle: _inizio,
-          endAngle: _inizio + _ampiezza,
-          colors: [
-            TachimetroProntezza.rosso,
-            Color(0x00000000),
-            TachimetroProntezza.verde,
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ).createShader(rettangolo)
-        ..color = neutro
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = spessore
-        ..strokeCap = StrokeCap.round,
-    );
+    const passi = 60;
+
+    for (var i = 0; i < passi; i++) {
+      final quota = i / (passi - 1);
+
+      canvas.drawArc(
+        rettangolo,
+        _inizio + _ampiezza * (i / passi),
+
+        // 💡 Un filo più larghi del passo: senza, fra un segmento e l'altro
+        // resterebbe una riga di sfondo, e l'arco sembrerebbe tratteggiato.
+        _ampiezza / passi * 1.4,
+        false,
+        Paint()
+          ..color = TachimetroProntezza.coloreDi(
+            quota * 100,
+            neutro,
+          ).withValues(alpha: 0.30)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = spessore,
+      );
+    }
 
     /*
      * ⚠️ **Le tacche a 0, 50 e 100**, e quella del 50 più lunga: è l'unica

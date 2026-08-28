@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:training_companion/src/features/forma/forma_controller.dart';
 import 'package:training_companion/src/features/forma/carica_batteria.dart';
+import 'package:training_companion/src/features/forma/forma_controller.dart';
 import 'package:training_companion/src/features/forma/indici_di_forma.dart';
 import 'package:training_companion/src/features/forma/ui/schermata_forma.dart';
 

@@ -30,6 +30,42 @@ import '../../health/health_controller.dart';
 import '../training_controller.dart' show revisioneSchedeProvider;
 import 'gruppo_muscolare.dart';
 
+/// Quanto conta una serie per il muscolo che fa il lavoro.
+///
+/// 💡 È il riferimento, e vale **1** per definizione: gli altri pesi si leggono
+/// rispetto a questo.
+const pesoDelPrimario = 1.0;
+
+/// Quanto conta una serie per un muscolo **secondario** — 3b-S, 28/08/2026.
+///
+/// ══ 📚 NON È UN NUMERO SCELTO DA NOI ══════════════════════════════════════
+///
+/// È il *fractional set counting*, la convenzione standard nella letteratura
+/// sull'ipertrofia: una serie in cui il muscolo è motore principale conta
+/// **1**, una in cui è secondario conta **0,5**. Tre serie di rematore più tre
+/// di curl fanno **4,5** serie per i bicipiti.
+///
+/// 🚨 **E ha una fonte vera**: una meta-analisi su 67 studi ha confrontato i
+/// tre modi di contare — tutto uguale, solo diretto, frazionario — e il
+/// frazionario è quello che spiega meglio i risultati, con evidenza da forte a
+/// molto forte su ogni misura.
+///
+/// ── ⚠️ Il limite, dichiarato ──────────────────────────────────────────────
+///
+/// Questo 0,5 nasce per contare le **serie** nei volumi settimanali, non per
+/// dire «quanto ho usato questo muscolo». La contribuzione vera cambia molto da
+/// esercizio a esercizio: il capo lungo del tricipite prende circa il **2%**
+/// nella panca e il **18%** in uno skullcrusher.
+///
+/// ⛔ Il modello giusto sarebbe una tabella di contribuzione **per esercizio**.
+/// Non ne esiste una pubblica per 314 esercizi, e riempirla a mano vorrebbe
+/// dire 314 righe di numeri inventati — che è peggio di un'approssimazione
+/// dichiarata.
+///
+/// 💡 **Sta qui, in un posto solo, apposta**: 📌 *«se è un coefficiente va
+/// bene»*. Cambiarlo è una riga.
+const pesoDelSecondario = 0.5;
+
 /// Da dove viene un esercizio — 3b-N, 28/08/2026.
 ///
 /// ══ ⚠️ TRE CASI, NON DUE ══════════════════════════════════════════════════
@@ -136,7 +172,7 @@ class EsercizioDelCatalogo {
   /// fotografia, e tingerla la distruggerebbe).
   final String? credito;
 
-  /// Tutti i muscoli con quanto pesano: primario 1, secondari 0,5.
+  /// Tutti i muscoli con quanto pesano — vedi [pesoDelSecondario].
   ///
   /// 🚨 **Stessa proporzione di `Exercise::muscoliConPeso()` sul server**, e sta
   /// scritta in tutti e due i posti perché tutti e due la usano — il server per
@@ -148,7 +184,7 @@ class EsercizioDelCatalogo {
     final pesi = <GruppoMuscolare, double>{};
 
     if (primario != null && primario!.eUnMuscolo) {
-      pesi[primario!] = 1;
+      pesi[primario!] = pesoDelPrimario;
     }
 
     for (final m in secondari) {
@@ -156,7 +192,9 @@ class EsercizioDelCatalogo {
 
       // ⚠️ Il massimo e non la somma: un muscolo che comparisse in tutti e due
       // i posti conta come primario, non uno e mezzo.
-      pesi[m] = (pesi[m] ?? 0) > 0.5 ? pesi[m]! : 0.5;
+      pesi[m] = (pesi[m] ?? 0) > pesoDelSecondario
+          ? pesi[m]!
+          : pesoDelSecondario;
     }
 
     return pesi;

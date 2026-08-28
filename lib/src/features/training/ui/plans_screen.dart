@@ -715,7 +715,12 @@ class _CosaAllena extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Gap.md),
-      child: MuscoliInCard(intensita: intensita),
+      child: MuscoliInCard(
+        intensita: intensita,
+        // 📊 Le proporzioni vere accanto ai nomi — 3b-S. `intensita` colora,
+        // `quote` dice quanto: sono due domande diverse.
+        quote: quoteDeiMuscoli(pesiDellaScheda(scheda, catalogo)),
+      ),
     );
   }
 }

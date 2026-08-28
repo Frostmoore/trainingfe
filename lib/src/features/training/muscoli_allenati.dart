@@ -294,7 +294,10 @@ NumeriDeiMuscoli numeriDeiMuscoli(Map<GruppoMuscolare, double> intensita) {
 /// ⛔ Con la mappa vuota **non si scrive una frase incoraggiante**: si dice che
 /// non c'è niente da dire. Una spiegazione allegra sopra una figura grigia è la
 /// cosa peggiore che questa card possa fare.
-String spiegazioneDeiMuscoli(Map<GruppoMuscolare, double> intensita) {
+String spiegazioneDeiMuscoli(
+  Map<GruppoMuscolare, double> intensita, {
+  Map<GruppoMuscolare, double> quote = const {},
+}) {
   if (intensita.isEmpty) {
     return 'Nessun allenamento di cui si sappiano i muscoli, questo mese.';
   }
@@ -302,10 +305,31 @@ String spiegazioneDeiMuscoli(Map<GruppoMuscolare, double> intensita) {
   final ordinati = intensita.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
 
-  final primi = ordinati
-      .take(2)
-      .map((e) => e.key.etichetta.toLowerCase())
-      .toList();
+  /*
+   * ══ 📊 LA QUOTA ACCANTO AL NOME — 3b-S, 28/08/2026 ═══════════════════════
+   *
+   * 📌 *«mi devi fare un calcolo proporzionale di quanto ho usato ciascuno dei
+   * muscoli»*.
+   *
+   * 🚨 **`intensita` non può dirlo**: è normalizzata sul massimo, quindi la
+   * prima voce vale 1 sempre. Scrivere «spalle 100%» sarebbe falso — dice solo
+   * che sono la cosa più allenata, non quanto lavoro hanno preso.
+   *
+   * 💡 Perciò la percentuale arriva da `quote`, che è una proporzione vera. ⚠️
+   * E se non arriva, la frase resta quella di prima invece di inventarsi un
+   * numero: **meglio nessuna percentuale che una sbagliata**.
+   */
+  String conQuota(GruppoMuscolare g) {
+    final nome = g.etichetta.toLowerCase();
+
+    if (quote[g] case final q? when q >= 1) {
+      return '$nome (${q.round()}%)';
+    }
+
+    return nome;
+  }
+
+  final primi = ordinati.take(2).map((e) => conQuota(e.key)).toList();
 
   final quanti = intensita.values.where((v) => v >= 0.15).length;
   final possibili = GruppoMuscolare.values.where((g) => g.eUnMuscolo).length;
@@ -343,14 +367,69 @@ Map<GruppoMuscolare, double> pesiDellaScheda(
 
     if (esercizio == null) continue;
 
+    /*
+     * ══ 🚨 SI CONTANO LE SERIE, NON GLI ESERCIZI — 3b-S, 28/08/2026 ═══════
+     *
+     * 📌 *«Deve essere un peso ponderato. Cioè se io alleno al 70% spalle e al
+     * 30 petto i numeri non possono essere calcolati in questo modo»*.
+     *
+     * ⛔ **Prima ogni riga pesava 1, e basta.** Un esercizio da quattro serie
+     * contava come uno da una sola: la figura diceva che una scheda con
+     * quattro serie di panca e una di curl allena petto e bicipiti quasi
+     * uguale.
+     *
+     * 🚨 È l'errore più grosso dei due, ed era invisibile: il numero c'era, la
+     * figura si colorava, e nessuno aveva modo di accorgersi che il volume non
+     * entrava nel conto. 💡 La strada delle serie **registrate** lo faceva già
+     * giusto — passa serie per serie — quindi le due fonti dicevano cose
+     * diverse sulla stessa scheda.
+     *
+     * ⚠️ **Almeno una**: una riga senza serie compilate vale comunque un
+     * esercizio. ⛔ Contarla zero la farebbe sparire dalla figura, e «non l'ho
+     * ancora compilata» non vuol dire «non allena niente».
+     */
+    final quanteSerie = riga.serie.isEmpty ? 1 : riga.serie.length;
+
     esercizio.muscoliConPeso.forEach((muscolo, peso) {
       if (!muscolo.eUnMuscolo) return;
 
-      pesi[muscolo] = (pesi[muscolo] ?? 0) + peso;
+      pesi[muscolo] = (pesi[muscolo] ?? 0) + peso * quanteSerie;
     });
   }
 
   return pesi;
+}
+
+/// Quanto vale ciascun muscolo **in percentuale sul totale** — 3b-S.
+///
+/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+///
+/// *«se io alleno al 70% spalle e al 30 petto i numeri non possono essere
+/// calcolati in questo modo… mi devi fare un calcolo proporzionale di quanto ho
+/// usato ciascuno dei muscoli»*.
+///
+/// ══ 🚨 PERCHÉ [intensitaDeiMuscoli] NON POTEVA DIRLO ══════════════════════
+///
+/// ⛔ Quella normalizza **sul massimo**: la zona più allenata vale 1 sempre, per
+/// costruzione. Quindi non può dire «il 70% del lavoro è andato alle spalle» —
+/// dice solo «le spalle sono la cosa che hai fatto di più», anche quando sono
+/// il 12% del totale.
+///
+/// 💡 Servono tutte e due, e dicono cose diverse: quella colora la figura (un
+/// disegno che si legge a colpo d'occhio vuole il confronto col massimo),
+/// questa dà **il numero**, che deve essere una proporzione vera.
+///
+/// @return muscolo → quota da 0 a 100, che sommate fanno 100
+Map<GruppoMuscolare, double> quoteDeiMuscoli(
+  Map<GruppoMuscolare, double> pesi,
+) {
+  final totale = pesi.values.fold<double>(0, (a, b) => a + b);
+
+  // ⛔ Zero non è «tutti a zero»: è «non lo sappiamo», e una mappa vuota lo
+  // dice senza far comparire una fila di 0%.
+  if (totale <= 0) return const {};
+
+  return {for (final e in pesi.entries) e.key: e.value / totale * 100};
 }
 
 /// Le schede che compaiono nello storico, coi loro muscoli.

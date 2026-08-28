@@ -31,9 +31,21 @@ import 'carosello_del_mese.dart';
 import 'figura_del_corpo.dart';
 
 class MuscoliInCard extends StatefulWidget {
-  const MuscoliInCard({required this.intensita, super.key});
+  const MuscoliInCard({
+    required this.intensita,
+    this.quote = const {},
+    super.key,
+  });
 
   final Map<GruppoMuscolare, double> intensita;
+
+  /// Quanto vale ogni muscolo **in percentuale sul totale** — 3b-S.
+  ///
+  /// ⚠️ **Non è [intensita] in centesimi.** Quella è normalizzata sul massimo,
+  /// quindi la prima voce è sempre 1: serve a colorare la figura, non a dire
+  /// una proporzione. 💡 Vuota quando non si sa: la frase allora non scrive
+  /// nessuna percentuale, invece di inventarne una.
+  final Map<GruppoMuscolare, double> quote;
 
   @override
   State<MuscoliInCard> createState() => _MuscoliInCardState();
@@ -71,7 +83,10 @@ class _MuscoliInCardState extends State<MuscoliInCard> {
       ),
       CardDelCarosello(
         titolo: 'I gruppi muscolari',
-        sottotitolo: spiegazioneDeiMuscoli(widget.intensita),
+        sottotitolo: spiegazioneDeiMuscoli(
+          widget.intensita,
+          quote: widget.quote,
+        ),
         child: StellaInRiquadro(intensita: widget.intensita),
       ),
     ];

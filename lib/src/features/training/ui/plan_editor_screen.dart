@@ -37,6 +37,7 @@ import '../../health/health_controller.dart';
 import '../data/catalogo_esercizi.dart';
 import '../data/gruppo_muscolare.dart';
 import '../data/scheda_in_scrittura.dart';
+import '../muscoli_allenati.dart';
 import '../training_controller.dart';
 import 'widgets/card_esercizio_scrittura.dart';
 import 'widgets/muscoli_della_scheda.dart';
@@ -441,6 +442,6 @@ class MuscoliDellaScheda extends ConsumerWidget {
       for (final voce in pesi.entries) voce.key: voce.value / massimo,
     };
 
-    return MuscoliInCard(intensita: intensita);
+    return MuscoliInCard(intensita: intensita, quote: quoteDeiMuscoli(pesi));
   }
 }

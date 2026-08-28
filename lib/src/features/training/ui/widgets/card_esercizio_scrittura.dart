@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/miniatura.dart';
 import '../../data/catalogo_esercizi.dart';
 import '../../data/gruppo_muscolare.dart';
 import '../../data/scheda_in_scrittura.dart';
@@ -237,6 +238,62 @@ class _NomeConElenco extends ConsumerWidget {
 
         onCambio();
       },
+      /*
+       * ══ 🖼️ CON L'IMMAGINE, COME PER GLI ALIMENTI — 3b-R, 28/08/2026 ══════
+       *
+       * 📌 *«quando inizio a scrivere il nome dell'esercizio nel builder delle
+       * schede e nel player (se ne aggiungo uno dal player) si deve vedere
+       * l'immagine come succede per gli alimenti»*.
+       *
+       * ⛔ Senza questo builder `Autocomplete` disegna il suo elenco
+       * predefinito: solo testo. 🚨 E qui il testo da solo non basta —
+       * «Croci ai cavi» e «Croci ai cavi alti» si distinguono a colpo d'occhio
+       * da due disegni, non da due righe che differiscono per una parola.
+       */
+      optionsViewBuilder: (context, scegli, opzioni) => Align(
+        alignment: Alignment.topLeft,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(Gap.radiusSm),
+          child: ConstrainedBox(
+            // ⚠️ Un tetto ci vuole: l'elenco sta **sopra la tastiera**, e senza
+            // limite le ultime righe finiscono sotto di essa.
+            constraints: const BoxConstraints(maxHeight: 280, maxWidth: 420),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: opzioni.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final e = opzioni.elementAt(i);
+
+                return ListTile(
+                  dense: true,
+                  leading: Miniatura(
+                    url: e.immagine,
+                    etichetta: e.nome,
+                    lato: 40,
+                    // Stessa regola di tutto il resto: si tinge solo quando è
+                    // un disegno nostro, cioè quando c'è un credito da rendere.
+                    tinta: e.credito == null
+                        ? null
+                        : tema.colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    e.nome,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: e.primario == null
+                      ? null
+                      : Text(e.primario!.etichetta),
+                  onTap: () => scegli(e),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
       fieldViewBuilder: (context, controller, focus, _) {
         // 💡 `Autocomplete` vuole il **suo** controller: si tengono allineati
         // in un verso solo, e quello di casa resta la sorgente.

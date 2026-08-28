@@ -7,6 +7,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
+import 'widgets/campo_esercizio.dart';
 import 'widgets/righe_delle_serie.dart';
 import 'widgets/scelta_muscoli.dart';
 
@@ -431,15 +432,25 @@ class _Esercizio extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
+                  child: CampoEsercizio(
                     key: ValueKey('n-${esercizio.hashCode}'),
-                    initialValue: esercizio.nome,
-                    decoration: const InputDecoration(
-                      labelText: 'Esercizio',
-                      isDense: true,
-                    ),
-                    onChanged: (v) {
+                    iniziale: esercizio.nome,
+                    onCambiato: (v) {
                       esercizio.nome = v;
+                      onCambio();
+                    },
+
+                    /*
+                     * 💡 **Scegliendo dal catalogo si prendono anche i
+                     * muscoli.** Il server li sa già per quell'esercizio:
+                     * lasciare la domanda aperta vorrebbe dire farla a chi ha
+                     * appena indicato la risposta.
+                     */
+                    onScelto: (scelto) {
+                      esercizio.muscoli = (
+                        primario: scelto.primario,
+                        secondari: scelto.secondari,
+                      );
                       onCambio();
                     },
                   ),

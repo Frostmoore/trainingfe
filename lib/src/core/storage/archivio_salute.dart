@@ -1159,39 +1159,61 @@ class ArchivioSalute extends _$ArchivioSalute {
 
       var cambiata = false;
 
-      void passeggia(Object? nodo) {
+      /*
+       * ══ 🚨 SI RISCRIVE `exercise_id`, MAI UN `id` NUDO ═══════════════════
+       *
+       * ⛔ **Prima la regola era «`id` se l'oggetto ha anche `name`», ed era
+       * sbagliata.** Nel JSON di una scheda hanno tutti e due: la scheda, il
+       * giorno, e ogni riga di esercizio — dove però `id` è **la riga**, non
+       * l'esercizio.
+       *
+       * 🚨 Bastava che l'id di una riga coincidesse con l'id vecchio di un
+       * esercizio fuso e quella riga si prendeva id **e nome** di un altro
+       * esercizio. Il 28/08 non è successo solo perché gli id non si
+       * sovrapponevano (righe 46-113, esercizi fusi 122-147): **per fortuna,
+       * non per costruzione**.
+       *
+       * 💡 Adesso `id` si tocca **solo** dentro l'oggetto `exercise`, che è
+       * l'unico posto in cui vuol dire davvero «l'esercizio».
+       */
+      void passeggia(Object? nodo, {bool dentroExercise = false}) {
         if (nodo is List) {
-          nodo.forEach(passeggia);
+          for (final figlio in nodo) {
+            passeggia(figlio);
+          }
 
           return;
         }
 
         if (nodo is! Map) return;
 
-        for (final chiave in ['exercise_id', 'id']) {
-          // ⚠️ `id` si riscrive **solo dentro `exercise`**: al primo livello
-          // è la riga della scheda, non l'esercizio. Due numeri che si
-          // somigliano, e scambiarli non dà nessun errore.
-          if (chiave == 'id' && !nodo.containsKey('name')) continue;
-
-          final vecchio = nodo[chiave];
-
-          if (vecchio is! int || !rinvii.containsKey(vecchio)) continue;
-
-          final nuovo = rinvii[vecchio]!;
-          nodo[chiave] = nuovo;
-          cambiata = true;
-
+        void rinomina(int nuovo) {
           if (nomi[nuovo] case final nome? when nodo.containsKey('name')) {
             nodo['name'] = nome;
           }
         }
 
-        nodo.values.forEach(passeggia);
+        if (nodo['exercise_id'] case final int vecchio
+            when rinvii.containsKey(vecchio)) {
+          nodo['exercise_id'] = rinvii[vecchio];
+          cambiata = true;
+          rinomina(rinvii[vecchio]!);
+        }
+
+        if (dentroExercise) {
+          if (nodo['id'] case final int vecchio
+              when rinvii.containsKey(vecchio)) {
+            nodo['id'] = rinvii[vecchio];
+            cambiata = true;
+            rinomina(rinvii[vecchio]!);
+          }
+        }
+
+        for (final voce in nodo.entries) {
+          passeggia(voce.value, dentroExercise: voce.key == 'exercise');
+        }
       }
 
-      // ⛔ `exercise.id` porta `name` accanto, quindi la regola qui sopra lo
-      // lascerebbe passare: si scende solo dentro `exercise`.
       passeggia(decodificata);
 
       if (!cambiata) continue;

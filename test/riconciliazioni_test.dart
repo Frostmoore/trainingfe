@@ -151,6 +151,76 @@ void main() {
     );
   });
 
+  /// 🚨 **La guardia che al primo giro era scritta male.**
+  ///
+  /// ⛔ La regola era «riscrivi `id` se l'oggetto ha anche `name`»: nel JSON di
+  /// una scheda ce l'hanno la scheda, il giorno e ogni riga. Bastava che l'id
+  /// di una riga coincidesse con l'id vecchio di un esercizio fuso, e quella
+  /// riga si prendeva id **e nome** di un altro esercizio.
+  test('un id di riga che somiglia a un id fuso non viene toccato', () async {
+    final id = await scheda({
+      // La scheda stessa ha `id` + `name`…
+      'id': 900,
+      'name': 'Giorno 1',
+      'days': [
+        // …e così il giorno…
+        {
+          'id': 900,
+          'name': 'A',
+          'exercises': [
+            // …e così la riga, dove `id` è la RIGA, non l'esercizio.
+            {'id': 900, 'exercise_id': 901, 'name': 'Panca'},
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni(
+      {900: 17, 901: 18},
+      nomi: {17: 'SBAGLIATO', 18: 'Panca piana'},
+    );
+
+    final letta = await rileggi(id);
+    final giorno = (letta['days'] as List).first as Map;
+    final riga = (giorno['exercises'] as List).first as Map;
+
+    expect(letta['id'], 900, reason: 'La scheda ha cambiato id.');
+    expect(letta['name'], 'Giorno 1');
+    expect(giorno['id'], 900, reason: 'Il giorno ha cambiato id.');
+    expect(riga['id'], 900, reason: 'La riga ha cambiato id.');
+
+    // Solo l'esercizio vero si sposta.
+    expect(riga['exercise_id'], 18);
+    expect(riga['name'], 'Panca piana');
+  });
+
+  /// 💡 Dentro `exercise` invece `id` **è** l'esercizio, e va riscritto: le
+  /// schede vecchie lo tengono lì.
+  test('dentro `exercise` l\'id si riscrive', () async {
+    final id = await scheda({
+      'days': [
+        {
+          'exercises': [
+            {
+              'id': 55,
+              'exercise': {'id': 900, 'name': 'Vecchio'},
+            },
+          ],
+        },
+      ],
+    });
+
+    await archivio.applicaLeRiconciliazioni({900: 17}, nomi: {17: 'Nuovo'});
+
+    final riga =
+        (((await rileggi(id))['days'] as List).first as Map)['exercises'].first
+            as Map;
+
+    expect(riga['id'], 55, reason: 'La riga non si tocca.');
+    expect((riga['exercise'] as Map)['id'], 17);
+    expect((riga['exercise'] as Map)['name'], 'Nuovo');
+  });
+
   /// ⛔ Gli esercizi si annidano anche dentro `alternatives`: una passeggiata
   /// scritta sulla forma di oggi le mancherebbe **senza dirlo**.
   test('anche le alternative vengono riscritte', () async {

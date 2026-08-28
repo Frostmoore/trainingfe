@@ -85,6 +85,7 @@ class EsercizioDellaScheda extends ConsumerWidget {
               immagine: esercizio.immagine,
               url: esercizio.imageUrl ?? dalCatalogo?.immagine,
               etichetta: esercizio.name,
+              credito: dalCatalogo?.credito,
             ),
             const SizedBox(width: Gap.sm),
             Expanded(
@@ -153,6 +154,39 @@ class EsercizioDellaScheda extends ConsumerWidget {
                         schedaLocale: scheda,
                         esercizioId: eid,
                       ),
+
+                  /*
+                   * ══ ⚖️ CHI HA FATTO IL DISEGNO — 3b-L, 28/08/2026 ═════════
+                   *
+                   * 📌 *«sotto ogni esercizio con la foto ci scriviamo "Image
+                   * by" quello che è, soltanto sulla pagina della scheda, non
+                   * durante l'allenamento»*.
+                   *
+                   * ⚖️ Non è una gentilezza: le illustrazioni sono CC BY-SA
+                   * 4.0, e **l'attribuzione è una condizione della licenza**.
+                   *
+                   * 🚨 **Due condizioni, e servono tutte e due.**
+                   * ⛔ `credito != null` non basta: se qualcuno ha messo la
+                   * **foto sua** a questo esercizio, è quella che si vede — e
+                   * scriverci sotto «Bryl Lim / Everkinetic» sarebbe un
+                   * credito falso, cioè attribuire a qualcun altro un lavoro
+                   * che non ha fatto. Peggio del non attribuire.
+                   *
+                   * 💡 Sta **dentro la colonna**, come la progressione: sotto
+                   * la card partirebbe da sotto la figura e sembrerebbe
+                   * riferita a tutto l'esercizio invece che all'immagine.
+                   */
+                  if (dalCatalogo?.credito case final credito?)
+                    if (esercizio.immagine?.isEmpty ?? true) ...[
+                      const SizedBox(height: Gap.xs),
+                      Text(
+                        'Illustrazione: $credito',
+                        style: tema.textTheme.labelSmall?.copyWith(
+                          color: tema.colorScheme.outline,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                 ],
               ),
             ),
@@ -178,8 +212,19 @@ class FotoDellEsercizio extends StatelessWidget {
     required this.url,
     required this.etichetta,
     this.lato = EsercizioDellaScheda._lato,
+    this.credito,
     super.key,
   });
+
+  /// Chi ha fatto il disegno, quando è dovuto — 3b-L.
+  ///
+  /// ⚠️ **Qui non si scrive niente**: serve solo a sapere che l'immagine è
+  /// un'illustrazione al tratto, e quindi **va tinta**. 🚨 La riga di credito
+  /// la scrive la pagina della scheda, perché è l'unico posto in cui il
+  /// committente l'ha voluta — *«soltanto sulla pagina della scheda, non
+  /// durante l'allenamento»*. Metterla qui la farebbe comparire anche nella
+  /// card dell'allenamento, che usa questo stesso widget.
+  final String? credito;
 
   /// Il percorso **relativo** della foto propria (`foto/esercizi/…`).
   final String? immagine;
@@ -190,12 +235,28 @@ class FotoDellEsercizio extends StatelessWidget {
   final String etichetta;
   final double lato;
 
+  /// Il colore con cui dipingere il disegno, o `null` se non è un disegno.
+  ///
+  /// 💡 `onSurfaceVariant` e non `primary`: il tratto è un'informazione
+  /// neutra, e sul colore della palestra un disegno di un bilanciere
+  /// diventerebbe un elemento di marca. ⚠️ E in tema scuro lo stesso token
+  /// diventa chiaro da solo, che è precisamente il motivo per cui si tinge
+  /// invece di produrre due file.
+  Color? _tinta(BuildContext context) => credito == null
+      ? null
+      : Theme.of(context).colorScheme.onSurfaceVariant;
+
   @override
   Widget build(BuildContext context) {
     final relativo = immagine;
 
     if (relativo == null || relativo.isEmpty) {
-      return Miniatura(url: url, etichetta: etichetta, lato: lato);
+      return Miniatura(
+        url: url,
+        etichetta: etichetta,
+        lato: lato,
+        tinta: _tinta(context),
+      );
     }
 
     return ClipRRect(
@@ -211,7 +272,12 @@ class FotoDellEsercizio extends StatelessWidget {
            * indicatore che lampeggia a ogni ricostruzione sembra un difetto.
            */
           if (file == null) {
-            return Miniatura(url: url, etichetta: etichetta, lato: lato);
+            return Miniatura(
+        url: url,
+        etichetta: etichetta,
+        lato: lato,
+        tinta: _tinta(context),
+      );
           }
 
           return FotoLocale(file: file, width: lato, height: lato);

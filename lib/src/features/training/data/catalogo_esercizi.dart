@@ -38,6 +38,7 @@ class EsercizioDelCatalogo {
     required this.secondari,
     this.met,
     this.immagine,
+    this.credito,
   });
 
   factory EsercizioDelCatalogo.fromJson(Map<String, dynamic> j) =>
@@ -51,6 +52,7 @@ class EsercizioDelCatalogo {
             .toList(growable: false),
         met: (j['met'] as num?)?.toDouble(),
         immagine: j['image_url']?.toString(),
+        credito: j['image_credit']?.toString(),
       );
 
   final int id;
@@ -59,6 +61,24 @@ class EsercizioDelCatalogo {
   final List<GruppoMuscolare> secondari;
   final double? met;
   final String? immagine;
+
+  /// Chi ha fatto il disegno, quando l'attribuzione è dovuta — 3b-L.
+  ///
+  /// ══ ⚖️ DUE COSE DIPENDONO DA QUESTO CAMPO ═════════════════════════════
+  ///
+  /// 1. **La riga di credito** sotto l'esercizio, nella pagina della scheda:
+  ///    le illustrazioni del catalogo sono CC BY-SA 4.0 e l'attribuzione è una
+  ///    condizione della licenza, non una cortesia.
+  /// 2. 🚨 **La tinta.** Il disegno è bianco su trasparente: su una card
+  ///    chiara sarebbe invisibile, e va colorato a schermo.
+  ///
+  /// 💡 Non sono due significati diversi: è **una** informazione — «questa è
+  /// una nostra illustrazione al tratto» — da cui seguono tutte e due.
+  ///
+  /// ⛔ `null` quando la foto l'ha caricata la palestra. Allora niente credito
+  /// (sarebbe falso: non l'ha fatta Bryl Lim) e niente tinta (è una
+  /// fotografia, e tingerla la distruggerebbe).
+  final String? credito;
 
   /// Tutti i muscoli con quanto pesano: primario 1, secondari 0,5.
   ///
@@ -93,6 +113,7 @@ class EsercizioDelCatalogo {
     'secondary_muscles': secondari.map((m) => m.valore).toList(),
     'met': met,
     'image_url': immagine,
+    'image_credit': credito,
   };
 }
 
@@ -137,7 +158,19 @@ class CatalogoEsercizi {
       .trim();
 }
 
-const _chiaveCache = 'catalogo.esercizi';
+/// ⚠️ **La chiave è cambiata con 3b-L**, e non per capriccio: la copia vecchia
+/// non ha `image_credit`, e senza quel campo l'app non tinge il disegno — che
+/// essendo bianco su trasparente resterebbe **invisibile** su fondo chiaro.
+/// 💡 Meglio nessuna copia che una copia che disegna il vuoto.
+const _chiaveCache = 'catalogo.esercizi.2';
+
+/// Quanti esercizi si chiedono in una volta.
+///
+/// 🚨 **Sopra il catalogo intero**, che con 3b-L è di 314 esercizi della
+/// piattaforma più quelli della palestra. ⛔ Chiederne meno non darebbe «una
+/// pagina»: darebbe un catalogo con dei buchi, e i buchi qui diventano
+/// esercizi senza figura e senza muscoli.
+const _quantiNeChiediamo = 1000;
 
 /// Il catalogo, dalla rete se si può e dalla copia locale se non si può.
 ///
@@ -172,7 +205,25 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
   try {
     final dati = await ref
         .watch(apiClientProvider)
-        .get<List<dynamic>>('/exercises', query: {'limit': '200'});
+        .get<List<dynamic>>(
+          '/exercises',
+          query: {'limit': '$_quantiNeChiediamo'},
+        );
+
+    /*
+     * ⚠️ **Un troncamento non deve poter passare in silenzio.** Se ne
+     * arrivano esattamente quanti ne abbiamo chiesti, quasi certamente ce ne
+     * sono altri che non abbiamo. 🚨 È il difetto che questa riga esiste per
+     * far vedere: un catalogo incompleto non dà nessun errore, dà solo
+     * esercizi senza figura e senza muscoli — e sembra un'importazione
+     * fallita, non una pagina mancante.
+     */
+    if (dati.length >= _quantiNeChiediamo) {
+      debugPrint(
+        'catalogo: arrivati ${dati.length} esercizi, cioè il massimo '
+        'richiedibile — molto probabilmente ne mancano. Serve la paginazione.',
+      );
+    }
 
     final righe = dati
         .map((e) => EsercizioDelCatalogo.fromJson((e as Map).cast()))

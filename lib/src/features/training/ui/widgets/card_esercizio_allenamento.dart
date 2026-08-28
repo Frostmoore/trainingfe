@@ -185,11 +185,19 @@ class _CardChiusa extends ConsumerWidget {
           children: [
             Row(
               children: [
+                /*
+                 * ⚠️ **Il credito arriva anche qui, ma non si scrive.** Serve
+                 * a tingere: senza, il disegno bianco su fondo chiaro non si
+                 * vedrebbe proprio. 🚨 La riga «Illustrazione: …» sta solo
+                 * nella pagina della scheda — *«non durante l'allenamento»* —
+                 * e infatti questo widget non la disegna.
+                 */
                 FotoDellEsercizio(
                   immagine: esercizio.immagine,
                   url: dalCatalogo?.immagine,
                   etichetta: nome,
                   lato: 48,
+                  credito: dalCatalogo?.credito,
                 ),
                 const SizedBox(width: Gap.sm),
                 Expanded(

@@ -6,10 +6,14 @@ import '../theme/app_theme.dart';
 /// La miniatura di una scheda o di un esercizio — C23.
 ///
 /// 🚨 **Senza immagine non si lascia un buco: si disegna un segnaposto.**
-/// La maggior parte degli esercizi non avrà mai una foto — le carica la palestra,
-/// una alla volta — e una lista in cui alcune righe hanno una miniatura e altre
-/// un vuoto della stessa dimensione sembra rotta. Il segnaposto con l'iniziale
-/// tiene l'allineamento e resta leggibile.
+/// Una lista in cui alcune righe hanno una miniatura e altre un vuoto della
+/// stessa dimensione sembra rotta. Il segnaposto tiene l'allineamento e resta
+/// leggibile.
+///
+/// ⚠️ **Da 3b-L il caso raro è quello opposto.** Prima quasi nessun esercizio
+/// aveva una figura — le caricava la palestra, una alla volta. Adesso ne hanno
+/// una **307 su 314**, e il segnaposto serve per i sette che restano e per gli
+/// esercizi scritti a mano dalle palestre.
 ///
 /// ⚠️ **Nessuna intestazione di autenticazione, a differenza delle foto dei
 /// progressi.** Quelle passano da un endpoint che controlla di chi sono; queste
@@ -21,10 +25,29 @@ class Miniatura extends StatelessWidget {
     required this.etichetta,
     this.lato = 48,
     this.icona = Icons.fitness_center_rounded,
+    this.tinta,
     super.key,
   });
 
   final String? url;
+
+  /// Di che colore dipingere l'immagine — 3b-L, 28/08/2026.
+  ///
+  /// ══ 🚨 SERVE PERCHE' I DISEGNI DEL CATALOGO SONO BIANCHI ══════════════
+  ///
+  /// Le illustrazioni sono un tratto **bianco su trasparente**: nate per uno
+  /// sfondo scuro, su una card chiara sarebbero **invisibili** — non brutte,
+  /// proprio assenti. ⛔ E lo stesso file deve servire tema chiaro e tema
+  /// scuro, quindi il colore non può stare dentro il file.
+  ///
+  /// 💡 `BlendMode.srcIn` tiene la forma (il canale alfa) e butta il colore:
+  /// è esattamente quello che serve a una sagoma.
+  ///
+  /// ⚠️ **Va passata solo per i disegni al tratto.** Su una fotografia —
+  /// la copertina di una scheda, la macchina fotografata dalla palestra —
+  /// dipingerebbe tutto di una tinta piatta e la distruggerebbe. 🚨 Per questo
+  /// il valore predefinito è `null`: chi non sa cosa sta disegnando non tinge.
+  final Color? tinta;
 
   /// Da cui si ricava l'iniziale del segnaposto.
   final String etichetta;
@@ -56,7 +79,16 @@ class Miniatura extends StatelessWidget {
         imageUrl: url!,
         width: lato,
         height: lato,
-        fit: BoxFit.cover,
+
+        /*
+         * ⚠️ **`contain` quando è un disegno, `cover` quando è una foto.**
+         * I disegni hanno il margine dentro il file: ritagliandoli si
+         * taglierebbero via testa e bilanciere. 💡 Una fotografia invece va
+         * riempita, o resta con due bande vuote ai lati.
+         */
+        fit: tinta == null ? BoxFit.cover : BoxFit.contain,
+        color: tinta,
+        colorBlendMode: tinta == null ? null : BlendMode.srcIn,
         placeholder: (context, _) => Container(
           width: lato,
           height: lato,

@@ -179,6 +179,59 @@ void main() {
       }
     });
 
+    /// 🚨 **L'abbonamento da trainer scaduto ha un'eccezione sua** — U.3.1.
+    ///
+    /// 📌 *«è una merda se esce solo un errore, si deve capire che è perché non
+    /// ha pagato»* — il committente, 29/08/2026.
+    ///
+    /// ⛔ Come `ForbiddenException` diventava *«Non hai accesso a questa
+    /// cosa»*, che a un trainer che quella schermata l'ha usata per mesi
+    /// **sembra un guasto**: riprova, riavvia, e finisce per scrivere che non
+    /// funziona più niente.
+    test('403 trainer_subscription_expired si riconosce', () async {
+      adapter.onGet(
+        '/trainer/members',
+        (s) => s.reply(403, {
+          'error': 'trainer_subscription_expired',
+          'code': 'trainer_subscription_expired',
+          'message':
+              'Il tuo abbonamento da trainer è scaduto. Le tue schede '
+              'restano tue: puoi continuare a usarle come chiunque altro.',
+        }),
+      );
+
+      final tradotto = ApiClient.unwrapError(
+        await _cattura(() => client.get<dynamic>('/trainer/members')),
+      );
+
+      expect(tradotto, isA<AbbonamentoTrainerScadutoException>());
+
+      // 💡 E il messaggio è quello del server: dice cosa **non** si è perso.
+      expect(tradotto.message, contains('Le tue schede restano tue'));
+
+      // ⚠️ Non è la palestra sospesa: lì la persona non può farci niente, qui
+      // può rinnovare. Confonderli manderebbe il messaggio sbagliato.
+      expect(tradotto, isNot(isA<GymInactiveException>()));
+    });
+
+    /// ⚠️ **Il codice arriva in `error` oltre che in `code`**, e tutti e due
+    /// devono funzionare: i 402 dei gettoni usano `error`, i 403 usano `code`.
+    /// 🚨 Il server li manda entrambi apposta; questo test dice che non è per
+    /// caso.
+    test('403 riconosciuto anche col solo `error`', () async {
+      adapter.onGet(
+        '/trainer/invites',
+        (s) => s.reply(403, {'error': 'trainer_subscription_expired'}),
+      );
+
+      expect(
+        ApiClient.unwrapError(
+          await _cattura(() => client.get<dynamic>('/trainer/invites')),
+        ),
+        isA<AbbonamentoTrainerScadutoException>(),
+      );
+    });
+
     test('403 generico resta ForbiddenException', () async {
       adapter.onGet('/segreto', (s) => s.reply(403, {'message': 'No.'}));
 

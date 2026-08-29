@@ -47,6 +47,36 @@ class GymInactiveException extends ApiException {
   ]);
 }
 
+/// 403 con `code: trainer_subscription_expired` — 3b-U.3.1, 29/08/2026.
+///
+/// ══ 🚨 PERCHE' HA UNA CLASSE SUA ═══════════════════════════════════════════
+///
+/// 📌 *«è una merda se esce solo un errore, si deve capire che è perché non ha
+/// pagato»* — il committente.
+///
+/// ⛔ Come [ForbiddenException] generico diventava *«Non hai accesso a questa
+/// cosa»*, che a un trainer che ha usato quella schermata per mesi **sembra un
+/// guasto**: riproverebbe, riavvierebbe l'app, e finirebbe per scrivere che
+/// «non funziona più niente».
+///
+/// ⚠️ E non è come [GymInactiveException]: lì la palestra ha sospeso il
+/// servizio e la persona non può farci niente. Qui **può**: rinnovare.
+///
+/// 💡 Il messaggio arriva dal server e dice anche cosa **non** si perde — le
+/// schede restano sue. Un trainer che vede sparire «i miei utenti» pensa di
+/// aver perso il lavoro di mesi.
+class AbbonamentoTrainerScadutoException extends ApiException {
+  const AbbonamentoTrainerScadutoException([
+    super.message =
+        'Il tuo abbonamento da trainer è scaduto. Le tue schede restano tue: '
+        'puoi continuare a usarle come chiunque altro.',
+  ]);
+
+  /// 🚨 Il contratto col server. Si riconosce **questo**, non la frase: una
+  /// virgola corretta un giorno non deve far tornare l'errore generico.
+  static const codice = 'trainer_subscription_expired';
+}
+
 /// 403 generico.
 class ForbiddenException extends ApiException {
   const ForbiddenException([super.message = 'Non hai accesso a questa cosa.']);

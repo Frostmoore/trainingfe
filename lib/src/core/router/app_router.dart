@@ -22,6 +22,7 @@ import '../../features/nutrition/ui/importa_piano_screen.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/schermata_benvenuto.dart';
+import '../../features/onboarding/ui/schermata_invito.dart';
 import '../../features/privacy/ui/schermata_consensi.dart';
 import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
@@ -95,6 +96,24 @@ class AppRoutes {
   /// Una scheda in più la trasformerebbe in un pannello di gestione con dentro
   /// anche il diario, che è il contrario di come questa app viene usata.
   static const mieiUtenti = '/profilo/i-miei-utenti';
+
+  /*
+   * ── 🔗 L'invito di una palestra — 3b-V ────────────────────────────────
+   *
+   * 🚨 **Fuori dall'area protetta**, ed è il punto: chi tocca questo link
+   * spesso **non ha nemmeno un account**. ⛔ Se il router lo mandasse
+   * all'accesso, la prima cosa che vedrebbe sarebbe un modulo di registrazione
+   * invece dell'invito che gli è stato mandato — cioè il muro che il link
+   * esiste per togliere.
+   *
+   * 💡 Il token è la credenziale: 32 caratteri casuali, monouso, a scadenza.
+   *
+   * ⚠️ **`/invito-palestra` e non `/invito`**: quello è già degli inviti dei
+   * **trainer** (F6.2), che hanno una loro pagina web. ⛔ Con lo stesso
+   * percorso l'app avrebbe aperto la schermata della palestra anche per un
+   * invito di un trainer — la pagina sbagliata, senza nessun errore.
+   */
+  static const invito = '/invito-palestra';
 
   /// Il catalogo di palestre e trainer — Parte M7.4.
   ///
@@ -357,6 +376,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const SchermataBenvenuto(),
       ),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
+
+      /*
+       * 🔗 `/invito/{token}` — 3b-V.2.5.
+       *
+       * ⚠️ Accanto all'accesso e non dentro l'app: sono le due sole schermate
+       * che una persona può vedere **senza essere nessuno**.
+       */
+      GoRoute(
+        path: '${AppRoutes.invito}/:token',
+        builder: (_, stato) =>
+            SchermataInvito(token: stato.pathParameters['token'] ?? ''),
+      ),
       GoRoute(
         path: AppRoutes.register,
         builder: (_, _) => const RegisterScreen(),

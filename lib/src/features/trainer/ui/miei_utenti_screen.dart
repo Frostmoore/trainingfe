@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../auth/auth_controller.dart';
 import '../data/utente_seguito.dart';
 import '../trainer_controller.dart';
+import 'abbonamento_scaduto.dart';
 
 /// «I miei utenti» — F5.1 e F6 della Parte B.
 ///
@@ -20,16 +23,54 @@ class MieiUtentiScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    /*
+     * ── 🚨 Si guarda PRIMA di chiedere — 3b-U.3.1, 29/08/2026 ─────────────
+     *
+     * 📌 *«è una merda se esce solo un errore, si deve capire che è perché non
+     * ha pagato»*.
+     *
+     * ⛔ `abbonato` arriva da `/me`, quindi l'app **sa già** che il server dirà
+     * di no: chiederglielo per poi mostrare un errore è un giro inutile che
+     * finisce con la persona che non capisce.
+     *
+     * ⚠️ **`== false` e non `!= true`**: `null` vuol dire «non lo so» — il
+     * profilo non è ancora arrivato, o la rete non va — e un flag che manca non
+     * deve chiudere fuori chi ha pagato. È la stessa regola già scritta in
+     * `limiti_delle_schede.dart`.
+     */
+    if (ref.watch(authControllerProvider).user?.abbonato == false) {
+      return const Scaffold(
+        appBar: IntestazioneApp(titolo: 'I miei utenti'),
+        body: AbbonamentoTrainerScaduto(),
+      );
+    }
+
     final stato = ref.watch(mieiUtentiProvider);
 
     return Scaffold(
       appBar: const IntestazioneApp(titolo: 'I miei utenti'),
       body: stato.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          error: ApiClient.unwrapError(e),
-          onRetry: () => ref.invalidate(mieiUtentiProvider),
-        ),
+        error: (e, _) {
+          final errore = ApiClient.unwrapError(e);
+
+          /*
+           * 🚨 **Il secondo ramo serve, e non è una ridondanza.**
+           *
+           * Il flag qui sopra può essere vecchio di un'ora: l'abbonamento è
+           * scaduto **mentre l'app era aperta**, che è poi il caso più
+           * probabile di tutti. ⛔ Senza questo, proprio quel caso mostrerebbe
+           * l'errore generico.
+           */
+          if (errore is AbbonamentoTrainerScadutoException) {
+            return AbbonamentoTrainerScaduto(messaggio: errore.message);
+          }
+
+          return ErrorState(
+            error: errore,
+            onRetry: () => ref.invalidate(mieiUtentiProvider),
+          );
+        },
         data: (dati) => _Elenco(dati: dati),
       ),
     );

@@ -75,8 +75,7 @@ class BrandingController extends StateNotifier<BrandingState> {
            */
           sceltaFatta: _cache.sceltaFatta(
             oppure:
-                _cache.senzaPalestra ||
-                (_cache.joinCode?.isNotEmpty ?? false),
+                _cache.senzaPalestra || (_cache.joinCode?.isNotEmpty ?? false),
           ),
         ),
       );

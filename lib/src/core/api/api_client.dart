@@ -315,11 +315,32 @@ class ApiClient {
         // La palestra sospesa NON è un problema di credenziali: mandare
         // l'utente al login lo farebbe riprovare all'infinito con la password
         // giusta.
-        return code == 'tenant_inactive'
-            ? GymInactiveException(
-                message ?? const GymInactiveException().message,
-              )
-            : ForbiddenException(message ?? const ForbiddenException().message);
+        if (code == 'tenant_inactive') {
+          return GymInactiveException(
+            message ?? const GymInactiveException().message,
+          );
+        }
+
+        /*
+         * 🆕 L'abbonamento da trainer è scaduto — 3b-U.3.1, 29/08/2026.
+         *
+         * 📌 *«è una merda se esce solo un errore, si deve capire che è perché
+         * non ha pagato»*.
+         *
+         * ⛔ Senza questo ramo diventava «Non hai accesso a questa cosa», che a
+         * un trainer che quella schermata l'ha usata per mesi **sembra un
+         * guasto**: riprova, riavvia, e finisce per scrivere che non funziona
+         * più niente.
+         */
+        if (code == AbbonamentoTrainerScadutoException.codice) {
+          return AbbonamentoTrainerScadutoException(
+            message ?? const AbbonamentoTrainerScadutoException().message,
+          );
+        }
+
+        return ForbiddenException(
+          message ?? const ForbiddenException().message,
+        );
 
       case 404:
         return NotFoundException(message ?? const NotFoundException().message);

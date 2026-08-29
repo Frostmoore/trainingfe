@@ -159,11 +159,26 @@ class ProfileScreen extends ConsumerWidget {
                  * altre persone — e la differenza la fa il server.
                  */
                 if (utente?.isTrainer ?? false) ...[
+                  /*
+                   * ⛔ **Scaduta, la voce NON sparisce** — 3b-U.3.1.
+                   *
+                   * 📌 *«si deve capire che è perché non ha pagato»*: una voce
+                   * che sparisce non spiega niente, e chi la cerca pensa che
+                   * l'app si sia rotta o che l'aggiornamento gliel'abbia tolta.
+                   *
+                   * 💡 Resta, lo dice qui, e la schermata lo spiega per esteso.
+                   */
                   ListTile(
-                    leading: const Icon(Icons.groups_2_outlined),
+                    leading: Icon(
+                      utente?.abbonato == false
+                          ? Icons.lock_clock_outlined
+                          : Icons.groups_2_outlined,
+                    ),
                     title: const Text('I miei utenti'),
-                    subtitle: const Text(
-                      'Invita, segui e gestisci le persone che alleni',
+                    subtitle: Text(
+                      utente?.abbonato == false
+                          ? 'Abbonamento scaduto — tocca per sapere cosa resta'
+                          : 'Invita, segui e gestisci le persone che alleni',
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.mieiUtenti),

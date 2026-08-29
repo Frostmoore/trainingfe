@@ -209,6 +209,44 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!--
+              🔗 IL LINK D'INVITO APRE L'APP — 3b-V.3.2.
+
+              📌 «a chi ci clicca si deve aprire l'app in una pagina con la
+              descrizione della palestra».
+
+              🚨 android:autoVerify="true" è quello che fa la differenza fra
+              «apre l'app» e «chiede all'utente con quale app aprirlo». La
+              verifica passa solo se sul dominio c'è
+              /.well-known/assetlinks.json con l'impronta della chiave di
+              firma — quindi ⛔ FINCHÉ L'APP È FIRMATA CON LA CHIAVE DI DEBUG
+              questo funziona solo se assetlinks.json porta ANCHE quella.
+
+              ⚠️ Il file sta nel repo del backend, in public/.well-known/. Se
+              un giorno la chiave di firma cambia, questo link smette di
+              aprire l'app e nessuno se ne accorge: il telefono aprirebbe il
+              browser, che è un ripiego funzionante e silenzioso — il modo
+              peggiore di rompersi.
+
+              💡 Il ripiego web è voluto e serve: chi tocca il link SENZA
+              AVERE L'APP deve comunque vedere di cosa si tratta e finire
+              sullo store. È V.3.1, la parte che si sottovaluta.
+
+              ⚠️ pathPrefix è "/invito-palestra" e NON "/invito": quello è già
+              degli inviti dei trainer (F6.2). Un prefisso su "/invito"
+              catturerebbe ANCHE quelli — pathPrefix è un confronto per
+              prefisso — e li aprirebbe sulla schermata della palestra. La
+              pagina sbagliata, senza nessun errore.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="training.riccardoronconi.it"
+                    android:pathPrefix="/invito-palestra"/>
+            </intent-filter>
+            <!--
               🚨 OBBLIGATORIO per Health Connect: Google rifiuta la
               pubblicazione senza. È il punto in cui il sistema chiede all'app
               di spiegare PERCHÉ vuole quei dati, e apre la nostra schermata di

@@ -71,7 +71,18 @@ class ConversationsScreen extends ConsumerWidget {
            * ⛔ Compare solo a chi segue qualcuno: a tutti gli altri sarebbe un
            * pulsante che apre un elenco vuoto.
            */
-          if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+          /*
+           * ⚠️ **E solo finché l'abbonamento regge** — 3b-U.3.1.
+           *
+           * ⛔ Qui il pulsante **sparisce** invece di spiegare, ed è la scelta
+           * opposta a quella del profilo: là la voce resta perché è il posto in
+           * cui uno la cerca. Qui è un'icona in una barra, e un'icona che apre
+           * un cartello di scuse è peggio di un'icona che non c'è.
+           *
+           * 💡 La spiegazione la trova dove la cerca: in «i miei utenti».
+           */
+          if ((ref.watch(authControllerProvider).user?.isTrainer ?? false) &&
+              ref.watch(authControllerProvider).user?.abbonato != false)
             const _MandaAPiuPersone(),
           /*
            * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6: sta nella

@@ -18,6 +18,9 @@ import '../../auth/auth_controller.dart';
 import '../../fotocamera/ui/schermata_fotocamera.dart';
 import '../../fotocamera/ui/schermata_ingrandimento.dart';
 import '../../nutrition/compositore_piano_controller.dart';
+import '../../trainer/data/utente_seguito.dart';
+import '../../trainer/invio_multiplo.dart';
+import '../../trainer/ui/scelta_degli_allievi.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
@@ -53,6 +56,23 @@ class ConversationsScreen extends ConsumerWidget {
             tooltip: 'Trova una palestra o un trainer',
             onPressed: () => context.push(AppRoutes.catalogo),
           ),
+
+          /*
+           * ── 📨 «Manda una scheda a piu' persone» — 3b-U.1 ────────────────
+           *
+           * 📌 *«Nella finestra delle chat deve poter selezionare tutti i suoi
+           * allievi»*.
+           *
+           * 🚨 **Sta qui e non dentro un filo**, ed e' la differenza che conta:
+           * dentro un filo si sta gia' parlando con **una** persona, e mandare
+           * a venti da li' vorrebbe dire scegliere venti destinatari da una
+           * schermata che ne mostra uno.
+           *
+           * ⛔ Compare solo a chi segue qualcuno: a tutti gli altri sarebbe un
+           * pulsante che apre un elenco vuoto.
+           */
+          if (ref.watch(authControllerProvider).user?.isTrainer ?? false)
+            const _MandaAPiuPersone(),
           /*
            * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6: sta nella
            * riga d'identita' di [IntestazioneApp], su ogni pagina. Lasciarlo
@@ -135,6 +155,91 @@ class ConversationsScreen extends ConsumerWidget {
 ///
 /// ⚠️ Non si vedeva sull'emulatore: capita durante l'animazione fra due rotte,
 /// ed è saltato fuori al primo uso su un telefono vero.
+/// Il pulsante che manda **una scheda a piu' allievi** — 3b-U.1.
+///
+/// ── I tre passi, in quest'ordine e non in un altro ────────────────────────
+///
+///     1. quale scheda   →  `_SceltaModello`
+///     2. a chi          →  `scegliGliAllievi`
+///     3. com'e' andata  →  `mostraIlResoconto`
+///
+/// 💡 **Prima la scheda e poi le persone**, perche' e' l'ordine in cui il
+/// trainer pensa: sceglie un allenamento e poi decide chi lo fara'. Al
+/// contrario si troverebbe con venti nomi selezionati e nessuna idea di cosa
+/// mandargli, e dovrebbe tenerli a mente mentre sfoglia i modelli.
+class _MandaAPiuPersone extends ConsumerStatefulWidget {
+  const _MandaAPiuPersone();
+
+  @override
+  ConsumerState<_MandaAPiuPersone> createState() => _MandaAPiuPersoneState();
+}
+
+class _MandaAPiuPersoneState extends ConsumerState<_MandaAPiuPersone> {
+  bool _inCorso = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_inCorso) {
+      return const Padding(
+        padding: EdgeInsets.all(Gap.md),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.send_to_mobile_rounded),
+      tooltip: 'Manda una scheda a piu\' persone',
+      onPressed: _avvia,
+    );
+  }
+
+  Future<void> _avvia() async {
+    final modello = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _SceltaModello(),
+    );
+
+    if (modello == null || !mounted) return;
+
+    final destinatari = await scegliGliAllievi(context);
+
+    if (destinatari == null || destinatari.isEmpty || !mounted) return;
+
+    await _manda(modello, destinatari);
+  }
+
+  /// ⚠️ **Ricorsivo per il ritentativo**, e va bene cosi': il secondo giro
+  /// parte solo da un tocco del trainer, sui soli falliti, che sono sempre
+  /// meno dei precedenti. Non e' un ciclo che puo' scappare.
+  Future<void> _manda(
+    Map<String, dynamic> scheda,
+    List<UtenteSeguito> destinatari,
+  ) async {
+    setState(() => _inCorso = true);
+
+    try {
+      final esiti = await ref
+          .read(invioMultiploProvider)
+          .manda(scheda: scheda, destinatari: destinatari);
+
+      if (!mounted) return;
+
+      await mostraIlResoconto(
+        context,
+        esiti,
+        riprova: (falliti) => _manda(scheda, falliti),
+      );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+}
+
 class _NuovoMessaggio extends ConsumerWidget {
   const _NuovoMessaggio();
 

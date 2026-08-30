@@ -236,17 +236,51 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
   final livello = livelloScelto ?? profilo.activityLevel;
   final fattore = CalcolatoreCalorie.fattoreDi(livello);
 
+  const calcolatore = CalcolatoreCalorie();
+
+  /*
+   * ══ 🚨 CON LA COMPOSIZIONE, TRE PEZZI NON SERVONO PIU' — 3b-W.6 ══════════
+   *
+   * 📌 *«le cose che si possono presumere si presumono, quelle che si possono
+   * calcolare si calcolano e quelle che si possono chiedere si chiedono»*.
+   *
+   * **Katch-McArdle non usa né altezza, né età, né sesso**: parte dalla massa
+   * magra, che quei tre li ha già dentro. ⛔ Chiederli lo stesso vorrebbe dire
+   * bloccare su «manca la tua data di nascita» chi ha una bilancia smart — per
+   * un dato che il calcolo **non userebbe**.
+   *
+   * ⚠️ E chiedere un dato che non serve è il modo più rapido per farsi dire di
+   * no su tutto.
+   *
+   * 💡 Restano necessari **solo** il peso e il livello di attività: il primo
+   * perché senza non si sa di chi si sta parlando, il secondo perché è la
+   * scelta che trasforma un basale in un fabbisogno.
+   */
+  final massaMagra = massaMagraPerIlBmr(
+    calcolatore: calcolatore,
+    kg: kg,
+    massaMagraMisurataKg: magraMisurata,
+    grassoRecente: grassoRecente,
+  );
+
   final mancano = <PezzoMancante>{
     if (kg == null) PezzoMancante.peso,
-    if (cm == null) PezzoMancante.altezza,
-    if (nascita == null) PezzoMancante.dataDiNascita,
-    if (sesso == null) PezzoMancante.sesso,
+
+    /*
+     * ⚠️ **Solo se Katch-McArdle non si può fare.** Con la massa magra questi
+     * tre non entrano in nessuna formula, e dichiararli «mancanti» sarebbe
+     * falso.
+     */
+    if (massaMagra == null) ...{
+      if (cm == null) PezzoMancante.altezza,
+      if (nascita == null) PezzoMancante.dataDiNascita,
+      if (sesso == null) PezzoMancante.sesso,
+    },
+
     if (fattore == null && tdeeMisurato == null) PezzoMancante.attivita,
   };
 
   if (mancano.isNotEmpty) return EsitoTarget.incompleto(mancano);
-
-  const calcolatore = CalcolatoreCalorie();
 
   /*
    * 🚨 **I valori vanno TRADOTTI, non passati così come sono.**
@@ -265,15 +299,20 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
    *
    * 💡 Nessuno dei due dà errore. Producono un numero plausibile e sbagliato.
    */
-  final bmr = bmrConLaComposizione(
-    calcolatore: calcolatore,
-    kg: kg!,
-    cm: cm!,
-    eta: calcolatore.etaDa(nascita!),
-    sesso: profilo.sessoPerFormula,
-    massaMagraMisurataKg: magraMisurata,
-    grassoRecente: grassoRecente,
-  );
+  /*
+   * 💡 `massaMagra` è già stata calcolata sopra, perché serviva a decidere
+   * **cosa chiedere**. ⛔ Ricalcolarla qui vorrebbe dire due sedi della stessa
+   * scelta, e il giorno che divergono la schermata direbbe «manca l'altezza»
+   * per un target che l'altezza non la usa.
+   */
+  final bmr = massaMagra != null
+      ? calcolatore.bmrKatchMcArdle(massaMagraKg: massaMagra)
+      : calcolatore.bmr(
+          kg: kg!,
+          cm: cm!,
+          eta: calcolatore.etaDa(nascita!),
+          sesso: profilo.sessoPerFormula,
+        );
 
   /*
    * ⛔ **`tdeeSeNoto` e non `tdee`**: il secondo ripiega su 1,2 quando la
@@ -415,20 +454,49 @@ double bmrConLaComposizione({
   double? massaMagraMisurataKg,
   List<double> grassoRecente = const [],
 }) {
-  final massaMagra =
-      massaMagraMisurataKg ??
-      (grassoRecente.isEmpty
-          ? null
-          : calcolatore.massaMagraDa(
-              kg: kg,
-              grassoPct: IndiciDiForma.ewma(grassoRecente, finestraDelGrasso),
-            ));
+  final massaMagra = massaMagraPerIlBmr(
+    calcolatore: calcolatore,
+    kg: kg,
+    massaMagraMisurataKg: massaMagraMisurataKg,
+    grassoRecente: grassoRecente,
+  );
 
   if (massaMagra != null) {
     return calcolatore.bmrKatchMcArdle(massaMagraKg: massaMagra);
   }
 
   return calcolatore.bmr(kg: kg, cm: cm, eta: eta, sesso: sesso);
+}
+
+/// La massa magra da usare nel BMR, o `null` se non se ne può avere una.
+///
+/// ══ 🚨 SEPARATA PERCHE' DECIDE ANCHE COSA CHIEDERE — 3b-W.6 ═══════════════
+///
+/// Non serve solo a calcolare: serve a sapere **se altezza, età e sesso vanno
+/// chiesti**. ⛔ Con la massa magra Katch-McArdle non li usa, e dichiararli
+/// «mancanti» sarebbe falso.
+///
+/// ⚠️ Averla in due copie — una per decidere e una per calcolare — vorrebbe
+/// dire che il giorno che divergono la schermata chiede l'altezza per un target
+/// che l'altezza non la usa.
+///
+/// 💡 `kg` è `null`-abile perché questa funzione viene chiamata **prima** di
+/// sapere se il peso c'è: senza peso non c'è niente da derivare, ma una massa
+/// magra **misurata** vale lo stesso.
+double? massaMagraPerIlBmr({
+  required CalcolatoreCalorie calcolatore,
+  required double? kg,
+  double? massaMagraMisurataKg,
+  List<double> grassoRecente = const [],
+}) {
+  if (massaMagraMisurataKg != null) return massaMagraMisurataKg;
+
+  if (kg == null || grassoRecente.isEmpty) return null;
+
+  return calcolatore.massaMagraDa(
+    kg: kg,
+    grassoPct: IndiciDiForma.ewma(grassoRecente, finestraDelGrasso),
+  );
 }
 
 /// Su quanti giorni si livella la percentuale di grasso — 3b-W.3.4.

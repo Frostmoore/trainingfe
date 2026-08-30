@@ -348,6 +348,56 @@ void main() {
       );
     });
   });
+
+  /// 🚨 **Con la composizione, tre pezzi non servono più** — 3b-W.6.
+  ///
+  /// 📌 *«le cose che si possono calcolare si calcolano e quelle che si possono
+  /// chiedere si chiedono»*.
+  ///
+  /// ⛔ Katch-McArdle non usa né altezza, né età, né sesso: chiederli lo stesso
+  /// vorrebbe dire bloccare su «manca la tua data di nascita» chi ha una
+  /// bilancia smart, per un dato che il calcolo **non userebbe**.
+  group('⚖️ quanti dati servono davvero', () {
+    const calc = CalcolatoreCalorie();
+
+    test('con la massa magra misurata basta quella', () {
+      expect(
+        massaMagraPerIlBmr(
+          calcolatore: calc,
+          kg: null,
+          massaMagraMisurataKg: 71.5,
+        ),
+        71.5,
+        reason: 'Una massa magra misurata vale anche senza il peso.',
+      );
+    });
+
+    test('con peso e grasso si deriva', () {
+      expect(
+        massaMagraPerIlBmr(
+          calcolatore: calc,
+          kg: 100,
+          grassoRecente: const [25, 25, 25],
+        ),
+        75.0,
+      );
+    });
+
+    /// ⛔ E quando non se ne può avere una, si dice — non si inventa.
+    test('senza niente è null, non uno zero', () {
+      expect(massaMagraPerIlBmr(calcolatore: calc, kg: 100), isNull);
+      expect(massaMagraPerIlBmr(calcolatore: calc, kg: null), isNull);
+      expect(
+        massaMagraPerIlBmr(
+          calcolatore: calc,
+          kg: null,
+          grassoRecente: const [25],
+        ),
+        isNull,
+        reason: "Senza peso non c'è niente da derivare.",
+      );
+    });
+  });
 }
 
 /// 💡 Zittisce l'analizzatore su `Value`, che serve solo se un giorno questi

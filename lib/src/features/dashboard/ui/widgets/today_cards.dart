@@ -1779,8 +1779,9 @@ class _CosaToccaOggi extends ConsumerWidget {
                       Text(
                         'Oggi tocca a',
                         style: tema.textTheme.labelSmall?.copyWith(
-                          color: tema.colorScheme.onPrimaryContainer
-                              .withValues(alpha: 0.75),
+                          color: tema.colorScheme.onPrimaryContainer.withValues(
+                            alpha: 0.75,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),

@@ -16,6 +16,7 @@ import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
 import 'widgets/grafico_calorie.dart';
+import 'widgets/scheda_composizione.dart';
 import 'widgets/scheda_peso.dart';
 import 'widgets/today_cards.dart';
 import 'widgets/today_header.dart';
@@ -145,6 +146,23 @@ class DashboardScreen extends ConsumerWidget {
                    * mentre scorreva fino al grafico.
                    */
                   SchedaPeso(pesoObiettivo: r.body.targetWeightKg),
+
+                  /*
+                   * ⚖️ **Cosa dice la composizione** — 3b-Y, 30/08/2026.
+                   *
+                   * 📌 *«mettiamo su oggi un'altra card con le conclusioni che
+                   * si possono ricavare dai dati che abbiamo aggiunto oggi»*.
+                   *
+                   * 💡 **Subito sotto il peso, e non altrove**: è la stessa
+                   * domanda guardata più a fondo — non «quanto peso», ma
+                   * **cosa** ho perso. ⛔ Due chili di grasso e due di muscolo
+                   * sulla bilancia sono lo stesso numero.
+                   *
+                   * ⚠️ Decide da sé se esistere: sparisce senza peso, chiede
+                   * la massa grassa se manca, e mostra solo la fotografia
+                   * finché non c'è abbastanza storia per una conclusione.
+                   */
+                  const SchedaComposizione(),
 
                   const TrainingCard(),
                   /*

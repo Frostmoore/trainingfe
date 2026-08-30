@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
+import '../../core/storage/archivio_salute.dart';
 import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
 import '../profile/corpo_controller.dart';
@@ -293,6 +294,23 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
 /// 🚨 Da qui la regola: **chi chiede un consiglio passa da questo provider.**
 /// Un terzo chiamante che si ricostruisse la mappa a mano rimetterebbe in piedi
 /// esattamente lo stesso difetto, e nessun test lo vedrebbe.
+/// Quanti giorni indietro viaggiano con il consiglio.
+///
+/// 📌 *«diciamo tutta la settimana»*.
+///
+/// 🚨 **Deve valere quanto `AiController::GIORNI_DI_STORIA`** (7): il server
+/// costruisce `week_food` sulla sua finestra e noi mandiamo `week_burned` sulla
+/// nostra. ⛔ Due finestre diverse darebbero al modello una settimana di cibo e
+/// dieci giorni di bruciate, e i confronti che ne uscirebbero sarebbero
+/// plausibili e sbagliati.
+const giorniDelContesto = 7;
+
+/// `2026-08-30` — la forma che le serie della settimana usano da sempre.
+String _etichettaDelGiorno(DateTime g) =>
+    '${g.year.toString().padLeft(4, '0')}-'
+    '${g.month.toString().padLeft(2, '0')}-'
+    '${g.day.toString().padLeft(2, '0')}';
+
 final contestoConsiglioProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
       /*
@@ -371,6 +389,7 @@ final contestoConsiglioProvider =
        * conservarlo.
        */
       final oggi = DateTime.now();
+      final oggiPerLaSettimana = DateTime(oggi.year, oggi.month, oggi.day);
 
       final bruciate = await ref
           .watch(
@@ -423,6 +442,46 @@ final contestoConsiglioProvider =
        * lista bianca, e questo campo non ne fa parte. Serve a decidere *se*
        * chiamare il modello, non a dirgli qualcosa.
        */
+      /*
+       * ══ 📅 LA SETTIMANA DI BRUCIATE E PESO — 31/08/2026 ═══════════════════
+       *
+       * 📌 *«anche i giorni passati (diciamo tutta la settimana) di tutti i
+       * dati che passo (anche in forma compressa, per non aumentare troppo il
+       * costo della chiamata)»*.
+       *
+       * 🚨 **Le manda l'app perché il server non le ha**: le bruciate dopo la
+       * FASE 11.6 e il peso dopo S5 vivono nell'archivio locale. ⛔ Il cibo
+       * invece **non** si manda da qui: `food_entries` è del server, e una
+       * seconda sede della stessa risposta è una sede che diverge.
+       *
+       * 💡 Compressa: un giorno per riga, un numero. Sette giorni costano una
+       * manciata di token.
+       */
+      final giorniIndietro = [
+        for (var i = 1; i <= giorniDelContesto; i++)
+          oggiPerLaSettimana.subtract(Duration(days: i)),
+      ];
+
+      final bruciateSettimana = await ref
+          .watch(
+            bruciateLocaliProvider(
+              giorniIndietro.map(_etichettaDelGiorno).join(','),
+            ).future,
+          )
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: la settimana bruciata non si legge — $e');
+
+            return const <String, int>{};
+          });
+
+      final pesateSettimana = await ref
+          .watch(storicoCorpoProvider.future)
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: le pesate non si leggono — $e');
+
+            return const <MisuraCorpo>[];
+          });
+
       final notizia = await ref
           .watch(ultimaNotiziaProvider.future)
           .catchError((Object e) {
@@ -430,6 +489,28 @@ final contestoConsiglioProvider =
 
             return null;
           });
+
+      /*
+       * ⛔ **Solo le pesate della finestra, e solo quelle vere.** Una riga senza
+       * peso è una misura del corpo senza bilancia (per esempio la sola massa
+       * grassa): mandarla con un peso nullo darebbe al modello un giorno che
+       * sembra pesato e non lo è.
+       */
+      final pesateDaMandare = [
+        for (final m in pesateSettimana)
+          if (m.pesoKg != null &&
+              m.giorno.isAfter(
+                oggiPerLaSettimana.subtract(
+                  const Duration(days: giorniDelContesto),
+                ),
+              ))
+            m,
+      ];
+
+      final pesoDiOggi = pesateSettimana
+          .where((m) => m.pesoKg != null)
+          .map((m) => m.pesoKg)
+          .firstOrNull;
 
       return {
         'last_event_at': notizia?.toUtc().toIso8601String() ?? '',
@@ -442,7 +523,37 @@ final contestoConsiglioProvider =
           'target_protein_g': locale.macro.proteineG,
           'target_carbs_g': locale.macro.carboidratiG,
           'target_fat_g': locale.macro.grassiG,
+
+          /*
+           * 🚨 **Il TDEE dà senso al target, e senza è un numero nudo.**
+           *
+           * 📌 *«Deve capire il target calorico mio, il mio tdee»*.
+           *
+           * 💡 1.900 kcal su un TDEE di 2.000 sono un deficit piccolo; 1.900 su
+           * 3.000 sono un deficit grosso, e i due meritano consigli opposti —
+           * nel secondo il rischio non è mangiare troppo, è non arrivare a
+           * fine giornata. ⛔ Con il solo target il modello non può distinguerli.
+           */
+          'tdee_kcal': locale.tdee.round(),
         },
+
+        /*
+         * ⚠️ **IL PESO ESCE DAL TELEFONO, ED È UN CAMBIO DI S5.**
+         *
+         * 🚨 Poche righe sopra c'è scritto *«Si manda solo il risultato, non il
+         * peso»*. Da oggi il peso parte, su richiesta esplicita del committente
+         * — ed è scritto qui perché nessuno lo scopra leggendo quel commento e
+         * lo creda un difetto.
+         *
+         * 💡 **Il perimetro non cambia**: il server lo inoltra al modello e non
+         * lo conserva, come fa da 16/08 con sonno, HRV e battito — che sono
+         * dati dell'art. 9, cioè molto più delicati. Vedi
+         * `AiController::corpoDallApp()`.
+         *
+         * ⛔ E il prompt gli vieta di parlarne: serve per le proteine, non è un
+         * argomento.
+         */
+        'weight_kg': ?pesoDiOggi,
         ...recupero,
         ...settimana,
 
@@ -453,6 +564,24 @@ final contestoConsiglioProvider =
      */
         for (final voce in tipi.entries)
           'training_types[${voce.key}]': voce.value,
+
+        /*
+         * 💡 La stessa forma delle altre serie della settimana (`day` + `v`),
+         * perché il server le passa tutte dallo stesso setaccio
+         * (`AiController::serieDallApp`). ⚠️ Una forma diversa vorrebbe dire un
+         * secondo sanificatore, e il secondo è quello che diverge.
+         */
+        for (final (i, giorno) in giorniIndietro.indexed) ...{
+          if (bruciateSettimana[_etichettaDelGiorno(giorno)] case final k?) ...{
+            'week_burned[$i][day]': _etichettaDelGiorno(giorno),
+            'week_burned[$i][v]': k,
+          },
+        },
+
+        for (final (i, m) in pesateDaMandare.indexed) ...{
+          'week_weight[$i][day]': _etichettaDelGiorno(m.giorno),
+          'week_weight[$i][v]': m.pesoKg,
+        },
       };
     });
 

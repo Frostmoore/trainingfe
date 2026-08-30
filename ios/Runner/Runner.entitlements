@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 3b-W — HealthKit.
+
+	     🚨 Senza questo file l'app **compila** e le chiamate ad Apple Health
+	     tornano vuote. E' il difetto ricorrente di questo progetto nella sua
+	     forma iOS: nessun errore, zero dati, e nessun modo di capire perche'.
+
+	     ⚠️ E il file da solo non basta: va collegato al target in Xcode
+	     (CODE_SIGN_ENTITLEMENTS) e la capability HealthKit va accesa, o
+	     l'entitlement non finisce nella firma. -->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<!-- ⛔ Nessun `health-records`: quello e' l'accesso alle cartelle cliniche
+	     (referti, diagnosi, farmaci). Non ci serve, e chiederlo aprirebbe una
+	     richiesta di revisione ad Apple per dati che non tocchiamo. -->
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
+</dict>
+</plist>

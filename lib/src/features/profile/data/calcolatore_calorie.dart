@@ -247,6 +247,61 @@ class CalcolatoreCalorie {
     return _arrotonda(base + (sesso.toLowerCase() == 'male' ? 5 : -161), 1);
   }
 
+  /// La **massa magra**, derivata dal peso e dalla percentuale di grasso.
+  ///
+  /// ⚠️ **Derivata, non misurata**: eredita l'errore della bioimpedenza, che su
+  /// una bilancia da casa vale 3-5 punti. 💡 Se la massa magra arriva
+  /// **misurata** (`MisuraCorpo.massaMagraKg`) si usa quella e questa non
+  /// serve — vedi `target_locale_controller.dart`.
+  ///
+  /// 🚨 `null` fuori dai limiti fisiologici, e non un numero corretto a forza:
+  /// una percentuale sopra 75 o sotto 2 non è una persona magra o grassa, è una
+  /// misura sbagliata. ⛔ Accettarla darebbe una massa magra assurda e un BMR
+  /// assurdo, **senza nessun errore**.
+  double? massaMagraDa({required double kg, required double grassoPct}) {
+    if (kg <= 0) return null;
+    if (grassoPct < 2 || grassoPct > 75) return null;
+
+    return _arrotonda(kg * (1 - grassoPct / 100), 1);
+  }
+
+  /// Metabolismo basale con **Katch-McArdle** — 3b-W.3.3.
+  ///
+  /// ```
+  /// BMR = 370 + 21,6 × massa magra (kg)
+  /// ```
+  ///
+  /// ══ 💡 PERCHE' E' MEGLIO DI MIFFLIN, QUANDO SI PUO' ══════════════════════
+  ///
+  /// Mifflin-St Jeor guarda peso, altezza, età e sesso: due persone da 80 kg,
+  /// una al 12% di grasso e una al 30%, per lui hanno **lo stesso**
+  /// metabolismo. 🚨 Nella realtà differiscono di **250-300 kcal**, perché il
+  /// muscolo consuma e il grasso quasi no.
+  ///
+  /// ⚠️ Chi si allena è quasi sempre il primo dei due, e per lui la formula
+  /// generale **sottostima** — cioè gli dice di mangiare meno di quanto
+  /// potrebbe.
+  ///
+  /// ══ ⛔ E PERCHE' NON SI USA SEMPRE ═══════════════════════════════════════
+  ///
+  /// 🚨 **Katch-McArdle è meglio solo quanto è buona la massa magra.** Con una
+  /// percentuale di bioimpedenza che sbaglia di 3-5 punti, il risultato può
+  /// essere **peggiore** di Mifflin — che almeno sbaglia in modo stabile.
+  ///
+  /// 💡 Per questo chi chiama passa una percentuale **livellata** su più
+  /// giorni, e non quella di stamattina. La decisione sta in
+  /// `target_locale_controller.dart`, non qui: questa classe calcola, non
+  /// sceglie.
+  ///
+  /// ⚠️ **Non prende né sesso né età**, ed è corretto: la massa magra li ha già
+  /// dentro. ⛔ Chi in futuro volesse «migliorarla» aggiungendoli conterebbe
+  /// due volte la stessa cosa.
+  double bmrKatchMcArdle({required double massaMagraKg}) {
+    if (massaMagraKg <= 0) throw ArgumentError('Massa magra non valida.');
+
+    return _arrotonda(370 + (21.6 * massaMagraKg), 1);
+  }
+
   /// Il TDEE con il ripiego su `sedentary`.
   ///
   /// ⚠️ **Esiste solo perché è il ritratto fedele di

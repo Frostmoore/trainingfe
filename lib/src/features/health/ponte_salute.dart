@@ -62,7 +62,89 @@ class PonteSalute {
      * possieda, e non serve a niente di quello che facciamo.
      */
     HealthDataType.WORKOUT,
+
+    /*
+     * ══ ⛔ IL BMI NON SI LEGGE. MAI. SU NESSUNA PIATTAFORMA. ══════════════
+     *
+     * 📌 Era stato chiesto — *«peso, massa grassa e bmi direttamente dalla
+     * bilancia»* — e la risposta è no, con due ragioni diverse che portano
+     * allo stesso posto.
+     *
+     * ── 1. Su Android **non esiste** ────────────────────────────────────
+     *
+     * 🚨 Health Connect non ha un record BMI. Il pacchetto `health` elenca
+     * `BODY_MASS_INDEX` in `dataTypeKeysAndroid`, ma il plugin nativo
+     * (`HealthConstants.kt`) non ha **nessuna riga** che lo mappi: sta in
+     * quella lista perché su iOS esiste, e la lista non distingue le
+     * piattaforme. ⚠️ Chiederlo non dà errore: dà **zero risultati, per
+     * sempre**. Verificato sul telefono il 30/08 con `DiagnosticaSalute`.
+     *
+     * ── 2. Su iOS esiste, e la risposta è lo stesso no ──────────────────
+     *
+     * 🚨 **Il BMI non è una misura: è una divisione** — peso ÷ altezza². Di
+     * quei due numeri il peso ce l'abbiamo (dalla bilancia) e l'altezza ce
+     * l'ha data la persona, nel profilo.
+     *
+     * ⛔ Prendere la divisione di qualcun altro vuol dire prendere **la sua
+     * altezza**: quella configurata sulla bilancia, o dentro Apple Health, che
+     * nessuno ricontrolla mai. Risultato: due BMI diversi per la stessa
+     * persona, e nessuno in grado di spiegare quale sia giusto.
+     *
+     * 💡 Uno solo, calcolato da noi, con l'altezza che quella persona ci ha
+     * detto. `CalcolatoreCalorie.bmi(kg, cm)` esiste da sempre e basta.
+     */
   ];
+
+  /// I tipi del corpo — 3b-W.
+  ///
+  /// ══ 🚨 UN GRUPPO A PARTE, E NON DENTRO [_tipiDaLeggere] ═════════════════
+  ///
+  /// ⛔ **Metterceli dentro spegneva tutta la sincronizzazione**, e senza
+  /// nessun errore. `aggiornaInSilenzio()` comincia con
+  /// `if (!await permessiGiaConcessi()) return;`, e quel controllo chiedeva
+  /// **tutti** i tipi in blocco: chi aveva già concesso i vecchi si ritrovava
+  /// `false` per via dei tre nuovi, e l'app smetteva di aggiornare **anche
+  /// sonno, HRV e allenamenti** finché non fosse tornato a mano sulla
+  /// schermata.
+  ///
+  /// ⚠️ Trovato il 30/08 guardando `dumpsys` dopo l'installazione: i tre
+  /// permessi risultavano **dichiarati e non concessi**, che è esattamente lo
+  /// stato in cui il difetto scatta.
+  ///
+  /// 💡 È la stessa regola di tutta 3b-W, applicata ai permessi invece che ai
+  /// valori: **una decisione per gruppo**. Se manca il permesso del corpo,
+  /// manca solo il corpo.
+  ///
+  /// ⛔ Il BMI non c'è, e il perché è scritto sopra.
+  static const tipiDelCorpo = <HealthDataType>[
+    HealthDataType.WEIGHT,
+    HealthDataType.BODY_FAT_PERCENTAGE,
+    HealthDataType.LEAN_BODY_MASS,
+  ];
+
+  static final _permessiDelCorpo = List<HealthDataAccess>.filled(
+    tipiDelCorpo.length,
+    HealthDataAccess.READ,
+  );
+
+  /// I permessi del corpo ci sono già?
+  ///
+  /// 💡 Separato da [permessiGiaConcessi] apposta: chi ha collegato l'orologio
+  /// mesi fa e non ha mai avuto una bilancia deve continuare a sincronizzare
+  /// tutto il resto.
+  Future<bool> permessiDelCorpoConcessi() async {
+    try {
+      await _salute.configure();
+
+      return await _salute.hasPermissions(
+            tipiDelCorpo,
+            permissions: _permessiDelCorpo,
+          ) ??
+          false;
+    } on Object {
+      return false;
+    }
+  }
 
   /// I tre tipi che **chiediamo senza leggerli**, perche' li pretende il
   /// pacchetto per consegnare un allenamento completo.
@@ -110,6 +192,17 @@ class PonteSalute {
   static const _tipiDaAutorizzare = <HealthDataType>[
     ..._tipiDaLeggere,
     ..._tipiInPiuPerGliAllenamenti,
+
+    /*
+     * ⚖️ 3b-W — il corpo si **chiede** insieme al resto, ma si **controlla** a
+     * parte (vedi [permessiDelCorpoConcessi]).
+     *
+     * 💡 Chiederlo insieme costa tre voci in più nel foglio del consenso, una
+     * volta sola. ⛔ Chiederlo dopo, in un secondo momento, vorrebbe dire un
+     * secondo foglio di sistema che compare a sorpresa mesi dopo — e a quel
+     * punto la gente dice di no.
+     */
+    ...tipiDelCorpo,
   ];
 
   /// Le due liste, aperte al test.
@@ -251,6 +344,156 @@ class PonteSalute {
 
       return null;
     }
+  }
+
+  /// ⚖️ Il corpo: peso, massa grassa e massa magra — 3b-W.1.
+  ///
+  /// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+  ///
+  /// *«prendere tutti i dati su peso, massa grassa e bmi direttamente dalla
+  /// bilancia […] e se non ci sono li stimiamo come facciamo ora»*, e poi:
+  /// *«bisogna prendere solo i dati che vengono davvero passati»*.
+  ///
+  /// ══ 🚨 UNA DECISIONE PER VALORE, NON UN `if` SOLO ════════════════════════
+  ///
+  /// I tre valori sono **tre record separati**, e una bilancia può mandarne uno
+  /// solo: quella del committente manda peso e massa grassa, la massa magra no.
+  ///
+  /// ⛔ Il modo sbagliato, che sembra il più ordinato: *«se la bilancia c'è
+  /// prendo tutto da lei, altrimenti stimo tutto»*. 🚨 A chi ha una bilancia che
+  /// manda **solo il peso** darebbe una massa grassa mancante anche quando la
+  /// conosciamo da un'altra parte — o, peggio, uno zero.
+  ///
+  /// 💡 Qui ogni tipo si legge e si scrive per conto suo, e i giorni in cui
+  /// arriva possono essere diversi.
+  ///
+  /// ══ ⚠️ PERCHE' NON DENTRO [sincronizza] ══════════════════════════════════
+  ///
+  /// Perché ha una **finestra diversa**: il sonno vale sette giorni, il peso di
+  /// due anni fa è la cosa che si guarda indietro. ⛔ Allargare la finestra di
+  /// `sincronizza` a due anni vorrebbe dire rileggere ogni volta 56.000 record
+  /// di battito — sei secondi misurati il 30/08 — per un dato che cambia una
+  /// volta al giorno.
+  ///
+  /// @return quanti giorni sono stati scritti
+  Future<int> sincronizzaIlCorpo({int? giorniIndietro}) async {
+    final a = DateTime.now();
+
+    /*
+     * ── ⏳ La prima volta prende TUTTO, poi solo il nuovo ──────────────────
+     *
+     * 💡 Chi arriva da un'altra app ha anni di pesate, ed è esattamente quello
+     * che gli serve rivedere. ⚠️ Ma rileggerli **a ogni avvio** costa: si parte
+     * dall'ultimo giorno già importato.
+     *
+     * 🚨 **Con una settimana di sovrapposizione**, e non dal giorno esatto: una
+     * bilancia può scrivere in ritardo — l'app della bilancia sincronizza
+     * quando le pare — e ripartire dall'ultimo giorno noto salterebbe le
+     * pesate arrivate dopo. ⛔ Un buco nel grafico che nessuno saprebbe
+     * spiegare.
+     */
+    final ultimo = await _archivio.ultimoGiornoImportato();
+
+    final da = giorniIndietro != null
+        ? a.subtract(Duration(days: giorniIndietro))
+        : ultimo == null
+        ? a.subtract(const Duration(days: 365 * 5))
+        : ultimo.subtract(const Duration(days: 7));
+
+    /*
+     * ⛔ **Senza il permesso non si prova nemmeno.** `getHealthDataFromTypes`
+     * su un tipo non concesso non lancia: torna vuoto. 🚨 Il che vuol dire che
+     * senza questo controllo la differenza fra «non ho il permesso» e «la
+     * bilancia non ha scritto niente» sparisce — e la prima è risolvibile,
+     * la seconda no.
+     */
+    if (!await permessiDelCorpoConcessi()) return 0;
+
+    final List<HealthDataPoint> punti;
+
+    try {
+      await _salute.configure();
+
+      punti = await _salute.getHealthDataFromTypes(
+        types: tipiDelCorpo,
+        startTime: da,
+        endTime: a,
+      );
+    } on Object catch (errore) {
+      /*
+       * ⚠️ **Detto e non ingoiato**, ma senza rilanciare: chi non ha una
+       * bilancia collegata passa di qui a ogni avvio, e un'eccezione che sale
+       * spegnerebbe l'app per una funzione che quella persona non sa di avere.
+       */
+      debugPrint('PonteSalute.sincronizzaIlCorpo: $errore');
+
+      return 0;
+    }
+
+    if (punti.isEmpty) return 0;
+
+    /*
+     * ── 🚨 Una misura al giorno, e si prende LA PIU' RECENTE ───────────────
+     *
+     * ⛔ La regola scritta all'inizio era «la prima del giorno, che è quella a
+     * stomaco vuoto». **I dati veri l'hanno smentita**: le pesate del
+     * committente sono alle 23:40, alle 17:48, alle 18:08 e alle 12:45.
+     * Nessuna al mattino. 🚨 Presupponeva un'abitudine che quella persona non
+     * ha.
+     *
+     * 💡 «La più recente» è semplice e prevedibile, e non finge di sapere quale
+     * pesata sia quella buona. ⚠️ Il rumore lo toglie il livellamento, non la
+     * scelta dell'orario: 96,15 kg alle 17:48 e 95,85 alle 18:08 — trecento
+     * grammi in venti minuti, che non sono grasso.
+     */
+    final perGiorno = <DateTime, _CorpoDelGiorno>{};
+
+    for (final punto in punti) {
+      final valore = _numero(punto.value);
+
+      if (valore == null) continue;
+
+      final giorno = DateTime(
+        punto.dateFrom.year,
+        punto.dateFrom.month,
+        punto.dateFrom.day,
+      );
+
+      final riga = perGiorno.putIfAbsent(giorno, _CorpoDelGiorno.new);
+
+      switch (punto.type) {
+        case HealthDataType.WEIGHT:
+          riga.peso.considera(punto.dateFrom, valore);
+        case HealthDataType.BODY_FAT_PERCENTAGE:
+          /*
+           * 🚨 **Uno zero non è «zero grasso»: è una misura fallita.** Una
+           * bilancia che non riesce a leggere l'impedenza — piedi asciutti,
+           * calzini — scrive `0`, non `null`. ⛔ Prenderlo per buono darebbe
+           * una massa magra pari al peso intero, e un BMR alto, plausibile e
+           * sbagliato.
+           */
+          if (valore > 0) riga.grasso.considera(punto.dateFrom, valore);
+        case HealthDataType.LEAN_BODY_MASS:
+          if (valore > 0) riga.magra.considera(punto.dateFrom, valore);
+        default:
+          break;
+      }
+    }
+
+    var scritti = 0;
+
+    for (final voce in perGiorno.entries) {
+      final fatto = await _archivio.registraDaSalute(
+        giorno: voce.key,
+        pesoKg: voce.value.peso.valore,
+        massaGrassaPct: voce.value.grasso.valore,
+        massaMagraKg: voce.value.magra.valore,
+      );
+
+      if (fatto) scritti++;
+    }
+
+    return scritti;
   }
 
   Future<int> sincronizza({int giorniIndietro = 7}) async {
@@ -536,4 +779,32 @@ class PonteSalute {
     HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
     _ => null,
   };
+}
+
+/// Il valore **più recente** di un giorno, e l'ora a cui è arrivato — 3b-W.
+///
+/// 💡 Una classe di tre righe invece di un `Map<DateTime, (double, DateTime)>`:
+/// il confronto sull'ora sta in un posto solo, e non si ripete tre volte con la
+/// possibilità di sbagliarne una.
+class _PiuRecente {
+  DateTime? _quando;
+  double? valore;
+
+  void considera(DateTime quando, double v) {
+    if (_quando != null && !quando.isAfter(_quando!)) return;
+
+    _quando = quando;
+    valore = v;
+  }
+}
+
+/// I tre valori di una giornata, ciascuno con la sua ora.
+///
+/// ⚠️ **Tre `_PiuRecente` e non uno**: peso e massa grassa possono arrivare da
+/// record diversi con orari diversi, e prendere «l'ultimo punto della giornata»
+/// per tutti e tre vorrebbe dire far decidere a uno l'ora degli altri.
+class _CorpoDelGiorno {
+  final peso = _PiuRecente();
+  final grasso = _PiuRecente();
+  final magra = _PiuRecente();
 }

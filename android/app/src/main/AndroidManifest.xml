@@ -74,6 +74,26 @@
         android:name="android.permission.health.READ_STEPS"/>
     <uses-permission
         android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+
+    <!--
+      ⚖️ 3b-W — il corpo, dalla bilancia.
+
+      🚨 Dichiararli qui NON BASTA: l'elenco da chiedere lo costruisce il
+      pacchetto `health` **dai tipi**, uno a uno. Sono le due meta' della stessa
+      cosa, e con una sola i permessi restano granted=false per sempre senza che
+      a nessuno venga chiesto niente. E' la trappola del 19/08
+      (SecurityException: READ_DISTANCE), col sintomo «zero allenamenti».
+
+      ⛔ Nessun WRITE: l'app legge e basta. Scrivere vorrebbe dire diventare una
+      fonte per altre app, e non e' un mestiere che abbiamo scelto.
+
+      ⚠️ READ_BODY_MASS_INDEX non esiste: in Health Connect non c'e' un record
+      BMI. Il BMI si calcola — vedi PonteSalute.
+    -->
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+    <uses-permission
+        android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
     <!--
       🚨 LA RETE — 14/08/2026.
 

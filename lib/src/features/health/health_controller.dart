@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/storage/archivio_salute.dart';
 import '../privacy/consensi_controller.dart';
+import '../profile/corpo_controller.dart';
 import '../profile/data/modello_calorie.dart';
 import '../profile/livello_attivita.dart';
 import '../profile/target_locale_controller.dart';
@@ -231,6 +232,7 @@ class HealthController extends StateNotifier<StatoSalute> {
     this._archivio,
     this._consensoSanitario,
     this._segnalaAllenamenti,
+    this._segnalaMisure,
   ) : super(const StatoSalute());
 
   final PonteSalute _ponte;
@@ -247,6 +249,19 @@ class HealthController extends StateNotifier<StatoSalute> {
   /// chiamate, e si può verificare che dopo una sincronizzazione l'avviso parta
   /// davvero — senza montare mezzo Riverpod.
   final void Function() _segnalaAllenamenti;
+
+  /// Come si avvisa che **le misure del corpo** sono cambiate — 3b-W.
+  ///
+  /// 🚨 **Una chiusura e non un `Ref`**, per la stessa ragione scritta qui
+  /// sopra: un controller che sa di Riverpod costringe i test a montarne uno
+  /// per provare una sincronizzazione.
+  ///
+  /// ⚠️ Serve perché `revisioneCorpoProvider` è quello che fa ricalcolare
+  /// target, grafico e card del peso: senza, una pesata arrivata dalla bilancia
+  /// resterebbe nel database e **non si vedrebbe** finché non si riapre la
+  /// schermata. ⛔ E il sintomo — «l'app non prende il peso» — non somiglia per
+  /// niente alla causa.
+  final void Function() _segnalaMisure;
 
   /// Se la persona ha dato il consenso al trattamento dei dati sanitari — S9.
   ///
@@ -318,6 +333,28 @@ class HealthController extends StateNotifier<StatoSalute> {
      */
     final quanti = await _ponte.sincronizza(giorniIndietro: 30);
 
+    /*
+     * ══ ⚖️ E il corpo, che ha una finestra sua — 3b-W.1 ═══════════════════
+     *
+     * 🚨 **Una chiamata a parte e non un tipo in più in `sincronizza`.** Il
+     * sonno vale sette giorni; il peso di due anni fa è la cosa che si guarda
+     * indietro. ⛔ Allargare la finestra del resto a due anni vorrebbe dire
+     * rileggere ogni volta 56.000 record di battito — sei secondi misurati sul
+     * telefono il 30/08 — per un dato che cambia una volta al giorno.
+     *
+     * 💡 `sincronizzaIlCorpo()` decide da sé quanto indietro andare: tutto la
+     * prima volta, poi solo il nuovo.
+     */
+    final misure = await _ponte.sincronizzaIlCorpo();
+
+    /*
+     * ⚠️ **La revisione si alza solo se qualcosa è cambiato davvero.**
+     * `revisioneCorpoProvider` fa ricalcolare target, grafico e card: farlo a
+     * ogni avvio anche senza pesate nuove vorrebbe dire tre ricalcoli inutili
+     * ogni volta che si apre l'app.
+     */
+    if (misure > 0) _segnalaMisure();
+
     _diCheCiSonoAllenamentiNuovi();
 
     state = state.copyWith(
@@ -367,6 +404,28 @@ class HealthController extends StateNotifier<StatoSalute> {
     if (!await _ponte.permessiGiaConcessi()) return;
 
     final quanti = await _ponte.sincronizza();
+
+    /*
+     * ══ ⚖️ E il corpo, che ha una finestra sua — 3b-W.1 ═══════════════════
+     *
+     * 🚨 **Una chiamata a parte e non un tipo in più in `sincronizza`.** Il
+     * sonno vale sette giorni; il peso di due anni fa è la cosa che si guarda
+     * indietro. ⛔ Allargare la finestra del resto a due anni vorrebbe dire
+     * rileggere ogni volta 56.000 record di battito — sei secondi misurati sul
+     * telefono il 30/08 — per un dato che cambia una volta al giorno.
+     *
+     * 💡 `sincronizzaIlCorpo()` decide da sé quanto indietro andare: tutto la
+     * prima volta, poi solo il nuovo.
+     */
+    final misure = await _ponte.sincronizzaIlCorpo();
+
+    /*
+     * ⚠️ **La revisione si alza solo se qualcosa è cambiato davvero.**
+     * `revisioneCorpoProvider` fa ricalcolare target, grafico e card: farlo a
+     * ogni avvio anche senza pesate nuove vorrebbe dire tre ricalcoli inutili
+     * ogni volta che si apre l'app.
+     */
+    if (misure > 0) _segnalaMisure();
 
     _diCheCiSonoAllenamentiNuovi();
 
@@ -432,6 +491,15 @@ final healthControllerProvider =
      * sincronizzare, e la cosa si morde la coda.
      */
         () => ref.read(revisioneAllenamentiProvider.notifier).state++,
+
+        /*
+     * ⚖️ 3b-W — e la stessa cosa per le misure del corpo.
+     *
+     * ⚠️ `ref.read` come sopra, e per lo stesso motivo: con `watch` il
+     * controller si ricreerebbe a ogni pesata arrivata dalla bilancia — cioe'
+     * subito dopo averla scritta lui.
+     */
+        () => ref.read(revisioneCorpoProvider.notifier).state++,
       ),
     );
 

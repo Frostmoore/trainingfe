@@ -877,6 +877,28 @@ class $MisureCorpoTable extends MisureCorpo
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _massaMagraKgMeta = const VerificationMeta(
+    'massaMagraKg',
+  );
+  @override
+  late final GeneratedColumn<double> massaMagraKg = GeneratedColumn<double>(
+    'massa_magra_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _origineMeta = const VerificationMeta(
+    'origine',
+  );
+  @override
+  late final GeneratedColumn<String> origine = GeneratedColumn<String>(
+    'origine',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _vitaCmMeta = const VerificationMeta('vitaCm');
   @override
   late final GeneratedColumn<double> vitaCm = GeneratedColumn<double>(
@@ -934,6 +956,8 @@ class $MisureCorpoTable extends MisureCorpo
     giorno,
     pesoKg,
     massaGrassaPct,
+    massaMagraKg,
+    origine,
     vitaCm,
     toraceCm,
     braccioCm,
@@ -976,6 +1000,21 @@ class $MisureCorpoTable extends MisureCorpo
           data['massa_grassa_pct']!,
           _massaGrassaPctMeta,
         ),
+      );
+    }
+    if (data.containsKey('massa_magra_kg')) {
+      context.handle(
+        _massaMagraKgMeta,
+        massaMagraKg.isAcceptableOrUnknown(
+          data['massa_magra_kg']!,
+          _massaMagraKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('origine')) {
+      context.handle(
+        _origineMeta,
+        origine.isAcceptableOrUnknown(data['origine']!, _origineMeta),
       );
     }
     if (data.containsKey('vita_cm')) {
@@ -1033,6 +1072,14 @@ class $MisureCorpoTable extends MisureCorpo
         DriftSqlType.double,
         data['${effectivePrefix}massa_grassa_pct'],
       ),
+      massaMagraKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}massa_magra_kg'],
+      ),
+      origine: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine'],
+      ),
       vitaCm: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}vita_cm'],
@@ -1069,6 +1116,37 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
   final DateTime giorno;
   final double? pesoKg;
   final double? massaGrassaPct;
+
+  /// 🆕 La **massa magra**, quando la bilancia la manda — 3b-W.
+  ///
+  /// 💡 Vale più della percentuale di grasso: Katch-McArdle parte da qui, e
+  /// averla **misurata** invece che derivata toglie di mezzo l'errore della
+  /// bioimpedenza. ⚠️ La bilancia del committente non la manda; un orologio
+  /// Amazfit sì.
+  final double? massaMagraKg;
+
+  /// 🆕 Da dove viene questa misura — 3b-W.2.
+  ///
+  /// ══ 🚨 SERVE A NON SOVRASCRIVERE QUELLO CHE UNO HA SCRITTO A MANO ═══════
+  ///
+  /// ⛔ Senza, un'importazione da Health Connect cancella **in silenzio** la
+  /// correzione di chi si è pesato con una bilancia scassata e ha rimesso il
+  /// numero giusto. ⚠️ E il caso non è teorico: la riga esiste, ha un valore
+  /// plausibile, e nessuno si accorge di niente.
+  ///
+  /// ══ ⛔ E DICE SOLO «DA HEALTH CONNECT», NON QUALE APP ═══════════════════
+  ///
+  /// 🚨 Misurato il 30/08: `HealthDataPoint.sourceId` arriva **vuoto** su
+  /// Android. Non sappiamo se un peso l'ha scritto la bilancia, l'orologio o
+  /// una persona dentro Health Connect. 💡 Quindi l'interfaccia può dire *«da
+  /// Health Connect»* e **non** *«dalla tua bilancia»*: promettere di sapere
+  /// quale bilancia sarebbe mentire.
+  ///
+  /// ⚠️ **`null` è un valore vero**, e vuol dire «non lo so»: sono le righe
+  /// scritte prima di 3b-W. ⛔ Riempirle con `'manuale'` alla migrazione le
+  /// proteggerebbe per sempre da un aggiornamento — e non è vero che sono state
+  /// scritte a mano: molte arrivano da un backup.
+  final String? origine;
   final double? vitaCm;
   final double? toraceCm;
   final double? braccioCm;
@@ -1079,6 +1157,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
     required this.giorno,
     this.pesoKg,
     this.massaGrassaPct,
+    this.massaMagraKg,
+    this.origine,
     this.vitaCm,
     this.toraceCm,
     this.braccioCm,
@@ -1095,6 +1175,12 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
     }
     if (!nullToAbsent || massaGrassaPct != null) {
       map['massa_grassa_pct'] = Variable<double>(massaGrassaPct);
+    }
+    if (!nullToAbsent || massaMagraKg != null) {
+      map['massa_magra_kg'] = Variable<double>(massaMagraKg);
+    }
+    if (!nullToAbsent || origine != null) {
+      map['origine'] = Variable<String>(origine);
     }
     if (!nullToAbsent || vitaCm != null) {
       map['vita_cm'] = Variable<double>(vitaCm);
@@ -1124,6 +1210,12 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
       massaGrassaPct: massaGrassaPct == null && nullToAbsent
           ? const Value.absent()
           : Value(massaGrassaPct),
+      massaMagraKg: massaMagraKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(massaMagraKg),
+      origine: origine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(origine),
       vitaCm: vitaCm == null && nullToAbsent
           ? const Value.absent()
           : Value(vitaCm),
@@ -1150,6 +1242,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
       giorno: serializer.fromJson<DateTime>(json['giorno']),
       pesoKg: serializer.fromJson<double?>(json['pesoKg']),
       massaGrassaPct: serializer.fromJson<double?>(json['massaGrassaPct']),
+      massaMagraKg: serializer.fromJson<double?>(json['massaMagraKg']),
+      origine: serializer.fromJson<String?>(json['origine']),
       vitaCm: serializer.fromJson<double?>(json['vitaCm']),
       toraceCm: serializer.fromJson<double?>(json['toraceCm']),
       braccioCm: serializer.fromJson<double?>(json['braccioCm']),
@@ -1165,6 +1259,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
       'giorno': serializer.toJson<DateTime>(giorno),
       'pesoKg': serializer.toJson<double?>(pesoKg),
       'massaGrassaPct': serializer.toJson<double?>(massaGrassaPct),
+      'massaMagraKg': serializer.toJson<double?>(massaMagraKg),
+      'origine': serializer.toJson<String?>(origine),
       'vitaCm': serializer.toJson<double?>(vitaCm),
       'toraceCm': serializer.toJson<double?>(toraceCm),
       'braccioCm': serializer.toJson<double?>(braccioCm),
@@ -1178,6 +1274,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
     DateTime? giorno,
     Value<double?> pesoKg = const Value.absent(),
     Value<double?> massaGrassaPct = const Value.absent(),
+    Value<double?> massaMagraKg = const Value.absent(),
+    Value<String?> origine = const Value.absent(),
     Value<double?> vitaCm = const Value.absent(),
     Value<double?> toraceCm = const Value.absent(),
     Value<double?> braccioCm = const Value.absent(),
@@ -1190,6 +1288,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
     massaGrassaPct: massaGrassaPct.present
         ? massaGrassaPct.value
         : this.massaGrassaPct,
+    massaMagraKg: massaMagraKg.present ? massaMagraKg.value : this.massaMagraKg,
+    origine: origine.present ? origine.value : this.origine,
     vitaCm: vitaCm.present ? vitaCm.value : this.vitaCm,
     toraceCm: toraceCm.present ? toraceCm.value : this.toraceCm,
     braccioCm: braccioCm.present ? braccioCm.value : this.braccioCm,
@@ -1204,6 +1304,10 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
       massaGrassaPct: data.massaGrassaPct.present
           ? data.massaGrassaPct.value
           : this.massaGrassaPct,
+      massaMagraKg: data.massaMagraKg.present
+          ? data.massaMagraKg.value
+          : this.massaMagraKg,
+      origine: data.origine.present ? data.origine.value : this.origine,
       vitaCm: data.vitaCm.present ? data.vitaCm.value : this.vitaCm,
       toraceCm: data.toraceCm.present ? data.toraceCm.value : this.toraceCm,
       braccioCm: data.braccioCm.present ? data.braccioCm.value : this.braccioCm,
@@ -1219,6 +1323,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
           ..write('giorno: $giorno, ')
           ..write('pesoKg: $pesoKg, ')
           ..write('massaGrassaPct: $massaGrassaPct, ')
+          ..write('massaMagraKg: $massaMagraKg, ')
+          ..write('origine: $origine, ')
           ..write('vitaCm: $vitaCm, ')
           ..write('toraceCm: $toraceCm, ')
           ..write('braccioCm: $braccioCm, ')
@@ -1234,6 +1340,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
     giorno,
     pesoKg,
     massaGrassaPct,
+    massaMagraKg,
+    origine,
     vitaCm,
     toraceCm,
     braccioCm,
@@ -1248,6 +1356,8 @@ class MisuraCorpo extends DataClass implements Insertable<MisuraCorpo> {
           other.giorno == this.giorno &&
           other.pesoKg == this.pesoKg &&
           other.massaGrassaPct == this.massaGrassaPct &&
+          other.massaMagraKg == this.massaMagraKg &&
+          other.origine == this.origine &&
           other.vitaCm == this.vitaCm &&
           other.toraceCm == this.toraceCm &&
           other.braccioCm == this.braccioCm &&
@@ -1260,6 +1370,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
   final Value<DateTime> giorno;
   final Value<double?> pesoKg;
   final Value<double?> massaGrassaPct;
+  final Value<double?> massaMagraKg;
+  final Value<String?> origine;
   final Value<double?> vitaCm;
   final Value<double?> toraceCm;
   final Value<double?> braccioCm;
@@ -1270,6 +1382,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
     this.giorno = const Value.absent(),
     this.pesoKg = const Value.absent(),
     this.massaGrassaPct = const Value.absent(),
+    this.massaMagraKg = const Value.absent(),
+    this.origine = const Value.absent(),
     this.vitaCm = const Value.absent(),
     this.toraceCm = const Value.absent(),
     this.braccioCm = const Value.absent(),
@@ -1281,6 +1395,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
     required DateTime giorno,
     this.pesoKg = const Value.absent(),
     this.massaGrassaPct = const Value.absent(),
+    this.massaMagraKg = const Value.absent(),
+    this.origine = const Value.absent(),
     this.vitaCm = const Value.absent(),
     this.toraceCm = const Value.absent(),
     this.braccioCm = const Value.absent(),
@@ -1292,6 +1408,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
     Expression<DateTime>? giorno,
     Expression<double>? pesoKg,
     Expression<double>? massaGrassaPct,
+    Expression<double>? massaMagraKg,
+    Expression<String>? origine,
     Expression<double>? vitaCm,
     Expression<double>? toraceCm,
     Expression<double>? braccioCm,
@@ -1303,6 +1421,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
       if (giorno != null) 'giorno': giorno,
       if (pesoKg != null) 'peso_kg': pesoKg,
       if (massaGrassaPct != null) 'massa_grassa_pct': massaGrassaPct,
+      if (massaMagraKg != null) 'massa_magra_kg': massaMagraKg,
+      if (origine != null) 'origine': origine,
       if (vitaCm != null) 'vita_cm': vitaCm,
       if (toraceCm != null) 'torace_cm': toraceCm,
       if (braccioCm != null) 'braccio_cm': braccioCm,
@@ -1316,6 +1436,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
     Value<DateTime>? giorno,
     Value<double?>? pesoKg,
     Value<double?>? massaGrassaPct,
+    Value<double?>? massaMagraKg,
+    Value<String?>? origine,
     Value<double?>? vitaCm,
     Value<double?>? toraceCm,
     Value<double?>? braccioCm,
@@ -1327,6 +1449,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
       giorno: giorno ?? this.giorno,
       pesoKg: pesoKg ?? this.pesoKg,
       massaGrassaPct: massaGrassaPct ?? this.massaGrassaPct,
+      massaMagraKg: massaMagraKg ?? this.massaMagraKg,
+      origine: origine ?? this.origine,
       vitaCm: vitaCm ?? this.vitaCm,
       toraceCm: toraceCm ?? this.toraceCm,
       braccioCm: braccioCm ?? this.braccioCm,
@@ -1349,6 +1473,12 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
     }
     if (massaGrassaPct.present) {
       map['massa_grassa_pct'] = Variable<double>(massaGrassaPct.value);
+    }
+    if (massaMagraKg.present) {
+      map['massa_magra_kg'] = Variable<double>(massaMagraKg.value);
+    }
+    if (origine.present) {
+      map['origine'] = Variable<String>(origine.value);
     }
     if (vitaCm.present) {
       map['vita_cm'] = Variable<double>(vitaCm.value);
@@ -1375,6 +1505,8 @@ class MisureCorpoCompanion extends UpdateCompanion<MisuraCorpo> {
           ..write('giorno: $giorno, ')
           ..write('pesoKg: $pesoKg, ')
           ..write('massaGrassaPct: $massaGrassaPct, ')
+          ..write('massaMagraKg: $massaMagraKg, ')
+          ..write('origine: $origine, ')
           ..write('vitaCm: $vitaCm, ')
           ..write('toraceCm: $toraceCm, ')
           ..write('braccioCm: $braccioCm, ')
@@ -7415,6 +7547,8 @@ typedef $$MisureCorpoTableCreateCompanionBuilder =
       required DateTime giorno,
       Value<double?> pesoKg,
       Value<double?> massaGrassaPct,
+      Value<double?> massaMagraKg,
+      Value<String?> origine,
       Value<double?> vitaCm,
       Value<double?> toraceCm,
       Value<double?> braccioCm,
@@ -7427,6 +7561,8 @@ typedef $$MisureCorpoTableUpdateCompanionBuilder =
       Value<DateTime> giorno,
       Value<double?> pesoKg,
       Value<double?> massaGrassaPct,
+      Value<double?> massaMagraKg,
+      Value<String?> origine,
       Value<double?> vitaCm,
       Value<double?> toraceCm,
       Value<double?> braccioCm,
@@ -7460,6 +7596,16 @@ class $$MisureCorpoTableFilterComposer
 
   ColumnFilters<double> get massaGrassaPct => $composableBuilder(
     column: $table.massaGrassaPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get massaMagraKg => $composableBuilder(
+    column: $table.massaMagraKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origine => $composableBuilder(
+    column: $table.origine,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7518,6 +7664,16 @@ class $$MisureCorpoTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get massaMagraKg => $composableBuilder(
+    column: $table.massaMagraKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origine => $composableBuilder(
+    column: $table.origine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get vitaCm => $composableBuilder(
     column: $table.vitaCm,
     builder: (column) => ColumnOrderings(column),
@@ -7566,6 +7722,14 @@ class $$MisureCorpoTableAnnotationComposer
     column: $table.massaGrassaPct,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get massaMagraKg => $composableBuilder(
+    column: $table.massaMagraKg,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get origine =>
+      $composableBuilder(column: $table.origine, builder: (column) => column);
 
   GeneratedColumn<double> get vitaCm =>
       $composableBuilder(column: $table.vitaCm, builder: (column) => column);
@@ -7618,6 +7782,8 @@ class $$MisureCorpoTableTableManager
                 Value<DateTime> giorno = const Value.absent(),
                 Value<double?> pesoKg = const Value.absent(),
                 Value<double?> massaGrassaPct = const Value.absent(),
+                Value<double?> massaMagraKg = const Value.absent(),
+                Value<String?> origine = const Value.absent(),
                 Value<double?> vitaCm = const Value.absent(),
                 Value<double?> toraceCm = const Value.absent(),
                 Value<double?> braccioCm = const Value.absent(),
@@ -7628,6 +7794,8 @@ class $$MisureCorpoTableTableManager
                 giorno: giorno,
                 pesoKg: pesoKg,
                 massaGrassaPct: massaGrassaPct,
+                massaMagraKg: massaMagraKg,
+                origine: origine,
                 vitaCm: vitaCm,
                 toraceCm: toraceCm,
                 braccioCm: braccioCm,
@@ -7640,6 +7808,8 @@ class $$MisureCorpoTableTableManager
                 required DateTime giorno,
                 Value<double?> pesoKg = const Value.absent(),
                 Value<double?> massaGrassaPct = const Value.absent(),
+                Value<double?> massaMagraKg = const Value.absent(),
+                Value<String?> origine = const Value.absent(),
                 Value<double?> vitaCm = const Value.absent(),
                 Value<double?> toraceCm = const Value.absent(),
                 Value<double?> braccioCm = const Value.absent(),
@@ -7650,6 +7820,8 @@ class $$MisureCorpoTableTableManager
                 giorno: giorno,
                 pesoKg: pesoKg,
                 massaGrassaPct: massaGrassaPct,
+                massaMagraKg: massaMagraKg,
+                origine: origine,
                 vitaCm: vitaCm,
                 toraceCm: toraceCm,
                 braccioCm: braccioCm,

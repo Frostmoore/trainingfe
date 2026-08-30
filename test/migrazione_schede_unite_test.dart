@@ -125,6 +125,30 @@ void main() {
       'sessione_id INTEGER)',
     );
 
+    /*
+     * ⚖️ Le misure del corpo — aggiunta il 30/08 dal passo v24 → v25 (3b-W).
+     *
+     * 🚨 **Mancava, e questo finto v14 non era un v14.** Un database vero a
+     * quella versione ce l'ha da sempre: la crea il passo `da < 2`. Qui non
+     * c'era perche' nessun passo l'aveva mai toccata — e il primo che l'ha
+     * toccata e' esploso con `no such table: misure_corpo`.
+     *
+     * 💡 E' precisamente l'avvertimento scritto qui sopra: chi aggiunge un
+     * passo scopre cosa manca al fixture, e questo e' il posto dove rimediare.
+     */
+    await esegui(
+      'CREATE TABLE misure_corpo ('
+      'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+      'giorno INTEGER NOT NULL UNIQUE, '
+      'peso_kg REAL, '
+      'massa_grassa_pct REAL, '
+      'vita_cm REAL, '
+      'torace_cm REAL, '
+      'braccio_cm REAL, '
+      'coscia_cm REAL, '
+      'note TEXT)',
+    );
+
     // La scheda scesa dal server: id positivo, non è mia.
     await esegui(
       "INSERT INTO schede_sul_telefono VALUES (8, 'Giorno 1', '{}', 1000, 0)",

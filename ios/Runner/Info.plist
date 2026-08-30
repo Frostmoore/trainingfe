@@ -8,6 +8,19 @@
 		<string>Per scattare le foto dei tuoi progressi e dei tuoi pasti.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Per scegliere una foto che hai gia’ scattato.</string>
+		<!-- 3b-W: senza questa, iOS CHIUDE l'app nell'istante in cui si chiede
+	     il permesso ad Apple Health. E' la stessa terminazione secca delle due
+	     righe qui sopra, non un avviso.
+
+	     ⚠️ La frase la legge la persona dentro il foglio dei permessi: dice
+	     COSA si legge e A COSA serve, perche' e' l'unico momento in cui puo'
+	     decidere sapendo. -->
+		<key>NSHealthShareUsageDescription</key>
+		<string>Per leggere il tuo peso, la massa grassa, il sonno e gli allenamenti, e calcolare il tuo fabbisogno sui tuoi numeri veri.</string>
+		<!-- ⛔ NIENTE NSHealthUpdateUsageDescription, ed e' deliberato:
+	     l'app **non scrive** in Apple Health. Dichiarare la scrittura
+	     vorrebbe dire chiedere un permesso che non useremmo mai, e ogni voce
+	     in piu' nel foglio dei permessi e' un motivo per dire di no. -->
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>

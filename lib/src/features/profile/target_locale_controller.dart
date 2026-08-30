@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../forma/indici_di_forma.dart';
 import '../health/health_controller.dart';
 import 'corpo_controller.dart';
 import 'data/calcolatore_calorie.dart';
@@ -198,6 +199,21 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
   final profilo = await profiloFuturo;
   final pesata = await archivio.ultimoPeso();
 
+  /*
+   * ══ ⚖️ LA COMPOSIZIONE, LETTA A PARTE — 3b-W ══════════════════════════════
+   *
+   * 📌 *«bisogna prendere solo i dati che vengono davvero passati e stimare
+   * quelli che non vengono passati»*.
+   *
+   * 🚨 **Due letture separate e non «l'ultima misura».** Peso, massa grassa e
+   * massa magra arrivano da record diversi e **possono essere di giorni
+   * diversi**: chi si pesa ogni giorno e misura il grasso una volta a settimana
+   * ha il peso di stamattina e il grasso di martedì. ⛔ Leggere tre campi dalla
+   * stessa riga butterebbe via il valore più fresco.
+   */
+  final magraMisurata = (await archivio.ultimaMassaMagra())?.massaMagraKg;
+  final grassoRecente = await archivio.massaGrassaRecente();
+
   final kg = pesata?.pesoKg;
   final cm = profilo.heightCm?.toDouble();
   final nascita = profilo.birthdate;
@@ -249,11 +265,14 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
    *
    * 💡 Nessuno dei due dà errore. Producono un numero plausibile e sbagliato.
    */
-  final bmr = calcolatore.bmr(
+  final bmr = bmrConLaComposizione(
+    calcolatore: calcolatore,
     kg: kg!,
     cm: cm!,
     eta: calcolatore.etaDa(nascita!),
     sesso: profilo.sessoPerFormula,
+    massaMagraMisurataKg: magraMisurata,
+    grassoRecente: grassoRecente,
   );
 
   /*
@@ -322,6 +341,18 @@ final metabolismoBasaleProvider = FutureProvider.autoDispose<double?>((
   final profilo = await profiloFuturo;
   final pesata = await archivio.ultimoPeso();
 
+  /*
+   * 🚨 **La stessa composizione del target, letta allo stesso modo** — 3b-W.
+   *
+   * ⛔ Senza queste due righe questo provider resterebbe su Mifflin mentre il
+   * target passa a Katch-McArdle: due numeri diversi per la stessa persona, uno
+   * nell'obiettivo e l'altro dentro la formula che lo spiega. ⚠️ È il difetto
+   * dell'header di «Oggi» — una correzione applicata in un posto e non
+   * nell'altro — in un posto dove fa più danno.
+   */
+  final magraMisurata = (await archivio.ultimaMassaMagra())?.massaMagraKg;
+  final grassoRecente = await archivio.massaGrassaRecente();
+
   final kg = pesata?.pesoKg;
   final cm = profilo.heightCm?.toDouble();
   final nascita = profilo.birthdate;
@@ -332,10 +363,77 @@ final metabolismoBasaleProvider = FutureProvider.autoDispose<double?>((
 
   const calcolatore = CalcolatoreCalorie();
 
-  return calcolatore.bmr(
+  return bmrConLaComposizione(
+    calcolatore: calcolatore,
     kg: kg,
     cm: cm,
     eta: calcolatore.etaDa(nascita),
     sesso: profilo.sessoPerFormula,
+    massaMagraMisurataKg: magraMisurata,
+    grassoRecente: grassoRecente,
   );
 });
+
+/// Il metabolismo basale, con la formula giusta per i dati che ci sono — 3b-W.3.
+///
+/// ══ 🚨 UNA SOLA SEDE, E NON E' PIGNOLERIA ════════════════════════════════
+///
+/// Due provider calcolano il BMR — [targetLocaleProvider] e
+/// [metabolismoBasaleProvider] — e sono separati di proposito: il secondo deve
+/// funzionare proprio quando il primo si rifiuta.
+///
+/// ⛔ Ma la **formula** dev'essere una. Averla in due copie vuol dire due numeri
+/// diversi per la stessa persona nella stessa app: uno dentro il target,
+/// l'altro dentro la spiegazione della formula. ⚠️ È il difetto trovato il
+/// 30/08 nell'header di «Oggi» — una correzione applicata in un posto e non
+/// nell'altro — e nessun test se ne accorge, perché niente è rotto.
+///
+/// ══ 💡 L'ORDINE, E PERCHE' E' QUESTO ═════════════════════════════════════
+///
+/// | | Da dove viene la massa magra | Perché prima |
+/// |---|---|---|
+/// | 1 | **misurata** dalla bilancia | non eredita nessun errore |
+/// | 2 | **derivata** da una percentuale **livellata** | eredita l'errore, ma smorzato |
+/// | 3 | ⛔ nessuna → **Mifflin-St Jeor**, come sempre | |
+///
+/// ⚠️ **La percentuale si livella**, e non è un vezzo: una bioimpedenza da casa
+/// oscilla di 3-5 punti con l'idratazione, e 3 punti sono ~60 kcal di BMR e ~80
+/// di target. 🚨 Un obiettivo che cambia ogni mattina **insegna a non fidarsi
+/// del numero**, ed è il danno peggiore che questa funzione possa fare.
+///
+/// ══ ⛔ E IL RIPIEGO NON E' UN NUMERO ═════════════════════════════════════
+///
+/// 🚨 «Non lo so» è `null`, **mai `0`**. Un `?? 0` messo per far compilare
+/// darebbe a chi non ha la bilancia una massa magra pari al peso intero, e un
+/// BMR alto, plausibile e sbagliato. ⚠️ È la metà che si rompe per prima.
+double bmrConLaComposizione({
+  required CalcolatoreCalorie calcolatore,
+  required double kg,
+  required double cm,
+  required int eta,
+  required String sesso,
+  double? massaMagraMisurataKg,
+  List<double> grassoRecente = const [],
+}) {
+  final massaMagra =
+      massaMagraMisurataKg ??
+      (grassoRecente.isEmpty
+          ? null
+          : calcolatore.massaMagraDa(
+              kg: kg,
+              grassoPct: IndiciDiForma.ewma(grassoRecente, finestraDelGrasso),
+            ));
+
+  if (massaMagra != null) {
+    return calcolatore.bmrKatchMcArdle(massaMagraKg: massaMagra);
+  }
+
+  return calcolatore.bmr(kg: kg, cm: cm, eta: eta, sesso: sesso);
+}
+
+/// Su quanti giorni si livella la percentuale di grasso — 3b-W.3.4.
+///
+/// 💡 **Sette**: è la finestra in cui l'idratazione si media da sola, ed è la
+/// stessa che lo storico usa per lo scostamento del peso. ⚠️ Più corta lascia
+/// passare il rumore, più lunga fa arrivare in ritardo un dimagrimento vero.
+const finestraDelGrasso = 7;

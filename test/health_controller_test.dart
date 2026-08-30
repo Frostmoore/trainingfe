@@ -27,8 +27,17 @@ void main() {
   /// allenamento» con la riga già nel database.
   late int avvisi;
 
-  HealthController conConsenso(bool dato) =>
-      HealthController(ponte, archivio, () async => dato, () => avvisi++);
+  /// ⚖️ 3b-W: quante volte il controller ha detto «le misure sono cambiate».
+  late int misureAvvisate;
+
+  HealthController conConsenso(bool dato) => HealthController(
+    ponte,
+    archivio,
+    () async => dato,
+    () => avvisi++,
+    // ⚖️ 3b-W: l'avviso che le misure del corpo sono cambiate.
+    () => misureAvvisate++,
+  );
 
   // ⚠️ `DateFormat(…, 'it')` lancia se i dati della lingua non sono stati
   // caricati. Nell'app lo fa `main()`; qui va rifatto, o l'etichetta
@@ -39,6 +48,7 @@ void main() {
     ponte = _PonteFinto();
     archivio = _ArchivioFinto();
     avvisi = 0;
+    misureAvvisate = 0;
   });
 
   /// ══ 🚨 Il difetto del 20/08, guardando l'app ═════════════════════════════
@@ -250,6 +260,21 @@ class _PonteFinto implements PonteSalute {
     ultimaFinestra = giorniIndietro;
 
     return campioni;
+  }
+
+  /// ⚖️ 3b-W — quante misure del corpo finge di aver scritto.
+  ///
+  /// 💡 Zero di serie: la maggior parte dei test non ha una bilancia, e con
+  /// zero il controller non avvisa nessuno — che e' il comportamento giusto.
+  int misure = 0;
+
+  int sincronizzazioniDelCorpo = 0;
+
+  @override
+  Future<int> sincronizzaIlCorpo({int? giorniIndietro}) async {
+    sincronizzazioniDelCorpo++;
+
+    return misure;
   }
 
   @override

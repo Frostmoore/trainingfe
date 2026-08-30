@@ -63,8 +63,17 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// dati dentro — cioè di tutti tranne noi.
   ArchivioSalute.su(super.e);
 
+  /// 🏷️ Scritta da una persona, dentro l'app. ⛔ **Non si sovrascrive mai.**
+  static const origineManuale = 'manuale';
+
+  /// 🏷️ Arrivata da Health Connect / Apple Health.
+  ///
+  /// ⚠️ **Non dice quale app**: `sourceId` arriva vuoto (misurato il 30/08), e
+  /// una frase che promette di sapere quale bilancia è una frase che mente.
+  static const origineSalute = 'salute';
+
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -521,6 +530,30 @@ class ArchivioSalute extends _$ArchivioSalute {
        */
       if (da < 24 && da >= 23) {
         await m.addColumn(analisiDelleSchede, analisiDelleSchede.riassunto);
+      }
+
+      /*
+       * ══ ⚖️ v24 → v25 (3b-W): la bilancia scrive nelle misure ═════════════
+       *
+       * Due colonne su `misureCorpo`: la **massa magra**, quando una bilancia
+       * la manda, e la **provenienza**, che serve a non sovrascrivere quello
+       * che una persona ha scritto a mano. Il perché per esteso sta sulle due
+       * colonne.
+       *
+       * ── 🚨 `da >= 2`, E NON È UNA CONDIZIONE DI TROPPO ──────────────────
+       *
+       * ⛔ È la stessa trappola del passo v23 → v24, e per la stessa ragione:
+       * il passo `da < 2` fa `m.createTable(misureCorpo)`, e `createTable`
+       * crea sempre la forma **di oggi** — cioè già con queste due colonne.
+       * Chi arriva dalla v1 se le ritroverebbe, e un `addColumn` subito dopo
+       * esploderebbe con `duplicate column name`.
+       *
+       * ⚠️ Chi invece è già alla v2 o oltre non ce le ha, e per lui
+       * l'`addColumn` serve davvero. 💡 Due strade verso la stessa forma.
+       */
+      if (da < 25 && da >= 2) {
+        await m.addColumn(misureCorpo, misureCorpo.massaMagraKg);
+        await m.addColumn(misureCorpo, misureCorpo.origine);
       }
     },
   );
@@ -1851,6 +1884,19 @@ class ArchivioSalute extends _$ArchivioSalute {
       giorno: _soloGiorno(misura.giorno),
       pesoKg: Value(misura.pesoKg),
       massaGrassaPct: Value(misura.massaGrassaPct),
+      massaMagraKg: Value(misura.massaMagraKg),
+      /*
+       * 🚨 **Chi passa di qui è una persona che scrive**, quindi `manuale` —
+       * anche se il chiamante non l'ha detto.
+       *
+       * ⛔ Lasciare `null` vorrebbe dire che la prima importazione da Health
+       * Connect sovrascrive quello che quella persona ha appena scritto:
+       * `null` è «non lo so», e «non lo so» non si difende.
+       *
+       * ⚠️ L'importazione **non passa di qui**: ha il suo metodo,
+       * [registraDaSalute], che rispetta questa colonna.
+       */
+      origine: Value(misura.origine ?? origineManuale),
       vitaCm: Value(misura.vitaCm),
       toraceCm: Value(misura.toraceCm),
       braccioCm: Value(misura.braccioCm),
@@ -1902,6 +1948,149 @@ class ArchivioSalute extends _$ArchivioSalute {
           ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
           ..limit(1))
         .getSingleOrNull();
+  }
+
+  /// L'ultima **massa grassa** nota, se c'è — 3b-W.
+  ///
+  /// ══ 🚨 SEPARATA DAL PESO, E NON È PIGNOLERIA ══════════════════════════════
+  ///
+  /// 📌 *«bisogna prendere solo i dati che vengono davvero passati e stimare
+  /// quelli che non vengono passati»*.
+  ///
+  /// ⚠️ Peso e massa grassa **arrivano da giorni diversi**: chi si pesa ogni
+  /// giorno e misura il grasso una volta a settimana ha il peso di stamattina e
+  /// il grasso di martedì. ⛔ Chiedere «l'ultima misura» e leggerne due campi
+  /// butterebbe via il valore più fresco dei due.
+  Future<MisuraCorpo?> ultimaMassaGrassa() {
+    return (select(misureCorpo)
+          ..where((t) => t.massaGrassaPct.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// L'ultima **massa magra** nota, se c'è — 3b-W.
+  ///
+  /// 💡 Vale più della percentuale: Katch-McArdle parte da qui, e averla
+  /// misurata invece che derivata toglie di mezzo l'errore della bioimpedenza.
+  Future<MisuraCorpo?> ultimaMassaMagra() {
+    return (select(misureCorpo)
+          ..where((t) => t.massaMagraKg.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Le ultime percentuali di grasso note, **dalla più vecchia alla più
+  /// recente** — per livellarle.
+  ///
+  /// ⚠️ L'ordine è quello che vuole [IndiciDiForma.ewma]: cronologico. 🚨 Darlo
+  /// al contrario non solleva niente e restituisce una media pesata **sul
+  /// passato invece che sul presente**, cioè un numero che si muove al
+  /// contrario.
+  Future<List<double>> massaGrassaRecente({int quante = 7}) async {
+    final righe =
+        await (select(misureCorpo)
+              ..where((t) => t.massaGrassaPct.isNotNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+              ..limit(quante))
+            .get();
+
+    return righe.reversed
+        .map((r) => r.massaGrassaPct!)
+        .toList(growable: false);
+  }
+
+  /// Scrive una misura **arrivata da Health Connect** — 3b-W.2.
+  ///
+  /// ══ ⛔ IL MANUALE VINCE SEMPRE ════════════════════════════════════════════
+  ///
+  /// Una riga con `origine == 'manuale'` **non si tocca**, nemmeno se la
+  /// bilancia ne ha una dello stesso giorno.
+  ///
+  /// 💡 Chi ha scritto un numero a mano ha fatto una scelta; un'importazione non
+  /// ne fa nessuna. ⚠️ E il caso concreto è quello di chi si pesa con una
+  /// bilancia che sballa e corregge: senza questa regola si ritroverebbe la
+  /// correzione cancellata al primo aggiornamento, **in silenzio**.
+  ///
+  /// ══ 🚨 E SI SCRIVE CAMPO PER CAMPO ═══════════════════════════════════════
+  ///
+  /// ⛔ **Non** si sovrascrive la riga intera. Una giornata può avere il peso
+  /// dalla bilancia e la circonferenza della vita scritta a mano: rimpiazzare
+  /// tutto perché è arrivato un peso butterebbe via il resto.
+  ///
+  /// 💡 Un valore `null` in arrivo vuol dire «di questo non so niente», **non**
+  /// «cancellalo».
+  ///
+  /// @return `true` se ha scritto, `false` se ha lasciato stare
+  Future<bool> registraDaSalute({
+    required DateTime giorno,
+    double? pesoKg,
+    double? massaGrassaPct,
+    double? massaMagraKg,
+  }) async {
+    if (pesoKg == null && massaGrassaPct == null && massaMagraKg == null) {
+      return false;
+    }
+
+    final quando = _soloGiorno(giorno);
+
+    final esistente =
+        await (select(misureCorpo)..where((t) => t.giorno.equals(quando)))
+            .getSingleOrNull();
+
+    if (esistente?.origine == origineManuale) return false;
+
+    if (esistente == null) {
+      await into(misureCorpo).insert(
+        MisureCorpoCompanion.insert(
+          giorno: quando,
+          pesoKg: Value(pesoKg),
+          massaGrassaPct: Value(massaGrassaPct),
+          massaMagraKg: Value(massaMagraKg),
+          origine: const Value(origineSalute),
+        ),
+      );
+
+      return true;
+    }
+
+    /*
+     * ⚠️ `Value.absent()` e non `Value(null)`: il primo dice «non toccare
+     * questa colonna», il secondo dice «mettila a null». 🚨 Confonderli
+     * cancellerebbe il peso di ieri ogni volta che arriva una massa grassa
+     * senza peso — e il grafico si bucherebbe da solo.
+     */
+    await (update(misureCorpo)..where((t) => t.giorno.equals(quando))).write(
+      MisureCorpoCompanion(
+        pesoKg: pesoKg == null ? const Value.absent() : Value(pesoKg),
+        massaGrassaPct: massaGrassaPct == null
+            ? const Value.absent()
+            : Value(massaGrassaPct),
+        massaMagraKg: massaMagraKg == null
+            ? const Value.absent()
+            : Value(massaMagraKg),
+        origine: const Value(origineSalute),
+      ),
+    );
+
+    return true;
+  }
+
+  /// Il giorno più recente che porta **già** un dato importato — 3b-W.1.3.
+  ///
+  /// 💡 Serve a non richiedere ogni volta due anni di storico: la prima
+  /// importazione prende tutto, le successive partono da qui. ⚠️ `null` vuol
+  /// dire «non ho mai importato niente», ed è il caso della prima volta.
+  Future<DateTime?> ultimoGiornoImportato() async {
+    final riga =
+        await (select(misureCorpo)
+              ..where((t) => t.origine.equals(origineSalute))
+              ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+              ..limit(1))
+            .getSingleOrNull();
+
+    return riga?.giorno;
   }
 
   // ─────────────────────────── foto (S5.3) ───────────────────────────
@@ -2656,6 +2845,38 @@ class MisureCorpo extends Table {
 
   RealColumn get pesoKg => real().nullable()();
   RealColumn get massaGrassaPct => real().nullable()();
+
+  /// 🆕 La **massa magra**, quando la bilancia la manda — 3b-W.
+  ///
+  /// 💡 Vale più della percentuale di grasso: Katch-McArdle parte da qui, e
+  /// averla **misurata** invece che derivata toglie di mezzo l'errore della
+  /// bioimpedenza. ⚠️ La bilancia del committente non la manda; un orologio
+  /// Amazfit sì.
+  RealColumn get massaMagraKg => real().nullable()();
+
+  /// 🆕 Da dove viene questa misura — 3b-W.2.
+  ///
+  /// ══ 🚨 SERVE A NON SOVRASCRIVERE QUELLO CHE UNO HA SCRITTO A MANO ═══════
+  ///
+  /// ⛔ Senza, un'importazione da Health Connect cancella **in silenzio** la
+  /// correzione di chi si è pesato con una bilancia scassata e ha rimesso il
+  /// numero giusto. ⚠️ E il caso non è teorico: la riga esiste, ha un valore
+  /// plausibile, e nessuno si accorge di niente.
+  ///
+  /// ══ ⛔ E DICE SOLO «DA HEALTH CONNECT», NON QUALE APP ═══════════════════
+  ///
+  /// 🚨 Misurato il 30/08: `HealthDataPoint.sourceId` arriva **vuoto** su
+  /// Android. Non sappiamo se un peso l'ha scritto la bilancia, l'orologio o
+  /// una persona dentro Health Connect. 💡 Quindi l'interfaccia può dire *«da
+  /// Health Connect»* e **non** *«dalla tua bilancia»*: promettere di sapere
+  /// quale bilancia sarebbe mentire.
+  ///
+  /// ⚠️ **`null` è un valore vero**, e vuol dire «non lo so»: sono le righe
+  /// scritte prima di 3b-W. ⛔ Riempirle con `'manuale'` alla migrazione le
+  /// proteggerebbe per sempre da un aggiornamento — e non è vero che sono state
+  /// scritte a mano: molte arrivano da un backup.
+  TextColumn get origine => text().nullable()();
+
   RealColumn get vitaCm => real().nullable()();
   RealColumn get toraceCm => real().nullable()();
   RealColumn get braccioCm => real().nullable()();

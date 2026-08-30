@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/intestazione_app.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
+import '../../../forma/carica_controller.dart';
 import '../../../forma/forma_controller.dart';
 import '../../../health/dati_salute.dart';
 import '../../../health/health_controller.dart';
@@ -102,6 +103,9 @@ class TodayHeader extends ConsumerWidget {
      */
     final recupero = ref.watch(recuperoProvider).valueOrNull;
     final forma = ref.watch(formaProvider).valueOrNull;
+
+    // 🔋 3b-X: la Carica vera. `null` senza TDEE, e allora non si disegna.
+    final carica = ref.watch(caricaProvider).valueOrNull;
 
     final hrv = recupero?.parametri[MetricaSalute.hrv];
     final battito = recupero?.parametri[MetricaSalute.battitoARiposo];
@@ -240,7 +244,13 @@ class TodayHeader extends ConsumerWidget {
                     icona: Icons.monitor_heart_outlined,
                   ),
 
-                // 🔋 Carico e carica, dalla FASE 2-sexies.
+                /*
+                 * ══ 🔋 CARICO → CARICA → PRONTEZZA — 3b-X, 30/08/2026 ══════
+                 *
+                 * 💡 **L'ordine è la catena causale**: quanto ho speso, quanto
+                 * mi resta, come sto rispetto al solito. Letta in fila si
+                 * spiega da sola, senza una parola in più.
+                 */
                 if (forma?.stanchezza.valore != null)
                   _Valore(
                     valore: '${(forma!.stanchezza.valore! * 100).round()}%',
@@ -248,11 +258,63 @@ class TodayHeader extends ConsumerWidget {
                     icona: Icons.trending_up_rounded,
                   ),
 
+                /*
+                 * 🔋 **La Carica vera** — quella di FASE 2-sexies.
+                 *
+                 * ⛔ **Prima non c'era affatto**: l'header mostrava la
+                 * *prontezza* con l'etichetta «carica» e l'icona di una
+                 * batteria, e la batteria vera non si vedeva da nessuna parte
+                 * se non entrando in «Carico e carica».
+                 *
+                 * 💡 Qui l'icona della batteria è **onesta**: questa si scarica
+                 * allenandosi e si ricarica dormendo.
+                 *
+                 * ⚠️ `caricaProvider` torna `null` senza TDEE — *«un TDEE
+                 * inventato darebbe una scarica inventata»* — e allora la voce
+                 * non si disegna. ⛔ Nessuno zero, nessun trattino.
+                 */
+                if (carica != null)
+                  _Valore(
+                    valore: carica.adesso.round().toString(),
+                    etichetta: 'carica',
+                    icona: Icons.battery_charging_full_rounded,
+                  ),
+
+                /*
+                 * ══ 🚨 LA PRONTEZZA NON E' UNA CARICA — 3b-X ══════════════
+                 *
+                 * ⛔ **Qui c'era scritto «carica», con l'icona di una
+                 * batteria.** Ed era la stessa bugia che il committente aveva
+                 * già fatto togliere il 28/08 dalla schermata Forma:
+                 *
+                 * > *«la parte della "Carica" non sia una batteria ma una
+                 * > specie di orologio con il 50 all'apice, perché a ben
+                 * > vedere non analizza la carica vera e propria, ma quanto sto
+                 * > bene o male rispetto al solito»*.
+                 *
+                 * 🚨 **Una batteria mente su questo numero**: al 50% dice «sei
+                 * a metà, stai finendo», mentre questo numero al 50 dice **«sei
+                 * esattamente nella tua norma»**, che è il posto migliore in
+                 * cui stare.
+                 *
+                 * ⚠️ La correzione era stata applicata **in un posto solo**, e
+                 * l'header è rimasto indietro per due giorni. Nessun test se ne
+                 * è accorto, perché niente era rotto.
+                 *
+                 * 💡 `speed_rounded` è il tachimetro di 3b-K: uno strumento di
+                 * misura, non un serbatoio. ⛔ Nessuna icona che suggerisca
+                 * «pieno/vuoto» — il 50 è il **centro**, non la metà di
+                 * qualcosa.
+                 *
+                 * ⚠️ E il valore resta **senza `%`**: non è una percentuale di
+                 * niente, è uno scarto dal proprio solito. Un `%` rimetterebbe
+                 * in piedi la stessa bugia con un altro segno.
+                 */
                 if (forma?.prontezza.valore != null)
                   _Valore(
                     valore: forma!.prontezza.valore!.round().toString(),
-                    etichetta: 'carica',
-                    icona: Icons.battery_charging_full_rounded,
+                    etichetta: 'prontezza',
+                    icona: Icons.speed_rounded,
                   ),
               ],
             ),

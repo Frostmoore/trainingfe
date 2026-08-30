@@ -280,7 +280,18 @@ class _Prontezza extends StatelessWidget {
     final ci = forma.ingredienti.where((i) => i.ceLo).length;
 
     return _Sezione(
-      icona: Icons.battery_charging_full_rounded,
+      /*
+       * 🚨 **Era `battery_charging_full`, ed era rimasta indietro** — 3b-X.
+       *
+       * ⛔ Il 28/08 la Prontezza aveva smesso di essere una batteria: il
+       * tachimetro l'ha sostituita e il titolo e' cambiato. **L'icona della
+       * sezione no.** Nessuno l'ha notata per due giorni.
+       *
+       * 💡 L'ha trovata `prontezza_non_e_una_carica_test.dart`, che cerca la
+       * regola in **tutti** i file invece che in una schermata sola. E l'ha
+       * trovata al primo giro, in un posto che non stavo guardando.
+       */
+      icona: Icons.speed_rounded,
       titolo: 'Prontezza',
       grande: valore == null ? '—' : valore.round().toString(),
       sotto: valore == null ? 'non calcolabile' : 'su 100',
@@ -936,7 +947,6 @@ class _Formula extends StatelessWidget {
     );
   }
 }
-
 
 // ══════════════════════════════════════════════════════════════════════════
 // La Carica

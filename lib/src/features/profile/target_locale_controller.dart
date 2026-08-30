@@ -239,44 +239,39 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
   const calcolatore = CalcolatoreCalorie();
 
   /*
-   * ══ 🚨 CON LA COMPOSIZIONE, TRE PEZZI NON SERVONO PIU' — 3b-W.6 ══════════
+   * ══ 🚨 ALTEZZA, ETA' E SESSO SI CHIEDONO SEMPRE ══════════════════════════
    *
-   * 📌 *«le cose che si possono presumere si presumono, quelle che si possono
-   * calcolare si calcolano e quelle che si possono chiedere si chiedono»*.
+   * ⛔ **Il 30/08 li avevo resi facoltativi quando c'è la massa grassa**, con
+   * il ragionamento che Katch-McArdle non li usa. 📌 Il committente:
+   * *«Se katch-mcardle non li usa non significa che non servano. Se uno non ha
+   * gli altri dati si devono usare quelli per forza»*. Aveva ragione.
    *
-   * **Katch-McArdle non usa né altezza, né età, né sesso**: parte dalla massa
-   * magra, che quei tre li ha già dentro. ⛔ Chiederli lo stesso vorrebbe dire
-   * bloccare su «manca la tua data di nascita» chi ha una bilancia smart — per
-   * un dato che il calcolo **non userebbe**.
+   * ── ⚠️ Il motivo, che è più forte del ragionamento sbagliato ────────────
    *
-   * ⚠️ E chiedere un dato che non serve è il modo più rapido per farsi dire di
-   * no su tutto.
+   * 🚨 **La massa grassa è un dato che può sparire.** Si revoca il permesso a
+   * Health Connect, la bilancia si rompe o si cambia, una lettura d'impedenza
+   * fallita scrive `0` — e per un mese ci si pesa su una bilancia normale.
    *
-   * 💡 Restano necessari **solo** il peso e il livello di attività: il primo
-   * perché senza non si sa di chi si sta parlando, il secondo perché è la
-   * scelta che trasforma un basale in un fabbisogno.
+   * ⛔ Altezza, età e sesso **non spariscono mai**. Costruire l'insieme dei
+   * dati obbligatori sopra quello volatile è esattamente al contrario: la base
+   * si tiene, e la composizione è un **miglioramento sopra**, non un rimpiazzo.
+   *
+   * ── 💡 Il caso concreto ─────────────────────────────────────────────────
+   *
+   * Uno si configura con la bilancia smart e non dà mai la data di nascita.
+   * Due mesi dopo revoca il permesso — o la bilancia muore. Da quel momento
+   * **non ha più nessun target**, e l'app gli chiede la data di nascita dal
+   * nulla, per un dato che non c'entra niente con quello che è cambiato.
+   *
+   * 🚨 È il difetto che questo progetto documenta da sempre, in una forma
+   * nuova: un numero che sparisce senza che sia successo niente di
+   * comprensibile.
    */
-  final massaMagra = massaMagraPerIlBmr(
-    calcolatore: calcolatore,
-    kg: kg,
-    massaMagraMisurataKg: magraMisurata,
-    grassoRecente: grassoRecente,
-  );
-
   final mancano = <PezzoMancante>{
     if (kg == null) PezzoMancante.peso,
-
-    /*
-     * ⚠️ **Solo se Katch-McArdle non si può fare.** Con la massa magra questi
-     * tre non entrano in nessuna formula, e dichiararli «mancanti» sarebbe
-     * falso.
-     */
-    if (massaMagra == null) ...{
-      if (cm == null) PezzoMancante.altezza,
-      if (nascita == null) PezzoMancante.dataDiNascita,
-      if (sesso == null) PezzoMancante.sesso,
-    },
-
+    if (cm == null) PezzoMancante.altezza,
+    if (nascita == null) PezzoMancante.dataDiNascita,
+    if (sesso == null) PezzoMancante.sesso,
     if (fattore == null && tdeeMisurato == null) PezzoMancante.attivita,
   };
 
@@ -300,19 +295,20 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
    * 💡 Nessuno dei due dà errore. Producono un numero plausibile e sbagliato.
    */
   /*
-   * 💡 `massaMagra` è già stata calcolata sopra, perché serviva a decidere
-   * **cosa chiedere**. ⛔ Ricalcolarla qui vorrebbe dire due sedi della stessa
-   * scelta, e il giorno che divergono la schermata direbbe «manca l'altezza»
-   * per un target che l'altezza non la usa.
+   * 💡 **La composizione migliora il calcolo, non lo sostituisce.** Qui i
+   * quattro dati di base ci sono per certo — `mancano` è vuoto — e la massa
+   * grassa, se c'è, li rende più precisi. ⚠️ Il giorno che sparisce, il
+   * fabbisogno **peggiora un po'** invece di svanire.
    */
-  final bmr = massaMagra != null
-      ? calcolatore.bmrKatchMcArdle(massaMagraKg: massaMagra)
-      : calcolatore.bmr(
-          kg: kg!,
-          cm: cm!,
-          eta: calcolatore.etaDa(nascita!),
-          sesso: profilo.sessoPerFormula,
-        );
+  final bmr = bmrConLaComposizione(
+    calcolatore: calcolatore,
+    kg: kg!,
+    cm: cm!,
+    eta: calcolatore.etaDa(nascita!),
+    sesso: profilo.sessoPerFormula,
+    massaMagraMisurataKg: magraMisurata,
+    grassoRecente: grassoRecente,
+  );
 
   /*
    * ⛔ **`tdeeSeNoto` e non `tdee`**: il secondo ripiega su 1,2 quando la
@@ -470,19 +466,18 @@ double bmrConLaComposizione({
 
 /// La massa magra da usare nel BMR, o `null` se non se ne può avere una.
 ///
-/// ══ 🚨 SEPARATA PERCHE' DECIDE ANCHE COSA CHIEDERE — 3b-W.6 ═══════════════
+/// ══ 💡 MISURATA, POI DERIVATA, POI NIENTE ════════════════════════════════
 ///
-/// Non serve solo a calcolare: serve a sapere **se altezza, età e sesso vanno
-/// chiesti**. ⛔ Con la massa magra Katch-McArdle non li usa, e dichiararli
-/// «mancanti» sarebbe falso.
+/// ⚠️ **`null` non blocca niente**: vuol dire soltanto che il BMR si fa con
+/// Mifflin-St Jeor, che è quello che l'app ha sempre usato.
 ///
-/// ⚠️ Averla in due copie — una per decidere e una per calcolare — vorrebbe
-/// dire che il giorno che divergono la schermata chiede l'altezza per un target
-/// che l'altezza non la usa.
+/// ⛔ **E non decide cosa chiedere.** Il 30/08 lo faceva, ed era sbagliato:
+/// altezza, età e sesso si chiedono **sempre**, perché la massa grassa può
+/// sparire (permesso revocato, bilancia cambiata, impedenza fallita) e quei tre
+/// no. Il perché per esteso sta in `targetLocaleProvider`.
 ///
-/// 💡 `kg` è `null`-abile perché questa funzione viene chiamata **prima** di
-/// sapere se il peso c'è: senza peso non c'è niente da derivare, ma una massa
-/// magra **misurata** vale lo stesso.
+/// 💡 `kg` è `null`-abile perché una massa magra **misurata** vale anche senza
+/// il peso: è il peso che serve a derivarla, non a leggerla.
 double? massaMagraPerIlBmr({
   required CalcolatoreCalorie calcolatore,
   required double? kg,

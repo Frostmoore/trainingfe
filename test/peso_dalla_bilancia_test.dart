@@ -349,15 +349,18 @@ void main() {
     });
   });
 
-  /// 🚨 **Con la composizione, tre pezzi non servono più** — 3b-W.6.
+  /// ⛔ **La composizione MIGLIORA il calcolo, non lo sostituisce** — 30/08.
   ///
-  /// 📌 *«le cose che si possono calcolare si calcolano e quelle che si possono
-  /// chiedere si chiedono»*.
+  /// 🚨 Il 30/08 avevo reso altezza, età e sesso facoltativi quando c'è la
+  /// massa grassa, perché Katch-McArdle non li usa. 📌 Il committente:
+  /// *«Se katch-mcardle non li usa non significa che non servano. Se uno non ha
+  /// gli altri dati si devono usare quelli per forza»*.
   ///
-  /// ⛔ Katch-McArdle non usa né altezza, né età, né sesso: chiederli lo stesso
-  /// vorrebbe dire bloccare su «manca la tua data di nascita» chi ha una
-  /// bilancia smart, per un dato che il calcolo **non userebbe**.
-  group('⚖️ quanti dati servono davvero', () {
+  /// ⚠️ **La massa grassa può sparire**: permesso revocato, bilancia cambiata,
+  /// impedenza fallita. Altezza, età e sesso no. ⛔ Costruire i dati
+  /// obbligatori sopra quello volatile vuol dire che il giorno che la bilancia
+  /// muore il target **svanisce**, e l'app chiede la data di nascita dal nulla.
+  group('⚖️ la massa magra, e cosa NON decide', () {
     const calc = CalcolatoreCalorie();
 
     test('con la massa magra misurata basta quella', () {
@@ -395,6 +398,87 @@ void main() {
         ),
         isNull,
         reason: "Senza peso non c'è niente da derivare.",
+      );
+    });
+  });
+
+  /// 🚨 **Il target non deve SVANIRE quando la bilancia sparisce.**
+  ///
+  /// ══ ⛔ IL DIFETTO CHE QUESTO TEST TIENE CHIUSO ═══════════════════════════
+  ///
+  /// La massa grassa è un dato **volatile**: si revoca il permesso a Health
+  /// Connect, si cambia bilancia, una lettura d'impedenza fallita scrive `0`.
+  /// Altezza, età e sesso **non spariscono mai**.
+  ///
+  /// ⛔ Se i dati obbligatori si appoggiassero sulla composizione, chi si
+  /// configura con la bilancia e non dà la data di nascita si ritroverebbe —
+  /// due mesi dopo, revocando un permesso — **senza nessun target**, e con
+  /// l'app che gli chiede la data di nascita dal nulla.
+  ///
+  /// 💡 Con la base sempre presente, il giorno che la composizione sparisce il
+  /// fabbisogno **peggiora un po'** invece di svanire: da Katch-McArdle a
+  /// Mifflin, e nient'altro cambia.
+  group('⛔ la composizione può sparire, il target no', () {
+    const calc = CalcolatoreCalorie();
+
+    test('con la bilancia si usa Katch-McArdle', () {
+      final conBilancia = bmrConLaComposizione(
+        calcolatore: calc,
+        kg: 95.9,
+        cm: 178,
+        eta: 38,
+        sesso: 'male',
+        grassoRecente: const [25.3, 25.3, 25.3],
+      );
+
+      expect(
+        conBilancia,
+        isNot(calc.bmr(sesso: 'male', kg: 95.9, cm: 178, eta: 38)),
+      );
+    });
+
+    /// 🚨 **Lo stesso profilo, il giorno dopo, senza più la bilancia.**
+    test('senza, si scende a Mifflin — e il numero c\'è ancora', () {
+      final senzaBilancia = bmrConLaComposizione(
+        calcolatore: calc,
+        kg: 95.9,
+        cm: 178,
+        eta: 38,
+        sesso: 'male',
+      );
+
+      expect(
+        senzaBilancia,
+        calc.bmr(sesso: 'male', kg: 95.9, cm: 178, eta: 38),
+      );
+      expect(senzaBilancia, greaterThan(0));
+    });
+
+    /// ⛔ E la differenza fra i due è **piccola**: si peggiora, non si crolla.
+    test('il passaggio non è un salto', () {
+      final con = bmrConLaComposizione(
+        calcolatore: calc,
+        kg: 95.9,
+        cm: 178,
+        eta: 38,
+        sesso: 'male',
+        grassoRecente: const [25.3, 25.3, 25.3],
+      );
+
+      final senza = bmrConLaComposizione(
+        calcolatore: calc,
+        kg: 95.9,
+        cm: 178,
+        eta: 38,
+        sesso: 'male',
+      );
+
+      expect(
+        (con - senza).abs(),
+        lessThan(300),
+        reason:
+            'Perdere la bilancia sposta il fabbisogno di più di 300 kcal: '
+            'chi la perde se ne accorgerebbe come di un guasto.',
       );
     });
   });

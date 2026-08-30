@@ -32,23 +32,9 @@ import '../auth/auth_controller.dart';
 import '../health/health_controller.dart';
 import 'data/limiti_delle_schede.dart';
 import 'data/progressione.dart';
+import 'data/session_models.dart';
 import 'data/storia_della_scheda.dart';
-
-/// L'ora della sera in cui l'analisi si fa da sola, se oggi non ti sei allenato.
-///
-/// ══ 📌 LA REGOLA, IN UNA RIGA ═════════════════════════════════════════════
-///
-/// 📌 *«in automatico lo fa una volta sola al giorno dopo l'allenamento (se c'è
-/// un allenamento oggi, altrimenti intorno alle 20)»*.
-///
-/// 💡 **Dopo l'allenamento** perché è il momento in cui c'è qualcosa di nuovo da
-/// dire: farla prima vorrebbe dire raccontare la giornata di ieri.
-///
-/// ⚠️ **Non c'è nessun lavoro in sottofondo**: l'app non ha un job che gira alle
-/// 20. Vuol dire «dalle 20 in poi, la prima volta che apri quella scheda» — che
-/// è l'unico momento in cui possiamo fare qualcosa, e anche l'unico in cui
-/// serve, perché è quando la stai guardando.
-const oraDellaSera = 20;
+import 'session_controller.dart';
 
 /// Se questa persona può vedere progressione e analisi.
 ///
@@ -281,6 +267,8 @@ Future<EsitoAnalisi> chiediLAnalisi(
     primatiDellaSchedaProvider(schedaLocale).future,
   );
 
+  final sedute = await ref.read(seduteDellaSchedaProvider(schedaLocale).future);
+
   /*
    * ⚠️ **Si mandano solo gli esercizi che hanno una storia.** Mandare anche
    * quelli mai fatti vorrebbe dire pagare del contesto per farsi rispondere
@@ -319,12 +307,51 @@ Future<EsitoAnalisi> chiediLAnalisi(
 
   if (corpo.isEmpty) return EsitoAnalisi.troppoPocoStorico;
 
+  /*
+   * ══ 🔥 LE CALORIE DELLE SEDUTE — 3b-AB, 30/08/2026 ═════════════════════
+   *
+   * 📌 *«mettiamoci dentro anche le calorie consumate da quell'allenamento se
+   * ci sono»*.
+   *
+   * 💡 **Sono l'unica misura di quanto è costato un allenamento** che non sia
+   * il carico su un bilanciere: dicono al modello che due sedute con gli stessi
+   * numeri non sono state la stessa seduta.
+   *
+   * ⚠️ **«Se ci sono» è una condizione vera, non un modo di dire**: le sedute
+   * senza un numero utile si omettono invece di mandare uno zero. ⛔ Uno zero
+   * il modello lo legge come *«non ha bruciato niente»*, che è una cosa
+   * diversa da *«non lo sappiamo»* — ed è la regola di casa da sempre.
+   *
+   * 🚨 **E si dice da dove viene il numero.** `manuale` è dichiarato da chi si
+   * è allenato; `stima` è `MET × kg × ore`, e su un peso non recente sbaglia di
+   * qualche decina di kcal. Un modello che non sa quale dei due ha in mano
+   * tratterebbe la stima come una misura.
+   */
+  final allenamenti = <Map<String, Object?>>[];
+
+  for (final s in sedute.reversed.take(limiteDelleSedute).toList().reversed) {
+    final kcal = s.kcal;
+    if (kcal == null || kcal <= 0) continue;
+
+    allenamenti.add({
+      'data': s.endedAt!.toIso8601String(),
+      'kcal': kcal,
+      'fonte': s.kcalSource == 'manual' ? 'manuale' : 'stima',
+    });
+  }
+
   try {
     final risposta = await ref
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
           '/ai/scheda/progresso',
-          body: {'esercizi': corpo},
+          body: {
+            'esercizi': corpo,
+
+            // 💡 Assente quando non c'è **nessun** numero, invece di una lista
+            // vuota: un campo che c'è sempre invita il modello a parlarne.
+            if (allenamenti.isNotEmpty) 'allenamenti': allenamenti,
+          },
         );
 
     final righe = [
@@ -373,66 +400,130 @@ Future<EsitoAnalisi> chiediLAnalisi(
   }
 }
 
-/// ⏰ È il momento in cui l'analisi si fa da sola? — 3b-I.G, 27/08/2026.
+/// ⏰ È il momento in cui l'analisi si fa da sola? — 3b-AB, 30/08/2026.
 ///
 /// ══ 📌 LA REGOLA ══════════════════════════════════════════════════════════
 ///
-/// 📌 *«in automatico lo fa una volta sola al giorno dopo l'allenamento (se c'è
-/// un allenamento oggi, altrimenti intorno alle 20)»*.
+/// 📌 Il committente: *«l'analisi AI deve essere fatta solamente dopo un
+/// allenamento con quella scheda e sempre quando si fa un allenamento con
+/// quella scheda, massimo 1 al giorno»*.
 ///
 /// | | Condizione |
 /// |---|---|
-/// | 1 | non è già stata fatta **oggi** |
-/// | 2 | ti sei allenato oggi con questa scheda **oppure** sono passate le [oraDellaSera] |
+/// | 1 | c'è **almeno un allenamento chiuso** con questa scheda |
+/// | 2 | non è già stata fatta **oggi** |
+/// | 3 | l'ultimo allenamento è **più recente** dell'ultima analisi |
 ///
-/// ── 💡 Perché il momento conta, e non solo il numero ─────────────────────
+/// ══ ⛔ COSA È SPARITO, E PERCHÉ ERA UN COSTO ══════════════════════════════
 ///
-/// **Dopo l'allenamento** c'è qualcosa di nuovo da dire; prima no. ⛔ Un'analisi
-/// che parte alle 8 del mattino racconta la giornata di ieri, e poi non si
-/// rifà: chi si allena alle 19 la trova vecchia proprio quando gli servirebbe.
+/// C'era una regola *«oppure sono passate le 20»*: dalle 20 in poi, la prima
+/// volta che aprivi **una qualsiasi** scheda, partiva l'analisi. ⛔ Anche di una
+/// scheda che non toccavi da una settimana, in cui non era successo niente.
 ///
-/// ⚠️ **La prima analisi in assoluto non aspetta niente.** Chi apre la scheda
-/// per la prima volta deve vedere la funzione, non un riquadro vuoto con la
-/// promessa che stasera arriva qualcosa.
+/// 🚨 **Un gettone per non dire niente di nuovo**, e la persona lo scopriva dal
+/// saldo. 💡 Adesso il segnale è uno solo, ed è quello vero: **ti sei allenato
+/// con questa scheda dopo l'ultima analisi**.
+///
+/// ══ 💡 E RECUPERA GLI ARRETRATI ═══════════════════════════════════════════
+///
+/// 📌 *«se per una settimana non ho mai fatto analisi, devo avere la
+/// possibilità di fare l'analisi di tutte le schede che ho usato quella
+/// settimana»*.
+///
+/// 🚨 Per questo il tetto «una al giorno» è **per scheda e non in totale**: con
+/// un tetto complessivo, una settimana di arretrati richiederebbe una settimana
+/// per essere recuperata.
+///
+/// ══ ⚠️ È UNA FUNZIONE PURA, E NON PER ELEGANZA ════════════════════════════
+///
+/// Perché è la riga che decide se si spende. ⛔ Sepolta dentro un provider
+/// sarebbe provabile solo montando un database e un'interfaccia, cioè non
+/// sarebbe provata affatto — ed è già successo: la regola delle 20 non aveva
+/// **nessun** test sul comportamento, solo uno che controllava che la costante
+/// fosse un'ora valida.
+bool analisiDaSola({
+  required DateTime? ultimaSeduta,
+  required DateTime? analisiFattaIl,
+  required DateTime adesso,
+}) {
+  /*
+   * ⛔ **Mai allenato con questa scheda: non si analizza.** È il caso che la
+   * regola delle 20 sbagliava, e lo sbagliava in silenzio.
+   */
+  if (ultimaSeduta == null) return false;
+
+  // 💡 La prima analisi in assoluto non aspetta niente: c'è un allenamento, e
+  // c'è qualcosa da raccontare.
+  if (analisiFattaIl == null) return true;
+
+  /*
+   * 🚨 **Il giorno di calendario, non ventiquattr'ore.** ⛔ Con una finestra
+   * mobile, un'analisi delle 23 di ieri bloccherebbe quella di stasera — e chi
+   * guarda direbbe che non funziona, perché per lui è un altro giorno.
+   */
+  if (analisiFattaIl.year == adesso.year &&
+      analisiFattaIl.month == adesso.month &&
+      analisiFattaIl.day == adesso.day) {
+    return false;
+  }
+
+  /*
+   * 🎯 **L'unica domanda che resta**: da quando l'abbiamo scritta, ti sei
+   * allenato? ⚠️ `finita_il` è un istante vero, non una data a mezzanotte:
+   * un'analisi fatta alle 10 e un allenamento chiuso alle 19 dello stesso
+   * giorno si distinguono — ed è il motivo per cui questo confronto funziona.
+   */
+  return ultimaSeduta.isAfter(analisiFattaIl);
+}
+
 Future<bool> _quandoDaSola(
   WidgetRef ref,
   AnalisiInCorso? gia,
   int schedaLocale,
 ) async {
-  if (gia == null) return true;
+  final sedute = await ref.read(seduteDellaSchedaProvider(schedaLocale).future);
 
-  if (gia.fattaOggi) return false;
-
-  final oggi = await ref.read(allenatoOggiProvider(schedaLocale).future);
-
-  return oggi || DateTime.now().hour >= oraDellaSera;
+  return analisiDaSola(
+    ultimaSeduta: sedute.isEmpty ? null : sedute.last.endedAt,
+    analisiFattaIl: gia?.fattaIl,
+    adesso: DateTime.now(),
+  );
 }
 
-/// Ti sei allenato **oggi** con questa scheda?
+/// Quante sedute al massimo viaggiano con le loro calorie — 3b-AB.
 ///
-/// ⚠️ **Solo le sedute finite**: una ancora aperta è un allenamento in corso, e
-/// analizzarlo a metà racconterebbe un calo che non è successo. 💡 È la stessa
-/// regola di `storiaDegliEsercizi`, ed è il motivo per cui l'analisi arriva
-/// quando chiudi la seduta e non quando la apri.
-final allenatoOggiProvider = FutureProvider.autoDispose.family<bool, int>((
-  ref,
-  schedaLocale,
-) async {
-  final storia = await ref.watch(storiaDellaSchedaProvider(schedaLocale).future);
-  final adesso = DateTime.now();
+/// 🚨 **Deve stare sotto il `max` della validazione del server** (12): un corpo
+/// rifiutato con un 422 diventa `EsitoAnalisi.nonRiuscita`, cioè «non ha
+/// funzionato» — una spiegazione falsa per un limite nostro.
+///
+/// 💡 Ed è la stessa profondità delle sedute che il modello riceve negli
+/// esercizi: mandare calorie di allenamenti che per il resto non vede vorrebbe
+/// dire dargli metà di un confronto.
+const limiteDelleSedute = 8;
 
-  for (final punti in storia.values) {
-    for (final p in punti) {
-      if (p.data.year == adesso.year &&
-          p.data.month == adesso.month &&
-          p.data.day == adesso.day) {
-        return true;
-      }
-    }
-  }
+/// Le sedute **chiuse** fatte con questa scheda, dalla più vecchia — 3b-AB.
+///
+/// ══ 🚨 `planId` È L'ID LOCALE ═════════════════════════════════════════════
+///
+/// `WorkoutSession.planId` porta `SedutaAllenamento.schedaServerId`, che è lo
+/// stesso valore su cui `storiaDegliEsercizi` filtra. ⚠️ Il nome dice «server»
+/// e il contenuto è locale: è una trappola già segnalata altrove in questo file,
+/// e qui è la ragione per cui il confronto è `s.planId == schedaLocale`.
+///
+/// ⛔ **Solo quelle chiuse.** Una seduta aperta è un allenamento in corso:
+/// analizzarlo a metà racconterebbe un calo che non è successo, ed è il motivo
+/// per cui l'analisi arriva quando chiudi la seduta e non quando la apri.
+final seduteDellaSchedaProvider = FutureProvider.autoDispose
+    .family<List<WorkoutSession>, int>((ref, schedaLocale) async {
+      final tutte = await ref.watch(sessionsProvider.future);
 
-  return false;
-});
+      final mie = [
+        for (final s in tutte)
+          if (!s.isOpen && s.endedAt != null && s.planId == schedaLocale) s,
+      ]..sort((a, b) => a.endedAt!.compareTo(b.endedAt!));
+
+      return mie;
+    });
 
 /// @nodoc
 List<ProgressoEsercizio> _daJson(String testo) {

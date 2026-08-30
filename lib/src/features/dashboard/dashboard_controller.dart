@@ -14,6 +14,7 @@ import '../training/storico_unificato_controller.dart';
 import 'data/dashboard_models.dart';
 import 'giorno_scelto.dart';
 import 'riassunto_settimana.dart';
+import 'ultima_notizia.dart';
 
 /// Il riepilogo di oggi — D5.
 ///
@@ -398,7 +399,40 @@ final contestoConsiglioProvider =
             return const RiassuntoSettimana();
           });
 
+      /*
+       * ══ 🕘 QUANDO È SUCCESSA L'ULTIMA COSA — 3b-AB, 30/08/2026 ═══════════
+       *
+       * 📌 *«questo può succedere solo dopo che apri l'app e solo dopo che si è
+       * registrato un pasto, un allenamento o il sonno»*.
+       *
+       * 🚨 **Il server non può ricavarselo da solo**: dopo D9 e la FASE 11.6
+       * non ha più né le sedute né i dati del sensore. I pasti li conta lui,
+       * allenamenti e sonno glieli diciamo noi — e prende il più recente dei
+       * due. Vedi `AiController::qualcosaDiNuovo()`.
+       *
+       * ⛔ **Il campo si manda SEMPRE, anche vuoto**, e non è una svista: sul
+       * server «assente» vuol dire *app vecchia che non lo sa* — e in quel caso
+       * si genera come prima. «Vuoto» vuol dire *non ho mai registrato niente*,
+       * e allora non si genera.
+       *
+       * 🚨 Se questa riga diventasse condizionale, un'app nuova senza dati
+       * verrebbe scambiata per un'app vecchia, e pagherebbe una chiamata per
+       * fascia raccontando una giornata in cui non è successo niente.
+       *
+       * ⚠️ **Non entra nel prompt**: `contestoConsiglio()` sul server è una
+       * lista bianca, e questo campo non ne fa parte. Serve a decidere *se*
+       * chiamare il modello, non a dirgli qualcosa.
+       */
+      final notizia = await ref
+          .watch(ultimaNotiziaProvider.future)
+          .catchError((Object e) {
+            debugPrint('contestoConsiglio: l\'ultima notizia non si legge — $e');
+
+            return null;
+          });
+
       return {
+        'last_event_at': notizia?.toUtc().toIso8601String() ?? '',
         if (bruciate > 0) 'burned_kcal': bruciate,
         'training_last_30_days': settimanaAllenamento.ultimi30,
         if (settimanaAllenamento.giorniDallUltimo != null)

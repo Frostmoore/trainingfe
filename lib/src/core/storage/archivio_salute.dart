@@ -1868,6 +1868,32 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga?.notte;
   }
 
+  /// L'istante in cui finisce il campione di sonno più recente — 3b-AB.
+  ///
+  /// ══ 🚨 PERCHÉ `finitoIl` E NON LA NOTTE ═══════════════════════════════
+  ///
+  /// Perché serve a rispondere a *«è successo qualcosa da quando abbiamo
+  /// scritto l'ultimo consiglio?»*, e [ultimaNotteConDati] risponde con una
+  /// **data a mezzanotte**.
+  ///
+  /// ⛔ Con quella, la notte del 30 varrebbe *30/08 00:00*: confrontata con un
+  /// consiglio generato il 30 alle 09:15 risulterebbe **più vecchia**, e il
+  /// sonno non farebbe mai scattere niente. 🚨 Un difetto che non dà errori:
+  /// semplicemente il consiglio non parla mai di come hai dormito.
+  ///
+  /// 💡 `finitoIl` è invece **il momento in cui ti sei svegliato**: le 07:30 di
+  /// stamattina battono le 22:00 di ieri sera, che è esattamente la risposta
+  /// giusta.
+  Future<DateTime?> ultimoRisveglio() async {
+    final riga =
+        await (select(campioniSonno)
+              ..orderBy([(t) => OrderingTerm.desc(t.finitoIl)])
+              ..limit(1))
+            .getSingleOrNull();
+
+    return riga?.finitoIl;
+  }
+
   // ─────────────────────────── corpo (S5.2) ───────────────────────────
 
   /// Registra una misura del corpo.

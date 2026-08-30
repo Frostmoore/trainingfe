@@ -196,10 +196,117 @@ void main() {
       );
     });
 
-    test('l\'ora della sera e\' un\'ora vera, non un promemoria', () {
-      // ⚠️ Non c'è nessun lavoro in sottofondo: `oraDellaSera` vuol dire «da
-      // quest'ora in poi, la prima volta che apri la scheda».
-      expect(oraDellaSera, inInclusiveRange(0, 23));
+    /*
+     * ══ 🎯 LA REGOLA NUOVA — 3b-AB, 30/08/2026 ═══════════════════════════
+     *
+     * 📌 *«l'analisi AI deve essere fatta solamente dopo un allenamento con
+     * quella scheda e sempre quando si fa un allenamento con quella scheda,
+     * massimo 1 al giorno»*.
+     *
+     * ⛔ **Prima c'era «oppure sono passate le 20»**, e da lì partiva l'analisi
+     * di *qualunque* scheda si aprisse dopo cena — anche di una non toccata da
+     * una settimana. 🚨 Un gettone per non dire niente di nuovo, e la persona
+     * lo scopriva dal saldo.
+     *
+     * ⚠️ E di quella regola non c'era **nessun** test sul comportamento: solo
+     * uno che controllava che la costante fosse un'ora valida fra 0 e 23. Un
+     * test che non poteva fallire nemmeno cancellando la funzione.
+     */
+    final oggi = DateTime(2026, 8, 30, 21);
+    DateTime ieri(int ora) => DateTime(2026, 8, 29, ora);
+
+    test('senza nessun allenamento con questa scheda non parte niente', () {
+      // ⛔ È il caso che la regola delle 20 sbagliava, e in silenzio.
+      expect(
+        analisiDaSola(
+          ultimaSeduta: null,
+          analisiFattaIl: null,
+          adesso: oggi,
+        ),
+        isFalse,
+      );
+    });
+
+    test('la prima analisi non aspetta niente, se c\'è un allenamento', () {
+      expect(
+        analisiDaSola(
+          ultimaSeduta: ieri(19),
+          analisiFattaIl: null,
+          adesso: oggi,
+        ),
+        isTrue,
+      );
+    });
+
+    test('se è già stata fatta oggi non se ne fa un\'altra', () {
+      // 🚨 «Massimo 1 al giorno», anche se ti alleni due volte.
+      expect(
+        analisiDaSola(
+          ultimaSeduta: DateTime(2026, 8, 30, 19),
+          analisiFattaIl: DateTime(2026, 8, 30, 10),
+          adesso: oggi,
+        ),
+        isFalse,
+      );
+    });
+
+    test('apro una scheda che non uso da giorni: non succede niente', () {
+      /*
+       * 🎯 **Il caso del committente**: *«se apro giorno 3 mi deve lasciare
+       * l'ultima analisi disponibile»*. ⛔ Con la vecchia regola, alle 21 questo
+       * pagava un gettone.
+       */
+      expect(
+        analisiDaSola(
+          ultimaSeduta: DateTime(2026, 8, 20, 19),
+          analisiFattaIl: DateTime(2026, 8, 20, 21),
+          adesso: oggi,
+        ),
+        isFalse,
+      );
+    });
+
+    test('un allenamento dopo l\'ultima analisi la fa ripartire', () {
+      /*
+       * 💡 **È il recupero degli arretrati**: *«se per una settimana non ho mai
+       * fatto analisi, devo avere la possibilità di fare l'analisi di tutte le
+       * schede che ho usato quella settimana»*.
+       */
+      expect(
+        analisiDaSola(
+          ultimaSeduta: DateTime(2026, 8, 27, 19),
+          analisiFattaIl: DateTime(2026, 8, 20, 21),
+          adesso: oggi,
+        ),
+        isTrue,
+      );
+    });
+
+    test('un\'analisi fatta DOPO l\'allenamento non si rifà', () {
+      /*
+       * 🚨 **Lo stesso giorno, ma l'ordine conta.** ⚠️ Se le sedute fossero
+       * date a mezzanotte invece che istanti veri, questi due casi sarebbero
+       * indistinguibili — ed è il motivo per cui il confronto usa `finita_il`.
+       */
+      expect(
+        analisiDaSola(
+          ultimaSeduta: ieri(19),
+          analisiFattaIl: ieri(23),
+          adesso: oggi,
+        ),
+        isFalse,
+      );
+    });
+
+    test('un allenamento dopo l\'analisi dello stesso giorno la rifà domani', () {
+      expect(
+        analisiDaSola(
+          ultimaSeduta: ieri(19),
+          analisiFattaIl: ieri(10),
+          adesso: oggi,
+        ),
+        isTrue,
+      );
     });
   });
 

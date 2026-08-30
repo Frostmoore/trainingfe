@@ -166,6 +166,7 @@
 
       💡 Su iOS `CFBundleDisplayName` era gia' giusto: qui mancava.
     -->
+
     <application
         android:label="Training Companion"
         android:name="${applicationName}"

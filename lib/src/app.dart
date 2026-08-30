@@ -8,6 +8,7 @@ import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/onboarding/branding_controller.dart';
+import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
 import 'features/training/data/limiti_delle_schede.dart';
 
@@ -17,11 +18,56 @@ import 'features/training/data/limiti_delle_schede.dart';
 /// ADR-A01 diventa vero: `watch` sul branding significa che appena arriva la
 /// risposta di `/branding/lookup` tutta l'app cambia colore, senza riavviarla e
 /// senza che nessuna schermata debba saperne niente.
-class TrainingCompanionApp extends ConsumerWidget {
+class TrainingCompanionApp extends ConsumerStatefulWidget {
   const TrainingCompanionApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrainingCompanionApp> createState() =>
+      _TrainingCompanionAppState();
+}
+
+class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    /*
+     * ── 🔗 L'invito da cui viene questa installazione — 3b-V.3.3 ──────────
+     *
+     * Chi tocca un link d'invito senza avere l'app finisce sullo store: dopo
+     * l'installazione, il Play Store ci passa il token e l'app apre l'invito
+     * da sola.
+     *
+     * 🚨 **Dopo il primo fotogramma, e non dentro `build`.** Serve il router
+     * montato per poterci navigare, e un `build` che naviga è un `build` che
+     * si rifà navigando ancora.
+     *
+     * ⛔ **Oggi non fa niente**: funziona solo per le installazioni dal Play
+     * Store, e l'app si carica a mano. È la strada per quando sarà pubblicata,
+     * e il ripiego (riaprire il link) resta e funziona intanto.
+     */
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _invitoDallInstallazione(),
+    );
+  }
+
+  Future<void> _invitoDallInstallazione() async {
+    final token = await ref
+        .read(riferimentoDellInstallazioneProvider)
+        .tokenDellInvito();
+
+    if (token == null || !mounted) return;
+
+    /*
+     * ⚠️ `go` e non `push`: chi arriva così **non ha una storia** da cui
+     * tornare indietro, e una freccia che riporta a una schermata mai vista
+     * è peggio di nessuna freccia.
+     */
+    ref.read(routerProvider).go('${AppRoutes.invito}/$token');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palestra = ref.watch(brandingControllerProvider).branding;
 
     /*

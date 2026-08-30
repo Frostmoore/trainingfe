@@ -77,6 +77,27 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> risposta.notImplemented()
                 }
             }
+
+        /*
+         * 🔗 Da dove viene questa installazione — 3b-V.3.3.
+         *
+         * ⚠️ **Un canale suo e non un metodo in più su quello dello schermo**:
+         * sono due cose che non c'entrano niente l'una con l'altra, e un canale
+         * che fa due mestieri è un canale che qualcuno un giorno spegne per il
+         * mestiere sbagliato.
+         *
+         * 💡 Il perché di tutto il resto sta su [RiferimentoDellInstallazione].
+         */
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            RiferimentoDellInstallazione.CANALE,
+        ).setMethodCallHandler { chiamata, risposta ->
+            when (chiamata.method) {
+                "leggi" -> RiferimentoDellInstallazione.leggi(applicationContext, risposta)
+
+                else -> risposta.notImplemented()
+            }
+        }
     }
 
     companion object {

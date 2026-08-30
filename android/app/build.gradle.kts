@@ -76,6 +76,24 @@ dependencies {
     // fallire la build con un errore che parla di classi mancanti, non di
     // versioni sbagliate.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    /*
+     * 🔗 Il «referrer» dell'installazione — 3b-V.3.3.
+     *
+     * Serve a ritrovare il token di un invito dopo che la persona ha
+     * installato l'app dal Play Store: il link ce lo attacca, il Play Store lo
+     * conserva, e l'app se lo legge al primo avvio.
+     *
+     * ⛔ **Non fa niente per gli APK caricati a mano** — cioè per come l'app sta
+     * oggi, in prova. È voluto: è la strada per quando sarà pubblicata, e il
+     * ripiego (riaprire il link) resta e funziona intanto.
+     *
+     * ⚠️ È la libreria ufficiale di Google e non un plugin di terzi: la usiamo
+     * da un `MethodChannel` nostro, per la stessa ragione scritta su
+     * `MainActivity` — un pacchetto in più è un pacchetto che un giorno smette
+     * di stare dietro a Flutter.
+     */
+    implementation("com.android.installreferrer:installreferrer:2.2")
 }
 
 kotlin {

@@ -33,13 +33,29 @@ class ModaleAcquisti {
   const ModaleAcquisti._();
 
   /// Apre la modale. 💡 Da chiamare ovunque una funzione venga negata.
-  static Future<void> mostra(BuildContext context) => showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    useSafeArea: true,
-    builder: (_) => const CorpoAcquisti(),
-  );
+  ///
+  /// ══ 🎟️ `soloGettoni` — 3b-AE, 31/08/2026 ═══════════════════════════════
+  ///
+  /// 📌 *«Dal messaggio di errore, si deve andare sull'interfaccia quella per
+  /// l'acquisto di gettoni»*.
+  ///
+  /// 🚨 **E non è solo navigazione: offrire lì l'abbonamento sarebbe una
+  /// bugia.** Un abbonato ha **zero gettoni** finché non li compra — 📌 *«Un
+  /// abbonato ha comunque 0 gettoni se non li compra»* — quindi a chi ha finito
+  /// i gettoni l'abbonamento **non sblocca niente**: pagherebbe 7,99 e
+  /// resterebbe esattamente dov'era.
+  ///
+  /// ⚠️ Resta `false` di serie: dalla pillola dei gettoni nell'header, o da una
+  /// funzione negata **per mancanza di abbonamento**, l'offerta giusta è ancora
+  /// quella grande.
+  static Future<void> mostra(BuildContext context, {bool soloGettoni = false}) =>
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        useSafeArea: true,
+        builder: (_) => CorpoAcquisti(soloGettoni: soloGettoni),
+      );
 }
 
 /// Il contenuto, **pubblico di proposito**: lo mostrano sia la modale sia la
@@ -49,7 +65,15 @@ class ModaleAcquisti {
 /// la copia sbagliata sarebbe quella che il cliente guarda meno — cioè quella
 /// che nessuno corregge.
 class CorpoAcquisti extends ConsumerStatefulWidget {
-  const CorpoAcquisti({this.dentroUnaModale = true, super.key});
+  const CorpoAcquisti({
+    this.dentroUnaModale = true,
+    this.soloGettoni = false,
+    super.key,
+  });
+
+  /// 🎟️ Ci si è arrivati perché i **gettoni** sono finiti: l'abbonamento non
+  /// c'entra e non si mostra. Vedi [ModaleAcquisti.mostra].
+  final bool soloGettoni;
 
   /// ⚠️ Dentro una modale ci si chiude da soli dopo il pagamento; dentro una
   /// schermata no — `pop()` lì porterebbe via la pagina sbagliata.
@@ -143,7 +167,27 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
       data: (l) => ListView(
         padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.xl),
         children: [
-          if (!l.abbonato) ...[
+          /*
+           * 🎟️ **Chi arriva coi gettoni finiti vede solo i gettoni** — 3b-AE.
+           *
+           * ⛔ L'abbonamento non gli serve: non accredita gettoni, quindi non
+           * sblocca la funzione che ha appena trovato chiusa.
+           */
+          if (widget.soloGettoni) ...[
+            Text(
+              'Ricarica i gettoni',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: Gap.xs),
+            Text(
+              'Servono per quello che chiedi tu: riconoscere un alimento, '
+              'una foto, rifare un\'analisi. Si comprano una volta e restano.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: Gap.md),
+          ] else if (!l.abbonato) ...[
             _Insegna(listino: l),
             const SizedBox(height: Gap.lg),
             _BottoneAbbonamento(
@@ -182,8 +226,17 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
             ),
             const SizedBox(height: Gap.xs),
             Text(
-              'Servono quando finisci le richieste incluse del mese. '
-              'Si comprano una volta e restano: non scadono al rinnovo.',
+              /*
+               * ⛔ **Diceva «servono quando finisci le richieste incluse», e da
+               * 3b-AE è falso**: le richieste incluse coprono quello che l'app
+               * fa da sola, i gettoni quello che chiedi tu. 🚨 Non è che
+               * finiscono le une e cominciano gli altri — sono due cose per due
+               * usi diversi, e chi legge la frase vecchia aspetterebbe di
+               * "finire" qualcosa che non finisce mai.
+               */
+              'Le richieste incluse coprono quello che l\'app fa da sola. '
+              'I gettoni servono per quello che chiedi tu: un alimento da '
+              'riconoscere, una foto, un\'analisi da rifare.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Gap.md),

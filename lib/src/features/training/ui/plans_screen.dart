@@ -1130,7 +1130,7 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
         action: esito == EsitoAnalisi.senzaGettoni
             ? SnackBarAction(
                 label: 'Ricarica',
-                onPressed: () => ModaleAcquisti.mostra(context),
+                onPressed: () => ModaleAcquisti.mostra(context, soloGettoni: true),
               )
             : null,
       ),

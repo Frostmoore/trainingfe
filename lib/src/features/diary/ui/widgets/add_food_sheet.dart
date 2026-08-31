@@ -624,7 +624,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                   if (_gettoniFiniti) ...[
                     const SizedBox(height: Gap.sm),
                     FilledButton.tonalIcon(
-                      onPressed: () => ModaleAcquisti.mostra(context),
+                      onPressed: () => ModaleAcquisti.mostra(context, soloGettoni: true),
                       icon: const Icon(Icons.toll_outlined),
                       label: const Text('Ricarica i gettoni'),
                     ),

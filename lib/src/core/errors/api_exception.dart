@@ -112,6 +112,41 @@ class AiQuotaExceededException extends ApiException {
   final DateTime? resetsAt;
 }
 
+/// 402: i gettoni sono finiti — 3b-AE, 31/08/2026.
+///
+/// ══ 🚨 PERCHÉ UNA CLASSE SUA, COME LA QUOTA ═══════════════════════════════
+///
+/// ⛔ **Non si sblocca riprovando, e non si sblocca aspettando.** È la
+/// differenza che conta: `AiQuotaExceededException` dice «torna il mese
+/// prossimo», questa dice «ricarica». ⚠️ Chi le confonde manda una persona ad
+/// aspettare trenta giorni per una cosa che si risolve in trenta secondi.
+///
+/// 🚨 **Prima non esisteva**, e il 402 cadeva nel `default` del traduttore,
+/// cioè in `ServerException` — *«Qualcosa non ha funzionato. Riprova.»* Una
+/// persona senza gettoni riprovava per sempre, perché riprovare **non può**
+/// funzionare.
+///
+/// 💡 Fino al 30/08 ci finivano solo i due import da PDF, ed era già sbagliato.
+/// Da 3b-AE ci finisce **ogni richiesta fatta a mano**: era il momento di
+/// smettere di rimandarlo.
+class GettoniEsauritiException extends ApiException {
+  const GettoniEsauritiException(super.message, this.saldo, this.servivano);
+
+  /// Quanti gettoni ci sono adesso.
+  final int? saldo;
+
+  /// Quanti ne servivano per questa funzione.
+  ///
+  /// 💡 Serve a dire «te ne servono 10 e ne hai 2» invece del generico «non
+  /// bastano», che non dice quanto ricaricare.
+  final int? servivano;
+
+  /// Quanti ne mancano, quando si sanno tutti e due.
+  int? get mancano => (saldo == null || servivano == null)
+      ? null
+      : (servivano! - saldo!).clamp(0, servivano!);
+}
+
 /// 429 generico o 503 dal fornitore AI: si può riprovare.
 class RateLimitedException extends ApiException {
   const RateLimitedException(super.message, this.retryAfter);

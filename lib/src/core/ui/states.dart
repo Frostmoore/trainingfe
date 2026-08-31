@@ -111,6 +111,8 @@ class ErrorState extends StatelessWidget {
   IconData _icona(ApiException? e) => switch (e) {
     NetworkException() => Icons.wifi_off_rounded,
     AiQuotaExceededException() => Icons.auto_awesome_outlined,
+    // 🎟️ Un gettone, non una stella: si ricarica, non si aspetta.
+    GettoniEsauritiException() => Icons.toll_outlined,
     RateLimitedException() => Icons.hourglass_bottom_rounded,
     _ => Icons.error_outline_rounded,
   };

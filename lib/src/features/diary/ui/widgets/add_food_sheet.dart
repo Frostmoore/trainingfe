@@ -237,6 +237,27 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
           _ => switch (tradotto) {
             AiQuotaExceededException() =>
               '${tradotto.message}\nPuoi comunque inserire a mano.',
+
+            /*
+             * 🎟️ **I gettoni finiti** — 3b-AE, 31/08/2026.
+             *
+             * 🚨 Da oggi la stima da testo e da foto si paga **sempre** a
+             * gettoni, quindi questo non è più il caso raro dei PDF: è quello
+             * che vedrà chiunque li finisca.
+             *
+             * ⛔ Prima cadeva in `tradotto.message` di una `ServerException` —
+             * «Qualcosa non ha funzionato. Riprova.» — e chi riprovava
+             * riprovava contro un muro.
+             *
+             * 💡 E la seconda riga è la stessa della quota: **si può sempre
+             * inserire a mano**. È l'unica cosa che rende questo errore
+             * sopportabile, e vale in tutti e due i casi.
+             */
+            final GettoniEsauritiException e => e.mancano != null
+                ? '${e.message}\nTe ne mancano ${e.mancano}. '
+                      'Puoi comunque inserire a mano.'
+                : '${e.message}\nPuoi comunque inserire a mano.',
+
             RateLimitedException() =>
               'Il servizio è occupato. Riprova fra poco.',
             _ => tradotto.message,

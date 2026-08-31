@@ -370,6 +370,21 @@ class ApiClient {
 
         return ServerException(message ?? const ServerException().message);
 
+      /*
+       * 🎟️ **I gettoni sono finiti** — 3b-AE, 31/08/2026.
+       *
+       * 🚨 Cadeva nel `default`, cioè in «Qualcosa non ha funzionato. Riprova.»
+       * ⛔ Una persona senza gettoni riprovava per sempre, perché riprovare non
+       * può funzionare. Da oggi ogni richiesta fatta a mano passa di qui, ed è
+       * diventato il caso normale invece dell'eccezione dei PDF.
+       */
+      case 402:
+        return GettoniEsauritiException(
+          message ?? 'I gettoni AI sono esauriti. Ricaricali per continuare.',
+          (body['saldo'] as num?)?.toInt(),
+          (body['servivano'] as num?)?.toInt(),
+        );
+
       case 422:
         return ValidationException(
           message ?? 'Controlla i dati inseriti.',

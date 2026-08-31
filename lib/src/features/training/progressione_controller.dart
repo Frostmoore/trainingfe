@@ -351,6 +351,25 @@ Future<EsitoAnalisi> chiediLAnalisi(
             // 💡 Assente quando non c'è **nessun** numero, invece di una lista
             // vuota: un campo che c'è sempre invita il modello a parlarne.
             if (allenamenti.isNotEmpty) 'allenamenti': allenamenti,
+
+            /*
+             * ══ 🎟️ CHI HA CHIESTO QUESTA ANALISI — 31/08/2026 ═══════════════
+             *
+             * 📌 *«tutte le richieste all'ai non automatiche devono costare
+             * GETTONI»*.
+             *
+             * 🚨 **Solo qui si sa.** La decisione la prende [analisiDaSola],
+             * che guarda l'ultima seduta e l'ultima analisi — due cose che
+             * vivono nell'archivio del telefono (D9). Il server non ha modo di
+             * ricostruirla, e se non gliela diciamo tratta tutto come «a
+             * richiesta» e fa pagare un gettone.
+             *
+             * ⚠️ **Il valore di serie di là è «a richiesta»**, non «automatica»:
+             * un'app vecchia che non manda il campo paga il gettone. ⛔ Il
+             * ripiego opposto regalerebbe la funzione a chiunque ometta un
+             * parametro.
+             */
+            'automatica': automatica,
           },
         );
 
@@ -394,7 +413,23 @@ Future<EsitoAnalisi> chiediLAnalisi(
 
     if (tradotto is ForbiddenException) return EsitoAnalisi.serveAbbonamento;
 
-    if (tradotto is AiQuotaExceededException) return EsitoAnalisi.senzaGettoni;
+    /*
+     * 🎟️ **Due errori diversi, lo stesso esito** — 3b-AE, 31/08/2026.
+     *
+     * `AiQuotaExceededException` (429) è la quota del mese finita;
+     * `GettoniEsauritiException` (402) sono i gettoni finiti. ⚠️ Da 3b-AE
+     * l'analisi **a richiesta** finisce sempre sul secondo, perché non passa
+     * più dalla quota.
+     *
+     * 💡 Qui l'esito è lo stesso perché la schermata fa la stessa cosa — apre
+     * la modale dei gettoni — ma le due eccezioni restano distinte a monte: chi
+     * mostra un messaggio deve poter dire «ricarica» invece di «torna il mese
+     * prossimo», e sono due frasi che mandano una persona in due posti diversi.
+     */
+    if (tradotto is AiQuotaExceededException ||
+        tradotto is GettoniEsauritiException) {
+      return EsitoAnalisi.senzaGettoni;
+    }
 
     return EsitoAnalisi.nonRiuscita;
   }

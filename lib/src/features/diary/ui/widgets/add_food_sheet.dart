@@ -9,6 +9,8 @@ import '../../../../core/media/canale_foto.dart';
 import '../../../../core/media/tipo_foto.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../acquisti/data/costo_delle_funzioni.dart';
+import '../../../acquisti/ui/modale_acquisti.dart';
 import '../../../auth/auth_controller.dart';
 import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
@@ -108,6 +110,19 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
   /// accoda un secondo lavoro e lo paga due volte.
   Duration _attesa = Duration.zero;
   String? _errore;
+
+  /*
+   * 🎟️ **Se l'errore erano i gettoni** — 3b-AE, 31/08/2026.
+   *
+   * ⛔ Non basta il testo: il messaggio dice «ricaricali» e non accompagna da
+   * nessuna parte, quindi chi legge deve cercarsi la schermata da solo — e la
+   * maggior parte non la cerca, smette.
+   *
+   * 💡 Un `bool` e non l'eccezione intera: qui serve solo sapere **se**
+   * mostrare il pulsante. Tenere l'oggetto vorrebbe dire farne dipendere il
+   * disegno, e un domani qualcuno ci leggerebbe dentro un saldo vecchio.
+   */
+  bool _gettoniFiniti = false;
 
   /// Le unità sono le stesse di `FoodUnit` lato backend, nello stesso ordine:
   /// un elenco diverso qui produrrebbe unità che il server non sa convertire.
@@ -224,7 +239,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
         // 🚨 La quota finita ha un messaggio suo e **non invita a riprovare**:
         // non si sblocca fino al mese prossimo, e un «riprova» qui farebbe
         // martellare l'utente contro un muro.
-        _errore = switch (error) {
+        _gettoniFiniti = tradotto is GettoniEsauritiException;
+
+      _errore = switch (error) {
           /*
            * 🆕 **I due esiti della coda** — FASE 9.
            *
@@ -342,7 +359,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
       final tradotto = ApiClient.unwrapError(error);
 
       setState(() {
-        _errore = switch (tradotto) {
+        _gettoniFiniti = tradotto is GettoniEsauritiException;
+
+      _errore = switch (tradotto) {
           AiQuotaExceededException() =>
             '${tradotto.message}\nPuoi comunque inserire a mano.',
           RateLimitedException() => 'Il servizio è occupato. Riprova fra poco.',
@@ -539,7 +558,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                             ),
                     ),
                     Text(
-                      '1 gettone',
+                      // 💡 Da `costoDi` e non a mano — 3b-AE: i posti con un
+                      // prezzo sono quattro, e quattro copie divergono.
+                      costoDi(AiACosa.cibo),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context).colorScheme.outline,
                       ),
@@ -566,7 +587,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                     // ⚠️ Dieci, non uno: una foto costa al fornitore circa
                     // quattro volte una frase, e il prezzo lo dice.
                     Text(
-                      '10 gettoni',
+                      costoDi(AiACosa.foto),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context).colorScheme.outline,
                       ),
@@ -580,10 +601,35 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
           if (_errore != null)
             Padding(
               padding: const EdgeInsets.all(Gap.md),
-              child: Text(
-                _errore!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              child: Column(
+                children: [
+                  Text(
+                    _errore!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+
+                  /*
+                   * 🎟️ **E da qui si ricarica** — 3b-AE.
+                   *
+                   * ⛔ Solo per i gettoni finiti: su un guasto di rete o su una
+                   * quota esaurita questo pulsante sarebbe **fuori luogo** —
+                   * nel primo caso non c'è niente da comprare, nel secondo si
+                   * venderebbe una cosa che non sblocca quello che è bloccato.
+                   *
+                   * 💡 `ModaleAcquisti.mostra()` è documentata *«da chiamare
+                   * ovunque una funzione venga negata»*: era proprio questo il
+                   * posto, e mancava.
+                   */
+                  if (_gettoniFiniti) ...[
+                    const SizedBox(height: Gap.sm),
+                    FilledButton.tonalIcon(
+                      onPressed: () => ModaleAcquisti.mostra(context),
+                      icon: const Icon(Icons.toll_outlined),
+                      label: const Text('Ricarica i gettoni'),
+                    ),
+                  ],
+                ],
               ),
             ),
 
@@ -850,6 +896,13 @@ class _Testo extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.auto_awesome),
+
+          /*
+           * ⛔ **Niente prezzo qui**, ed è una correzione del 31/08/2026: il
+           * costo lo dice già la linguetta, dal 16/08. 🚨 Scriverlo anche sul
+           * pulsante lo ripete due volte nella stessa schermata, e un prezzo
+           * ripetuto sembra **due prezzi**.
+           */
           label: const Text('Riconosci e aggiungi'),
         ),
       ],
@@ -884,6 +937,7 @@ class _Foto extends StatelessWidget {
               if (scelta != null) onScelta(scelta.relativo);
             },
             icon: const Icon(Icons.photo_camera_rounded),
+            // ⛔ Vedi sopra: il prezzo sta sulla linguetta, e una volta sola.
             label: const Text('Scatta una foto'),
           ),
           const SizedBox(height: Gap.md),

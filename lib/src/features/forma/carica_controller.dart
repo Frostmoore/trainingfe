@@ -170,8 +170,39 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
 
   if (catena.isEmpty) return null;
 
-  final ultimo = catena.last;
-  final oggiCosi = giorni.last;
+  /*
+   * ══ 🌙 QUALE GIORNO SI STA ANCORA VIVENDO — 3b-AD, 31/08/2026 ═══════════
+   *
+   * 📌 Il committente, alle 00:50: *«è mezzanotte e 50, non è possibile che la
+   * carica mi dica che ho il 94% di carica»* · *«Ovviamente la giornata inizia
+   * al risveglio»*.
+   *
+   * ⛔ **Prima si prendeva `catena.last` e basta.** A mezzanotte quello
+   * diventava un giorno nuovo, con due conseguenze che si sommavano: il suo
+   * mattino era stato calcolato accreditando il recupero di una notte **non
+   * ancora avvenuta**, e la sua scarica ripartiva da zero.
+   *
+   * 💡 Adesso il giorno in corso è **l'ultimo la cui notte è stata
+   * registrata**: finché non ti sei svegliato, la Carica resta quella di ieri.
+   *
+   * ⚠️ L'ora si legge qui e si passa: `CaricaBatteria` è un file puro, e un
+   * `DateTime.now()` là dentro renderebbe la formula impossibile da provare
+   * alle 00:50 — cioè proprio all'ora in cui sbagliava.
+   */
+  final inCorso = CaricaBatteria.indiceDelGiornoInCorso(
+    giorni: giorni,
+    oraLocale: oggi.hour,
+  );
+
+  final ultimo = catena[inCorso];
+  final oggiCosi = giorni[inCorso];
+
+  /*
+   * 🚨 **La mezzanotte non azzera la scarica.** Se si sta ancora vivendo ieri,
+   * i minuti dopo le 00:00 fanno parte della stessa giornata sveglia: le loro
+   * calorie si sommano, non aprono un conto nuovo.
+   */
+  final spese = CaricaBatteria.speseDalRisveglio(giorni: giorni, da: inCorso);
 
   /*
    * 💡 **La scarica di oggi si ricalcola qui** invece di riusare `ultimo.sera`:
@@ -189,8 +220,8 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
     adesso: CaricaBatteria.adesso(
       caricaDelMattino: ultimo.mattina,
       scaricaFinora: CaricaBatteria.scarica(
-        calorieAttive: oggiCosi.calorieAttive,
-        calorieAllenamento: oggiCosi.calorieAllenamento,
+        calorieAttive: spese.attive,
+        calorieAllenamento: spese.allenamento,
         riferimentoAllenamento: rif.allenamento,
         riferimentoAttivita: rif.attivita,
       ),
@@ -199,7 +230,7 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
     giorniValidi: validi,
     senzaSonno: oggiCosi.minutiDormiti == null,
     senzaFisiologia: oggiCosi.zHrv == null && oggiCosi.zBattito == null,
-    senzaAttivita: oggiCosi.calorieAttive == null,
+    senzaAttivita: spese.attive == null,
   );
 });
 

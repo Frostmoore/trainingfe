@@ -206,6 +206,25 @@ abstract final class CaricaBatteria {
   /// pessima» e «notte normale»: è il modo onesto di non sapere.
   static const recuperoSenzaSonno = 0.55;
 
+  /// L'ora oltre la quale la giornata è cominciata comunque — 3b-AD.
+  ///
+  /// ══ 🚨 NON È «QUANDO CI SI SVEGLIA» ═══════════════════════════════════
+  ///
+  /// ⛔ E leggerla così è l'unico modo di sbagliarla. È l'ora oltre la quale,
+  /// **se una notte non è ancora comparsa nell'archivio, vuol dire che il
+  /// sensore non l'ha registrata** — non che quella persona è ancora sveglia da
+  /// ieri.
+  ///
+  /// 💡 Il segnale primario resta **la notte registrata**: chi si sveglia alle
+  /// 05:30 e ha l'orologio al polso comincia la sua giornata alle 05:30, non
+  /// alle 11. Questa costante serve solo a non restare incastrati nel giorno
+  /// prima quando l'orologio è rimasto nel cassetto.
+  ///
+  /// ⚠️ **Undici e non otto**: chi dorme fino alle dieci di domenica esiste, e
+  /// dirgli che è ancora sabato sera è meno grave che dirgli che si è ricaricato
+  /// mentre era sveglio.
+  static const oraOltreLaQualeIlGiornoEComunqueCominciato = 11;
+
   /// Quando il primo giorno non ha nemmeno il sonno.
   static const caricaSenzaNiente = 75.0;
 
@@ -492,6 +511,104 @@ abstract final class CaricaBatteria {
     }
 
     return fuori;
+  }
+
+  // ─────────────────── quando comincia la giornata ────────────────────────
+
+  /// Quale giorno della catena si sta **ancora vivendo** — 3b-AD, 31/08/2026.
+  ///
+  /// ══ 📌 IL DIFETTO CHE QUESTA FUNZIONE CHIUDE ══════════════════════════
+  ///
+  /// 📌 Il committente, alle 00:50 del 31/08: *«è mezzanotte e 50, non è
+  /// possibile che la carica mi dica che ho il 94% di carica»*.
+  ///
+  /// 🚨 **Aveva ragione, e non era una taratura: era il confine del giorno.**
+  /// A mezzanotte succedevano due cose insieme, e si sommavano:
+  ///
+  /// | | |
+  /// |---|---|
+  /// | ⛔ si accreditava il recupero di **una notte non ancora avvenuta** | `minutiDormiti` è `null`, e `frazioneDiRecupero` ripiega su [recuperoSenzaSonno] — il 55% della capacità mancante, regalato |
+  /// | ⛔ la **scarica ripartiva da zero** | le calorie attive del giorno nuovo, in cinquanta minuti, sono zero |
+  ///
+  /// 💡 Mezzo recupero regalato più tutto il consumo della giornata azzerato:
+  /// da lì il 94% dopo diciotto ore sveglio.
+  ///
+  /// ══ 🎯 LA REGOLA, DECISA DAL COMMITTENTE ══════════════════════════════
+  ///
+  /// 📌 *«Ovviamente la giornata inizia al risveglio»*.
+  ///
+  /// 🚨 **E il risveglio è un dato, non un'ora**: è la notte registrata
+  /// nell'archivio. Finché la notte di oggi non c'è, si sta ancora vivendo
+  /// ieri — e la Carica è quella di ieri, meno quello che si è speso da
+  /// stamattina *e* nei minuti dopo la mezzanotte.
+  ///
+  /// ⚠️ **Si guarda indietro di un giorno solo.** Oltre non è una giornata
+  /// lunga, è un orologio spento: due giorni senza notte non fanno
+  /// quarantott'ore di veglia.
+  ///
+  /// ⛔ **E [oraOltreLaQualeIlGiornoEComunqueCominciato] è la via d'uscita**:
+  /// senza, chi non registra il sonno resterebbe incastrato per sempre nel
+  /// giorno prima.
+  ///
+  /// [oraLocale] è l'ora di adesso, da 0 a 23. 💡 Si passa invece di leggerla
+  /// qui perché questo file è puro: un `DateTime.now()` dentro la formula la
+  /// renderebbe impossibile da provare alle 00:50.
+  static int indiceDelGiornoInCorso({
+    required List<GiornataPerLaCarica> giorni,
+    required int oraLocale,
+  }) {
+    if (giorni.isEmpty) return -1;
+
+    final ultimo = giorni.length - 1;
+
+    // 💡 La notte di oggi c'è: la giornata è cominciata, e siamo dentro.
+    if (giorni[ultimo].minutiDormiti != null) return ultimo;
+
+    // ⛔ Tardi, e la notte non è comparsa: non l'ha registrata nessuno.
+    if (oraLocale >= oraOltreLaQualeIlGiornoEComunqueCominciato) return ultimo;
+
+    /*
+     * 🌙 Presto, e la notte di oggi non c'è ancora: si sta ancora vivendo
+     * ieri. ⚠️ Ma solo se **ieri** una notte ce l'aveva: altrimenti non
+     * sappiamo niente nemmeno di quella, e tornare indietro sposterebbe il
+     * problema di un giorno senza risolverlo.
+     */
+    if (ultimo > 0 && giorni[ultimo - 1].minutiDormiti != null) {
+      return ultimo - 1;
+    }
+
+    return ultimo;
+  }
+
+  /// Quanto si è speso **da quel risveglio a adesso**, mezzanotte compresa.
+  ///
+  /// 🚨 **La mezzanotte non azzera niente.** Se si sta ancora vivendo ieri, i
+  /// minuti dopo le 00:00 sono parte della stessa giornata sveglia: le loro
+  /// calorie si sommano a quelle di ieri, non aprono un conto nuovo.
+  ///
+  /// 💡 `null` solo se **nessuno** dei giorni ha calorie: uno zero direbbe
+  /// «fermo», e chi ha lasciato l'orologio nel cassetto non è fermo — non lo
+  /// sappiamo. È la stessa regola di [scarica].
+  static ({double? attive, double? allenamento}) speseDalRisveglio({
+    required List<GiornataPerLaCarica> giorni,
+    required int da,
+  }) {
+    double? attive;
+    double? allenamento;
+
+    for (var i = da; i < giorni.length; i++) {
+      final g = giorni[i];
+
+      if (g.calorieAttive != null) {
+        attive = (attive ?? 0) + g.calorieAttive!;
+      }
+
+      if (g.calorieAllenamento != null) {
+        allenamento = (allenamento ?? 0) + g.calorieAllenamento!;
+      }
+    }
+
+    return (attive: attive, allenamento: allenamento);
   }
 
   /// La carica **adesso**: quella del mattino meno quello che si è già speso.

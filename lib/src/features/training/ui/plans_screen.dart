@@ -10,6 +10,7 @@ import '../../../core/ui/etichetta_ai.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../acquisti/data/costo_delle_funzioni.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
 import '../../profile/corpo_controller.dart';
 import '../../progress/ui/progress_screen.dart';
@@ -1109,9 +1110,31 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
 
     if (spiegazione.isEmpty) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(spiegazione)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(spiegazione),
+
+        /*
+         * 🎟️ **E da qui si ricarica** — 3b-AE, 31/08/2026.
+         *
+         * ⛔ Prima la snackbar diceva «Gettoni finiti.» e spariva: chi legge
+         * restava senza analisi **e senza strada**. La modale esiste, è
+         * documentata *«da chiamare ovunque una funzione venga negata»*, ed era
+         * già importata qui sopra — si apriva per `serveAbbonamento` e non per
+         * i gettoni.
+         *
+         * ⚠️ **Solo per i gettoni.** Su «troppo poco storico» o su una chiamata
+         * non riuscita un'azione «Ricarica» sarebbe fuori luogo: venderebbe una
+         * cosa che non sblocca quello che è bloccato.
+         */
+        action: esito == EsitoAnalisi.senzaGettoni
+            ? SnackBarAction(
+                label: 'Ricarica',
+                onPressed: () => ModaleAcquisti.mostra(context),
+              )
+            : null,
+      ),
+    );
   }
 
   /// 📌 *«deve avvenire in automatico, max 1 volta al giorno per chi è
@@ -1366,9 +1389,17 @@ class _ProgressiDellaSchedaState extends ConsumerState<_ProgressiDellaScheda> {
                    * ⛔ E non c'è nel percorso automatico: là non c'è niente da
                    * toccare, e il prezzo lo spiega la riga sopra.
                    */
+                    /*
+                     * 💡 **Il numero viene da `costoDi`** — 3b-AE, 31/08/2026.
+                     *
+                     * ⛔ Era scritto a mano, e finché era l'unico pulsante con
+                     * un prezzo andava bene. Da oggi i pulsanti con un prezzo
+                     * sono quattro: un numero copiato in quattro etichette è
+                     * un numero che un giorno mente in tre.
+                     */
                     analisi == null
-                        ? 'Analizza adesso · 1 gettone'
-                        : 'Rifai adesso · 1 gettone',
+                        ? 'Analizza adesso · ${costoDi(AiACosa.scheda)}'
+                        : 'Rifai adesso · ${costoDi(AiACosa.scheda)}',
                   ),
                 ),
               ),

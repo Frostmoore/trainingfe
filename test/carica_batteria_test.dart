@@ -306,6 +306,175 @@ void main() {
     });
   });
 
+  group('la giornata comincia al risveglio, non a mezzanotte', () {
+    /*
+     * ══ 📌 IL DIFETTO ═══════════════════════════════════════════════════
+     *
+     * 📌 Il committente, alle 00:50 del 31/08/2026: *«è mezzanotte e 50, non è
+     * possibile che la carica mi dica che ho il 94% di carica... C'è qualcosa
+     * che non torna nella formula»*.
+     *
+     * 🚨 **Non era una taratura: era il confine del giorno.** A mezzanotte si
+     * accreditava il recupero di una notte non ancora avvenuta *e* la scarica
+     * ripartiva da zero. Mezzo recupero regalato più tutto il consumo azzerato.
+     *
+     * 📌 La decisione: *«Ovviamente la giornata inizia al risveglio»*.
+     */
+    List<GiornataPerLaCarica> conNotte({required bool oggiHaDormito}) => [
+      GiornataPerLaCarica(
+        giorno: giorno(1),
+        calorieAttive: 900,
+        calorieAllenamento: 600,
+        minutiDormiti: 480,
+      ),
+      GiornataPerLaCarica(
+        giorno: giorno(2),
+        calorieAttive: 15,
+        minutiDormiti: oggiHaDormito ? 450 : null,
+      ),
+    ];
+
+    test('alle 00:50, senza la notte di oggi, si sta ancora vivendo ieri', () {
+      expect(
+        CaricaBatteria.indiceDelGiornoInCorso(
+          giorni: conNotte(oggiHaDormito: false),
+          oraLocale: 0,
+        ),
+        0,
+        reason:
+            'A mezzanotte e cinquanta la giornata di oggi non è cominciata: '
+            'nessuno si è svegliato.',
+      );
+    });
+
+    test('con la notte di oggi registrata, la giornata è cominciata', () {
+      expect(
+        CaricaBatteria.indiceDelGiornoInCorso(
+          giorni: conNotte(oggiHaDormito: true),
+          oraLocale: 7,
+        ),
+        1,
+      );
+    });
+
+    test('passata l\'ora limite si va avanti comunque', () {
+      /*
+       * ⛔ **Senza questa via d'uscita chi non registra il sonno resterebbe
+       * incastrato per sempre nel giorno prima.** La notte che non compare a
+       * mezzogiorno non vuol dire che sei ancora sveglio da ieri: vuol dire
+       * che il sensore non l'ha vista.
+       */
+      expect(
+        CaricaBatteria.indiceDelGiornoInCorso(
+          giorni: conNotte(oggiHaDormito: false),
+          oraLocale:
+              CaricaBatteria.oraOltreLaQualeIlGiornoEComunqueCominciato,
+        ),
+        1,
+      );
+    });
+
+    test('e non si torna mai indietro di più di un giorno', () {
+      /*
+       * 🚨 Due giorni senza notte non fanno quarantott'ore di veglia: fanno un
+       * orologio spento. ⛔ Tornare indietro all'ultima notte vera direbbe che
+       * quella persona è sveglia da due giorni, e le sommerebbe due giornate
+       * di calorie in una scarica sola.
+       */
+      final giorni = [
+        GiornataPerLaCarica(giorno: giorno(1), minutiDormiti: 480),
+        GiornataPerLaCarica(giorno: giorno(2)),
+        GiornataPerLaCarica(giorno: giorno(3)),
+      ];
+
+      expect(
+        CaricaBatteria.indiceDelGiornoInCorso(giorni: giorni, oraLocale: 2),
+        2,
+      );
+    });
+
+    test('la mezzanotte non azzera la scarica', () {
+      /*
+       * 🎯 **È la seconda metà del difetto.** I quindici kcal dopo le 00:00
+       * sono parte della stessa giornata sveglia, e si sommano a quelli di
+       * ieri invece di aprire un conto nuovo.
+       */
+      final spese = CaricaBatteria.speseDalRisveglio(
+        giorni: conNotte(oggiHaDormito: false),
+        da: 0,
+      );
+
+      expect(spese.attive, 915);
+      expect(spese.allenamento, 600);
+    });
+
+    test('senza nessuna caloria resta «non lo so», non zero', () {
+      /*
+       * ⛔ Uno zero direbbe «fermo». Chi ha lasciato l'orologio nel cassetto
+       * non è fermo: non lo sappiamo, e `scarica()` non fa scendere niente.
+       */
+      final spese = CaricaBatteria.speseDalRisveglio(
+        giorni: [
+          GiornataPerLaCarica(giorno: giorno(1), minutiDormiti: 480),
+          GiornataPerLaCarica(giorno: giorno(2)),
+        ],
+        da: 0,
+      );
+
+      expect(spese.attive, isNull);
+      expect(spese.allenamento, isNull);
+    });
+
+    test('🚨 il caso vero: a mezzanotte la Carica NON risale', () {
+      /*
+       * 🎯 **La prova che chiude il difetto**, e mette insieme le due metà.
+       *
+       * Una giornata pesante, poi mezzanotte. ⛔ Prima: il mattino del giorno
+       * nuovo veniva calcolato con `recuperoSenzaSonno` (0,55) e la scarica
+       * ripartiva da zero — la batteria risaliva mentre la persona era ancora
+       * sveglia.
+       */
+      final giorni = conNotte(oggiHaDormito: false);
+
+      final catena = CaricaBatteria.catena(tdeeDiBase: 2100, giorni: giorni);
+
+      final rif = CaricaBatteria.riferimenti(tdeeDiBase: 2100, giorniValidi: 1);
+
+      final inCorso = CaricaBatteria.indiceDelGiornoInCorso(
+        giorni: giorni,
+        oraLocale: 0,
+      );
+
+      final spese = CaricaBatteria.speseDalRisveglio(giorni: giorni, da: inCorso);
+
+      final adesso = CaricaBatteria.adesso(
+        caricaDelMattino: catena[inCorso].mattina,
+        scaricaFinora: CaricaBatteria.scarica(
+          calorieAttive: spese.attive,
+          calorieAllenamento: spese.allenamento,
+          riferimentoAllenamento: rif.allenamento,
+          riferimentoAttivita: rif.attivita,
+        ),
+      );
+
+      // 💡 La sera di ieri era 59,1: dopo mezzanotte si scende ancora un po'.
+      expect(adesso, lessThan(60));
+
+      /*
+       * ⛔ **E il numero sbagliato di prima non deve tornare.** Con il giorno
+       * nuovo si sarebbe letto il mattino del secondo giorno — che è sopra 80 —
+       * meno una scarica di quindici kcal, cioè quasi niente.
+       */
+      expect(
+        adesso,
+        lessThan(catena.last.mattina),
+        reason:
+            'Sta leggendo il mattino di un giorno che non è ancora cominciato: '
+            'è il difetto delle 00:50.',
+      );
+    });
+  });
+
   group('la catena, che è il motivo per cui la Carica esiste', () {
     test('l\'esempio completo della specifica, dal primo giorno', () {
       final c = CaricaBatteria.catena(

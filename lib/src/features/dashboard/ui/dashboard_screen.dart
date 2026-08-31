@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../achievements/ui/carosello_achievements.dart';
+import '../../acquisti/data/costo_delle_funzioni.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../profile/corpo_controller.dart';
@@ -331,7 +332,8 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                     onPressed: _rigenera,
                     icon: Icon(Icons.refresh_rounded, size: 18, color: sopra),
                     label: Text(
-                      '1 gettone',
+                      // 💡 Da `costoDi` e non a mano — 3b-AE.
+                      costoDi(AiACosa.consiglio),
                       style: theme.textTheme.labelSmall?.copyWith(color: sopra),
                     ),
                     style: TextButton.styleFrom(

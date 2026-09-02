@@ -14,6 +14,7 @@ import '../../../core/backup/raccolta_foto.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../diary/data/trasloco_del_diario.dart';
 import '../../health/health_controller.dart';
 
 /// L'esportazione del file di backup — M7.3, 18/08/2026.
@@ -103,6 +104,31 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
             '· Peso, misure, sonno e recupero: tutto quello che vive solo sul '
             'tuo telefono.',
           ),
+          const SizedBox(height: 4),
+
+          /*
+           * 🍽️ **Il diario, con quante voci ci sono davvero** — Parte I, I3.
+           *
+           * 🚨 Non è un vezzo: il trasloco dal server succede in silenzio, e in
+           * release non lascia traccia — `debugPrint` non arriva a logcat.
+           * ⛔ Senza questo numero, un trasloco fallito si scoprirebbe solo
+           * quando il diario comincia a leggersi da qui, e sembrerebbe che a
+           * perdere i dati sia stato **quel** passo.
+           *
+           * 💡 E resta utile dopo: è il posto dove si dice cosa c'è su questo
+           * telefono, e il diario adesso c'è.
+           */
+          ref
+              .watch(vociSulTelefonoProvider)
+              .when(
+                loading: () => const Text('· Il diario alimentare: sto contando…'),
+                error: (_, _) => const Text('· Il diario alimentare.'),
+                data: (quante) => Text(
+                  quante == 0
+                      ? '· Il diario alimentare: ancora nessuna voce qui.'
+                      : '· Il diario alimentare: $quante voci su questo telefono.',
+                ),
+              ),
           const SizedBox(height: 4),
           /*
            * 🚨 **Si dice anche cosa NON c'è.**

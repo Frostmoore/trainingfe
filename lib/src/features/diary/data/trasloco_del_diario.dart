@@ -197,6 +197,25 @@ class Trasloco {
   };
 }
 
+/// Quante voci di diario ci sono **su questo telefono**.
+///
+/// ══ 🚨 PERCHE' ESISTE: IL TRASLOCO NON SI VEDE ═══════════════════════════
+///
+/// Il trasloco (I3) succede in silenzio, e in release **non lascia traccia**:
+/// `debugPrint` non arriva a logcat, e l'access log del server vuole permessi
+/// che su una macchina condivisa non si prendono per una verifica.
+///
+/// ⛔ Il momento in cui si scoprirebbe da solo è **I2**, quando il diario
+/// comincia a leggersi dal telefono — cioè il momento peggiore: un trasloco
+/// fallito apparirebbe come un diario vuoto, e sembrerebbe che a perdere i dati
+/// sia stato I2.
+///
+/// 💡 Quindi il numero si mostra **prima**, dove si dice già cosa c'è su questo
+/// telefono: nella schermata del backup.
+final vociSulTelefonoProvider = FutureProvider.autoDispose<int>(
+  (ref) => ref.watch(archivioSaluteProvider).quanteVociDelDiario(),
+);
+
 final traslocoProvider = Provider<Trasloco>(
   (ref) => Trasloco(
     ref.watch(apiClientProvider),

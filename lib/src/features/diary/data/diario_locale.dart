@@ -47,6 +47,31 @@ const pastiDelGiorno = <String, String>{
   'evening_snack': 'Dopo cena',
 };
 
+/// Un pasto di oggi, come lo vede il consiglio del giorno — I5.2.
+///
+/// 💡 Una classe e non un record perché ha un nome che vale la pena leggere: il
+/// campo che conta è [scrittaIl], e un record `(String, double, ..., DateTime)`
+/// lo nasconderebbe fra gli altri.
+class PastoScritto {
+  const PastoScritto({
+    required this.pasto,
+    required this.kcal,
+    required this.proteine,
+    required this.carboidrati,
+    required this.grassi,
+    required this.scrittaIl,
+  });
+
+  /// La chiave del server: `breakfast`, `lunch`…
+  final String pasto;
+
+  final double kcal, proteine, carboidrati, grassi;
+
+  /// 🚨 **Quando è stata scritta l'ultima voce di questo pasto.** È ciò che
+  /// distingue una cena programmata alle 10 del mattino da una cena mangiata.
+  final DateTime scrittaIl;
+}
+
 /// Legge e scrive il diario nell'archivio locale.
 class DiarioLocale {
   const DiarioLocale(this._archivio);
@@ -119,6 +144,53 @@ class DiarioLocale {
   /// senza voci no — è la differenza fra «ho mangiato poco» e «non ho segnato».
   Future<int> quanteVociDel(DateTime giorno) async =>
       (await _archivio.vociDelGiorno(giorno)).length;
+
+  /// I pasti di un giorno, **con l'ora in cui sono stati scritti** — I5.2.
+  ///
+  /// ══ 🕘 `scrittaIl` E' IL CAMPO CHE VALE ══════════════════════════════════
+  ///
+  /// 📌 Il committente, il 31/08/2026: *«se oggi ho già segnato tutto quello che
+  /// mangerò alle 10 di mattina il consiglio del giorno mi dice che ho già
+  /// assunto 1800 kcal e sono solo le 10... è ovvio che non può essere così»*.
+  ///
+  /// 💡 Un pranzo scritto alle 10:14 è cibo **programmato**; una cena scritta
+  /// alle 21:30 è cibo **mangiato**. ⚠️ La distinzione la fa il modello, non
+  /// questo codice.
+  ///
+  /// 🚨 **Si prende la scrittura più RECENTE del pasto, non la prima**: chi
+  /// aggiunge il pane alla cena alle 21:40 sta ancora cenando, e l'ora che conta
+  /// è quella dell'ultimo gesto.
+  ///
+  /// ⛔ **I pasti vuoti non ci sono**, al contrario di [giornata]: qui l'elenco
+  /// va in un prompt, e sei righe a zero sarebbero token pagati per dire niente.
+  Future<List<PastoScritto>> pastiScrittiDel(DateTime giorno) async {
+    final righe = await _archivio.vociDelGiorno(giorno);
+
+    final perPasto = <String, List<VoceDiario>>{};
+
+    for (final r in righe) {
+      (perPasto[r.pasto] ??= []).add(r);
+    }
+
+    return [
+      // 💡 Nell'ordine della giornata, che è quello di `MealType::ordered()`.
+      for (final chiave in pastiDelGiorno.keys)
+        if (perPasto[chiave] case final voci? when voci.isNotEmpty)
+          PastoScritto(
+            pasto: chiave,
+            kcal: _somma(voci, (r) => r.kcal),
+            proteine: _somma(voci, (r) => r.proteine),
+            carboidrati: _somma(voci, (r) => r.carboidrati),
+            grassi: _somma(voci, (r) => r.grassi),
+            scrittaIl: voci
+                .map((r) => r.scrittaIl)
+                .reduce((a, b) => a.isAfter(b) ? a : b),
+          ),
+    ];
+  }
+
+  /// Quando è stata scritta l'ultima voce, di qualunque giorno — I5.2.
+  Future<DateTime?> ultimaScrittura() => _archivio.ultimaScritturaDelDiario();
 
   /// I totali giorno per giorno, per i grafici — `2026-09-02` → kcal.
   ///

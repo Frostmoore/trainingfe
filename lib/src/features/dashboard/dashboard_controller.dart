@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
+import '../diary/data/cibo_per_il_consiglio.dart';
 import '../diary/data/diario_locale.dart';
 import '../diary/data/serie_del_cibo.dart';
 import '../health/recupero_controller.dart';
@@ -238,11 +239,11 @@ final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
 ///
 /// 📌 *«diciamo tutta la settimana»*.
 ///
-/// 🚨 **Deve valere quanto `AiController::GIORNI_DI_STORIA`** (7): il server
-/// costruisce `week_food` sulla sua finestra e noi mandiamo `week_burned` sulla
-/// nostra. ⛔ Due finestre diverse darebbero al modello una settimana di cibo e
-/// dieci giorni di bruciate, e i confronti che ne uscirebbero sarebbero
-/// plausibili e sbagliati.
+/// 🚨 **Deve valere quanto `AiController::GIORNI_DI_STORIA`** (7) e quanto
+/// `giorniDelCibo`: le serie della settimana viaggiano tutte insieme nello
+/// stesso contesto. ⛔ Due finestre diverse darebbero al modello una settimana
+/// di cibo e dieci giorni di bruciate, e i confronti che ne uscirebbero
+/// sarebbero plausibili e sbagliati.
 const giorniDelContesto = 7;
 
 /// `2026-08-30` — la forma che le serie della settimana usano da sempre.
@@ -390,9 +391,9 @@ final contestoConsiglioProvider =
        * costo della chiamata)»*.
        *
        * 🚨 **Le manda l'app perché il server non le ha**: le bruciate dopo la
-       * FASE 11.6 e il peso dopo S5 vivono nell'archivio locale. ⛔ Il cibo
-       * invece **non** si manda da qui: `food_entries` è del server, e una
-       * seconda sede della stessa risposta è una sede che diverge.
+       * FASE 11.6 e il peso dopo S5 vivono nell'archivio locale. 🆕 E da I5
+       * **anche il cibo**, che dalla Parte I vive lì con loro: vedi
+       * `cibo_per_il_consiglio.dart`.
        *
        * 💡 Compressa: un giorno per riga, un numero. Sette giorni costano una
        * manciata di token.
@@ -429,6 +430,23 @@ final contestoConsiglioProvider =
 
             return null;
           });
+
+      /*
+       * ══ 🍽️ IL CIBO, CHE DA I5 LO MANDA IL TELEFONO ══════════════════════
+       *
+       * ⛔ Poche righe sopra c'era scritto *«Il cibo invece non si manda da qui:
+       * `food_entries` è del server, e una seconda sede della stessa risposta è
+       * una sede che diverge»*. 🚨 Era vero, e con I2.5 ha smesso di esserlo: la
+       * sede è **una sola**, ed è questa.
+       *
+       * ⚠️ **Un guasto qui non è un di più.** Le altre fonti sono facoltative —
+       * senza il sonno il consiglio parla lo stesso. Senza il cibo no: direbbe
+       * che non hai mangiato niente, con la stessa sicurezza di un consiglio
+       * giusto. 💡 Quindi non c'è nessun `catchError`: se l'archivio non
+       * risponde, `adviceProvider` fallisce e la dashboard mostra la giornata
+       * senza consiglio — che è l'esito onesto.
+       */
+      final cibo = await ref.watch(ciboPerIlConsiglioProvider.future);
 
       /*
        * ⛔ **Solo le pesate della finestra, e solo quelle vere.** Una riga senza
@@ -494,6 +512,7 @@ final contestoConsiglioProvider =
          * argomento.
          */
         'weight_kg': ?pesoDiOggi,
+        ...cibo.payload,
         ...recupero,
         ...settimana,
 

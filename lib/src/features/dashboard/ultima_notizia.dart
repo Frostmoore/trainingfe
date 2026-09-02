@@ -13,35 +13,28 @@
 /// l'app alle 09:10 senza aver toccato niente da ieri sera riceverebbe un
 /// consiglio identico a quello di ieri sera — e l'avremmo pagato.
 ///
-/// ══ ⛔ I PASTI NON SONO QUI DENTRO, E DAL 03/09/2026 E' UN DIFETTO ═══════
+/// ══ 🍽️ E DA I5 CI SONO ANCHE I PASTI ════════════════════════════════════
 ///
-/// Qui c'era scritto che **li sa il server**: `food_entries` era sua, e
-/// `created_at` diceva quando una voce era stata registrata. 🚨 **Con I2.5 non
-/// è più vero**: il diario alimentare vive sul telefono, e in `food_entries`
-/// non entra più niente.
+/// Qui c'era scritto che i pasti **li sa il server**: `food_entries` era sua, e
+/// `created_at` diceva quando una voce era stata registrata. ⛔ Con I2.5 quella
+/// premessa è morta — il diario alimentare vive sul telefono — e per qualche ora
+/// **registrare un pasto non ha fatto scattare più niente**.
 ///
-/// ⛔ Quindi **registrare un pasto non fa più scattare il consiglio**, e il
-/// difetto è di quelli silenziosi: nessun errore, il consiglio c'è, è solo
-/// quello di prima.
+/// 🚨 Un difetto silenzioso: nessun errore, il consiglio c'era, era solo quello
+/// di prima. 💡 Si è chiuso con I5, **insieme** al contesto del cibo: aggiungere
+/// l'ultimo pasto qui *da solo* sarebbe stato peggio — il consiglio si sarebbe
+/// rigenerato a ogni pasto per dire «oggi non hai mangiato niente», cioè una
+/// chiamata pagata per una risposta sbagliata.
 ///
-/// ══ 🚨 E NON SI AGGIUSTA DA SOLO — SI CHIUDE CON I5 ══════════════════════
-///
-/// ⚠️ Aggiungere qui l'ultimo pasto sarebbe **peggio**: `AiController::
-/// laSettimanaDelCibo()` costruisce `meals` e `week_food` leggendo
-/// `food_entries`, che è vuota per le voci nuove. Il consiglio si rigenererebbe
-/// a ogni pasto **per dire «oggi non hai mangiato niente»** — una chiamata
-/// pagata per una risposta sbagliata, che è il contrario di 3b-AB.
-///
-/// 💡 Le due cose si chiudono **insieme**, in I5: l'app manda il contesto del
-/// cibo dall'archivio locale, e allora l'ultimo pasto va aggiunto anche qui.
-///
-/// 💡 Nel frattempo qui c'è quello che **solo il telefono sa**: dopo D9 e la
-/// FASE 11.6 il server non ha più né `workout_sessions` né i dati del sensore, e
-/// quello che non ha non può accorgersi che è cambiato.
+/// 💡 Adesso qui c'è **tutto quello che il telefono sa**, che dopo D9, la FASE
+/// 11.6 e la Parte I è tutto: pasti, allenamenti e sonno. ⚠️ Il server non ha
+/// più nessuna fonte sua — vedi `AiController::qualcosaDiNuovo()`, che infatti
+/// non guarda più nessuna tabella.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../diary/data/diario_locale.dart';
 import '../health/health_controller.dart';
 import '../training/session_controller.dart';
 import '../training/storico_unificato_controller.dart';
@@ -111,6 +104,27 @@ final ultimaNotiziaProvider = FutureProvider.autoDispose<DateTime?>((ref) async 
     if (sveglia != null) quando.add(sveglia);
   } on Object {
     // Vedi sopra.
+  }
+
+  /*
+   * 🍽️ E i pasti — I5.2.
+   *
+   * 🚨 **`scrittaIl` e non `mangiatoIl`**: il secondo è la mezzanotte del giorno
+   * scelto, quindi chi programma la cena di domani scriverebbe una notizia di
+   * **domani** — e il consiglio si rigenererebbe per un pasto non ancora
+   * avvenuto, ogni volta, fino a domani.
+   *
+   * ⚠️ Il contatore [revisioneDiarioProvider] serve a rileggere questo numero
+   * dopo una scrittura: senza, la notizia resterebbe quella di prima proprio
+   * nell'istante in cui è cambiata.
+   */
+  ref.watch(revisioneDiarioProvider);
+
+  try {
+    final pasto = await ref.watch(diarioLocaleProvider).ultimaScrittura();
+    if (pasto != null) quando.add(pasto);
+  } on Object {
+    // Vedi sopra: una fonte in meno, non un guasto.
   }
 
   if (quando.isEmpty) return null;

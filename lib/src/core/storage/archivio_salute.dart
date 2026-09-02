@@ -1980,6 +1980,26 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga.read(vociDiario.id.count()) ?? 0;
   }
 
+  /// Quando è stata scritta l'ultima voce, di qualunque giorno — I5.2.
+  ///
+  /// ══ 🚨 `scrittaIl`, NON `mangiatoIl` ═════════════════════════════════════
+  ///
+  /// ⛔ `mangiatoIl` è la **mezzanotte del giorno scelto**: chi programma la
+  /// cena di domani alle 10 del mattino scriverebbe una «notizia» di domani, e
+  /// chi completa ieri sera una di ieri. 💡 La domanda è *«quando è successo
+  /// l'ultimo gesto»*, e la risposta è l'ora in cui la riga è nata.
+  ///
+  /// 🚨 Serve al secondo cancello del consiglio (3b-AB): senza, registrare un
+  /// pasto non fa scattare niente — e non lo dice a nessuno, perché il consiglio
+  /// resta quello di prima.
+  Future<DateTime?> ultimaScritturaDelDiario() async {
+    final riga = await (selectOnly(vociDiario)
+          ..addColumns([vociDiario.scrittaIl.max()]))
+        .getSingleOrNull();
+
+    return riga?.read(vociDiario.scrittaIl.max());
+  }
+
   /// Scrive una voce e torna il suo id locale.
   Future<int> scriviVoceDiario(VociDiarioCompanion voce) =>
       into(vociDiario).insert(voce);

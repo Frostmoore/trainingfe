@@ -93,7 +93,12 @@ void main() {
 
       expect(await trasloco.porta(), EsitoTrasloco.fatto);
       expect(await archivio.quanteVociDelDiario(), 2);
-      expect(cache.getString(chiaveTraslocoFatto), '1');
+      /*
+       * 💡 **La versione, non un «sì»**: il pacchetto cresce, e un numero
+       * permette di rifare il trasloco quando guadagna un campo — come è
+       * successo col contatore d'uso dei preferiti.
+       */
+      expect(cache.getString(chiaveTraslocoFatto), '$versioneDelTrasloco');
     });
 
     test('🚨 i decimali arrivano come stringhe, e non si perdono', () async {

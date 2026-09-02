@@ -55,6 +55,24 @@ enum EsitoTrasloco {
 /// un telefono nuovo si porta dietro il diario, e non deve rifare il viaggio.
 const chiaveTraslocoFatto = 'diario.trasloco_fatto';
 
+/// La versione del pacchetto che questo telefono ha già preso.
+///
+/// ══ 🚨 PERCHE' UN NUMERO E NON UN «SI'» ═══════════════════════════════════
+///
+/// Perché il pacchetto **cresce**. La prima versione non portava il contatore
+/// d'uso dei preferiti, e chi aveva già traslocato se li sarebbe tenuti a zero
+/// per sempre — con l'elenco in ordine cronologico invece che per uso, e
+/// nessun modo di accorgersene guardando.
+///
+/// 💡 Con un numero, aggiungere un campo al pacchetto significa alzarlo di uno:
+/// il trasloco riparte da solo, le voci del diario non si duplicano
+/// (`insertOrIgnore`) e i preferiti si rifanno.
+///
+/// ⚠️ **Si alza solo quando il pacchetto guadagna qualcosa**, non a ogni
+/// modifica: un numero che cambia per abitudine fa riscaricare tutto a ogni
+/// aggiornamento dell'app.
+const versioneDelTrasloco = 2;
+
 class Trasloco {
   const Trasloco(this._api, this._archivio, this._cache);
 
@@ -80,7 +98,9 @@ class Trasloco {
   /// 💡 Se non tornano si riprova al prossimo avvio: le righe già scritte non
   /// si duplicano — ci pensa `insertOrIgnore` su `idSulServer`.
   Future<EsitoTrasloco> porta() async {
-    if (_cache.getString(chiaveTraslocoFatto) == '1') {
+    final fatta = int.tryParse(_cache.getString(chiaveTraslocoFatto) ?? '') ?? 0;
+
+    if (fatta >= versioneDelTrasloco) {
       return EsitoTrasloco.giaFatto;
     }
 
@@ -117,7 +137,7 @@ class Trasloco {
         return EsitoTrasloco.nonTorna;
       }
 
-      await _cache.setString(chiaveTraslocoFatto, '1');
+      await _cache.setString(chiaveTraslocoFatto, '$versioneDelTrasloco');
 
       return EsitoTrasloco.fatto;
     } on Object catch (e) {
@@ -184,6 +204,13 @@ class Trasloco {
         grassi100: Value(_numero(p['fat_100'])),
         salvatoIl: Value(
           DateTime.tryParse(p['created_at']?.toString() ?? '') ?? DateTime.now(),
+        ),
+
+        // 🚨 Metà dell'ordinamento: senza, i preferiti ci sono tutti e sono
+        // nell'ordine sbagliato — e un elenco non si guarda per accorgersene.
+        volteUsato: Value((p['times_used'] as num?)?.toInt() ?? 0),
+        usatoIl: Value(
+          DateTime.tryParse(p['last_used_at']?.toString() ?? '')?.toLocal(),
         ),
       );
 

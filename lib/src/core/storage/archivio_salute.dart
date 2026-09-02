@@ -75,7 +75,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -573,6 +573,23 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 26) {
         await m.createTable(vociDiario);
         await m.createTable(preferitiCibo);
+      }
+
+      /*
+       * v26 → v27 (I2.5): i preferiti si ricordano **quante volte** sono stati
+       * usati.
+       *
+       * ⛔ Erano rimasti fuori dalla v26, e sarebbe stato un difetto silenzioso:
+       * l'elenco dei preferiti c'è tutto, ma nell'ordine sbagliato — e nessuno
+       * guarda un elenco per accorgersi che manca un criterio.
+       *
+       * ⚠️ Solo per chi è **già** alla v26: chi arriva da prima le trova nella
+       * `createTable` qui sopra, e un `addColumn` gli darebbe «duplicate column
+       * name». È la stessa forma del passo `da < 25 && da >= 2`.
+       */
+      if (da < 27 && da >= 26) {
+        await m.addColumn(preferitiCibo, preferitiCibo.volteUsato);
+        await m.addColumn(preferitiCibo, preferitiCibo.usatoIl);
       }
     },
   );
@@ -1997,12 +2014,36 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<int> scriviPreferito(PreferitiCiboCompanion preferito) =>
       into(preferitiCibo).insert(preferito);
 
+  /// ⚠️ **I preferiti si AGGIORNANO, le voci del diario no**, ed è una
+  /// differenza voluta.
+  ///
+  /// 🚨 Una voce del diario può essere stata corretta a mano sul telefono dopo
+  /// il trasloco: riscriverla con quella del server cancellerebbe la
+  /// correzione. ⛔ Un preferito invece è ancora del server fino a I4, e il suo
+  /// contatore d'uso lì è più aggiornato che qui.
+  ///
+  /// 💡 È anche ciò che permette di **rifare** il trasloco quando il pacchetto
+  /// guadagna un campo — come è successo con `volteUsato`.
   Future<void> importaPreferiti(List<PreferitiCiboCompanion> preferiti) async {
     if (preferiti.isEmpty) return;
 
-    await batch(
-      (b) => b.insertAll(preferitiCibo, preferiti, mode: InsertMode.insertOrIgnore),
-    );
+    /*
+     * 💡 **Si buttano e si riscrivono**, invece di una clausola di conflitto:
+     * dice da solo cosa succede, e non c'è niente da tenere allineato.
+     *
+     * ⛔ **Solo quelle del server**: le righe nate qui hanno `idSulServer` a
+     * `null` e restano dove sono. 🚨 Senza quel `where`, rifare il trasloco
+     * cancellerebbe i preferiti creati sul telefono — e nessuno lo scoprirebbe
+     * finché non ne cerca uno.
+     *
+     * ⚠️ In una transazione: a metà strada i preferiti del server **non ci sono
+     * più e non sono ancora tornati**, e un'interruzione lì li perderebbe tutti.
+     */
+    await transaction(() async {
+      await (delete(preferitiCibo)..where((t) => t.idSulServer.isNotNull())).go();
+
+      await batch((b) => b.insertAll(preferitiCibo, preferiti));
+    });
   }
 
   Future<void> cancellaPreferito(int id) =>
@@ -3114,6 +3155,21 @@ class PreferitiCibo extends Table {
   RealColumn get grassi100 => real().nullable()();
 
   DateTimeColumn get salvatoIl => dateTime().withDefault(currentDateAndTime)();
+
+  /// Quante volte è stato usato.
+  ///
+  /// 🚨 **Un contatore salvato, non un aggregato**: sul server era
+  /// `food_favorites.times_used`, incrementato a ogni uso. ⛔ Ricavarlo contando
+  /// le voci del diario con la stessa descrizione darebbe un numero diverso —
+  /// chi ha scritto «Pollo» a mano dieci volte non ha usato dieci volte il
+  /// preferito «Pollo».
+  ///
+  /// 💡 È metà dell'ordinamento: 📌 *«chi ha venticinque preferiti vuole i tre
+  /// che usa ogni giorno in cima, non quelli che cominciano per A»*.
+  IntColumn get volteUsato => integer().withDefault(const Constant(0))();
+
+  /// L'ultima volta che è stato usato. L'altra metà dell'ordinamento.
+  DateTimeColumn get usatoIl => dateTime().nullable()();
 
   /// ⚠️ **L'indice unico è ciò che rende vero `insertOrIgnore`** — I1.
   ///

@@ -8450,6 +8450,29 @@ class $PreferitiCiboTable extends PreferitiCibo
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _volteUsatoMeta = const VerificationMeta(
+    'volteUsato',
+  );
+  @override
+  late final GeneratedColumn<int> volteUsato = GeneratedColumn<int>(
+    'volte_usato',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _usatoIlMeta = const VerificationMeta(
+    'usatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> usatoIl = GeneratedColumn<DateTime>(
+    'usato_il',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -8469,6 +8492,8 @@ class $PreferitiCiboTable extends PreferitiCibo
     carboidrati100,
     grassi100,
     salvatoIl,
+    volteUsato,
+    usatoIl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8598,6 +8623,18 @@ class $PreferitiCiboTable extends PreferitiCibo
         salvatoIl.isAcceptableOrUnknown(data['salvato_il']!, _salvatoIlMeta),
       );
     }
+    if (data.containsKey('volte_usato')) {
+      context.handle(
+        _volteUsatoMeta,
+        volteUsato.isAcceptableOrUnknown(data['volte_usato']!, _volteUsatoMeta),
+      );
+    }
+    if (data.containsKey('usato_il')) {
+      context.handle(
+        _usatoIlMeta,
+        usatoIl.isAcceptableOrUnknown(data['usato_il']!, _usatoIlMeta),
+      );
+    }
     return context;
   }
 
@@ -8679,6 +8716,14 @@ class $PreferitiCiboTable extends PreferitiCibo
         DriftSqlType.dateTime,
         data['${effectivePrefix}salvato_il'],
       )!,
+      volteUsato: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}volte_usato'],
+      )!,
+      usatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}usato_il'],
+      ),
     );
   }
 
@@ -8710,6 +8755,21 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
   final double? carboidrati100;
   final double? grassi100;
   final DateTime salvatoIl;
+
+  /// Quante volte è stato usato.
+  ///
+  /// 🚨 **Un contatore salvato, non un aggregato**: sul server era
+  /// `food_favorites.times_used`, incrementato a ogni uso. ⛔ Ricavarlo contando
+  /// le voci del diario con la stessa descrizione darebbe un numero diverso —
+  /// chi ha scritto «Pollo» a mano dieci volte non ha usato dieci volte il
+  /// preferito «Pollo».
+  ///
+  /// 💡 È metà dell'ordinamento: 📌 *«chi ha venticinque preferiti vuole i tre
+  /// che usa ogni giorno in cima, non quelli che cominciano per A»*.
+  final int volteUsato;
+
+  /// L'ultima volta che è stato usato. L'altra metà dell'ordinamento.
+  final DateTime? usatoIl;
   const PreferitoCibo({
     required this.id,
     this.idSulServer,
@@ -8728,6 +8788,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
     this.carboidrati100,
     this.grassi100,
     required this.salvatoIl,
+    required this.volteUsato,
+    this.usatoIl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8775,6 +8837,10 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
       map['grassi100'] = Variable<double>(grassi100);
     }
     map['salvato_il'] = Variable<DateTime>(salvatoIl);
+    map['volte_usato'] = Variable<int>(volteUsato);
+    if (!nullToAbsent || usatoIl != null) {
+      map['usato_il'] = Variable<DateTime>(usatoIl);
+    }
     return map;
   }
 
@@ -8819,6 +8885,10 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
           ? const Value.absent()
           : Value(grassi100),
       salvatoIl: Value(salvatoIl),
+      volteUsato: Value(volteUsato),
+      usatoIl: usatoIl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usatoIl),
     );
   }
 
@@ -8845,6 +8915,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
       carboidrati100: serializer.fromJson<double?>(json['carboidrati100']),
       grassi100: serializer.fromJson<double?>(json['grassi100']),
       salvatoIl: serializer.fromJson<DateTime>(json['salvatoIl']),
+      volteUsato: serializer.fromJson<int>(json['volteUsato']),
+      usatoIl: serializer.fromJson<DateTime?>(json['usatoIl']),
     );
   }
   @override
@@ -8868,6 +8940,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
       'carboidrati100': serializer.toJson<double?>(carboidrati100),
       'grassi100': serializer.toJson<double?>(grassi100),
       'salvatoIl': serializer.toJson<DateTime>(salvatoIl),
+      'volteUsato': serializer.toJson<int>(volteUsato),
+      'usatoIl': serializer.toJson<DateTime?>(usatoIl),
     };
   }
 
@@ -8889,6 +8963,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
     Value<double?> carboidrati100 = const Value.absent(),
     Value<double?> grassi100 = const Value.absent(),
     DateTime? salvatoIl,
+    int? volteUsato,
+    Value<DateTime?> usatoIl = const Value.absent(),
   }) => PreferitoCibo(
     id: id ?? this.id,
     idSulServer: idSulServer.present ? idSulServer.value : this.idSulServer,
@@ -8909,6 +8985,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
         : this.carboidrati100,
     grassi100: grassi100.present ? grassi100.value : this.grassi100,
     salvatoIl: salvatoIl ?? this.salvatoIl,
+    volteUsato: volteUsato ?? this.volteUsato,
+    usatoIl: usatoIl.present ? usatoIl.value : this.usatoIl,
   );
   PreferitoCibo copyWithCompanion(PreferitiCiboCompanion data) {
     return PreferitoCibo(
@@ -8939,6 +9017,10 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
           : this.carboidrati100,
       grassi100: data.grassi100.present ? data.grassi100.value : this.grassi100,
       salvatoIl: data.salvatoIl.present ? data.salvatoIl.value : this.salvatoIl,
+      volteUsato: data.volteUsato.present
+          ? data.volteUsato.value
+          : this.volteUsato,
+      usatoIl: data.usatoIl.present ? data.usatoIl.value : this.usatoIl,
     );
   }
 
@@ -8961,7 +9043,9 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
           ..write('proteine100: $proteine100, ')
           ..write('carboidrati100: $carboidrati100, ')
           ..write('grassi100: $grassi100, ')
-          ..write('salvatoIl: $salvatoIl')
+          ..write('salvatoIl: $salvatoIl, ')
+          ..write('volteUsato: $volteUsato, ')
+          ..write('usatoIl: $usatoIl')
           ..write(')'))
         .toString();
   }
@@ -8985,6 +9069,8 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
     carboidrati100,
     grassi100,
     salvatoIl,
+    volteUsato,
+    usatoIl,
   );
   @override
   bool operator ==(Object other) =>
@@ -9006,7 +9092,9 @@ class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
           other.proteine100 == this.proteine100 &&
           other.carboidrati100 == this.carboidrati100 &&
           other.grassi100 == this.grassi100 &&
-          other.salvatoIl == this.salvatoIl);
+          other.salvatoIl == this.salvatoIl &&
+          other.volteUsato == this.volteUsato &&
+          other.usatoIl == this.usatoIl);
 }
 
 class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
@@ -9027,6 +9115,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
   final Value<double?> carboidrati100;
   final Value<double?> grassi100;
   final Value<DateTime> salvatoIl;
+  final Value<int> volteUsato;
+  final Value<DateTime?> usatoIl;
   const PreferitiCiboCompanion({
     this.id = const Value.absent(),
     this.idSulServer = const Value.absent(),
@@ -9045,6 +9135,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
     this.carboidrati100 = const Value.absent(),
     this.grassi100 = const Value.absent(),
     this.salvatoIl = const Value.absent(),
+    this.volteUsato = const Value.absent(),
+    this.usatoIl = const Value.absent(),
   });
   PreferitiCiboCompanion.insert({
     this.id = const Value.absent(),
@@ -9064,6 +9156,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
     this.carboidrati100 = const Value.absent(),
     this.grassi100 = const Value.absent(),
     this.salvatoIl = const Value.absent(),
+    this.volteUsato = const Value.absent(),
+    this.usatoIl = const Value.absent(),
   }) : descrizione = Value(descrizione);
   static Insertable<PreferitoCibo> custom({
     Expression<int>? id,
@@ -9083,6 +9177,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
     Expression<double>? carboidrati100,
     Expression<double>? grassi100,
     Expression<DateTime>? salvatoIl,
+    Expression<int>? volteUsato,
+    Expression<DateTime>? usatoIl,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -9102,6 +9198,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
       if (carboidrati100 != null) 'carboidrati100': carboidrati100,
       if (grassi100 != null) 'grassi100': grassi100,
       if (salvatoIl != null) 'salvato_il': salvatoIl,
+      if (volteUsato != null) 'volte_usato': volteUsato,
+      if (usatoIl != null) 'usato_il': usatoIl,
     });
   }
 
@@ -9123,6 +9221,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
     Value<double?>? carboidrati100,
     Value<double?>? grassi100,
     Value<DateTime>? salvatoIl,
+    Value<int>? volteUsato,
+    Value<DateTime?>? usatoIl,
   }) {
     return PreferitiCiboCompanion(
       id: id ?? this.id,
@@ -9142,6 +9242,8 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
       carboidrati100: carboidrati100 ?? this.carboidrati100,
       grassi100: grassi100 ?? this.grassi100,
       salvatoIl: salvatoIl ?? this.salvatoIl,
+      volteUsato: volteUsato ?? this.volteUsato,
+      usatoIl: usatoIl ?? this.usatoIl,
     );
   }
 
@@ -9199,6 +9301,12 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
     if (salvatoIl.present) {
       map['salvato_il'] = Variable<DateTime>(salvatoIl.value);
     }
+    if (volteUsato.present) {
+      map['volte_usato'] = Variable<int>(volteUsato.value);
+    }
+    if (usatoIl.present) {
+      map['usato_il'] = Variable<DateTime>(usatoIl.value);
+    }
     return map;
   }
 
@@ -9221,7 +9329,9 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
           ..write('proteine100: $proteine100, ')
           ..write('carboidrati100: $carboidrati100, ')
           ..write('grassi100: $grassi100, ')
-          ..write('salvatoIl: $salvatoIl')
+          ..write('salvatoIl: $salvatoIl, ')
+          ..write('volteUsato: $volteUsato, ')
+          ..write('usatoIl: $usatoIl')
           ..write(')'))
         .toString();
   }
@@ -13563,6 +13673,8 @@ typedef $$PreferitiCiboTableCreateCompanionBuilder =
       Value<double?> carboidrati100,
       Value<double?> grassi100,
       Value<DateTime> salvatoIl,
+      Value<int> volteUsato,
+      Value<DateTime?> usatoIl,
     });
 typedef $$PreferitiCiboTableUpdateCompanionBuilder =
     PreferitiCiboCompanion Function({
@@ -13583,6 +13695,8 @@ typedef $$PreferitiCiboTableUpdateCompanionBuilder =
       Value<double?> carboidrati100,
       Value<double?> grassi100,
       Value<DateTime> salvatoIl,
+      Value<int> volteUsato,
+      Value<DateTime?> usatoIl,
     });
 
 class $$PreferitiCiboTableFilterComposer
@@ -13676,6 +13790,16 @@ class $$PreferitiCiboTableFilterComposer
 
   ColumnFilters<DateTime> get salvatoIl => $composableBuilder(
     column: $table.salvatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get volteUsato => $composableBuilder(
+    column: $table.volteUsato,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get usatoIl => $composableBuilder(
+    column: $table.usatoIl,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13773,6 +13897,16 @@ class $$PreferitiCiboTableOrderingComposer
     column: $table.salvatoIl,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get volteUsato => $composableBuilder(
+    column: $table.volteUsato,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get usatoIl => $composableBuilder(
+    column: $table.usatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PreferitiCiboTableAnnotationComposer
@@ -13844,6 +13978,14 @@ class $$PreferitiCiboTableAnnotationComposer
 
   GeneratedColumn<DateTime> get salvatoIl =>
       $composableBuilder(column: $table.salvatoIl, builder: (column) => column);
+
+  GeneratedColumn<int> get volteUsato => $composableBuilder(
+    column: $table.volteUsato,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get usatoIl =>
+      $composableBuilder(column: $table.usatoIl, builder: (column) => column);
 }
 
 class $$PreferitiCiboTableTableManager
@@ -13900,6 +14042,8 @@ class $$PreferitiCiboTableTableManager
                 Value<double?> carboidrati100 = const Value.absent(),
                 Value<double?> grassi100 = const Value.absent(),
                 Value<DateTime> salvatoIl = const Value.absent(),
+                Value<int> volteUsato = const Value.absent(),
+                Value<DateTime?> usatoIl = const Value.absent(),
               }) => PreferitiCiboCompanion(
                 id: id,
                 idSulServer: idSulServer,
@@ -13918,6 +14062,8 @@ class $$PreferitiCiboTableTableManager
                 carboidrati100: carboidrati100,
                 grassi100: grassi100,
                 salvatoIl: salvatoIl,
+                volteUsato: volteUsato,
+                usatoIl: usatoIl,
               ),
           createCompanionCallback:
               ({
@@ -13938,6 +14084,8 @@ class $$PreferitiCiboTableTableManager
                 Value<double?> carboidrati100 = const Value.absent(),
                 Value<double?> grassi100 = const Value.absent(),
                 Value<DateTime> salvatoIl = const Value.absent(),
+                Value<int> volteUsato = const Value.absent(),
+                Value<DateTime?> usatoIl = const Value.absent(),
               }) => PreferitiCiboCompanion.insert(
                 id: id,
                 idSulServer: idSulServer,
@@ -13956,6 +14104,8 @@ class $$PreferitiCiboTableTableManager
                 carboidrati100: carboidrati100,
                 grassi100: grassi100,
                 salvatoIl: salvatoIl,
+                volteUsato: volteUsato,
+                usatoIl: usatoIl,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

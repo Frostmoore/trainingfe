@@ -9,6 +9,7 @@ import '../../core/storage/archivio_salute.dart';
 import '../diary/data/cibo_per_il_consiglio.dart';
 import '../diary/data/diario_locale.dart';
 import '../diary/data/serie_del_cibo.dart';
+import '../health/health_controller.dart';
 import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
 import '../profile/corpo_controller.dart';
@@ -569,16 +570,7 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
   final contesto = await ref.watch(contestoConsiglioProvider.future);
 
   try {
-    final data = await ref
-        .watch(apiClientProvider)
-        .get<Map<String, dynamic>>('/ai/advice', query: contesto);
-
-    return Consiglio(
-      testo: data['body']?.toString(),
-      generatoIl: DateTime.tryParse(
-        data['generated_at']?.toString() ?? '',
-      )?.toLocal(),
-    );
+    return await chiediIlConsiglio(ref, contesto);
   } on Object catch (e) {
     /*
      * ══ 🚨 SI SBUCCIA CON `unwrapError`, NON CON `on ...Exception` ═══════════
@@ -625,6 +617,104 @@ final adviceProvider = FutureProvider.autoDispose<Consiglio>((ref) async {
     return const Consiglio();
   }
 });
+
+/// Chiede il consiglio al server e **se lo tiene** — Parte I, I5.3.
+///
+/// ══ 🚨 IL TESTO ARRIVA UNA VOLTA SOLA ═══════════════════════════════════
+///
+/// Da I5.3 il server non conserva più il testo: `ai_advices.body` non esiste, e
+/// quella tabella è rimasta il **registro delle fasce** — dice che il consiglio
+/// è già stato generato e pagato, non cosa diceva.
+///
+/// 💡 Quindi `body` c'è **solo quando il consiglio è appena nato**. Su una cache
+/// il server manda `fascia` e basta, e il testo lo ritrova questo telefono.
+///
+/// ══ ⛔ PERCHE' UNA FUNZIONE E NON DUE COPIE ═════════════════════════════
+///
+/// Perché i chiamanti sono **due** — la lettura normale e «Rigenera» — e sono
+/// gli stessi due che nella FASE 2-septies costruivano il contesto ognuno per
+/// conto suo, con il risultato di far pagare due volte lo stesso consiglio.
+///
+/// 🚨 Qui il rischio è speculare: se «Rigenera» chiamasse e buttasse via la
+/// risposta — come faceva fino a oggi, perché tanto il testo era sul server — il
+/// consiglio appena **pagato** non verrebbe scritto da nessuna parte, e la
+/// lettura subito dopo troverebbe `cached: true` senza niente da mostrare. ⛔ Si
+/// pagherebbe una chiamata per rivedere il testo di prima.
+Future<Consiglio> chiediIlConsiglio(
+  Ref ref,
+  Map<String, dynamic> contesto, {
+  bool manuale = false,
+}) async {
+  /*
+   * ⚠️ **Nullable**, e non è pedanteria: il server risponde `data: null` quando
+   * l'aggiornamento automatico è spento e non c'è niente in cache. 🚨 Con un
+   * tipo non nullable quel caso diventava un `TypeError` raccolto dal `catch`
+   * generico — cioè un consiglio vuoto invece del ricordo locale.
+   */
+  final data = await ref
+      .read(apiClientProvider)
+      .get<Map<String, dynamic>?>(
+        '/ai/advice',
+        query: manuale ? {'manuale': 1, ...contesto} : contesto,
+      );
+
+  final archivio = ref.read(archivioSaluteProvider);
+
+  final fascia = data?['fascia']?.toString();
+  final testo = data?['body']?.toString();
+  final generatoIl = DateTime.tryParse(
+    data?['generated_at']?.toString() ?? '',
+  )?.toLocal();
+
+  // 🎉 Appena nato: si scrive, e da qui in poi è roba di questo telefono.
+  if (testo != null && testo.isNotEmpty) {
+    /*
+     * ⚠️ **Si mostra comunque, e si scrive SE c'è la fascia.**
+     *
+     * 🚨 Le due condizioni sono separate di proposito. Durante un deploy l'app
+     * nuova può parlare per qualche minuto con il server vecchio, che il campo
+     * `fascia` non lo manda: ⛔ pretenderlo per mostrare il testo vorrebbe dire
+     * buttare un consiglio **già pagato** e far comparire il ripiego, senza
+     * nessun errore da nessuna parte.
+     *
+     * 💡 Senza fascia non si può archiviare — la chiave non c'è — ma il
+     * consiglio si legge lo stesso, che è ciò per cui esiste.
+     */
+    if (fascia != null && fascia.isNotEmpty && generatoIl != null) {
+      await archivio.scriviConsiglio(
+        fascia: fascia,
+        testo: testo,
+        generatoIl: generatoIl,
+      );
+    }
+
+    return Consiglio(testo: testo, generatoIl: generatoIl);
+  }
+
+  /*
+   * 💡 Altrimenti si guarda in casa. **Prima la fascia che il server nomina**,
+   * poi l'ultimo che c'è: sono due esiti diversi e tutti e due giusti.
+   *
+   * ⚠️ Il ripiego sull'ultimo copre il caso «niente di nuovo, ma il consiglio di
+   * stamattina c'è»: è la stessa scelta che il server faceva restituendo
+   * `$ultimo` invece di `null` — 📌 *«l'app lo mostra con la sua data, e chi
+   * legge vede che è di prima»*.
+   *
+   * ⛔ E se questo telefono non ce l'ha — reinstallazione, dati cancellati, un
+   * secondo telefono — non c'è più nessuno che possa rimediare: il testo sul
+   * server non esiste. Si mostra niente, che è onesto, e alla fascia dopo ne
+   * nasce uno nuovo.
+   */
+  final locale = fascia == null || fascia.isEmpty
+      ? null
+      : await archivio.consiglioDellaFascia(fascia);
+
+  final daMostrare = locale ?? await archivio.ultimoConsiglio();
+
+  return daMostrare == null
+      ? const Consiglio()
+      : Consiglio(testo: daMostrare.testo, generatoIl: daMostrare.generatoIl);
+}
 
 /// Il consiglio, o il motivo per cui non c'è.
 class Consiglio {
@@ -691,14 +781,21 @@ final rigeneraConsiglioProvider = Provider<Future<void> Function()>((ref) {
      *
      * 💡 Con `contestoConsiglioProvider` i due hash coincidono: si genera una
      * volta, e la lettura subito dopo trova la cache.
+     *
+     * ══ 🚨 E LA RISPOSTA NON SI BUTTA PIU' — I5.3 ═══════════════════════════
+     *
+     * ⛔ Qui la risposta si ignorava, e andava bene: il testo lo teneva il
+     * server, e la rilettura subito dopo se lo faceva ridare.
+     *
+     * 🚨 Da I5.3 il server il testo non ce l'ha: `body` esce **una volta sola**,
+     * proprio in questa risposta. Buttarla vorrebbe dire pagare una chiamata e
+     * poi mostrare il consiglio di prima — cioè un pulsante che sembra rotto
+     * mentre ha funzionato.
+     *
+     * 💡 [chiediIlConsiglio] lo scrive nell'archivio: la rilettura lo ritrova.
      */
     final contesto = await ref.read(contestoConsiglioProvider.future);
 
-    await ref
-        .read(apiClientProvider)
-        .get<Map<String, dynamic>>(
-          '/ai/advice',
-          query: {'manuale': 1, ...contesto},
-        );
+    await chiediIlConsiglio(ref, contesto, manuale: true);
   };
 });

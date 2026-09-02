@@ -5,8 +5,10 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:training_companion/src/core/api/api_client.dart';
 import 'package:training_companion/src/core/config/app_config.dart';
 import 'package:training_companion/src/core/providers.dart';
+import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/dashboard/dashboard_controller.dart';
+import 'package:training_companion/src/features/health/health_controller.dart';
 
 /// Le due richieste del consiglio mandano **la stessa cosa** — 21/08/2026.
 ///
@@ -33,6 +35,10 @@ void main() {
   late DioAdapter adapter;
   late List<Map<String, dynamic>> mandate;
 
+  /// 💡 Da I5.3 `chiediIlConsiglio` scrive il testo nell'archivio: senza, i due
+  /// chiamanti non arrivano nemmeno alla richiesta.
+  late ArchivioSalute archivio;
+
   /// Il contesto finto: qui non interessa come nasce, interessa **chi lo usa**.
   const contesto = <String, dynamic>{
     'target_kcal': 2200,
@@ -42,6 +48,7 @@ void main() {
 
   setUp(() {
     mandate = [];
+    archivio = ArchivioSalute.inMemoria();
 
     dio = Dio(
       BaseOptions(
@@ -90,10 +97,12 @@ void main() {
          * esattamente quello.
          */
         contestoConsiglioProvider.overrideWith((ref) async => contesto),
+        archivioSaluteProvider.overrideWithValue(archivio),
       ],
     );
 
     addTearDown(c.dispose);
+    addTearDown(archivio.close);
 
     return c;
   }

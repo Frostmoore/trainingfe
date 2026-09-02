@@ -49,6 +49,7 @@ part 'archivio_salute.g.dart';
     SchedeSulTelefono,
     VociDiario,
     PreferitiCibo,
+    ConsigliDelGiorno,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -75,7 +76,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -590,6 +591,18 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 27 && da >= 26) {
         await m.addColumn(preferitiCibo, preferitiCibo.volteUsato);
         await m.addColumn(preferitiCibo, preferitiCibo.usatoIl);
+      }
+
+      /*
+       * v27 → v28 (I5.3): il consiglio del giorno si tiene qui.
+       *
+       * 🚨 Sul server il testo **non esiste più**: `ai_advices.body` è stata
+       * lasciata cadere il 03/09/2026. ⛔ Senza questa tabella, il consiglio
+       * sparirebbe alla prima cache: il server risponde `cached: true` e non ha
+       * più niente da consegnare.
+       */
+      if (da < 28) {
+        await m.createTable(consigliDelGiorno);
       }
     },
   );
@@ -2126,6 +2139,87 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> cancellaPreferito(int id) =>
       (delete(preferitiCibo)..where((t) => t.id.equals(id))).go();
 
+  // ────────────────── il consiglio del giorno (I5.3) ──────────────────
+
+  /// Il consiglio di una fascia, se questo telefono ce l'ha.
+  ///
+  /// ⚠️ `null` è un esito normale, non un guasto: chi ha reinstallato l'app, o
+  /// chi apre da un secondo telefono, quel testo non ce l'ha — e sul server non
+  /// c'è più. 💡 Chi legge mostra l'ultimo che ha, con la sua data.
+  Future<ConsiglioDelGiorno?> consiglioDellaFascia(String fascia) =>
+      (select(consigliDelGiorno)..where((t) => t.fascia.equals(fascia)))
+          .getSingleOrNull();
+
+  /// L'ultimo consiglio che questo telefono ha, di qualunque fascia.
+  Future<ConsiglioDelGiorno?> ultimoConsiglio() =>
+      (select(consigliDelGiorno)
+            ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
+            ..limit(1))
+          .getSingleOrNull();
+
+  /// Scrive il consiglio di una fascia, e **pota**.
+  ///
+  /// ══ 🚨 TRE RIGHE AL MASSIMO, E NON E' UN'OTTIMIZZAZIONE ═════════════════
+  ///
+  /// 📌 Il committente, il 16/08/2026: *«perché dovremmo salvare il consiglio
+  /// del giorno? L'utente lo vede quel giorno e via»*. ⛔ Sul server la regola
+  /// era **una riga**; qui sono tre perché tre sono le fasce di una giornata, e
+  /// serve poter mostrare quello di stamattina quando quello delle 14 non è
+  /// ancora nato.
+  ///
+  /// 💡 Si pota **nello stesso punto in cui si scrive**, come faceva
+  /// `AiAdvice::pota()`: una pulizia schedulata è una cosa che un giorno non
+  /// gira, e nessuno se ne accorge finché la tabella non è gonfia.
+  ///
+  /// 🚨 **Un consiglio è il testo più intimo che l'app conservi** — *«hai
+  /// mangiato 1.400 kcal, ti mancano proteine»* — ed è la ragione per cui il
+  /// tetto è così basso.
+  Future<void> scriviConsiglio({
+    required String fascia,
+    required String testo,
+    required DateTime generatoIl,
+  }) async {
+    /*
+     * ⚠️ **`target: [fascia]` e non `insertOnConflictUpdate()` liscio.**
+     *
+     * 🚨 Senza il bersaglio esplicito, drift risolve il conflitto sulla **chiave
+     * primaria** — che qui è `id`, un autoincremento che non collide mai. ⛔ Il
+     * risultato è che rigenerare il consiglio della stessa fascia sbatte contro
+     * l'indice unico e lancia, invece di sostituire il testo.
+     */
+    await into(consigliDelGiorno).insert(
+      ConsigliDelGiornoCompanion.insert(
+        fascia: fascia,
+        testo: testo,
+        generatoIl: generatoIl,
+      ),
+      onConflict: DoUpdate(
+        (vecchio) => ConsigliDelGiornoCompanion(
+          testo: Value(testo),
+          generatoIl: Value(generatoIl),
+        ),
+        target: [consigliDelGiorno.fascia],
+      ),
+    );
+
+    /*
+     * ⚠️ **Si cancella per `generatoIl`, non per `id`**: due telefoni che si
+     * scambiano un backup possono avere id in ordine diverso, e potare per id
+     * butterebbe via il consiglio più recente invece del più vecchio.
+     */
+    final tenuti =
+        await (select(consigliDelGiorno)
+              ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
+              ..limit(3))
+            .get();
+
+    if (tenuti.length < 3) return;
+
+    await (delete(consigliDelGiorno)
+          ..where((t) => t.generatoIl.isSmallerThanValue(tenuti.last.generatoIl)))
+        .go();
+  }
+
   // ─────────────────────────── corpo (S5.2) ───────────────────────────
 
   /// Registra una misura del corpo.
@@ -3260,6 +3354,60 @@ class PreferitiCibo extends Table {
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
     {idSulServer},
+  ];
+}
+
+/// Il consiglio del giorno, **tenuto qui** — Parte I, I5.3, 03/09/2026.
+///
+/// ══ 🚨 PERCHE' NON STA PIU' SUL SERVER ═══════════════════════════════════
+///
+/// 📌 Il committente, il 16/08/2026: *«perché dovremmo salvare il consiglio del
+/// giorno? L'utente lo vede quel giorno e via»*.
+///
+/// 🚨 **È il testo più intimo che il server contenesse**: *«hai mangiato 1.400
+/// kcal, ti mancano proteine, ieri non ti sei allenato»* è un ritratto di una
+/// persona in tre righe. ⛔ Dopo D9 e la Parte I era rimasto **l'unico posto in
+/// cui peso, sonno, allenamenti e diario tornavano insieme** — riassunti, e in
+/// italiano.
+///
+/// 💡 `ai_advices` di là resta, e serve: è il **registro delle fasce**, cioè il
+/// cancello che tiene il tetto a tre chiamate al giorno. Dice *quando* è
+/// successo, non *cosa* è stato detto.
+///
+/// ══ ⚠️ E SE QUESTO TELEFONO NON CE L'HA ═════════════════════════════════
+///
+/// Succede: reinstallazione, dati cancellati, un secondo telefono. ⛔ Il server
+/// non può più rimediare — il testo non ce l'ha. 💡 Si mostra l'ultimo che c'è,
+/// **con la sua data**, che è già il comportamento previsto per «niente di
+/// nuovo»: chi legge vede che è di prima.
+///
+/// 🚨 E finisce **nel backup** come tutto il resto (regola R4), quindi un
+/// ripristino lo riporta.
+@DataClassName('ConsiglioDelGiorno')
+class ConsigliDelGiorno extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// `2026-09-03T14` — l'etichetta che il server manda nella risposta.
+  ///
+  /// 🚨 **È la chiave, e viene da `FasciaDelConsiglio::etichetta()`.** ⛔ Non si
+  /// ricostruisce qui: la fascia delle 22 scavalca la mezzanotte, e chi provasse
+  /// a dedurla dall'orologio sbaglierebbe per nove ore al giorno.
+  TextColumn get fascia => text().withLength(min: 1, max: 24)();
+
+  TextColumn get testo => text()();
+
+  /// Quando l'ha generato il server (`generated_at`).
+  ///
+  /// 💡 È il campo con cui la schermata scrive «di ieri», e quello su cui si
+  /// pota: vedi `scriviConsiglio`.
+  DateTimeColumn get generatoIl => dateTime()();
+
+  /// ⚠️ **Una fascia, un consiglio.** Senza questo indice, `insertOnConflictUpdate`
+  /// non avrebbe niente su cui riconoscere il conflitto e ogni rilettura
+  /// aggiungerebbe una riga.
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {fascia},
   ];
 }
 

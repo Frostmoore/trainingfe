@@ -9337,6 +9337,324 @@ class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
   }
 }
 
+class $ConsigliDelGiornoTable extends ConsigliDelGiorno
+    with TableInfo<$ConsigliDelGiornoTable, ConsiglioDelGiorno> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConsigliDelGiornoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _fasciaMeta = const VerificationMeta('fascia');
+  @override
+  late final GeneratedColumn<String> fascia = GeneratedColumn<String>(
+    'fascia',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 24,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _testoMeta = const VerificationMeta('testo');
+  @override
+  late final GeneratedColumn<String> testo = GeneratedColumn<String>(
+    'testo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generatoIlMeta = const VerificationMeta(
+    'generatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> generatoIl = GeneratedColumn<DateTime>(
+    'generato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, fascia, testo, generatoIl];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'consigli_del_giorno';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConsiglioDelGiorno> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('fascia')) {
+      context.handle(
+        _fasciaMeta,
+        fascia.isAcceptableOrUnknown(data['fascia']!, _fasciaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fasciaMeta);
+    }
+    if (data.containsKey('testo')) {
+      context.handle(
+        _testoMeta,
+        testo.isAcceptableOrUnknown(data['testo']!, _testoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_testoMeta);
+    }
+    if (data.containsKey('generato_il')) {
+      context.handle(
+        _generatoIlMeta,
+        generatoIl.isAcceptableOrUnknown(data['generato_il']!, _generatoIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_generatoIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {fascia},
+  ];
+  @override
+  ConsiglioDelGiorno map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConsiglioDelGiorno(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      fascia: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fascia'],
+      )!,
+      testo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}testo'],
+      )!,
+      generatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}generato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $ConsigliDelGiornoTable createAlias(String alias) {
+    return $ConsigliDelGiornoTable(attachedDatabase, alias);
+  }
+}
+
+class ConsiglioDelGiorno extends DataClass
+    implements Insertable<ConsiglioDelGiorno> {
+  final int id;
+
+  /// `2026-09-03T14` — l'etichetta che il server manda nella risposta.
+  ///
+  /// 🚨 **È la chiave, e viene da `FasciaDelConsiglio::etichetta()`.** ⛔ Non si
+  /// ricostruisce qui: la fascia delle 22 scavalca la mezzanotte, e chi provasse
+  /// a dedurla dall'orologio sbaglierebbe per nove ore al giorno.
+  final String fascia;
+  final String testo;
+
+  /// Quando l'ha generato il server (`generated_at`).
+  ///
+  /// 💡 È il campo con cui la schermata scrive «di ieri», e quello su cui si
+  /// pota: vedi `scriviConsiglio`.
+  final DateTime generatoIl;
+  const ConsiglioDelGiorno({
+    required this.id,
+    required this.fascia,
+    required this.testo,
+    required this.generatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['fascia'] = Variable<String>(fascia);
+    map['testo'] = Variable<String>(testo);
+    map['generato_il'] = Variable<DateTime>(generatoIl);
+    return map;
+  }
+
+  ConsigliDelGiornoCompanion toCompanion(bool nullToAbsent) {
+    return ConsigliDelGiornoCompanion(
+      id: Value(id),
+      fascia: Value(fascia),
+      testo: Value(testo),
+      generatoIl: Value(generatoIl),
+    );
+  }
+
+  factory ConsiglioDelGiorno.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConsiglioDelGiorno(
+      id: serializer.fromJson<int>(json['id']),
+      fascia: serializer.fromJson<String>(json['fascia']),
+      testo: serializer.fromJson<String>(json['testo']),
+      generatoIl: serializer.fromJson<DateTime>(json['generatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'fascia': serializer.toJson<String>(fascia),
+      'testo': serializer.toJson<String>(testo),
+      'generatoIl': serializer.toJson<DateTime>(generatoIl),
+    };
+  }
+
+  ConsiglioDelGiorno copyWith({
+    int? id,
+    String? fascia,
+    String? testo,
+    DateTime? generatoIl,
+  }) => ConsiglioDelGiorno(
+    id: id ?? this.id,
+    fascia: fascia ?? this.fascia,
+    testo: testo ?? this.testo,
+    generatoIl: generatoIl ?? this.generatoIl,
+  );
+  ConsiglioDelGiorno copyWithCompanion(ConsigliDelGiornoCompanion data) {
+    return ConsiglioDelGiorno(
+      id: data.id.present ? data.id.value : this.id,
+      fascia: data.fascia.present ? data.fascia.value : this.fascia,
+      testo: data.testo.present ? data.testo.value : this.testo,
+      generatoIl: data.generatoIl.present
+          ? data.generatoIl.value
+          : this.generatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConsiglioDelGiorno(')
+          ..write('id: $id, ')
+          ..write('fascia: $fascia, ')
+          ..write('testo: $testo, ')
+          ..write('generatoIl: $generatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, fascia, testo, generatoIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConsiglioDelGiorno &&
+          other.id == this.id &&
+          other.fascia == this.fascia &&
+          other.testo == this.testo &&
+          other.generatoIl == this.generatoIl);
+}
+
+class ConsigliDelGiornoCompanion extends UpdateCompanion<ConsiglioDelGiorno> {
+  final Value<int> id;
+  final Value<String> fascia;
+  final Value<String> testo;
+  final Value<DateTime> generatoIl;
+  const ConsigliDelGiornoCompanion({
+    this.id = const Value.absent(),
+    this.fascia = const Value.absent(),
+    this.testo = const Value.absent(),
+    this.generatoIl = const Value.absent(),
+  });
+  ConsigliDelGiornoCompanion.insert({
+    this.id = const Value.absent(),
+    required String fascia,
+    required String testo,
+    required DateTime generatoIl,
+  }) : fascia = Value(fascia),
+       testo = Value(testo),
+       generatoIl = Value(generatoIl);
+  static Insertable<ConsiglioDelGiorno> custom({
+    Expression<int>? id,
+    Expression<String>? fascia,
+    Expression<String>? testo,
+    Expression<DateTime>? generatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fascia != null) 'fascia': fascia,
+      if (testo != null) 'testo': testo,
+      if (generatoIl != null) 'generato_il': generatoIl,
+    });
+  }
+
+  ConsigliDelGiornoCompanion copyWith({
+    Value<int>? id,
+    Value<String>? fascia,
+    Value<String>? testo,
+    Value<DateTime>? generatoIl,
+  }) {
+    return ConsigliDelGiornoCompanion(
+      id: id ?? this.id,
+      fascia: fascia ?? this.fascia,
+      testo: testo ?? this.testo,
+      generatoIl: generatoIl ?? this.generatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (fascia.present) {
+      map['fascia'] = Variable<String>(fascia.value);
+    }
+    if (testo.present) {
+      map['testo'] = Variable<String>(testo.value);
+    }
+    if (generatoIl.present) {
+      map['generato_il'] = Variable<DateTime>(generatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConsigliDelGiornoCompanion(')
+          ..write('id: $id, ')
+          ..write('fascia: $fascia, ')
+          ..write('testo: $testo, ')
+          ..write('generatoIl: $generatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -9366,6 +9684,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $SchedeSulTelefonoTable(this);
   late final $VociDiarioTable vociDiario = $VociDiarioTable(this);
   late final $PreferitiCiboTable preferitiCibo = $PreferitiCiboTable(this);
+  late final $ConsigliDelGiornoTable consigliDelGiorno =
+      $ConsigliDelGiornoTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9387,6 +9707,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     schedeSulTelefono,
     vociDiario,
     preferitiCibo,
+    consigliDelGiorno,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -14132,6 +14453,196 @@ typedef $$PreferitiCiboTableProcessedTableManager =
       PreferitoCibo,
       PrefetchHooks Function()
     >;
+typedef $$ConsigliDelGiornoTableCreateCompanionBuilder =
+    ConsigliDelGiornoCompanion Function({
+      Value<int> id,
+      required String fascia,
+      required String testo,
+      required DateTime generatoIl,
+    });
+typedef $$ConsigliDelGiornoTableUpdateCompanionBuilder =
+    ConsigliDelGiornoCompanion Function({
+      Value<int> id,
+      Value<String> fascia,
+      Value<String> testo,
+      Value<DateTime> generatoIl,
+    });
+
+class $$ConsigliDelGiornoTableFilterComposer
+    extends Composer<_$ArchivioSalute, $ConsigliDelGiornoTable> {
+  $$ConsigliDelGiornoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fascia => $composableBuilder(
+    column: $table.fascia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get testo => $composableBuilder(
+    column: $table.testo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get generatoIl => $composableBuilder(
+    column: $table.generatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ConsigliDelGiornoTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $ConsigliDelGiornoTable> {
+  $$ConsigliDelGiornoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fascia => $composableBuilder(
+    column: $table.fascia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get testo => $composableBuilder(
+    column: $table.testo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get generatoIl => $composableBuilder(
+    column: $table.generatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ConsigliDelGiornoTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $ConsigliDelGiornoTable> {
+  $$ConsigliDelGiornoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fascia =>
+      $composableBuilder(column: $table.fascia, builder: (column) => column);
+
+  GeneratedColumn<String> get testo =>
+      $composableBuilder(column: $table.testo, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get generatoIl => $composableBuilder(
+    column: $table.generatoIl,
+    builder: (column) => column,
+  );
+}
+
+class $$ConsigliDelGiornoTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $ConsigliDelGiornoTable,
+          ConsiglioDelGiorno,
+          $$ConsigliDelGiornoTableFilterComposer,
+          $$ConsigliDelGiornoTableOrderingComposer,
+          $$ConsigliDelGiornoTableAnnotationComposer,
+          $$ConsigliDelGiornoTableCreateCompanionBuilder,
+          $$ConsigliDelGiornoTableUpdateCompanionBuilder,
+          (
+            ConsiglioDelGiorno,
+            BaseReferences<
+              _$ArchivioSalute,
+              $ConsigliDelGiornoTable,
+              ConsiglioDelGiorno
+            >,
+          ),
+          ConsiglioDelGiorno,
+          PrefetchHooks Function()
+        > {
+  $$ConsigliDelGiornoTableTableManager(
+    _$ArchivioSalute db,
+    $ConsigliDelGiornoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConsigliDelGiornoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ConsigliDelGiornoTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ConsigliDelGiornoTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> fascia = const Value.absent(),
+                Value<String> testo = const Value.absent(),
+                Value<DateTime> generatoIl = const Value.absent(),
+              }) => ConsigliDelGiornoCompanion(
+                id: id,
+                fascia: fascia,
+                testo: testo,
+                generatoIl: generatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String fascia,
+                required String testo,
+                required DateTime generatoIl,
+              }) => ConsigliDelGiornoCompanion.insert(
+                id: id,
+                fascia: fascia,
+                testo: testo,
+                generatoIl: generatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ConsigliDelGiornoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $ConsigliDelGiornoTable,
+      ConsiglioDelGiorno,
+      $$ConsigliDelGiornoTableFilterComposer,
+      $$ConsigliDelGiornoTableOrderingComposer,
+      $$ConsigliDelGiornoTableAnnotationComposer,
+      $$ConsigliDelGiornoTableCreateCompanionBuilder,
+      $$ConsigliDelGiornoTableUpdateCompanionBuilder,
+      (
+        ConsiglioDelGiorno,
+        BaseReferences<
+          _$ArchivioSalute,
+          $ConsigliDelGiornoTable,
+          ConsiglioDelGiorno
+        >,
+      ),
+      ConsiglioDelGiorno,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -14168,4 +14679,6 @@ class $ArchivioSaluteManager {
       $$VociDiarioTableTableManager(_db, _db.vociDiario);
   $$PreferitiCiboTableTableManager get preferitiCibo =>
       $$PreferitiCiboTableTableManager(_db, _db.preferitiCibo);
+  $$ConsigliDelGiornoTableTableManager get consigliDelGiorno =>
+      $$ConsigliDelGiornoTableTableManager(_db, _db.consigliDelGiorno);
 }

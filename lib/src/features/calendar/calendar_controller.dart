@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
+import '../diary/data/diario_locale.dart';
 import '../health/health_controller.dart';
 import '../training/session_controller.dart';
 
@@ -22,10 +23,17 @@ class CalendarDay {
     date: DateTime.parse(j['date'].toString()),
     day: (j['day'] as num).toInt(),
     dow: j['dow'].toString(),
-    // 🚨 `null` ≠ `0`: niente registrato è un'altra cosa da «registrato e vale
-    // zero». Appiattirli disegnerebbe la stessa cella per una giornata a
-    // digiuno e per una dimenticata.
-    kcal: (j['kcal'] as num?)?.toInt(),
+    /*
+     * ⛔ **Nemmeno le calorie si leggono più dal server** — Parte I, I2.5.
+     *
+     * 🚨 Erano l'ultima cosa che il calendario prendeva di là. Dopo il trasloco
+     * del diario ogni cella avrebbe detto «niente registrato» — cioè un mese
+     * intero vuoto e credibile, esattamente come era successo agli allenamenti
+     * nella FASE 11.5.3.
+     *
+     * 💡 Le mette `conCalorie()` un istante dopo.
+     */
+    kcal: null,
     /*
      * ⛔ **Non si leggono più dal server** — FASE 11.5.3, 21/08/2026.
      *
@@ -62,6 +70,23 @@ class CalendarDay {
         inMonth: inMonth,
         today: today,
       );
+
+  /// Le calorie **assunte**, dal diario di questo telefono — I2.5.
+  ///
+  /// 🚨 `null` ≠ `0`: niente registrato è un'altra cosa da «registrato e vale
+  /// zero». ⛔ Appiattirli disegnerebbe la stessa cella per una giornata a
+  /// digiuno e per una dimenticata — ed è il motivo per cui chi chiama passa
+  /// `null` quando quel giorno non ha voci, invece di uno zero comodo.
+  CalendarDay conCalorie(int? assunte) => CalendarDay(
+    date: date,
+    day: day,
+    dow: dow,
+    kcal: assunte,
+    workouts: workouts,
+    burned: burned,
+    inMonth: inMonth,
+    today: today,
+  );
 }
 
 class CalendarPage {
@@ -105,15 +130,19 @@ final calendarProvider = FutureProvider.autoDispose<CalendarPage>((ref) async {
   final pagina = CalendarPage.fromJson(data);
 
   /*
-   * ══ 🚨 IL CIBO DAL SERVER, GLI ALLENAMENTI DAL TELEFONO — FASE 11.5.3 ═══
+   * ══ 🚨 TUTTO DAL TELEFONO, DA I2.5 ═════════════════════════════════════
    *
-   * ⚠️ Il calendario è l'ultima schermata in cui le due cose convivono, e da
-   * qui in poi hanno **due case diverse**: le calorie mangiate stanno ancora
-   * sul server (il diario non è stato traslocato), gli allenamenti no.
+   * ⚠️ Fino al 03/09/2026 questo era l'ultimo punto in cui le due cose
+   * convivevano: le calorie mangiate dal server, gli allenamenti dal telefono.
+   * 🆕 Adesso hanno la **stessa casa**, e dal server restano solo la griglia del
+   * mese e le sue etichette.
    *
-   * 🚨 Senza questo innesto ogni cella avrebbe detto «0 allenamenti» — un mese
-   * vuoto, credibile, e senza nessun errore da nessuna parte.
+   * 🚨 Senza questi innesti ogni cella direbbe «0 allenamenti» e «niente
+   * registrato» — un mese vuoto, credibile, e senza nessun errore da nessuna
+   * parte.
    */
+  ref.watch(revisioneDiarioProvider);
+
   final sedute = await ref.watch(sessionsProvider.future);
   final archivio = ref.watch(archivioSaluteProvider);
 
@@ -141,6 +170,13 @@ final calendarProvider = FutureProvider.autoDispose<CalendarPage>((ref) async {
     kcal[DateFormat('yyyy-MM-dd').format(e.key)] = e.value;
   }
 
+  // 🚨 Una lettura sola per tutto il mese: trentuno letture per disegnare una
+  // griglia sarebbero trentuno viaggi nel database per una risposta che sta in
+  // uno.
+  final assunte = await ref
+      .watch(diarioLocaleProvider)
+      .totaliFra(pagina.days.first.date, pagina.days.last.date);
+
   return CalendarPage(
     title: pagina.title,
     prev: pagina.prev,
@@ -149,7 +185,14 @@ final calendarProvider = FutureProvider.autoDispose<CalendarPage>((ref) async {
     days: pagina.days.map((d) {
       final g = DateFormat('yyyy-MM-dd').format(d.date);
 
-      return d.conAllenamenti(quanti: quante[g] ?? 0, kcal: kcal[g] ?? 0);
+      return d
+          .conAllenamenti(quanti: quante[g] ?? 0, kcal: kcal[g] ?? 0)
+          /*
+           * 💡 `?.round()` su un giorno **assente**: senza voci non c'è nessuna
+           * chiave, e il `null` che ne esce è quello giusto — «non registrato»,
+           * non «zero calorie».
+           */
+          .conCalorie(assunte[g]?.kcal.round());
     }).toList(),
   );
 });

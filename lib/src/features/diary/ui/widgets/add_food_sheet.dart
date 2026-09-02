@@ -15,6 +15,7 @@ import '../../../auth/auth_controller.dart';
 import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../data/alimento_catalogo.dart';
+import '../../data/diario_locale.dart';
 import '../../data/stima_ai.dart';
 import '../../data/stime_in_coda.dart';
 import '../../diary_controller.dart';
@@ -38,23 +39,8 @@ class AddFoodSheet extends ConsumerStatefulWidget {
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => AddFoodSheet(meal: meal ?? _pastoDaOra()),
+        builder: (_) => AddFoodSheet(meal: meal ?? pastoDallOra(DateTime.now())),
       );
-
-  /// Il pasto plausibile a quest'ora: chiederlo ogni volta è attrito, e le
-  /// stesse soglie le usa il backend quando l'app non lo manda.
-  static String _pastoDaOra() {
-    final h = DateTime.now().hour;
-
-    return switch (h) {
-      < 10 => 'breakfast',
-      < 12 => 'morning_snack',
-      < 15 => 'lunch',
-      < 18 => 'afternoon_snack',
-      < 22 => 'dinner',
-      _ => 'evening_snack',
-    };
-  }
 
   @override
   ConsumerState<AddFoodSheet> createState() => _AddFoodSheetState();

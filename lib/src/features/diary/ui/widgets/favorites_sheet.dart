@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/diary_models.dart';
 import '../../diary_controller.dart';
 
 /// I preferiti — D2.

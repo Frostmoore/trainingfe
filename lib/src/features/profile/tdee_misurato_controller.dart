@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
-import '../dashboard/dashboard_controller.dart';
+import '../diary/data/diario_locale.dart';
+import '../diary/data/serie_del_cibo.dart';
 import '../health/health_controller.dart';
 import 'corpo_controller.dart';
 import 'data/tdee_misurato.dart';
@@ -17,24 +18,29 @@ const _finestraGiorni = 60;
 
 /// La misura, rifatta sui dati di adesso.
 ///
-/// ⚠️ **Le assunte vengono dal server e il peso dal telefono**, ed è l'unico
-/// posto dell'app dove i due mondi si incontrano per fare un conto. 🚨 È anche
-/// il motivo per cui questo provider può fallire in due modi diversi: senza
-/// rete non c'è il diario, senza pesate non c'è la variazione.
+/// ══ 🚨 NON HA MAI FUNZIONATO, E SI E' SCOPERTO QUI — I2.5, 03/09/2026 ═════
+///
+/// ⛔ Chiedeva `days: _finestraGiorni`, cioè **60**, e `SeriesController`
+/// ammetteva solo `0, 7, 30, 90, 365`: ogni lettura prendeva un
+/// **`422 validation.in`**, quindi la misura del TDEE non è mai comparsa a
+/// nessuno. 🚨 È lo stesso difetto del 21/08 sulla carica — e c'era pure un test
+/// a sorvegliarlo: cercava i **letterali** `'days': 28`, e qui c'era una
+/// costante. 📌 *«Un test che passa per il motivo sbagliato è peggio di uno
+/// rosso, perché nessuno lo guarda»*.
+///
+/// 💡 Adesso le assunte vengono dall'archivio locale come le pesate: niente
+/// rete, niente elenco di periodi ammessi, e i 60 giorni si chiedono e basta.
 final tdeeMisuratoProvider = FutureProvider.autoDispose<TdeeMisurato>((
   ref,
 ) async {
   ref.watch(revisioneCorpoProvider);
+  ref.watch(revisioneDiarioProvider);
 
   final archivio = ref.watch(archivioSaluteProvider);
-  final api = ref.watch(apiClientProvider);
 
-  final dati = await api.get<Map<String, dynamic>>(
-    '/series',
-    query: {'metric': 'calories', 'days': _finestraGiorni, 'offset': 0},
-  );
-
-  final serie = Series.fromJson(dati);
+  final serie = await ref
+      .watch(serieDelCiboProvider)
+      .calorie(giorni: _finestraGiorni);
 
   final misure = await archivio.storicoMisure(ultimiGiorni: _finestraGiorni);
 

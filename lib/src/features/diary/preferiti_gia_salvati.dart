@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'data/diary_models.dart';
 import 'diary_controller.dart';
 
 /// Se una cosa è **già** fra i preferiti — 3b-D.5, 22/08/2026.

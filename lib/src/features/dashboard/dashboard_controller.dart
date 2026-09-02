@@ -6,6 +6,8 @@ import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
 import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
+import '../diary/data/diario_locale.dart';
+import '../diary/data/serie_del_cibo.dart';
 import '../health/recupero_controller.dart';
 import '../health/settimana_per_il_consiglio.dart';
 import '../profile/corpo_controller.dart';
@@ -13,9 +15,18 @@ import '../profile/target_locale_controller.dart';
 import '../training/bruciate_locali.dart';
 import '../training/storico_unificato_controller.dart';
 import 'data/dashboard_models.dart';
+import 'data/serie.dart';
 import 'giorno_scelto.dart';
 import 'riassunto_settimana.dart';
 import 'ultima_notizia.dart';
+
+/// 🚨 **`Series` vive in `data/serie.dart` e si riesporta da qui** — I2.5.
+///
+/// ⛔ Ci sono venti file che scrivono `import '.../dashboard_controller.dart'`
+/// per averla. 💡 Riesportarla li lascia tutti intatti: spostare una classe *e*
+/// riscrivere venti import nello stesso giro vorrebbe dire non sapere quale
+/// delle due cose ha rotto cosa.
+export 'data/serie.dart';
 
 /// Il riepilogo di oggi — D5.
 ///
@@ -55,146 +66,72 @@ final dashboardProvider = FutureProvider.autoDispose<DashboardSummary>((
               },
       );
 
-  return DashboardSummary.fromJson(data);
+  final riepilogo = DashboardSummary.fromJson(data);
+
+  /*
+   * ══ 🚨 IL CIBO VIENE DAL TELEFONO — Parte I, I2.5 ═══════════════════════
+   *
+   * ⛔ `nutrition.totals` nasceva da `food_entries`, che dal 03/09/2026 non è
+   * più il posto in cui il diario vive. ⚠️ Lasciando la lettura, «Oggi» avrebbe
+   * mostrato **zero calorie assunte senza un errore** — e uno zero credibile
+   * non si distingue da una giornata a digiuno.
+   *
+   * 💡 È lo stesso innesto della FASE 11.5 per gli allenamenti: il resto della
+   * risposta — ora, percentuale di giornata, sonno, parametri — resta del
+   * server, che quelle cose le sa ancora.
+   */
+  ref.watch(revisioneDiarioProvider);
+
+  final diario = ref.watch(diarioLocaleProvider);
+  final totali = await diario.totaliDel(giorno);
+  final quante = await diario.quanteVociDel(giorno);
+
+  return riepilogo.conNutrizione(
+    riepilogo.nutrition.conIlCiboDelTelefono(
+      kcal: totali.kcal,
+      protein: totali.proteine,
+      carbs: totali.carboidrati,
+      fat: totali.grassi,
+      entriesCount: quante,
+    ),
+  );
 });
 
-/// Una serie per i grafici — C12.
-///
-/// 🚨 **Una sola forma per entrambe le metriche.** Il backend risponde con lo
-/// stesso involucro per peso e calorie proprio perché qui ci sia un parser
-/// solo: due parser divergono, e il secondo si scopre rotto molto più tardi.
-class Series {
-  const Series({
-    required this.labels,
-    required this.granularity,
-    this.dates = const [],
-    this.values = const [],
-    this.consumed = const [],
-    this.burned = const [],
-    this.protein = const [],
-    this.period,
-    this.avgConsumed = 0,
-    this.avgBurned = 0,
-    this.daysWithData = 0,
-    this.canGoBack = true,
-  });
-
-  factory Series.fromJson(Map<String, dynamic> j) {
-    final medie = (j['averages'] as Map?)?.cast<String, dynamic>() ?? const {};
-
-    List<double> numeri(String chiave) => ((j[chiave] as List?) ?? const [])
-        .map((e) => (e as num).toDouble())
-        .toList();
-
-    return Series(
-      labels: ((j['labels'] as List?) ?? const [])
-          .map((e) => e.toString())
-          .toList(),
-      dates: ((j['dates'] as List?) ?? const [])
-          .map((e) => e.toString())
-          .toList(),
-      values: numeri('values'),
-      consumed: numeri('consumed'),
-      burned: numeri('burned'),
-      protein: numeri('protein'),
-      granularity: j['granularity']?.toString() ?? 'day',
-      period: j['period']?.toString(),
-      avgConsumed: (medie['consumed'] as num?)?.toInt() ?? 0,
-      avgBurned: (medie['burned'] as num?)?.toInt() ?? 0,
-      daysWithData: (medie['days_with_data'] as num?)?.toInt() ?? 0,
-      canGoBack: j['can_go_back'] != false,
-    );
-  }
-
-  final List<String> labels;
-
-  /// Solo per il peso.
-  final List<double> values;
-
-  /// Solo per le calorie.
-  final List<double> consumed;
-  final List<double> burned;
-
-  /// I grammi di proteine per giorno — 3b-O.7.3, 21/08/2026.
-  ///
-  /// ⚠️ **Vuota se il server non li manda ancora**, e va bene: il campo è stato
-  /// *aggiunto* a `/series`, e un'app nuova contro un server vecchio deve
-  /// funzionare lo stesso. 💡 Chi la usa nasconde la voce invece di scrivere
-  /// zero — uno zero direbbe «non hai mangiato proteine», che è un'altra cosa.
-  ///
-  /// ⛔ Arriva **solo** sulla vista per giorno: una media mensile di grammi non
-  /// risponde a nessuna domanda.
-  final List<double> protein;
-
-  /// Le date vere delle colonne (`yyyy-mm-dd`) — 19/08/2026.
-  ///
-  /// 🚨 `labels` e' testo da mostrare (`d/m`): non ci si ricostruisce sopra un
-  /// giorno. Queste servono a unire alla serie le calorie **misurate
-  /// dall'orologio**, che stanno solo sul telefono e vanno accostate **per
-  /// giorno**.
-  ///
-  /// ⚠️ Vuota sulle serie vecchie, e va bene: senza date non si fonde niente e
-  /// resta quello che manda il server.
-  final List<String> dates;
-
-  final String granularity;
-  final String? period;
-  final int avgConsumed;
-
-  /// ⛔ **Non usarlo: dopo la FASE 11 vale zero per tutti.**
-  ///
-  /// 🚨 È la media delle bruciate secondo il **server**, che gli allenamenti non
-  /// li ha più. ⚠️ Resta nel modello solo perché il campo arriva ancora nella
-  /// risposta: chi lo legge stampa uno zero credibile. 💡 Le bruciate vere si
-  /// contano con `bruciateDi()` in `grafico_calorie.dart`.
-  final int avgBurned;
-
-  /// 🚨 Su quanti giorni sono calcolate le medie. Va **mostrato**: «2.200 kcal
-  /// di media» su due giorni registrati su sette è un numero diverso da
-  /// «2.200 di media» su sette, e senza il contesto si legge come se lo fosse.
-  final int daysWithData;
-
-  final bool canGoBack;
-
-  bool get vuota =>
-      values.isEmpty &&
-      consumed.every((v) => v == 0) &&
-      burned.every((v) => v == 0);
-}
-
-/// I periodi che `/series` accetta — difetto del 21/08/2026.
-///
-/// ══ 🚨 NON È UN INTERVALLO LIBERO, E COSTA CARO CREDERLO ══════════════════
-///
-/// `SeriesController::index` valida `days` con `in:0,7,30,90,365`
-/// (`trainingbe/app/Http/Controllers/Api/V1/Training/SeriesController.php`):
-/// sono i **periodi dei pulsanti del grafico**, e `0` significa «tutto lo
-/// storico». ⚠️ Qualunque altro numero prende `422 validation.in`.
-///
-/// 🚨 **È già successo, ed è passato inosservato per settimane.**
-/// `_storiaCalorieProvider` chiedeva `days: 28` — la finestra dei calcoli di
-/// forma — e il suo `catch` si mangiava l'errore: la **carica veniva calcolata
-/// senza l'ingrediente delle calorie**, mostrando un numero plausibile e
-/// sbagliato. Nessun avviso a schermo, nessun modo di accorgersene dall'app.
-///
-/// 💡 Sta scritto qui perché chi costruisce una finestra lo legga **prima** di
-/// inventare un numero: chiedere il valore ammesso più vicino e tagliare la
-/// lista in casa costa due righe, scoprirlo dal log costa settimane.
-///
-/// ⚠️ Se l'elenco cambia di là, cambia **anche qui**: sono due copie della
-/// stessa regola, ed è il prezzo per poterla controllare senza rete.
-const giorniAmmessiPerLeSerie = <int>{0, 7, 30, 90, 365};
+/*
+| ══ ⛔ `giorniAmmessiPerLeSerie` NON ESISTE PIU' — I2.5, 03/09/2026 ═════════
+|
+| Era l'elenco `{0, 7, 30, 90, 365}` che `SeriesController` accettava, copiato
+| qui per poterlo controllare senza rete. 🚨 Ha reso un servizio e ha fatto un
+| danno:
+|
+| - **il servizio**: il 21/08 ha spiegato perche' la carica fosse calcolata
+|   senza le calorie — `_storiaCalorieProvider` chiedeva 28, prendeva un
+|   `422 validation.in`, e un `catch` se lo mangiava;
+| - **il danno**: il test che lo sorvegliava cercava i **letterali** `'days': N`
+|   e `tdeeMisuratoProvider` scriveva `days: _finestraGiorni`. 🚨 Restava verde
+|   mentre il TDEE misurato **non funzionava per nessuno**. 📌 *«Un test che
+|   passa per il motivo sbagliato e' peggio di uno rosso»*.
+|
+| 💡 Da I2.5 la serie delle calorie si costruisce sul telefono
+| (`serie_del_cibo.dart`): non c'e' piu' nessun elenco di periodi ammessi, e i
+| giorni che servono si chiedono e basta. ⚠️ Il suo posto lo ha preso
+| `test/il_diario_resta_sul_telefono_test.dart`, che sorveglia una cosa piu'
+| utile: che nessuno rimetta il diario sul server.
+*/
 
 /// La finestra scelta per il grafico delle calorie.
 class CaloriesWindow {
-  /// 🚨 L'`assert` è la rete: un periodo non ammesso **spacca subito in
-  /// sviluppo**, invece di diventare un `422` che qualcuno intercetta e
-  /// nasconde. ⚠️ In release non gira — lì la difesa è il test sul sorgente.
-  const CaloriesWindow({this.days = 7, this.offset = 0})
-    : assert(
-        days == 0 || days == 7 || days == 30 || days == 90 || days == 365,
-        'Il server accetta solo $giorniAmmessiPerLeSerie giorni per /series.',
-      );
+  /// ⚠️ **Qui c'era un `assert` sui periodi ammessi, e non serve più.**
+  ///
+  /// Sorvegliava l'elenco di `SeriesController` (`0, 7, 30, 90, 365`), perché un
+  /// numero fuori elenco diventava un `422` che qualcuno intercettava in
+  /// silenzio. 🆕 Da I2.5 la serie la costruisce il telefono: **qualunque numero
+  /// di giorni è lecito**, e i pulsanti offrono quelli che offrono per scelta
+  /// d'interfaccia, non per un limite del server.
+  ///
+  /// 💡 `0` continua a significare «tutto lo storico», ed è il valore che manda
+  /// il pulsante «Tutto».
+  const CaloriesWindow({this.days = 7, this.offset = 0});
 
   final int days;
   final int offset;
@@ -214,9 +151,10 @@ final weightWindowProvider = StateProvider<int>((ref) => 0);
 /// 🚨 **Era `GET /series?metric=weight`.** Da S5 quell'endpoint non serve più il
 /// peso: i dati del corpo non stanno sul server (decisione **D9-bis**).
 ///
-/// ⚠️ `caloriesSeriesProvider` invece **continua a chiamare il server**: le
-/// calorie del diario non sono un dato del corpo, e restano dove sono. Le due
-/// serie hanno la stessa forma e due sorgenti diverse, ed è voluto.
+/// 🆕 **E da I2.5 anche `caloriesSeriesProvider` nasce qui.** Fino al
+/// 03/09/2026 le due serie avevano la stessa forma e due sorgenti diverse — il
+/// peso dal telefono, le calorie dal server — ed era voluto. ⛔ Dopo il trasloco
+/// del diario quella distinzione non esiste più: le sorgenti sono una sola.
 final weightSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
   final giorni = ref.watch(weightWindowProvider);
   final misure = await ref.watch(storicoCorpoProvider.future);
@@ -246,21 +184,23 @@ final weightSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
   );
 });
 
+/// La serie delle calorie, **costruita sul telefono** — Parte I, I2.5.
+///
+/// 🚨 **Era `GET /series?metric=calories`.** Dopo il trasloco il server il
+/// diario non ce l'ha più: la stessa chiamata avrebbe risposto un grafico di
+/// zeri, credibile e falso.
+///
+/// 💡 Adesso `caloriesSeriesProvider` e `weightSeriesProvider` sono finalmente
+/// la stessa cosa — due serie dallo stesso archivio locale — e la nota che
+/// spiegava perché fossero diverse non serve più.
 final caloriesSeriesProvider = FutureProvider.autoDispose<Series>((ref) async {
+  ref.watch(revisioneDiarioProvider);
+
   final finestra = ref.watch(caloriesWindowProvider);
 
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>(
-        '/series',
-        query: {
-          'metric': 'calories',
-          'days': finestra.days,
-          'offset': finestra.offset,
-        },
-      );
-
-  return Series.fromJson(data);
+  return ref
+      .watch(serieDelCiboProvider)
+      .calorie(giorni: finestra.days, offset: finestra.offset);
 });
 
 /// Il consiglio del giorno.

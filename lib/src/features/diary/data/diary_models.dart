@@ -219,3 +219,58 @@ class DiaryDay {
   /// Da 0 a oltre 1: oltre 1 significa sforato.
   double get progresso => hasTarget ? (kcal / targetKcal!).clamp(0.0, 2.0) : 0;
 }
+
+/// I preferiti — D2.
+///
+/// 🚨 **Due cose diverse dietro la stessa parola**: un singolo alimento
+/// («fette biscottate, 30 g») e un **pasto intero** («la mia colazione», con
+/// dentro cinque voci). Il secondo è quello che fa risparmiare tempo davvero,
+/// perché una colazione si ripete uguale per mesi — ed è anche quello che
+/// nell'app storica viene usato di più.
+///
+/// ══ 📌 PERCHE' STA QUI E NON NEL CONTROLLER — I2.5 ════════════════════════
+///
+/// ⛔ Perché adesso lo costruisce `DiarioLocale`, che sta **sotto** il
+/// controller: lasciarlo di là avrebbe voluto dire due file che si importano a
+/// vicenda. 💡 È un modello del diario come [FoodEntry] e [DiaryDay]: la sua
+/// casa era già questa.
+class FoodFavorite {
+  const FoodFavorite({
+    required this.id,
+    required this.description,
+    required this.isMeal,
+    required this.itemsCount,
+    required this.timesUsed,
+    this.kcal,
+    this.protein,
+    this.carbs,
+    this.fat,
+    this.grams,
+    this.qty,
+    this.unit,
+  });
+
+  final int id;
+  final String description;
+  final bool isMeal;
+  final int itemsCount;
+  final int timesUsed;
+  final double? kcal, protein, carbs, fat, grams, qty;
+  final String? unit;
+
+  /// La quantità come la si legge: «100 ml · 100 g».
+  String? get quantita {
+    if (qty != null && unit != null) {
+      final n = qty! == qty!.roundToDouble()
+          ? qty!.toInt().toString()
+          : qty!.toString();
+      final base = '$n $unit';
+
+      return unit != 'g' && grams != null
+          ? '$base · ${grams!.round()} g'
+          : base;
+    }
+
+    return grams == null ? null : '${grams!.round()} g';
+  }
+}

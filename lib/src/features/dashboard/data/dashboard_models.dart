@@ -68,6 +68,19 @@ class DashboardSummary {
   final List<Vital> vitals;
   final bool hasVitals;
 
+  /// Lo stesso riepilogo, con **il cibo del telefono** — I2.5.
+  DashboardSummary conNutrizione(NutritionToday n) => DashboardSummary(
+    date: date,
+    hour: hour,
+    dayProgressPct: dayProgressPct,
+    nutrition: n,
+    training: training,
+    body: body,
+    sleep: sleep,
+    vitals: vitals,
+    hasVitals: hasVitals,
+  );
+
   /// Il ritmo di oggi rispetto all'ora: `null` quando non c'è un target.
   ///
   /// Positivo = si sta mangiando più in fretta di come scorre la giornata.
@@ -144,6 +157,43 @@ class NutritionToday {
   bool get haTarget => targetKcal != null && targetKcal! > 0;
 
   double? get residuo => haTarget ? targetKcal! - kcal : null;
+
+  /// Le calorie e i macro **presi dal telefono** — Parte I, I2.5.
+  ///
+  /// ══ 🚨 PERCHE' SI SOSTITUISCONO INVECE DI NON CHIEDERLI ══════════════════
+  ///
+  /// Perché `/dashboard` porta **molto altro** — l'ora, la percentuale di
+  /// giornata, i parametri, il sonno — e quel pezzo resta del server. ⛔ Quello
+  /// che non è più suo è il cibo: dopo I2.5 il diario sta qui, e `totals`
+  /// arriverebbe **a zero senza un errore**.
+  ///
+  /// ⚠️ È esattamente la forma già usata per gli allenamenti nella FASE 11.5:
+  /// uno zero credibile è il difetto peggiore che ci sia, perché non si
+  /// distingue da una giornata in cui non si è mangiato.
+  ///
+  /// 💡 `targets` **non** si tocca: era già `null` per tutti (il server non
+  /// conosce il peso da D9-bis, e i piani sono anonimi da D4), e chi mostra
+  /// l'obiettivo cade da sé sul calcolo locale.
+  NutritionToday conIlCiboDelTelefono({
+    required double kcal,
+    required double protein,
+    required double carbs,
+    required double fat,
+    required int entriesCount,
+  }) => NutritionToday(
+    kcal: kcal,
+    protein: protein,
+    carbs: carbs,
+    fat: fat,
+    burnedKcal: burnedKcal,
+    burnedManuale: burnedManuale,
+    entriesCount: entriesCount,
+    targetKcal: targetKcal,
+    targetProtein: targetProtein,
+    targetCarbs: targetCarbs,
+    targetFat: targetFat,
+    targetDaPiano: targetDaPiano,
+  );
 }
 
 class TrainingToday {

@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../diary/diary_controller.dart';
 import '../../training/bruciate_locali.dart';
 import '../../training/session_controller.dart';
 import '../calendar_controller.dart';
@@ -31,20 +32,22 @@ class DayScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(calendarDayProvider(date)),
         ),
         data: (d) {
-          final voci = ((d['entries'] as List?) ?? const [])
-              .cast<Map<String, dynamic>>();
           /*
-           * ══ 🚨 GLI ALLENAMENTI VENGONO DAL TELEFONO — FASE 11.5.3 ═══════
+           * ══ 🚨 DAL SERVER RESTA SOLO IL TITOLO — FASE 11.5.3, poi I2.5 ═══
            *
-           * ⚠️ Erano `d['sessions']` e `d['burned']`, cioè `workout_sessions` e
-           * `daily_burns` dal server. 🚨 Dopo il trasloco quelle liste sarebbero
-           * state **vuote senza un errore**: una giornata in cui ci si è
-           * allenati mostrata come una in cui non si è fatto niente.
+           * ⚠️ Gli allenamenti erano `d['sessions']` e `d['burned']`, il cibo
+           * era `d['entries']` e `d['kcal']`. 🚨 Dopo i due traslochi quelle
+           * liste sarebbero **vuote senza un errore**: una giornata in cui ci si
+           * è allenati e si è mangiato, mostrata come una in cui non si è fatto
+           * niente.
            *
-           * 💡 Le calorie **assunte** restano dal server: il diario non è stato
-           * traslocato, ed è la FASE 6 che resta aperta.
+           * 💡 Il titolo («Mercoledì 2 settembre») resta di là perché è una
+           * data scritta in italiano, non un dato.
            */
           final giornoScelto = DateTime.tryParse(date) ?? DateTime.now();
+
+          final giornata = ref.watch(giornataProvider(giornoScelto)).valueOrNull;
+          final voci = giornata?.meals.expand((m) => m.entries).toList() ?? const [];
 
           final sessioni = (ref.watch(sessionsProvider).valueOrNull ?? const [])
               .where(
@@ -76,7 +79,12 @@ class DayScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       _Numero(
-                        valore: '${d['kcal'] ?? 0}',
+                        // 💡 `—` mentre l'archivio risponde, non `0`: uno zero
+                        // che dura un istante e poi diventa 1.800 si legge come
+                        // un guasto.
+                        valore: giornata == null
+                            ? '—'
+                            : '${giornata.kcal.round()}',
                         etichetta: 'kcal assunte',
                       ),
                       _Numero(
@@ -105,11 +113,11 @@ class DayScreen extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(v['description']?.toString() ?? ''),
+                    title: Text(v.description),
                     subtitle: Text(
-                      'P ${v['protein'] ?? 0} · C ${v['carbs'] ?? 0} · G ${v['fat'] ?? 0}',
+                      'P ${v.protein ?? 0} · C ${v.carbs ?? 0} · G ${v.fat ?? 0}',
                     ),
-                    trailing: Text('${v['kcal'] ?? 0} kcal'),
+                    trailing: Text('${v.kcal ?? 0} kcal'),
                   ),
 
               const SizedBox(height: Gap.md),

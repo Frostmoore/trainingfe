@@ -3,19 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/diario_locale.dart';
 import '../../data/diary_models.dart';
+import '../../data/unita_di_misura.dart';
 import '../../diary_controller.dart';
 
 /// Modifica di una voce del diario — C15.
 ///
-/// 🚨 **I macro NON si ricalcolano qui.** Cambiando la quantità si manda quella
-/// e basta: il ricalcolo lo fa il server, che possiede la tabella unità→grammi e
-/// i valori per 100 g. Farlo anche in Dart vorrebbe dire due conversioni da
-/// tenere allineate, e il giorno che ne cambia una sola il diario mostrerebbe un
-/// totale e il database ne conterrebbe un altro — senza che niente lo segnali.
+/// ══ 🚨 L'ANTEPRIMA E IL SALVATAGGIO USANO LA STESSA FUNZIONE — I2.5 ══════
 ///
-/// ⚠️ Se invece l'utente **scrive** un macro, quello si manda e vince: correggere
-/// a mano una stima è il motivo principale per cui si apre questa schermata.
+/// Qui c'era scritto che *«i macro NON si ricalcolano qui: il ricalcolo lo fa il
+/// server, che possiede la tabella unità→grammi»*, e questo foglio teneva una
+/// **terza** tabella privata (`_grammiPer`) con dentro solo le unità in cui un
+/// grammo è un grammo, per non discordare da lui.
+///
+/// ⛔ Dopo il trasloco del diario il server non ricalcola più niente. 🚨 E la
+/// paura era giusta ma il rimedio no: la difesa contro «due conversioni che
+/// divergono» non è tenerne una monca, è averne **una sola**. Adesso l'anteprima
+/// e il salvataggio chiamano tutti e due [grammiPerLaQuantita].
+///
+/// 💡 Il guadagno si vede: prima, cambiando «2 cucchiai» in «3», i campi
+/// restavano fermi perché il peso di un cucchiaio lo sapeva solo il server. Ora
+/// si aggiornano — e con il peso che l'AI aveva dato a **quell'olio**, non con i
+/// 15 g della tabella generica.
+///
+/// ⚠️ Se invece l'utente **scrive** un macro, quello vince: correggere a mano
+/// una stima è il motivo principale per cui si apre questa schermata.
 class EditEntrySheet extends ConsumerStatefulWidget {
   const EditEntrySheet({required this.voce, super.key});
 
@@ -38,26 +51,12 @@ class EditEntrySheet extends ConsumerStatefulWidget {
 }
 
 class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
-  /// Le unità che il backend conosce (`FoodUnit::ORDER`), nell'ordine in cui le
-  /// mostra l'app storica.
+  /// 💡 **L'elenco è `ordineDelleUnita`**, cioè `FoodUnit::ORDER` portato in
+  /// Dart: le stesse tredici unità, e una copia in meno da tenere allineata.
   ///
-  /// ⚠️ È un elenco per la tendina, **non** una tabella di conversione: i
-  /// fattori restano sul server, dove sono già.
-  static const _unita = [
-    'g',
-    'mg',
-    'hg',
-    'kg',
-    'ml',
-    'dl',
-    'cl',
-    'l',
-    'bicchiere',
-    'cucchiaio',
-    'tazza',
-    'cucchiaino',
-    'scoop',
-  ];
+  /// ⚠️ L'ordine cambia leggermente — prima quelle che si usano davvero, non
+  /// l'ordine alfabetico dell'app storica.
+  static const _unita = ordineDelleUnita;
 
   late final _descrizione = TextEditingController(
     text: widget.voce.description,
@@ -100,27 +99,21 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   double? _valore(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
-  /// Le unità in cui **un grammo è un grammo**, senza sapere che alimento sia.
+  /// Quanto peserà questa voce con la quantità che si sta scrivendo.
   ///
-  /// 🚨 **Non è la tabella di `FoodUnit` portata in Dart**, ed è la differenza
-  /// che rende questo codice lecito. Un chilo è mille grammi per qualunque cosa;
-  /// un *cucchiaio* pesa 14 g d'olio e 21 g di miele, e quel numero lo sa solo
-  /// il server. Duplicare quella tabella qui vorrebbe dire due conversioni da
-  /// tenere allineate — che è ciò che il commento in cima a questo file vieta.
+  /// 🚨 **È la stessa funzione che userà il salvataggio.** Un secondo calcolo
+  /// qui, anche identico oggi, sarebbe la cosa che diverge domani: il foglio
+  /// mostrerebbe un numero e il diario ne conterrebbe un altro, senza che
+  /// niente lo segnali.
   ///
-  /// ⚠️ Su `ml` e compagni si segue la scelta dichiarata di `FoodUnit`: 1 ml = 1 g.
-  /// È un'approssimazione, ma è **la stessa** che farà il server, quindi
-  /// l'anteprima non può discordare dal risultato.
-  static const _grammiPer = {
-    'g': 1.0,
-    'mg': 0.001,
-    'hg': 100.0,
-    'kg': 1000.0,
-    'ml': 1.0,
-    'cl': 10.0,
-    'dl': 100.0,
-    'l': 1000.0,
-  };
+  /// 💡 `null` quando non si sa convertire, e allora non si riscala niente.
+  double? get _grammiPrevisti => grammiPerLaQuantita(
+    quantita: _valore(_qty),
+    unita: _unitaScelta,
+    grammiPrima: widget.voce.grams,
+    quantitaPrima: widget.voce.qty,
+    unitaPrima: widget.voce.unit,
+  );
 
   /// La quantità è cambiata: **i macro si riscrivono mentre si digita**.
   ///
@@ -133,23 +126,22 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   /// avvenuto. Vero, ma vuol dire premere «Salva» su una schermata che mostra i
   /// numeri di prima: si conferma un valore che si sa sbagliato, fidandosi.
   ///
-  /// ⚠️ **Quello che si manda non cambia**: i macro riscritti da qui NON entrano
-  /// in `_toccati`, quindi non viaggiano nella richiesta e il ricalcolo resta del
-  /// server. È un'anteprima, non una decisione — e usa la stessa proporzione.
+  /// ⚠️ **Quello che si salva non cambia**: i macro riscritti da qui NON entrano
+  /// in `_toccati`, quindi non viaggiano fra i valori passati, e il ricalcolo
+  /// resta di [DiarioLocale.aggiorna]. È un'anteprima, non una decisione — e usa
+  /// la stessa proporzione, sugli stessi grammi.
   ///
   /// 🚨 **Un campo corretto a mano non si tocca più.** Chi ha scritto «32» nelle
   /// proteine sta dicendo che ne sa più della stima, e vederselo riscrivere al
   /// carattere successivo sarebbe un campo che si rifiuta di obbedire.
   void _quantitaCambiata() {
-    final fattore = _grammiPer[_unitaScelta];
-    final q = _valore(_qty);
+    final grammi = _grammiPrevisti;
 
-    // Senza un fattore certo o senza valori per 100 g non si riscala niente: si
-    // lascia fare al server, che ha la tabella vera.
-    if (fattore == null || q == null || q <= 0 || !widget.voce.siRicalcola)
-      return;
+    // ⛔ Senza un peso o senza valori per 100 g non si riscala niente, e non si
+    // inventa: i campi restano come sono, e la riga sotto il modulo lo dice.
+    if (grammi == null || grammi <= 0 || !widget.voce.siRicalcola) return;
 
-    final nuovi = widget.voce.riscalataA(q * fattore);
+    final nuovi = widget.voce.riscalataA(grammi);
 
     setState(() {
       if (!_toccati.contains('kcal')) _kcal.text = _pulito(nuovi.kcal);
@@ -290,13 +282,14 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
               !widget.voce.siRicalcola
                   ? 'Questa voce non ha valori per 100 g: cambiando la quantità '
                         'dovrai correggere anche calorie e macro.'
-                  : _grammiPer.containsKey(_unitaScelta)
-                  ? 'Calorie e macro si aggiornano mentre scrivi. Quelli che '
-                        'correggi a mano restano come li hai messi.'
-                  // 🚨 Su un\'unità che non è in grammi l\'app NON può riscalare:
-                  // quanto pesi un cucchiaio lo sa la tabella del server.
-                  : 'Cambiando la quantità in $_unitaScelta, calorie e macro li '
-                        'ricalcola il server al salvataggio.',
+                  : _grammiPrevisti == null
+                  // ⛔ Resta un caso, ed è quello in cui il peso non si sa:
+                  // meglio dirlo che lasciar credere a un ricalcolo che non
+                  // avverrà.
+                  ? 'Non so quanto pesa una quantità in $_unitaScelta: '
+                        'correggi anche calorie e macro.'
+                  : 'Calorie e macro si aggiornano mentre scrivi. Quelli che '
+                        'correggi a mano restano come li hai messi.',
               style: theme.textTheme.bodySmall,
             ),
 

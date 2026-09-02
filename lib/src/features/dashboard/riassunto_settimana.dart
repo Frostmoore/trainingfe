@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers.dart';
+import '../diary/data/diario_locale.dart';
+import '../diary/data/serie_del_cibo.dart';
 import '../health/analizzatore_sonno.dart';
 import '../health/health_controller.dart';
 import '../profile/target_locale_controller.dart';
@@ -257,21 +258,21 @@ bool _haDistanza(VoceStorico v) =>
 /// due intenzioni diverse è il modo più rapido per farne divergere una.
 Future<Series?> _serieDellaSettimana(Ref ref) async {
   try {
-    final dati = await ref
-        .watch(apiClientProvider)
-        .get<Map<String, dynamic>>(
-          '/series',
-          // 🚨 `7` è fra `giorniAmmessiPerLeSerie`: vedi §56.3 n° 3.
-          query: {'metric': 'calories', 'days': 7, 'offset': 0},
-        );
+    /*
+     * 🆕 **Dal telefono, non da `/series`** — Parte I, I2.5.
+     *
+     * 🚨 Il diario non sta più sul server: la vecchia chiamata avrebbe risposto
+     * sette zeri, e la scheda avrebbe riassunto una settimana a digiuno senza
+     * nessun errore.
+     */
+    ref.watch(revisioneDiarioProvider);
 
-    return Series.fromJson(dati);
+    return await ref.watch(serieDelCiboProvider).calorie(giorni: 7);
   } on Object catch (e) {
     /*
      * ⚠️ Il resto della scheda vive lo stesso: il cibo è **una** delle voci, e
-     * una rete che non risponde non deve portarsi via anche il peso sollevato,
-     * che sta sul telefono. 💡 Le voci che dipendono da qui spariscono, che è
-     * già la regola.
+     * un archivio che non risponde non deve portarsi via anche il peso
+     * sollevato. 💡 Le voci che dipendono da qui spariscono, che è già la regola.
      */
     debugPrint('riassunto settimana: la serie del cibo non si legge — $e');
 

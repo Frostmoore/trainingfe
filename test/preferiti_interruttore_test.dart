@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:training_companion/src/features/diary/diary_controller.dart';
+import 'package:training_companion/src/features/diary/data/diary_models.dart';
 import 'package:training_companion/src/features/diary/preferiti_gia_salvati.dart';
 
 /// La stella e il segnalibro sono interruttori — 3b-D.5, 22/08/2026.

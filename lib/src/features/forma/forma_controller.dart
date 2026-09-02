@@ -8,8 +8,8 @@
 ///
 /// ⚠️ **La regola è «non esce», non «non entra».** In una prima stesura c'era
 /// scritto *«qui non c'è nessuna chiamata di rete»*, ed era **più stretta del
-/// necessario**: leggere le proprie calorie dal nostro server — che le ha già,
-/// per T3 — non fa uscire niente di nuovo da nessuna parte.
+/// necessario**: leggere le proprie calorie dal nostro server — che allora le
+/// aveva già, per T3 — non faceva uscire niente di nuovo da nessuna parte.
 ///
 /// 🚨 Quello che non deve succedere è che **il risultato** finisca fuori, o che
 /// a calcolarlo sia qualcun altro. Chi aggiungesse una `POST` con dentro questi
@@ -18,14 +18,18 @@
 /// 💡 La differenza conta perché la versione stretta aveva già prodotto un buco:
 /// il cibo era rimasto fuori dal calcolo **per una regola scritta male**, non per
 /// un limite vero.
+///
+/// 🆕 **Da I2.5 la questione non si pone più**: anche le calorie vengono
+/// dall'archivio locale, e qui dentro non c'è nessuna chiamata di rete — non
+/// perché una regola lo vieti, ma perché non c'è più niente da chiedere.
 
 library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers.dart';
-import '../dashboard/dashboard_controller.dart';
+import '../diary/data/diario_locale.dart';
+import '../diary/data/serie_del_cibo.dart';
 import '../health/analizzatore_sonno.dart';
 import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
@@ -124,41 +128,26 @@ final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((
   ref,
 ) async {
   /*
-   * ══ 🚨 SI CHIEDONO 30 GIORNI, NON 28 — difetto del 21/08/2026 ════════════
+   * ══ 🚨 SI CHIEDEVANO 30 GIORNI PER TENERNE 28, E ADESSO NO — I2.5 ════════
    *
-   * ⚠️ **Questa chiamata non ha MAI funzionato.** Chiedeva `days: _finestra`,
-   * cioe' 28, ma `SeriesController` ammette solo `0, 7, 30, 90, 365` — sono i
-   * periodi dei pulsanti del grafico, non un intervallo libero. Il server
-   * rispondeva `422 validation.in`, il `catch` piu' sotto se lo mangiava, e la
-   * **carica e' sempre stata calcolata senza l'ingrediente delle calorie**.
+   * ⚠️ **Questa chiamata non ha funzionato per settimane.** Chiedeva
+   * `days: _finestra`, cioe' 28, ma `SeriesController` ammetteva solo
+   * `0, 7, 30, 90, 365` — i periodi dei pulsanti del grafico, non un intervallo
+   * libero. Il server rispondeva `422 validation.in`, il `catch` piu' sotto se
+   * lo mangiava, e la **carica veniva calcolata senza l'ingrediente delle
+   * calorie**: nessun errore a schermo, un numero plausibile, e nessun modo di
+   * accorgersene guardando l'app.
    *
-   * 🚨 Ed e' il difetto peggiore che ci sia: nessun errore a schermo, un numero
-   * plausibile, e nessun modo di accorgersene guardando l'app. Si e' visto solo
-   * perche' un crollo di layout ha portato a leggere il log per un altro
-   * motivo.
-   *
-   * 💡 **Non si tocca il server**: quell'elenco e' una scelta di prodotto — i
-   * periodi che l'interfaccia offre — e infilarci dentro un 28 che serve solo a
-   * un calcolo interno lo trasformerebbe in un elenco senza criterio. Si chiede
-   * il valore ammesso piu' vicino, 30, e si tengono gli ultimi 28.
+   * 💡 Il ripiego era chiedere 30 e tagliare a 28. 🆕 Da I2.5 la serie si
+   * costruisce **qui**, sull'archivio locale: quell'elenco era una scelta di
+   * prodotto del server, e adesso non c'e' piu' nessun server in mezzo. Si
+   * chiedono i 28 giorni che servono.
    */
-  final dati = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>(
-        '/series',
-        query: {'metric': 'calories', 'days': 30, 'offset': 0},
-      );
+  ref.watch(revisioneDiarioProvider);
 
-  final serie = Series.fromJson(dati);
+  final serie = await ref.watch(serieDelCiboProvider).calorie(giorni: _finestra);
 
-  /*
-   * 🚨 **Gli ULTIMI 28**, non i primi: la serie arriva dal piu' vecchio al piu'
-   * recente (`SeriesService::perGiorno`), quindi la coda e' il presente.
-   * Prendendo la testa si confronterebbe oggi con un mese fa.
-   */
-  final ultimi = serie.consumed.length > _finestra
-      ? serie.consumed.sublist(serie.consumed.length - _finestra)
-      : serie.consumed;
+  final ultimi = serie.consumed;
 
   // ⚠️ Gli zeri si buttano: sono i giorni in cui non si è segnato niente, non i
   // giorni in cui non si è mangiato. Contarli come «zero calorie» farebbe

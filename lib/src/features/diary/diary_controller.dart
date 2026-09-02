@@ -1,18 +1,42 @@
+/// Il diario alimentare, **letto e scritto sul telefono** — Parte I, I2.5.
+///
+/// ══ 🚨 COSA E' CAMBIATO IL 03/09/2026, E COSA NO ═════════════════════════
+///
+/// ⛔ **Le rotte del diario non si chiamano più.** `GET /diary`,
+/// `POST/PATCH/DELETE /food-entries`, tutta la famiglia `/food-favorites`: erano
+/// nove chiamate, e adesso sono nove letture di SQLite. 📌 Regola R3 del
+/// progetto: *«tutto ciò che è anche lontanamente sensibile resta sul
+/// telefono»*, e cosa mangia una persona è dato dell'art. 9.
+///
+/// 💡 **Le forme non cambiano**: `DiaryDay`, `FoodEntry`, `FoodFavorite` sono le
+/// stesse classi di ieri, e i nomi dei provider pure. ⚠️ Cambiare *dove* nascono
+/// i dati e *come sono fatti* nello stesso giro vorrebbe dire non sapere quale
+/// delle due cose ha rotto cosa.
+///
+/// ══ 🚨 L'UNICA COSA CHE RESTA DEL SERVER, E PERCHE' ══════════════════════
+///
+/// `POST /ai/food/valida`: il **setaccio** su una risposta del modello, cioè
+/// `MealValidator`. ⛔ Non è un calcolo che si porta in Dart come le altre: qui
+/// il rischio non è un numero sbagliato, è testo non filtrato che entra in
+/// diario così com'è. 💡 La rotta valida e **restituisce**; a scrivere è l'app.
+library;
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../health/health_controller.dart';
+import 'data/diario_locale.dart';
 import 'data/diary_models.dart';
 import 'data/stima_ai.dart';
 import 'data/stime_in_coda.dart';
 
 /// Il giorno che si sta guardando.
 ///
-/// Sta in un provider separato dal diario perché cambiare giorno deve
-/// **rifare la richiesta**, e con `family` sulla data quel comportamento è
+/// ⚠️ **Resta dov'è, e non c'entra col trasloco**: è la data che si ha davanti,
+/// non un dato. 💡 Sta in un provider separato dal diario perché cambiare giorno
+/// deve **rifare la lettura**, e con la `family` sulla data quel comportamento è
 /// automatico invece di dover ricordarsi di invalidare.
 final selectedDateProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
@@ -20,9 +44,7 @@ final selectedDateProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month, now.day);
 });
 
-String _iso(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
-
-/// Le voci che stanno sparendo, mentre il server non lo sa ancora — C15.
+/// Le voci che stanno sparendo, mentre la scrittura non è ancora finita — C15.
 ///
 /// ── 🚨 Il difetto, riferito il 12/08/2026 ────────────────────────────────
 ///
@@ -36,15 +58,9 @@ String _iso(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 /// passano centinaia di millisecondi, e in quel tempo Flutter ritrova nell'albero
 /// un widget che si era già dichiarato scomparso.
 ///
-/// 💡 **Per questo la cancellazione «funzionava lo stesso»**: la richiesta partiva
-/// davvero, e il diario si aggiornava. L'eccezione riguardava solo la coerenza
-/// dell'albero — ma un rettangolo rosso in mezzo alla schermata è, per chi usa
-/// l'app, indistinguibile da un guasto.
-///
-/// ⚠️ **Rimuovere l'elemento subito è l'unico modo corretto**, e vale anche come
-/// scelta d'interfaccia: la riga sparisce quando il dito la lascia, non quando
-/// risponde il server. Se la cancellazione fallisce, la riga **torna** e si dice
-/// perché.
+/// ⚠️ **Serve ancora dopo il trasloco.** Una scrittura su SQLite dura pochi
+/// millisecondi invece di mezzo secondo, ma resta `Future`: il frame del gesto
+/// finisce prima, e il rettangolo rosso tornerebbe uguale.
 ///
 /// 💡 **Gli id cancellati non si tolgono mai dall'insieme, ed è voluto.** Toglierli
 /// vorrebbe dire aspettare che il diario nuovo sia arrivato — e se lo si facesse
@@ -53,19 +69,24 @@ String _iso(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 /// e l'insieme cresce di un intero per ogni cancellazione della sessione.
 final vociInUscitaProvider = StateProvider<Set<int>>((ref) => const {});
 
+/// La giornata alimentare di **un giorno qualunque** — I2.5.
+///
+/// 💡 Esiste separato da [diaryProvider] perché il calendario apre il dettaglio
+/// di un giorno che non è quello selezionato nel diario. ⛔ Prima quel dettaglio
+/// se lo faceva dare da `GET /calendar/{data}`, che adesso il cibo non ce l'ha
+/// più.
+final giornataProvider = FutureProvider.autoDispose
+    .family<DiaryDay, DateTime>((ref, giorno) {
+      ref.watch(revisioneDiarioProvider);
+
+      return ref.watch(diarioLocaleProvider).giornata(giorno);
+    });
+
 /// La giornata alimentare — A4.1.
-final diaryProvider = FutureProvider.autoDispose<DiaryDay>((ref) async {
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>(
-        '/diary',
-        query: {'date': _iso(ref.watch(selectedDateProvider))},
-      );
+final diaryProvider = FutureProvider.autoDispose<DiaryDay>(
+  (ref) => ref.watch(giornataProvider(ref.watch(selectedDateProvider)).future),
+);
 
-  return DiaryDay.fromJson(data);
-});
-
-/// Le scritture sul diario — A4.2 / A4.4 / A4.6.
 /// L'attesa delle stime — FASE 9.
 ///
 /// 💡 Un provider e non un campo di `DiaryActions` perché lo usa anche chi
@@ -77,6 +98,7 @@ final stimeInCodaProvider = Provider<StimeInCoda>((ref) {
   );
 });
 
+/// Le scritture sul diario — A4.2 / A4.4 / A4.6.
 class DiaryActions {
   DiaryActions(this._ref);
 
@@ -84,11 +106,28 @@ class DiaryActions {
 
   ApiClient get _api => _ref.read(apiClientProvider);
 
+  DiarioLocale get _diario => _ref.read(diarioLocaleProvider);
+
+  DateTime get _giorno => _ref.read(selectedDateProvider);
+
+  /// 🚨 **Un posto solo per dire «il diario è cambiato».**
+  ///
+  /// ⛔ Prima bastava `invalidate(diaryProvider)`: dashboard, calendario e
+  /// grafici rifacevano la loro chiamata HTTP e trovavano i numeri nuovi.
+  /// Adesso quei numeri nascono da SQLite, che non avvisa nessuno — e senza
+  /// questo contatore aggiungere un alimento aggiornerebbe **solo** la
+  /// schermata del diario, lasciando «Oggi» sulle calorie di prima.
+  void _cambiato() {
+    _ref.read(revisioneDiarioProvider.notifier).state++;
+  }
+
   /// Inserimento manuale — A4.4.
   ///
-  /// `grams` si manda **solo se c'è**: quando manca, il backend lo deriva da
-  /// `qty × unit` con la tabella di `FoodUnit`. Mandare uno zero invece di
-  /// niente farebbe entrare nel diario una voce che non pesa nulla.
+  /// ⚠️ `grams` si passa **solo se c'è**: quando manca lo deriva
+  /// [DiarioLocale.aggiungi] da `qty × unit`, con la stessa tabella che usava
+  /// `FoodUnit` sul server. 🚨 Uno zero al posto di niente farebbe entrare nel
+  /// diario una voce che non pesa nulla, e il giorno che si corregge la quantità
+  /// non ci sarebbe niente da riscalare.
   Future<void> addManual({
     required String description,
     required String meal,
@@ -100,27 +139,20 @@ class DiaryActions {
     double? carbs,
     double? fat,
   }) async {
-    await _api.post<dynamic>(
-      '/food-entries',
-      body: {
-        'description': description,
-        'meal': meal,
-        'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-        // `?chiave: valore` omette la voce quando il valore è nullo: mandare
-        // uno zero invece di niente farebbe entrare nel diario una voce che non
-        // pesa nulla, e il backend non potrebbe più derivare i grammi da
-        // quantità e unità.
-        'grams': ?grams,
-        'qty': ?qty,
-        'unit': ?unit,
-        'kcal': ?kcal,
-        'protein': ?protein,
-        'carbs': ?carbs,
-        'fat': ?fat,
-      },
+    await _diario.aggiungi(
+      giorno: _giorno,
+      pasto: meal,
+      descrizione: description,
+      grammi: grams,
+      quantita: qty,
+      unita: unit,
+      kcal: kcal,
+      proteine: protein,
+      carboidrati: carbs,
+      grassi: fat,
     );
 
-    _ref.invalidate(diaryProvider);
+    _cambiato();
   }
 
   /// Riconoscimento da testo — A4.2 / A4.8.
@@ -140,13 +172,10 @@ class DiaryActions {
   ///
   /// 💡 Il rischio che il vecchio commento temeva resta gestito: se la conferma
   /// fallisce, **il foglio è ancora aperto con la stima dentro** e si riprova.
-  /// Prima, se falliva la scrittura, si perdeva comunque tutto — solo senza
-  /// averla mai vista.
   ///
   /// 🆕 **Dalla FASE 9 la stima non arriva più nella risposta.** Il server
   /// accoda e risponde in ~50 ms; l'attesa la fa `StimeInCoda`, qui sull'app,
-  /// dove non tiene occupato uno dei sei processi del dominio. ⚠️ Per chi la
-  /// chiama non cambia niente: entra una frase, esce una stima.
+  /// dove non tiene occupato uno dei sei processi del dominio.
   ///
   /// 💡 [avanzamento] dice **da quanto** si sta aspettando, così la schermata
   /// può cambiare quello che scrive invece di limitarsi a girare.
@@ -160,7 +189,7 @@ class DiaryActions {
     final id = await coda.accodaTesto(
       testo: text,
       pasto: meal,
-      quando: _ref.read(selectedDateProvider),
+      quando: _giorno,
     );
 
     final pronta = await coda.aspetta(id, avanzamento: avanzamento);
@@ -214,7 +243,7 @@ class DiaryActions {
     final form = FormData.fromMap({
       'photo': await MultipartFile.fromFile(path),
       'meal': meal,
-      'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
+      'eaten_at': _giorno.toIso8601String(),
     });
 
     final coda = _ref.read(stimeInCodaProvider);
@@ -227,51 +256,79 @@ class DiaryActions {
 
   /// Scrive in diario una stima **guardata da chi l'ha chiesta** — A4.8.
   ///
-  /// 🚨 Passa da `/ai/food/confirm` e non da `/food-entries` perché `source` e
-  /// `ai_raw` devono sopravvivere: senza, ogni voce nascerebbe `manual` e il
-  /// giorno che un modello peggiora non si saprebbe più quali voci rifare.
+  /// ══ 🚨 IL SETACCIO RESTA SUL SERVER, LA SCRITTURA NO — I2.5 ═════════════
   ///
-  /// ⚠️ **Non consuma quota**: la chiamata al modello è già stata pagata dalla
-  /// stima.
+  /// Fino al 03/09/2026 `POST /ai/food/confirm` faceva **due cose**: validava le
+  /// voci con `MealValidator` e le scriveva in `food_entries`.
+  ///
+  /// ⛔ **La validazione non si porta in Dart**, ed è l'unica eccezione alla
+  /// regola R2 della Parte I. Le altre formule trasportate — le unità, i totali,
+  /// le serie — sbagliano al massimo un numero. Questa no: è il filtro che
+  /// impedisce a una risposta del modello di entrare nel diario così com'è, e un
+  /// filtro che vive sul telefono è un filtro che si può aggirare e che non si
+  /// può correggere senza pubblicare una versione.
+  ///
+  /// 💡 Quindi la rotta **valida e restituisce**, e a scrivere è l'app. ⚠️ Il
+  /// prezzo è che confermare una stima **vuole la rete** — ma la stima stessa
+  /// era arrivata dalla rete un attimo prima, quindi non toglie niente a nessuno.
+  ///
+  /// 🚨 **Si scrive PRIMA di dire che è andata bene.** Se la scrittura fallisce,
+  /// l'eccezione arriva a chi ha chiamato e il foglio resta aperto con la stima
+  /// dentro: è una proprietà del 12/08 e non si perde.
   Future<void> confermaStima(
     StimaAi stima, {
     required String meal,
     required bool daFoto,
   }) async {
-    await _api.post<dynamic>(
-      '/ai/food/confirm',
-      body: {
-        'source': daFoto ? 'ai_photo' : 'ai_text',
-        'meal': meal,
-        'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-        'items': stima.voci.map((v) => v.toJson()).toList(),
-      },
+    final risposta = await _api.post<Map<String, dynamic>>(
+      '/ai/food/valida',
+      body: {'items': stima.voci.map((v) => v.toJson()).toList()},
     );
 
-    _ref.invalidate(diaryProvider);
+    /*
+     * 💡 **La risposta intera, non solo `estimate`**: `StimaAi.fromJson` prende
+     * le voci da lì dentro e gli avvisi da `warnings`, che sta di fuori. ⚠️
+     * Passando solo `estimate` gli avvisi si perderebbero in silenzio.
+     */
+    final pulita = StimaAi.fromJson(risposta);
+
+    /*
+     * 🚨 **Un pasto è una cosa sola.** Cinque scritture separate possono fallire
+     * alla terza e lasciare in diario mezza cena, che nei totali è un numero
+     * sbagliato senza nessun segno che lo sia. ⚠️ È la stessa ragione per cui
+     * `AiController::scriviVoci()` scriveva in transazione.
+     */
+    await _diario.scriviLaStima(
+      pulita.voci,
+      giorno: _giorno,
+      pasto: meal,
+      fonte: daFoto ? 'ai_photo' : 'ai_text',
+    );
+
+    _cambiato();
   }
 
   Future<void> delete(int entryId) async {
-    await _api.delete('/food-entries/$entryId');
+    await _diario.cancella(entryId);
 
-    _ref.invalidate(diaryProvider);
+    _cambiato();
   }
 
   /// Cancella **facendo sparire subito la riga** — C15.
   ///
   /// 🚨 Serve allo scorrimento: `Dismissible` pretende che l'elemento esca dalla
-  /// lista **nello stesso frame** del gesto, e una `DELETE` sulla rete non ci
-  /// arriva mai in tempo. Da lì il rettangolo rosso *«a dismissed Dismissible
-  /// widget is still part of the tree»*, che compariva mentre la cancellazione
+  /// lista **nello stesso frame** del gesto, e nemmeno una scrittura locale ci
+  /// arriva in tempo. Da lì il rettangolo rosso *«a dismissed Dismissible widget
+  /// is still part of the tree»*, che compariva mentre la cancellazione
   /// funzionava benissimo.
   ///
-  /// ⚠️ **Se la richiesta fallisce la riga torna**, e l'errore si rilancia a chi
-  /// ha chiamato perché lo mostri. Far sparire per sempre una voce che il server
-  /// ha ancora sarebbe peggio dell'errore che si stava togliendo: al prossimo
-  /// aggiornamento ricomparirebbe da sola, senza nessuna spiegazione.
+  /// ⚠️ **Se la scrittura fallisce la riga torna**, e l'errore si rilancia a chi
+  /// ha chiamato perché lo mostri. Far sparire per sempre una voce che
+  /// nell'archivio c'è ancora sarebbe peggio dell'errore che si stava togliendo:
+  /// al prossimo aggiornamento ricomparirebbe da sola, senza nessuna spiegazione.
   ///
-  /// 💡 Il ripristino **non ripristina la posizione** nell'elenco: il diario è
-  /// ordinato dal server per pasto e orario, quindi la riga rientra dove le
+  /// 💡 Il ripristino **non ripristina la posizione** nell'elenco: la giornata è
+  /// ordinata per pasto e ora di scrittura, quindi la riga rientra dove le
   /// spetta senza che l'app debba ricordarselo.
   Future<void> deleteSubito(int entryId) async {
     final prima = _ref.read(vociInUscitaProvider);
@@ -279,9 +336,9 @@ class DiaryActions {
     _ref.read(vociInUscitaProvider.notifier).state = {...prima, entryId};
 
     try {
-      await _api.delete('/food-entries/$entryId');
+      await _diario.cancella(entryId);
 
-      _ref.invalidate(diaryProvider);
+      _cambiato();
     } on Object {
       _ref.read(vociInUscitaProvider.notifier).state = {
         ..._ref.read(vociInUscitaProvider),
@@ -291,14 +348,16 @@ class DiaryActions {
     }
   }
 
-  /// Salva una voce fra i preferiti — A4.5.
   /// Modifica una voce — C15.
   ///
-  /// 🚨 **Si manda solo ciò che è stato toccato.** I macro che arrivano vincono
-  /// sempre sul ricalcolo del server: se l'utente li ha corretti a mano non
-  /// vanno sovrascritti da una stima. Mandarli sempre — anche invariati —
-  /// impedirebbe per sempre il ricalcolo automatico, e cambiare la quantità non
-  /// aggiornerebbe più niente.
+  /// 🚨 **Si passa solo ciò che è stato toccato**, e `null` vuol dire «non
+  /// toccato». I macro che arrivano vincono sempre sul ricalcolo: se l'utente li
+  /// ha corretti a mano non vanno sovrascritti da una proporzione. Mandarli
+  /// sempre — anche invariati — impedirebbe per sempre il ricalcolo automatico, e
+  /// cambiare la quantità non aggiornerebbe più niente.
+  ///
+  /// 💡 La regola sta tutta in [DiarioLocale.aggiorna], che è il ritratto di
+  /// `DiaryController::ricalcolaSeCambiaLaQuantita()`.
   Future<void> update(
     int entryId, {
     String? description,
@@ -311,28 +370,22 @@ class DiaryActions {
     double? carbs,
     double? fat,
   }) async {
-    await _api.patch<dynamic>(
-      '/food-entries/$entryId',
-      body: {
-        'description': ?description,
-        'meal': ?meal,
-        'qty': ?qty,
-        'unit': ?unit,
-        'grams': ?grams,
-        'kcal': ?kcal,
-        'protein': ?protein,
-        'carbs': ?carbs,
-        'fat': ?fat,
-      },
+    await _diario.aggiorna(
+      entryId,
+      descrizione: description,
+      pasto: meal,
+      quantita: qty,
+      unita: unit,
+      grammi: grams,
+      kcal: kcal,
+      proteine: protein,
+      carboidrati: carbs,
+      grassi: fat,
     );
 
-    _ref.invalidate(diaryProvider);
+    _cambiato();
   }
 
-  /// Le calorie bruciate dichiarate a mano per il giorno — C15.
-  ///
-  /// ⚠️ `null` **rimette la stima**, non azzera: è la differenza fra «non lo so»
-  /// e «oggi ho bruciato zero», e il backend la rispetta.
   /// Dichiara (o disfa) le calorie bruciate del giorno.
   ///
   /// ══ 🚨 SCRIVE SUL TELEFONO, NON SUL SERVER — FASE 11.5 ═════════════════
@@ -346,7 +399,7 @@ class DiaryActions {
   /// parlare le sedute. 🚨 Confonderli qui vorrebbe dire che chi svuota il
   /// campo si ritrova a zero invece che com'era prima.
   Future<void> setDailyBurn(int? kcal) async {
-    final giorno = _ref.read(selectedDateProvider);
+    final giorno = _giorno;
     final archivio = _ref.read(archivioSaluteProvider);
 
     if (kcal == null) {
@@ -356,95 +409,36 @@ class DiaryActions {
     }
 
     _ref.read(revisioneAllenamentiProvider.notifier).state++;
-    _ref.invalidate(diaryProvider);
+    _cambiato();
   }
 
+  /// Salva una voce fra i preferiti — A4.5.
   Future<void> favorite(int entryId) async {
-    await _api.post<dynamic>('/food-entries/$entryId/favorite');
+    await _diario.salvaVoceComePreferito(entryId);
+
+    _ref.invalidate(favoritesProvider);
   }
 }
 
 final diaryActionsProvider = Provider<DiaryActions>(DiaryActions.new);
 
-/// I preferiti — D2.
+/// I preferiti dell'iscritto, **ordinati per uso reale** — D2.
 ///
-/// 🚨 **Due cose diverse dietro la stessa parola**: un singolo alimento
-/// («fette biscottate, 30 g») e un **pasto intero** («la mia colazione», con
-/// dentro cinque voci). Il secondo è quello che fa risparmiare tempo davvero,
-/// perché una colazione si ripete uguale per mesi — ed è anche quello che
-/// nell'app storica viene usato di più.
-class FoodFavorite {
-  const FoodFavorite({
-    required this.id,
-    required this.description,
-    required this.isMeal,
-    required this.itemsCount,
-    required this.timesUsed,
-    this.kcal,
-    this.protein,
-    this.carbs,
-    this.fat,
-    this.grams,
-    this.qty,
-    this.unit,
-  });
-
-  factory FoodFavorite.fromJson(Map<String, dynamic> j) => FoodFavorite(
-    id: (j['id'] as num).toInt(),
-    description: j['description']?.toString() ?? '',
-    isMeal: j['is_meal'] == true,
-    itemsCount: (j['items_count'] as num?)?.toInt() ?? 1,
-    timesUsed: (j['times_used'] as num?)?.toInt() ?? 0,
-    kcal: (j['kcal'] as num?)?.toDouble(),
-    protein: (j['protein'] as num?)?.toDouble(),
-    carbs: (j['carbs'] as num?)?.toDouble(),
-    fat: (j['fat'] as num?)?.toDouble(),
-    grams: (j['grams'] as num?)?.toDouble(),
-    qty: (j['qty'] as num?)?.toDouble(),
-    unit: j['unit']?.toString(),
-  );
-
-  final int id;
-  final String description;
-  final bool isMeal;
-  final int itemsCount;
-  final int timesUsed;
-  final double? kcal, protein, carbs, fat, grams, qty;
-  final String? unit;
-
-  /// La quantità come la si legge: «100 ml · 100 g».
-  String? get quantita {
-    if (qty != null && unit != null) {
-      final n = qty! == qty!.roundToDouble()
-          ? qty!.toInt().toString()
-          : qty!.toString();
-      final base = '$n $unit';
-
-      return unit != 'g' && grams != null
-          ? '$base · ${grams!.round()} g'
-          : base;
-    }
-
-    return grams == null ? null : '${grams!.round()} g';
-  }
-}
-
-/// I preferiti dell'iscritto, **ordinati per uso reale** dal server.
+/// ⚠️ L'ordine non è alfabetico né cronologico: è `volteUsato`, poi `usatoIl`.
+/// 📌 *«Chi ha venticinque preferiti vuole i tre che usa ogni giorno in cima,
+/// non quelli che cominciano per A»*.
 ///
-/// ⚠️ L'ordine non è alfabetico né cronologico: è `times_used`. Chi ha
-/// venticinque preferiti vuole i tre che usa ogni giorno in cima, non quelli
-/// che cominciano per A.
-final favoritesProvider = FutureProvider.autoDispose<List<FoodFavorite>>((
-  ref,
-) async {
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<List<dynamic>>('/food-favorites');
-
-  return data
-      .map((e) => FoodFavorite.fromJson((e as Map).cast<String, dynamic>()))
-      .toList();
-});
+/// 🚨 **Il contatore è un dato salvato, non un aggregato**: contare le voci del
+/// diario con la stessa descrizione darebbe un altro numero — chi ha scritto
+/// «Pollo» a mano dieci volte non ha usato dieci volte il preferito «Pollo».
+///
+/// ⚠️ **Il nome resta inglese come le classi che maneggia**, e non è pigrizia:
+/// lo guardano `favorites_sheet`, `diary_screen` e `preferiti_gia_salvati`, e
+/// rinominarlo *nello stesso giro* in cui cambia da dove vengono i dati vorrebbe
+/// dire non sapere quale delle due cose ha rotto cosa.
+final favoritesProvider = FutureProvider.autoDispose<List<FoodFavorite>>(
+  (ref) => ref.watch(diarioLocaleProvider).preferiti(),
+);
 
 /// Le azioni sui preferiti — D2.
 class FavoriteActions {
@@ -452,22 +446,17 @@ class FavoriteActions {
 
   final Ref _ref;
 
-  ApiClient get _api => _ref.read(apiClientProvider);
+  DiarioLocale get _diario => _ref.read(diarioLocaleProvider);
 
   /// Salva **l'intero pasto** di un giorno come preferito.
   Future<void> saveMeal({
     required String meal,
     required String description,
   }) async {
-    await _api.post<dynamic>(
-      '/food-favorites/meal',
-      body: {
-        'meal': meal,
-        'description': description,
-        'date': DateFormat(
-          'yyyy-MM-dd',
-        ).format(_ref.read(selectedDateProvider)),
-      },
+    await _diario.salvaPasto(
+      giorno: _ref.read(selectedDateProvider),
+      pasto: meal,
+      descrizione: description,
     );
 
     _ref.invalidate(favoritesProvider);
@@ -475,24 +464,22 @@ class FavoriteActions {
 
   /// Rimette un preferito nel diario.
   ///
-  /// ⚠️ `eaten_at` è il **giorno che si sta guardando**, non adesso: chi
-  /// completa ieri sera vuole che il cibo finisca su ieri. È lo stesso motivo
-  /// per cui l'app storica ha dovuto correggerlo (v1.26.2).
+  /// ⚠️ Il giorno è **quello che si sta guardando**, non adesso: chi completa
+  /// ieri sera vuole che il cibo finisca su ieri. È lo stesso motivo per cui
+  /// l'app storica ha dovuto correggerlo (v1.26.2).
   Future<void> add(int favoriteId, {String? meal}) async {
-    await _api.post<dynamic>(
-      '/food-favorites/$favoriteId/add',
-      body: {
-        'meal': ?meal,
-        'eaten_at': _ref.read(selectedDateProvider).toIso8601String(),
-      },
+    await _diario.usaPreferito(
+      favoriteId,
+      giorno: _ref.read(selectedDateProvider),
+      pasto: meal,
     );
 
-    _ref.invalidate(diaryProvider);
+    _ref.read(revisioneDiarioProvider.notifier).state++;
     _ref.invalidate(favoritesProvider);
   }
 
   Future<void> remove(int favoriteId) async {
-    await _api.delete('/food-favorites/$favoriteId');
+    await _diario.togliPreferito(favoriteId);
 
     _ref.invalidate(favoritesProvider);
   }

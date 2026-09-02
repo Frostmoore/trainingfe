@@ -13,15 +13,31 @@
 /// l'app alle 09:10 senza aver toccato niente da ieri sera riceverebbe un
 /// consiglio identico a quello di ieri sera — e l'avremmo pagato.
 ///
-/// ══ 🚨 PERCHÉ I PASTI NON SONO QUI DENTRO ════════════════════════════════
+/// ══ ⛔ I PASTI NON SONO QUI DENTRO, E DAL 03/09/2026 E' UN DIFETTO ═══════
 ///
-/// Perché **li sa il server**: `food_entries` è sua, e `created_at` dice quando
-/// una voce è stata registrata. ⛔ Mandarli anche da qui vorrebbe dire due
-/// sedi della stessa risposta, e la copia sarebbe quella che diverge.
+/// Qui c'era scritto che **li sa il server**: `food_entries` era sua, e
+/// `created_at` diceva quando una voce era stata registrata. 🚨 **Con I2.5 non
+/// è più vero**: il diario alimentare vive sul telefono, e in `food_entries`
+/// non entra più niente.
 ///
-/// 💡 Qui c'è solo quello che **solo il telefono sa**: dopo D9 e la FASE 11.6 il
-/// server non ha più né `workout_sessions` né i dati del sensore, e quello che
-/// non ha non può accorgersi che è cambiato.
+/// ⛔ Quindi **registrare un pasto non fa più scattare il consiglio**, e il
+/// difetto è di quelli silenziosi: nessun errore, il consiglio c'è, è solo
+/// quello di prima.
+///
+/// ══ 🚨 E NON SI AGGIUSTA DA SOLO — SI CHIUDE CON I5 ══════════════════════
+///
+/// ⚠️ Aggiungere qui l'ultimo pasto sarebbe **peggio**: `AiController::
+/// laSettimanaDelCibo()` costruisce `meals` e `week_food` leggendo
+/// `food_entries`, che è vuota per le voci nuove. Il consiglio si rigenererebbe
+/// a ogni pasto **per dire «oggi non hai mangiato niente»** — una chiamata
+/// pagata per una risposta sbagliata, che è il contrario di 3b-AB.
+///
+/// 💡 Le due cose si chiudono **insieme**, in I5: l'app manda il contesto del
+/// cibo dall'archivio locale, e allora l'ultimo pasto va aggiunto anche qui.
+///
+/// 💡 Nel frattempo qui c'è quello che **solo il telefono sa**: dopo D9 e la
+/// FASE 11.6 il server non ha più né `workout_sessions` né i dati del sensore, e
+/// quello che non ha non può accorgersi che è cambiato.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

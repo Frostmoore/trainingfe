@@ -1984,6 +1984,18 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<int> scriviVoceDiario(VociDiarioCompanion voce) =>
       into(vociDiario).insert(voce);
 
+  /// Un gruppo di scritture che vale **tutto o niente** — I2.5.
+  ///
+  /// 🚨 Serve a chi scrive **un pasto**: un preferito da cinque voci, o una
+  /// stima confermata. ⛔ Un'interruzione a metà lascerebbe in diario mezza
+  /// cena, che nei totali è un numero sbagliato **senza nessun segno che lo
+  /// sia** — è la stessa ragione per cui `AiController::scriviVoci()` scriveva
+  /// in transazione sul server.
+  ///
+  /// 💡 Esiste come metodo invece di esporre `transaction` perché chi la usa
+  /// sta nel livello dei dati del diario, non dentro l'archivio.
+  Future<T> tuttoOniente<T>(Future<T> Function() azione) => transaction(azione);
+
   /// Scrive un pacchetto di voci in un colpo solo — I3.
   ///
   /// ══ 🚨 `insertOrIgnore` SU `idSulServer`, E NON È UN DETTAGLIO ═══════
@@ -2004,12 +2016,57 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> cancellaVoceDiario(int id) =>
       (delete(vociDiario)..where((t) => t.id.equals(id))).go();
 
+  /// Una voce sola, per id locale — I2.5.
+  ///
+  /// 🚨 **Serve al ricalcolo della modifica**, che ha bisogno di sapere
+  /// *com'era* la voce prima: il fattore grammi-per-unità si ricava da lì, e
+  /// senza la riga di partenza si finirebbe per usare la tabella generica —
+  /// cioè 30 g per due cucchiai di un olio che il modello aveva pesato 28.
+  Future<VoceDiario?> voceDelDiario(int id) =>
+      (select(vociDiario)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// ⚠️ **Scrive solo i campi presenti nel companion.** I `Value.absent()` non
+  /// toccano niente: è ciò che permette di correggere la quantità senza
+  /// azzerare i macro che nessuno ha nominato.
+  Future<void> aggiornaVoceDiario(int id, VociDiarioCompanion voce) =>
+      (update(vociDiario)..where((t) => t.id.equals(id))).write(voce);
+
   // ── i preferiti ────────────────────────────────────────────────────────
 
+  /// I preferiti, **i più usati per primi** — I2.5.
+  ///
+  /// 🚨 È l'ordine di `FoodFavorite::scopeMostUsed()` sul server, e non è un
+  /// dettaglio estetico: 📌 *«chi ha venticinque preferiti vuole i tre che usa
+  /// ogni giorno in cima, non quelli che cominciano per A»*.
+  ///
+  /// ⚠️ **`salvatoIl` come terzo criterio**, e non come primo: chi non ha mai
+  /// usato niente ha tutti gli zeri, e senza un terzo criterio l'ordine fra
+  /// quelli sarebbe quello che decide SQLite — cioè diverso a ogni lettura.
   Future<List<PreferitoCibo>> preferitiDelDiario() =>
       (select(preferitiCibo)
-            ..orderBy([(t) => OrderingTerm.desc(t.salvatoIl)]))
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.volteUsato),
+              (t) => OrderingTerm.desc(t.usatoIl),
+              (t) => OrderingTerm.desc(t.salvatoIl),
+            ]))
           .get();
+
+  Future<PreferitoCibo?> preferitoDelDiario(int id) =>
+      (select(preferitiCibo)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// Segna che un preferito è stato usato — I2.5.
+  ///
+  /// 🚨 **Incrementa in SQL, non legge-e-riscrive.** Due usi ravvicinati —
+  /// aggiungere la colazione e poi lo spuntino dallo stesso elenco — leggerebbero
+  /// lo stesso numero e ne scriverebbero uno solo: il contatore perderebbe colpi
+  /// proprio a chi lo usa di più, cioè esattamente chi l'ordinamento deve servire.
+  Future<void> segnaPreferitoUsato(int id, DateTime quando) =>
+      (update(preferitiCibo)..where((t) => t.id.equals(id))).write(
+        PreferitiCiboCompanion.custom(
+          volteUsato: preferitiCibo.volteUsato + const Constant(1),
+          usatoIl: Variable(quando),
+        ),
+      );
 
   Future<int> scriviPreferito(PreferitiCiboCompanion preferito) =>
       into(preferitiCibo).insert(preferito);

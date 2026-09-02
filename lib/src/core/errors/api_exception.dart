@@ -179,3 +179,82 @@ class ServerException extends ApiException {
     super.message = 'Il servizio ha avuto un problema. Riprova fra poco.',
   ]);
 }
+
+/*
+| ══ 🚨 QUI SOTTO GLI ERRORI CHE NON VENGONO DALLA RETE — I2.5 ══════════════
+|
+| ⛔ **Non è una contraddizione con il titolo del file**, ed è una scelta:
+| `ApiClient.unwrapError()` è ciò che ogni schermata chiama per sapere *cosa
+| scrivere*, e tutto ciò che non è un [ApiException] gli torna come
+| [ServerException] — *«Il servizio ha avuto un problema»*.
+|
+| 🚨 Dopo la Parte I il diario **non passa più dal servizio**: un errore suo
+| mostrato come un guasto del server manderebbe qualcuno a controllare la rete
+| per una voce che è stata cancellata sul telefono un secondo prima. 💡 Meglio
+| due classi in più che venti schermate che imparano un secondo tipo di errore.
+*/
+
+/// La riga che si stava toccando non esiste più **sul telefono** — I2.5.
+///
+/// 💡 Succede quando due schermate guardano lo stesso diario: si corregge una
+/// voce da un foglio mentre l'elenco dietro l'ha già cancellata.
+class DatoSparitoException extends ApiException {
+  const DatoSparitoException([
+    super.message = 'Questa voce non c\'è più: il diario è cambiato.',
+  ]);
+}
+
+/// Un alimento dichiara più macronutrienti di quanto pesa — I2.5.
+///
+/// ══ 🚨 L'UNICA GUARDIA DEL DIARIO CHE BLOCCA ═════════════════════════════
+///
+/// È un'**impossibilità fisica, non un'imprecisione**: cento grammi di prodotto
+/// non possono contenere centoventi grammi di macronutrienti. ⛔ Non c'è nessuna
+/// interpretazione, nessuna tabella e nessun margine di stima in cui quel numero
+/// abbia senso — per questo si rifiuta la scrittura invece di limitarsi ad
+/// abbassare la confidenza.
+///
+/// 📌 Il committente, il 12/08/2026, guardando delle coppiette con 56 g di
+/// proteine, 4 di carboidrati e 40 di grassi **per 100 g**: *«la guardia
+/// sull'impossibilità della massa è hard-blocking perché non è possibile che un
+/// alimento abbia più macro che peso»*. 🚨 588 kcal sono un numero
+/// perfettamente plausibile, ed è per questo che sarebbe passato.
+///
+/// ⚠️ **Il messaggio nomina l'alimento e i due numeri**, e deve: un generico
+/// «non ha funzionato» su un pasto da otto voci non dice quale riga correggere.
+///
+/// 💡 Sul server era `MassaIncoerenteException`, con lo stesso testo e un
+/// `render()` che la faceva arrivare come 422 leggibile invece che come 500.
+class MassaImpossibileException extends ApiException {
+  MassaImpossibileException({
+    required this.alimento,
+    required this.grammi,
+    required this.macroTotali,
+  }) : super(
+         'I valori di «$alimento» non sono possibili: '
+         '${_uno(macroTotali)} g di proteine, carboidrati e grassi in '
+         '${_uno(grammi)} g di alimento. Correggili prima di salvare.',
+       );
+
+  final String alimento;
+  final double grammi;
+  final double macroTotali;
+
+  static String _uno(double n) {
+    final arrotondato = (n * 10).roundToDouble() / 10;
+
+    return arrotondato == arrotondato.roundToDouble()
+        ? arrotondato.toInt().toString()
+        : arrotondato.toStringAsFixed(1);
+  }
+}
+
+/// Si è chiesto di salvare come preferito un pasto che non ha voci — I2.5.
+///
+/// ⚠️ È lo stesso `422` che dava `FoodFavoriteController::storeMeal()`, con lo
+/// stesso testo: 📌 *«Non c'è niente da salvare in questo pasto»*.
+class PastoVuotoException extends ApiException {
+  const PastoVuotoException([
+    super.message = 'Non c\'è niente da salvare in questo pasto.',
+  ]);
+}

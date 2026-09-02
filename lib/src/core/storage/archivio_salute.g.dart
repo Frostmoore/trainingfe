@@ -7040,6 +7040,2193 @@ class SchedeSulTelefonoCompanion extends UpdateCompanion<SchedaSulTelefono> {
   }
 }
 
+class $VociDiarioTable extends VociDiario
+    with TableInfo<$VociDiarioTable, VoceDiario> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $VociDiarioTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _idSulServerMeta = const VerificationMeta(
+    'idSulServer',
+  );
+  @override
+  late final GeneratedColumn<int> idSulServer = GeneratedColumn<int>(
+    'id_sul_server',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mangiatoIlMeta = const VerificationMeta(
+    'mangiatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> mangiatoIl = GeneratedColumn<DateTime>(
+    'mangiato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pastoMeta = const VerificationMeta('pasto');
+  @override
+  late final GeneratedColumn<String> pasto = GeneratedColumn<String>(
+    'pasto',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 24,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descrizioneMeta = const VerificationMeta(
+    'descrizione',
+  );
+  @override
+  late final GeneratedColumn<String> descrizione = GeneratedColumn<String>(
+    'descrizione',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 255,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _grammiMeta = const VerificationMeta('grammi');
+  @override
+  late final GeneratedColumn<double> grammi = GeneratedColumn<double>(
+    'grammi',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantitaMeta = const VerificationMeta(
+    'quantita',
+  );
+  @override
+  late final GeneratedColumn<double> quantita = GeneratedColumn<double>(
+    'quantita',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unitaMeta = const VerificationMeta('unita');
+  @override
+  late final GeneratedColumn<String> unita = GeneratedColumn<String>(
+    'unita',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 16,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcalMeta = const VerificationMeta('kcal');
+  @override
+  late final GeneratedColumn<double> kcal = GeneratedColumn<double>(
+    'kcal',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _proteineMeta = const VerificationMeta(
+    'proteine',
+  );
+  @override
+  late final GeneratedColumn<double> proteine = GeneratedColumn<double>(
+    'proteine',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _carboidratiMeta = const VerificationMeta(
+    'carboidrati',
+  );
+  @override
+  late final GeneratedColumn<double> carboidrati = GeneratedColumn<double>(
+    'carboidrati',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grassiMeta = const VerificationMeta('grassi');
+  @override
+  late final GeneratedColumn<double> grassi = GeneratedColumn<double>(
+    'grassi',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcal100Meta = const VerificationMeta(
+    'kcal100',
+  );
+  @override
+  late final GeneratedColumn<double> kcal100 = GeneratedColumn<double>(
+    'kcal100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _proteine100Meta = const VerificationMeta(
+    'proteine100',
+  );
+  @override
+  late final GeneratedColumn<double> proteine100 = GeneratedColumn<double>(
+    'proteine100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _carboidrati100Meta = const VerificationMeta(
+    'carboidrati100',
+  );
+  @override
+  late final GeneratedColumn<double> carboidrati100 = GeneratedColumn<double>(
+    'carboidrati100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grassi100Meta = const VerificationMeta(
+    'grassi100',
+  );
+  @override
+  late final GeneratedColumn<double> grassi100 = GeneratedColumn<double>(
+    'grassi100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fonteMeta = const VerificationMeta('fonte');
+  @override
+  late final GeneratedColumn<String> fonte = GeneratedColumn<String>(
+    'fonte',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 16,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('manual'),
+  );
+  static const VerificationMeta _aiGrezzoMeta = const VerificationMeta(
+    'aiGrezzo',
+  );
+  @override
+  late final GeneratedColumn<String> aiGrezzo = GeneratedColumn<String>(
+    'ai_grezzo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pianoIdMeta = const VerificationMeta(
+    'pianoId',
+  );
+  @override
+  late final GeneratedColumn<int> pianoId = GeneratedColumn<int>(
+    'piano_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _alimentoIdMeta = const VerificationMeta(
+    'alimentoId',
+  );
+  @override
+  late final GeneratedColumn<int> alimentoId = GeneratedColumn<int>(
+    'alimento_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _scrittaIlMeta = const VerificationMeta(
+    'scrittaIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> scrittaIl = GeneratedColumn<DateTime>(
+    'scritta_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    idSulServer,
+    mangiatoIl,
+    pasto,
+    descrizione,
+    grammi,
+    quantita,
+    unita,
+    kcal,
+    proteine,
+    carboidrati,
+    grassi,
+    kcal100,
+    proteine100,
+    carboidrati100,
+    grassi100,
+    fonte,
+    aiGrezzo,
+    pianoId,
+    alimentoId,
+    scrittaIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'voci_diario';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<VoceDiario> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('id_sul_server')) {
+      context.handle(
+        _idSulServerMeta,
+        idSulServer.isAcceptableOrUnknown(
+          data['id_sul_server']!,
+          _idSulServerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mangiato_il')) {
+      context.handle(
+        _mangiatoIlMeta,
+        mangiatoIl.isAcceptableOrUnknown(data['mangiato_il']!, _mangiatoIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mangiatoIlMeta);
+    }
+    if (data.containsKey('pasto')) {
+      context.handle(
+        _pastoMeta,
+        pasto.isAcceptableOrUnknown(data['pasto']!, _pastoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pastoMeta);
+    }
+    if (data.containsKey('descrizione')) {
+      context.handle(
+        _descrizioneMeta,
+        descrizione.isAcceptableOrUnknown(
+          data['descrizione']!,
+          _descrizioneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descrizioneMeta);
+    }
+    if (data.containsKey('grammi')) {
+      context.handle(
+        _grammiMeta,
+        grammi.isAcceptableOrUnknown(data['grammi']!, _grammiMeta),
+      );
+    }
+    if (data.containsKey('quantita')) {
+      context.handle(
+        _quantitaMeta,
+        quantita.isAcceptableOrUnknown(data['quantita']!, _quantitaMeta),
+      );
+    }
+    if (data.containsKey('unita')) {
+      context.handle(
+        _unitaMeta,
+        unita.isAcceptableOrUnknown(data['unita']!, _unitaMeta),
+      );
+    }
+    if (data.containsKey('kcal')) {
+      context.handle(
+        _kcalMeta,
+        kcal.isAcceptableOrUnknown(data['kcal']!, _kcalMeta),
+      );
+    }
+    if (data.containsKey('proteine')) {
+      context.handle(
+        _proteineMeta,
+        proteine.isAcceptableOrUnknown(data['proteine']!, _proteineMeta),
+      );
+    }
+    if (data.containsKey('carboidrati')) {
+      context.handle(
+        _carboidratiMeta,
+        carboidrati.isAcceptableOrUnknown(
+          data['carboidrati']!,
+          _carboidratiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grassi')) {
+      context.handle(
+        _grassiMeta,
+        grassi.isAcceptableOrUnknown(data['grassi']!, _grassiMeta),
+      );
+    }
+    if (data.containsKey('kcal100')) {
+      context.handle(
+        _kcal100Meta,
+        kcal100.isAcceptableOrUnknown(data['kcal100']!, _kcal100Meta),
+      );
+    }
+    if (data.containsKey('proteine100')) {
+      context.handle(
+        _proteine100Meta,
+        proteine100.isAcceptableOrUnknown(
+          data['proteine100']!,
+          _proteine100Meta,
+        ),
+      );
+    }
+    if (data.containsKey('carboidrati100')) {
+      context.handle(
+        _carboidrati100Meta,
+        carboidrati100.isAcceptableOrUnknown(
+          data['carboidrati100']!,
+          _carboidrati100Meta,
+        ),
+      );
+    }
+    if (data.containsKey('grassi100')) {
+      context.handle(
+        _grassi100Meta,
+        grassi100.isAcceptableOrUnknown(data['grassi100']!, _grassi100Meta),
+      );
+    }
+    if (data.containsKey('fonte')) {
+      context.handle(
+        _fonteMeta,
+        fonte.isAcceptableOrUnknown(data['fonte']!, _fonteMeta),
+      );
+    }
+    if (data.containsKey('ai_grezzo')) {
+      context.handle(
+        _aiGrezzoMeta,
+        aiGrezzo.isAcceptableOrUnknown(data['ai_grezzo']!, _aiGrezzoMeta),
+      );
+    }
+    if (data.containsKey('piano_id')) {
+      context.handle(
+        _pianoIdMeta,
+        pianoId.isAcceptableOrUnknown(data['piano_id']!, _pianoIdMeta),
+      );
+    }
+    if (data.containsKey('alimento_id')) {
+      context.handle(
+        _alimentoIdMeta,
+        alimentoId.isAcceptableOrUnknown(data['alimento_id']!, _alimentoIdMeta),
+      );
+    }
+    if (data.containsKey('scritta_il')) {
+      context.handle(
+        _scrittaIlMeta,
+        scrittaIl.isAcceptableOrUnknown(data['scritta_il']!, _scrittaIlMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {idSulServer},
+  ];
+  @override
+  VoceDiario map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return VoceDiario(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      idSulServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_sul_server'],
+      ),
+      mangiatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}mangiato_il'],
+      )!,
+      pasto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pasto'],
+      )!,
+      descrizione: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}descrizione'],
+      )!,
+      grammi: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grammi'],
+      ),
+      quantita: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}quantita'],
+      ),
+      unita: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unita'],
+      ),
+      kcal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kcal'],
+      ),
+      proteine: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}proteine'],
+      ),
+      carboidrati: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carboidrati'],
+      ),
+      grassi: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grassi'],
+      ),
+      kcal100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kcal100'],
+      ),
+      proteine100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}proteine100'],
+      ),
+      carboidrati100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carboidrati100'],
+      ),
+      grassi100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grassi100'],
+      ),
+      fonte: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fonte'],
+      )!,
+      aiGrezzo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ai_grezzo'],
+      ),
+      pianoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}piano_id'],
+      ),
+      alimentoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alimento_id'],
+      ),
+      scrittaIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}scritta_il'],
+      )!,
+    );
+  }
+
+  @override
+  $VociDiarioTable createAlias(String alias) {
+    return $VociDiarioTable(attachedDatabase, alias);
+  }
+}
+
+class VoceDiario extends DataClass implements Insertable<VoceDiario> {
+  final int id;
+
+  /// L'id che questa riga aveva su `food_entries`. Vedi la nota in testa.
+  final int? idSulServer;
+
+  /// Quando è stata mangiata.
+  ///
+  /// ⚠️ **Oggi l'app manda la mezzanotte del giorno scelto**, non l'ora vera:
+  /// `eaten_at` sul server vale `selectedDate`. 🚨 Qui si conserva così com'è
+  /// per non inventare un'ora che non è mai stata misurata — e per sapere
+  /// *quando* una voce è stata scritta c'è [scrittaIl], che è un dato vero.
+  final DateTime mangiatoIl;
+
+  /// `breakfast`, `morning_snack`, `lunch`, `afternoon_snack`, `dinner`,
+  /// `evening_snack`. 💡 La **chiave**, non l'etichetta: le etichette cambiano.
+  final String pasto;
+  final String descrizione;
+  final double? grammi;
+  final double? quantita;
+  final String? unita;
+  final double? kcal;
+  final double? proteine;
+  final double? carboidrati;
+  final double? grassi;
+
+  /// I valori per 100 g/ml, che servono a ricalcolare quando si corregge la
+  /// quantità. ⛔ Senza, cambiare «100 g» in «150 g» richiederebbe di
+  /// richiedere la stima da capo — cioè di pagare un gettone per una moltiplicazione.
+  final double? kcal100;
+  final double? proteine100;
+  final double? carboidrati100;
+  final double? grassi100;
+
+  /// `manual`, `ai_text`, `ai_photo`, `plan`, `favorite`, `catalog`…
+  ///
+  /// 💡 È quello che permette di dire «questo numero l'ha stimato l'AI» accanto
+  /// alla voce, ed è anche l'unico modo di sapere **quanto** ci si può fidare.
+  final String fonte;
+
+  /// La risposta grezza del modello, quando la voce viene da una stima.
+  ///
+  /// ⚠️ Serve a spiegare un numero che qualcuno contesta — *«non è stato
+  /// specificato se sono panate»* — ed è il campo che il 12/08 ha spiegato una
+  /// stima sbagliata mentre `confidence` diceva 0.85.
+  final String? aiGrezzo;
+
+  /// Da quale piano alimentare viene, se viene da un piano.
+  final int? pianoId;
+
+  /// L'alimento del catalogo condiviso, se è stato riconosciuto.
+  ///
+  /// 🚨 **Il catalogo resta sul server** ed è giusto così: non è di nessuno.
+  /// Qui c'è solo il riferimento.
+  final int? alimentoId;
+
+  /// Quando la riga è stata **scritta**, che è un'altra cosa da [mangiatoIl].
+  ///
+  /// 💡 È il campo che distingue una cena **programmata** alle 10 del mattino da
+  /// una cena mangiata alle 21 — la stessa distinzione che il consiglio del
+  /// giorno usa da 3b-AC, dove si chiama `scritto_alle` e viene da `created_at`.
+  final DateTime scrittaIl;
+  const VoceDiario({
+    required this.id,
+    this.idSulServer,
+    required this.mangiatoIl,
+    required this.pasto,
+    required this.descrizione,
+    this.grammi,
+    this.quantita,
+    this.unita,
+    this.kcal,
+    this.proteine,
+    this.carboidrati,
+    this.grassi,
+    this.kcal100,
+    this.proteine100,
+    this.carboidrati100,
+    this.grassi100,
+    required this.fonte,
+    this.aiGrezzo,
+    this.pianoId,
+    this.alimentoId,
+    required this.scrittaIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || idSulServer != null) {
+      map['id_sul_server'] = Variable<int>(idSulServer);
+    }
+    map['mangiato_il'] = Variable<DateTime>(mangiatoIl);
+    map['pasto'] = Variable<String>(pasto);
+    map['descrizione'] = Variable<String>(descrizione);
+    if (!nullToAbsent || grammi != null) {
+      map['grammi'] = Variable<double>(grammi);
+    }
+    if (!nullToAbsent || quantita != null) {
+      map['quantita'] = Variable<double>(quantita);
+    }
+    if (!nullToAbsent || unita != null) {
+      map['unita'] = Variable<String>(unita);
+    }
+    if (!nullToAbsent || kcal != null) {
+      map['kcal'] = Variable<double>(kcal);
+    }
+    if (!nullToAbsent || proteine != null) {
+      map['proteine'] = Variable<double>(proteine);
+    }
+    if (!nullToAbsent || carboidrati != null) {
+      map['carboidrati'] = Variable<double>(carboidrati);
+    }
+    if (!nullToAbsent || grassi != null) {
+      map['grassi'] = Variable<double>(grassi);
+    }
+    if (!nullToAbsent || kcal100 != null) {
+      map['kcal100'] = Variable<double>(kcal100);
+    }
+    if (!nullToAbsent || proteine100 != null) {
+      map['proteine100'] = Variable<double>(proteine100);
+    }
+    if (!nullToAbsent || carboidrati100 != null) {
+      map['carboidrati100'] = Variable<double>(carboidrati100);
+    }
+    if (!nullToAbsent || grassi100 != null) {
+      map['grassi100'] = Variable<double>(grassi100);
+    }
+    map['fonte'] = Variable<String>(fonte);
+    if (!nullToAbsent || aiGrezzo != null) {
+      map['ai_grezzo'] = Variable<String>(aiGrezzo);
+    }
+    if (!nullToAbsent || pianoId != null) {
+      map['piano_id'] = Variable<int>(pianoId);
+    }
+    if (!nullToAbsent || alimentoId != null) {
+      map['alimento_id'] = Variable<int>(alimentoId);
+    }
+    map['scritta_il'] = Variable<DateTime>(scrittaIl);
+    return map;
+  }
+
+  VociDiarioCompanion toCompanion(bool nullToAbsent) {
+    return VociDiarioCompanion(
+      id: Value(id),
+      idSulServer: idSulServer == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idSulServer),
+      mangiatoIl: Value(mangiatoIl),
+      pasto: Value(pasto),
+      descrizione: Value(descrizione),
+      grammi: grammi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grammi),
+      quantita: quantita == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantita),
+      unita: unita == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unita),
+      kcal: kcal == null && nullToAbsent ? const Value.absent() : Value(kcal),
+      proteine: proteine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proteine),
+      carboidrati: carboidrati == null && nullToAbsent
+          ? const Value.absent()
+          : Value(carboidrati),
+      grassi: grassi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grassi),
+      kcal100: kcal100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(kcal100),
+      proteine100: proteine100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proteine100),
+      carboidrati100: carboidrati100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(carboidrati100),
+      grassi100: grassi100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grassi100),
+      fonte: Value(fonte),
+      aiGrezzo: aiGrezzo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiGrezzo),
+      pianoId: pianoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pianoId),
+      alimentoId: alimentoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alimentoId),
+      scrittaIl: Value(scrittaIl),
+    );
+  }
+
+  factory VoceDiario.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return VoceDiario(
+      id: serializer.fromJson<int>(json['id']),
+      idSulServer: serializer.fromJson<int?>(json['idSulServer']),
+      mangiatoIl: serializer.fromJson<DateTime>(json['mangiatoIl']),
+      pasto: serializer.fromJson<String>(json['pasto']),
+      descrizione: serializer.fromJson<String>(json['descrizione']),
+      grammi: serializer.fromJson<double?>(json['grammi']),
+      quantita: serializer.fromJson<double?>(json['quantita']),
+      unita: serializer.fromJson<String?>(json['unita']),
+      kcal: serializer.fromJson<double?>(json['kcal']),
+      proteine: serializer.fromJson<double?>(json['proteine']),
+      carboidrati: serializer.fromJson<double?>(json['carboidrati']),
+      grassi: serializer.fromJson<double?>(json['grassi']),
+      kcal100: serializer.fromJson<double?>(json['kcal100']),
+      proteine100: serializer.fromJson<double?>(json['proteine100']),
+      carboidrati100: serializer.fromJson<double?>(json['carboidrati100']),
+      grassi100: serializer.fromJson<double?>(json['grassi100']),
+      fonte: serializer.fromJson<String>(json['fonte']),
+      aiGrezzo: serializer.fromJson<String?>(json['aiGrezzo']),
+      pianoId: serializer.fromJson<int?>(json['pianoId']),
+      alimentoId: serializer.fromJson<int?>(json['alimentoId']),
+      scrittaIl: serializer.fromJson<DateTime>(json['scrittaIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'idSulServer': serializer.toJson<int?>(idSulServer),
+      'mangiatoIl': serializer.toJson<DateTime>(mangiatoIl),
+      'pasto': serializer.toJson<String>(pasto),
+      'descrizione': serializer.toJson<String>(descrizione),
+      'grammi': serializer.toJson<double?>(grammi),
+      'quantita': serializer.toJson<double?>(quantita),
+      'unita': serializer.toJson<String?>(unita),
+      'kcal': serializer.toJson<double?>(kcal),
+      'proteine': serializer.toJson<double?>(proteine),
+      'carboidrati': serializer.toJson<double?>(carboidrati),
+      'grassi': serializer.toJson<double?>(grassi),
+      'kcal100': serializer.toJson<double?>(kcal100),
+      'proteine100': serializer.toJson<double?>(proteine100),
+      'carboidrati100': serializer.toJson<double?>(carboidrati100),
+      'grassi100': serializer.toJson<double?>(grassi100),
+      'fonte': serializer.toJson<String>(fonte),
+      'aiGrezzo': serializer.toJson<String?>(aiGrezzo),
+      'pianoId': serializer.toJson<int?>(pianoId),
+      'alimentoId': serializer.toJson<int?>(alimentoId),
+      'scrittaIl': serializer.toJson<DateTime>(scrittaIl),
+    };
+  }
+
+  VoceDiario copyWith({
+    int? id,
+    Value<int?> idSulServer = const Value.absent(),
+    DateTime? mangiatoIl,
+    String? pasto,
+    String? descrizione,
+    Value<double?> grammi = const Value.absent(),
+    Value<double?> quantita = const Value.absent(),
+    Value<String?> unita = const Value.absent(),
+    Value<double?> kcal = const Value.absent(),
+    Value<double?> proteine = const Value.absent(),
+    Value<double?> carboidrati = const Value.absent(),
+    Value<double?> grassi = const Value.absent(),
+    Value<double?> kcal100 = const Value.absent(),
+    Value<double?> proteine100 = const Value.absent(),
+    Value<double?> carboidrati100 = const Value.absent(),
+    Value<double?> grassi100 = const Value.absent(),
+    String? fonte,
+    Value<String?> aiGrezzo = const Value.absent(),
+    Value<int?> pianoId = const Value.absent(),
+    Value<int?> alimentoId = const Value.absent(),
+    DateTime? scrittaIl,
+  }) => VoceDiario(
+    id: id ?? this.id,
+    idSulServer: idSulServer.present ? idSulServer.value : this.idSulServer,
+    mangiatoIl: mangiatoIl ?? this.mangiatoIl,
+    pasto: pasto ?? this.pasto,
+    descrizione: descrizione ?? this.descrizione,
+    grammi: grammi.present ? grammi.value : this.grammi,
+    quantita: quantita.present ? quantita.value : this.quantita,
+    unita: unita.present ? unita.value : this.unita,
+    kcal: kcal.present ? kcal.value : this.kcal,
+    proteine: proteine.present ? proteine.value : this.proteine,
+    carboidrati: carboidrati.present ? carboidrati.value : this.carboidrati,
+    grassi: grassi.present ? grassi.value : this.grassi,
+    kcal100: kcal100.present ? kcal100.value : this.kcal100,
+    proteine100: proteine100.present ? proteine100.value : this.proteine100,
+    carboidrati100: carboidrati100.present
+        ? carboidrati100.value
+        : this.carboidrati100,
+    grassi100: grassi100.present ? grassi100.value : this.grassi100,
+    fonte: fonte ?? this.fonte,
+    aiGrezzo: aiGrezzo.present ? aiGrezzo.value : this.aiGrezzo,
+    pianoId: pianoId.present ? pianoId.value : this.pianoId,
+    alimentoId: alimentoId.present ? alimentoId.value : this.alimentoId,
+    scrittaIl: scrittaIl ?? this.scrittaIl,
+  );
+  VoceDiario copyWithCompanion(VociDiarioCompanion data) {
+    return VoceDiario(
+      id: data.id.present ? data.id.value : this.id,
+      idSulServer: data.idSulServer.present
+          ? data.idSulServer.value
+          : this.idSulServer,
+      mangiatoIl: data.mangiatoIl.present
+          ? data.mangiatoIl.value
+          : this.mangiatoIl,
+      pasto: data.pasto.present ? data.pasto.value : this.pasto,
+      descrizione: data.descrizione.present
+          ? data.descrizione.value
+          : this.descrizione,
+      grammi: data.grammi.present ? data.grammi.value : this.grammi,
+      quantita: data.quantita.present ? data.quantita.value : this.quantita,
+      unita: data.unita.present ? data.unita.value : this.unita,
+      kcal: data.kcal.present ? data.kcal.value : this.kcal,
+      proteine: data.proteine.present ? data.proteine.value : this.proteine,
+      carboidrati: data.carboidrati.present
+          ? data.carboidrati.value
+          : this.carboidrati,
+      grassi: data.grassi.present ? data.grassi.value : this.grassi,
+      kcal100: data.kcal100.present ? data.kcal100.value : this.kcal100,
+      proteine100: data.proteine100.present
+          ? data.proteine100.value
+          : this.proteine100,
+      carboidrati100: data.carboidrati100.present
+          ? data.carboidrati100.value
+          : this.carboidrati100,
+      grassi100: data.grassi100.present ? data.grassi100.value : this.grassi100,
+      fonte: data.fonte.present ? data.fonte.value : this.fonte,
+      aiGrezzo: data.aiGrezzo.present ? data.aiGrezzo.value : this.aiGrezzo,
+      pianoId: data.pianoId.present ? data.pianoId.value : this.pianoId,
+      alimentoId: data.alimentoId.present
+          ? data.alimentoId.value
+          : this.alimentoId,
+      scrittaIl: data.scrittaIl.present ? data.scrittaIl.value : this.scrittaIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VoceDiario(')
+          ..write('id: $id, ')
+          ..write('idSulServer: $idSulServer, ')
+          ..write('mangiatoIl: $mangiatoIl, ')
+          ..write('pasto: $pasto, ')
+          ..write('descrizione: $descrizione, ')
+          ..write('grammi: $grammi, ')
+          ..write('quantita: $quantita, ')
+          ..write('unita: $unita, ')
+          ..write('kcal: $kcal, ')
+          ..write('proteine: $proteine, ')
+          ..write('carboidrati: $carboidrati, ')
+          ..write('grassi: $grassi, ')
+          ..write('kcal100: $kcal100, ')
+          ..write('proteine100: $proteine100, ')
+          ..write('carboidrati100: $carboidrati100, ')
+          ..write('grassi100: $grassi100, ')
+          ..write('fonte: $fonte, ')
+          ..write('aiGrezzo: $aiGrezzo, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('alimentoId: $alimentoId, ')
+          ..write('scrittaIl: $scrittaIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    idSulServer,
+    mangiatoIl,
+    pasto,
+    descrizione,
+    grammi,
+    quantita,
+    unita,
+    kcal,
+    proteine,
+    carboidrati,
+    grassi,
+    kcal100,
+    proteine100,
+    carboidrati100,
+    grassi100,
+    fonte,
+    aiGrezzo,
+    pianoId,
+    alimentoId,
+    scrittaIl,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is VoceDiario &&
+          other.id == this.id &&
+          other.idSulServer == this.idSulServer &&
+          other.mangiatoIl == this.mangiatoIl &&
+          other.pasto == this.pasto &&
+          other.descrizione == this.descrizione &&
+          other.grammi == this.grammi &&
+          other.quantita == this.quantita &&
+          other.unita == this.unita &&
+          other.kcal == this.kcal &&
+          other.proteine == this.proteine &&
+          other.carboidrati == this.carboidrati &&
+          other.grassi == this.grassi &&
+          other.kcal100 == this.kcal100 &&
+          other.proteine100 == this.proteine100 &&
+          other.carboidrati100 == this.carboidrati100 &&
+          other.grassi100 == this.grassi100 &&
+          other.fonte == this.fonte &&
+          other.aiGrezzo == this.aiGrezzo &&
+          other.pianoId == this.pianoId &&
+          other.alimentoId == this.alimentoId &&
+          other.scrittaIl == this.scrittaIl);
+}
+
+class VociDiarioCompanion extends UpdateCompanion<VoceDiario> {
+  final Value<int> id;
+  final Value<int?> idSulServer;
+  final Value<DateTime> mangiatoIl;
+  final Value<String> pasto;
+  final Value<String> descrizione;
+  final Value<double?> grammi;
+  final Value<double?> quantita;
+  final Value<String?> unita;
+  final Value<double?> kcal;
+  final Value<double?> proteine;
+  final Value<double?> carboidrati;
+  final Value<double?> grassi;
+  final Value<double?> kcal100;
+  final Value<double?> proteine100;
+  final Value<double?> carboidrati100;
+  final Value<double?> grassi100;
+  final Value<String> fonte;
+  final Value<String?> aiGrezzo;
+  final Value<int?> pianoId;
+  final Value<int?> alimentoId;
+  final Value<DateTime> scrittaIl;
+  const VociDiarioCompanion({
+    this.id = const Value.absent(),
+    this.idSulServer = const Value.absent(),
+    this.mangiatoIl = const Value.absent(),
+    this.pasto = const Value.absent(),
+    this.descrizione = const Value.absent(),
+    this.grammi = const Value.absent(),
+    this.quantita = const Value.absent(),
+    this.unita = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.proteine = const Value.absent(),
+    this.carboidrati = const Value.absent(),
+    this.grassi = const Value.absent(),
+    this.kcal100 = const Value.absent(),
+    this.proteine100 = const Value.absent(),
+    this.carboidrati100 = const Value.absent(),
+    this.grassi100 = const Value.absent(),
+    this.fonte = const Value.absent(),
+    this.aiGrezzo = const Value.absent(),
+    this.pianoId = const Value.absent(),
+    this.alimentoId = const Value.absent(),
+    this.scrittaIl = const Value.absent(),
+  });
+  VociDiarioCompanion.insert({
+    this.id = const Value.absent(),
+    this.idSulServer = const Value.absent(),
+    required DateTime mangiatoIl,
+    required String pasto,
+    required String descrizione,
+    this.grammi = const Value.absent(),
+    this.quantita = const Value.absent(),
+    this.unita = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.proteine = const Value.absent(),
+    this.carboidrati = const Value.absent(),
+    this.grassi = const Value.absent(),
+    this.kcal100 = const Value.absent(),
+    this.proteine100 = const Value.absent(),
+    this.carboidrati100 = const Value.absent(),
+    this.grassi100 = const Value.absent(),
+    this.fonte = const Value.absent(),
+    this.aiGrezzo = const Value.absent(),
+    this.pianoId = const Value.absent(),
+    this.alimentoId = const Value.absent(),
+    this.scrittaIl = const Value.absent(),
+  }) : mangiatoIl = Value(mangiatoIl),
+       pasto = Value(pasto),
+       descrizione = Value(descrizione);
+  static Insertable<VoceDiario> custom({
+    Expression<int>? id,
+    Expression<int>? idSulServer,
+    Expression<DateTime>? mangiatoIl,
+    Expression<String>? pasto,
+    Expression<String>? descrizione,
+    Expression<double>? grammi,
+    Expression<double>? quantita,
+    Expression<String>? unita,
+    Expression<double>? kcal,
+    Expression<double>? proteine,
+    Expression<double>? carboidrati,
+    Expression<double>? grassi,
+    Expression<double>? kcal100,
+    Expression<double>? proteine100,
+    Expression<double>? carboidrati100,
+    Expression<double>? grassi100,
+    Expression<String>? fonte,
+    Expression<String>? aiGrezzo,
+    Expression<int>? pianoId,
+    Expression<int>? alimentoId,
+    Expression<DateTime>? scrittaIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (idSulServer != null) 'id_sul_server': idSulServer,
+      if (mangiatoIl != null) 'mangiato_il': mangiatoIl,
+      if (pasto != null) 'pasto': pasto,
+      if (descrizione != null) 'descrizione': descrizione,
+      if (grammi != null) 'grammi': grammi,
+      if (quantita != null) 'quantita': quantita,
+      if (unita != null) 'unita': unita,
+      if (kcal != null) 'kcal': kcal,
+      if (proteine != null) 'proteine': proteine,
+      if (carboidrati != null) 'carboidrati': carboidrati,
+      if (grassi != null) 'grassi': grassi,
+      if (kcal100 != null) 'kcal100': kcal100,
+      if (proteine100 != null) 'proteine100': proteine100,
+      if (carboidrati100 != null) 'carboidrati100': carboidrati100,
+      if (grassi100 != null) 'grassi100': grassi100,
+      if (fonte != null) 'fonte': fonte,
+      if (aiGrezzo != null) 'ai_grezzo': aiGrezzo,
+      if (pianoId != null) 'piano_id': pianoId,
+      if (alimentoId != null) 'alimento_id': alimentoId,
+      if (scrittaIl != null) 'scritta_il': scrittaIl,
+    });
+  }
+
+  VociDiarioCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? idSulServer,
+    Value<DateTime>? mangiatoIl,
+    Value<String>? pasto,
+    Value<String>? descrizione,
+    Value<double?>? grammi,
+    Value<double?>? quantita,
+    Value<String?>? unita,
+    Value<double?>? kcal,
+    Value<double?>? proteine,
+    Value<double?>? carboidrati,
+    Value<double?>? grassi,
+    Value<double?>? kcal100,
+    Value<double?>? proteine100,
+    Value<double?>? carboidrati100,
+    Value<double?>? grassi100,
+    Value<String>? fonte,
+    Value<String?>? aiGrezzo,
+    Value<int?>? pianoId,
+    Value<int?>? alimentoId,
+    Value<DateTime>? scrittaIl,
+  }) {
+    return VociDiarioCompanion(
+      id: id ?? this.id,
+      idSulServer: idSulServer ?? this.idSulServer,
+      mangiatoIl: mangiatoIl ?? this.mangiatoIl,
+      pasto: pasto ?? this.pasto,
+      descrizione: descrizione ?? this.descrizione,
+      grammi: grammi ?? this.grammi,
+      quantita: quantita ?? this.quantita,
+      unita: unita ?? this.unita,
+      kcal: kcal ?? this.kcal,
+      proteine: proteine ?? this.proteine,
+      carboidrati: carboidrati ?? this.carboidrati,
+      grassi: grassi ?? this.grassi,
+      kcal100: kcal100 ?? this.kcal100,
+      proteine100: proteine100 ?? this.proteine100,
+      carboidrati100: carboidrati100 ?? this.carboidrati100,
+      grassi100: grassi100 ?? this.grassi100,
+      fonte: fonte ?? this.fonte,
+      aiGrezzo: aiGrezzo ?? this.aiGrezzo,
+      pianoId: pianoId ?? this.pianoId,
+      alimentoId: alimentoId ?? this.alimentoId,
+      scrittaIl: scrittaIl ?? this.scrittaIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (idSulServer.present) {
+      map['id_sul_server'] = Variable<int>(idSulServer.value);
+    }
+    if (mangiatoIl.present) {
+      map['mangiato_il'] = Variable<DateTime>(mangiatoIl.value);
+    }
+    if (pasto.present) {
+      map['pasto'] = Variable<String>(pasto.value);
+    }
+    if (descrizione.present) {
+      map['descrizione'] = Variable<String>(descrizione.value);
+    }
+    if (grammi.present) {
+      map['grammi'] = Variable<double>(grammi.value);
+    }
+    if (quantita.present) {
+      map['quantita'] = Variable<double>(quantita.value);
+    }
+    if (unita.present) {
+      map['unita'] = Variable<String>(unita.value);
+    }
+    if (kcal.present) {
+      map['kcal'] = Variable<double>(kcal.value);
+    }
+    if (proteine.present) {
+      map['proteine'] = Variable<double>(proteine.value);
+    }
+    if (carboidrati.present) {
+      map['carboidrati'] = Variable<double>(carboidrati.value);
+    }
+    if (grassi.present) {
+      map['grassi'] = Variable<double>(grassi.value);
+    }
+    if (kcal100.present) {
+      map['kcal100'] = Variable<double>(kcal100.value);
+    }
+    if (proteine100.present) {
+      map['proteine100'] = Variable<double>(proteine100.value);
+    }
+    if (carboidrati100.present) {
+      map['carboidrati100'] = Variable<double>(carboidrati100.value);
+    }
+    if (grassi100.present) {
+      map['grassi100'] = Variable<double>(grassi100.value);
+    }
+    if (fonte.present) {
+      map['fonte'] = Variable<String>(fonte.value);
+    }
+    if (aiGrezzo.present) {
+      map['ai_grezzo'] = Variable<String>(aiGrezzo.value);
+    }
+    if (pianoId.present) {
+      map['piano_id'] = Variable<int>(pianoId.value);
+    }
+    if (alimentoId.present) {
+      map['alimento_id'] = Variable<int>(alimentoId.value);
+    }
+    if (scrittaIl.present) {
+      map['scritta_il'] = Variable<DateTime>(scrittaIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VociDiarioCompanion(')
+          ..write('id: $id, ')
+          ..write('idSulServer: $idSulServer, ')
+          ..write('mangiatoIl: $mangiatoIl, ')
+          ..write('pasto: $pasto, ')
+          ..write('descrizione: $descrizione, ')
+          ..write('grammi: $grammi, ')
+          ..write('quantita: $quantita, ')
+          ..write('unita: $unita, ')
+          ..write('kcal: $kcal, ')
+          ..write('proteine: $proteine, ')
+          ..write('carboidrati: $carboidrati, ')
+          ..write('grassi: $grassi, ')
+          ..write('kcal100: $kcal100, ')
+          ..write('proteine100: $proteine100, ')
+          ..write('carboidrati100: $carboidrati100, ')
+          ..write('grassi100: $grassi100, ')
+          ..write('fonte: $fonte, ')
+          ..write('aiGrezzo: $aiGrezzo, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('alimentoId: $alimentoId, ')
+          ..write('scrittaIl: $scrittaIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PreferitiCiboTable extends PreferitiCibo
+    with TableInfo<$PreferitiCiboTable, PreferitoCibo> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PreferitiCiboTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _idSulServerMeta = const VerificationMeta(
+    'idSulServer',
+  );
+  @override
+  late final GeneratedColumn<int> idSulServer = GeneratedColumn<int>(
+    'id_sul_server',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descrizioneMeta = const VerificationMeta(
+    'descrizione',
+  );
+  @override
+  late final GeneratedColumn<String> descrizione = GeneratedColumn<String>(
+    'descrizione',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 255,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ePastoMeta = const VerificationMeta('ePasto');
+  @override
+  late final GeneratedColumn<bool> ePasto = GeneratedColumn<bool>(
+    'e_pasto',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("e_pasto" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _vociMeta = const VerificationMeta('voci');
+  @override
+  late final GeneratedColumn<String> voci = GeneratedColumn<String>(
+    'voci',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grammiMeta = const VerificationMeta('grammi');
+  @override
+  late final GeneratedColumn<double> grammi = GeneratedColumn<double>(
+    'grammi',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantitaMeta = const VerificationMeta(
+    'quantita',
+  );
+  @override
+  late final GeneratedColumn<double> quantita = GeneratedColumn<double>(
+    'quantita',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unitaMeta = const VerificationMeta('unita');
+  @override
+  late final GeneratedColumn<String> unita = GeneratedColumn<String>(
+    'unita',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 16,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcalMeta = const VerificationMeta('kcal');
+  @override
+  late final GeneratedColumn<double> kcal = GeneratedColumn<double>(
+    'kcal',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _proteineMeta = const VerificationMeta(
+    'proteine',
+  );
+  @override
+  late final GeneratedColumn<double> proteine = GeneratedColumn<double>(
+    'proteine',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _carboidratiMeta = const VerificationMeta(
+    'carboidrati',
+  );
+  @override
+  late final GeneratedColumn<double> carboidrati = GeneratedColumn<double>(
+    'carboidrati',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grassiMeta = const VerificationMeta('grassi');
+  @override
+  late final GeneratedColumn<double> grassi = GeneratedColumn<double>(
+    'grassi',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kcal100Meta = const VerificationMeta(
+    'kcal100',
+  );
+  @override
+  late final GeneratedColumn<double> kcal100 = GeneratedColumn<double>(
+    'kcal100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _proteine100Meta = const VerificationMeta(
+    'proteine100',
+  );
+  @override
+  late final GeneratedColumn<double> proteine100 = GeneratedColumn<double>(
+    'proteine100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _carboidrati100Meta = const VerificationMeta(
+    'carboidrati100',
+  );
+  @override
+  late final GeneratedColumn<double> carboidrati100 = GeneratedColumn<double>(
+    'carboidrati100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grassi100Meta = const VerificationMeta(
+    'grassi100',
+  );
+  @override
+  late final GeneratedColumn<double> grassi100 = GeneratedColumn<double>(
+    'grassi100',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _salvatoIlMeta = const VerificationMeta(
+    'salvatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> salvatoIl = GeneratedColumn<DateTime>(
+    'salvato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    idSulServer,
+    descrizione,
+    ePasto,
+    voci,
+    grammi,
+    quantita,
+    unita,
+    kcal,
+    proteine,
+    carboidrati,
+    grassi,
+    kcal100,
+    proteine100,
+    carboidrati100,
+    grassi100,
+    salvatoIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'preferiti_cibo';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PreferitoCibo> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('id_sul_server')) {
+      context.handle(
+        _idSulServerMeta,
+        idSulServer.isAcceptableOrUnknown(
+          data['id_sul_server']!,
+          _idSulServerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('descrizione')) {
+      context.handle(
+        _descrizioneMeta,
+        descrizione.isAcceptableOrUnknown(
+          data['descrizione']!,
+          _descrizioneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descrizioneMeta);
+    }
+    if (data.containsKey('e_pasto')) {
+      context.handle(
+        _ePastoMeta,
+        ePasto.isAcceptableOrUnknown(data['e_pasto']!, _ePastoMeta),
+      );
+    }
+    if (data.containsKey('voci')) {
+      context.handle(
+        _vociMeta,
+        voci.isAcceptableOrUnknown(data['voci']!, _vociMeta),
+      );
+    }
+    if (data.containsKey('grammi')) {
+      context.handle(
+        _grammiMeta,
+        grammi.isAcceptableOrUnknown(data['grammi']!, _grammiMeta),
+      );
+    }
+    if (data.containsKey('quantita')) {
+      context.handle(
+        _quantitaMeta,
+        quantita.isAcceptableOrUnknown(data['quantita']!, _quantitaMeta),
+      );
+    }
+    if (data.containsKey('unita')) {
+      context.handle(
+        _unitaMeta,
+        unita.isAcceptableOrUnknown(data['unita']!, _unitaMeta),
+      );
+    }
+    if (data.containsKey('kcal')) {
+      context.handle(
+        _kcalMeta,
+        kcal.isAcceptableOrUnknown(data['kcal']!, _kcalMeta),
+      );
+    }
+    if (data.containsKey('proteine')) {
+      context.handle(
+        _proteineMeta,
+        proteine.isAcceptableOrUnknown(data['proteine']!, _proteineMeta),
+      );
+    }
+    if (data.containsKey('carboidrati')) {
+      context.handle(
+        _carboidratiMeta,
+        carboidrati.isAcceptableOrUnknown(
+          data['carboidrati']!,
+          _carboidratiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grassi')) {
+      context.handle(
+        _grassiMeta,
+        grassi.isAcceptableOrUnknown(data['grassi']!, _grassiMeta),
+      );
+    }
+    if (data.containsKey('kcal100')) {
+      context.handle(
+        _kcal100Meta,
+        kcal100.isAcceptableOrUnknown(data['kcal100']!, _kcal100Meta),
+      );
+    }
+    if (data.containsKey('proteine100')) {
+      context.handle(
+        _proteine100Meta,
+        proteine100.isAcceptableOrUnknown(
+          data['proteine100']!,
+          _proteine100Meta,
+        ),
+      );
+    }
+    if (data.containsKey('carboidrati100')) {
+      context.handle(
+        _carboidrati100Meta,
+        carboidrati100.isAcceptableOrUnknown(
+          data['carboidrati100']!,
+          _carboidrati100Meta,
+        ),
+      );
+    }
+    if (data.containsKey('grassi100')) {
+      context.handle(
+        _grassi100Meta,
+        grassi100.isAcceptableOrUnknown(data['grassi100']!, _grassi100Meta),
+      );
+    }
+    if (data.containsKey('salvato_il')) {
+      context.handle(
+        _salvatoIlMeta,
+        salvatoIl.isAcceptableOrUnknown(data['salvato_il']!, _salvatoIlMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {idSulServer},
+  ];
+  @override
+  PreferitoCibo map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PreferitoCibo(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      idSulServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_sul_server'],
+      ),
+      descrizione: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}descrizione'],
+      )!,
+      ePasto: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}e_pasto'],
+      )!,
+      voci: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}voci'],
+      ),
+      grammi: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grammi'],
+      ),
+      quantita: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}quantita'],
+      ),
+      unita: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unita'],
+      ),
+      kcal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kcal'],
+      ),
+      proteine: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}proteine'],
+      ),
+      carboidrati: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carboidrati'],
+      ),
+      grassi: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grassi'],
+      ),
+      kcal100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kcal100'],
+      ),
+      proteine100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}proteine100'],
+      ),
+      carboidrati100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carboidrati100'],
+      ),
+      grassi100: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grassi100'],
+      ),
+      salvatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}salvato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $PreferitiCiboTable createAlias(String alias) {
+    return $PreferitiCiboTable(attachedDatabase, alias);
+  }
+}
+
+class PreferitoCibo extends DataClass implements Insertable<PreferitoCibo> {
+  final int id;
+  final int? idSulServer;
+  final String descrizione;
+
+  /// Se è un **pasto intero** invece di un singolo alimento.
+  final bool ePasto;
+
+  /// Le voci che lo compongono, quando è un pasto. JSON.
+  final String? voci;
+  final double? grammi;
+  final double? quantita;
+  final String? unita;
+  final double? kcal;
+  final double? proteine;
+  final double? carboidrati;
+  final double? grassi;
+  final double? kcal100;
+  final double? proteine100;
+  final double? carboidrati100;
+  final double? grassi100;
+  final DateTime salvatoIl;
+  const PreferitoCibo({
+    required this.id,
+    this.idSulServer,
+    required this.descrizione,
+    required this.ePasto,
+    this.voci,
+    this.grammi,
+    this.quantita,
+    this.unita,
+    this.kcal,
+    this.proteine,
+    this.carboidrati,
+    this.grassi,
+    this.kcal100,
+    this.proteine100,
+    this.carboidrati100,
+    this.grassi100,
+    required this.salvatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || idSulServer != null) {
+      map['id_sul_server'] = Variable<int>(idSulServer);
+    }
+    map['descrizione'] = Variable<String>(descrizione);
+    map['e_pasto'] = Variable<bool>(ePasto);
+    if (!nullToAbsent || voci != null) {
+      map['voci'] = Variable<String>(voci);
+    }
+    if (!nullToAbsent || grammi != null) {
+      map['grammi'] = Variable<double>(grammi);
+    }
+    if (!nullToAbsent || quantita != null) {
+      map['quantita'] = Variable<double>(quantita);
+    }
+    if (!nullToAbsent || unita != null) {
+      map['unita'] = Variable<String>(unita);
+    }
+    if (!nullToAbsent || kcal != null) {
+      map['kcal'] = Variable<double>(kcal);
+    }
+    if (!nullToAbsent || proteine != null) {
+      map['proteine'] = Variable<double>(proteine);
+    }
+    if (!nullToAbsent || carboidrati != null) {
+      map['carboidrati'] = Variable<double>(carboidrati);
+    }
+    if (!nullToAbsent || grassi != null) {
+      map['grassi'] = Variable<double>(grassi);
+    }
+    if (!nullToAbsent || kcal100 != null) {
+      map['kcal100'] = Variable<double>(kcal100);
+    }
+    if (!nullToAbsent || proteine100 != null) {
+      map['proteine100'] = Variable<double>(proteine100);
+    }
+    if (!nullToAbsent || carboidrati100 != null) {
+      map['carboidrati100'] = Variable<double>(carboidrati100);
+    }
+    if (!nullToAbsent || grassi100 != null) {
+      map['grassi100'] = Variable<double>(grassi100);
+    }
+    map['salvato_il'] = Variable<DateTime>(salvatoIl);
+    return map;
+  }
+
+  PreferitiCiboCompanion toCompanion(bool nullToAbsent) {
+    return PreferitiCiboCompanion(
+      id: Value(id),
+      idSulServer: idSulServer == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idSulServer),
+      descrizione: Value(descrizione),
+      ePasto: Value(ePasto),
+      voci: voci == null && nullToAbsent ? const Value.absent() : Value(voci),
+      grammi: grammi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grammi),
+      quantita: quantita == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantita),
+      unita: unita == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unita),
+      kcal: kcal == null && nullToAbsent ? const Value.absent() : Value(kcal),
+      proteine: proteine == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proteine),
+      carboidrati: carboidrati == null && nullToAbsent
+          ? const Value.absent()
+          : Value(carboidrati),
+      grassi: grassi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grassi),
+      kcal100: kcal100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(kcal100),
+      proteine100: proteine100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proteine100),
+      carboidrati100: carboidrati100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(carboidrati100),
+      grassi100: grassi100 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grassi100),
+      salvatoIl: Value(salvatoIl),
+    );
+  }
+
+  factory PreferitoCibo.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PreferitoCibo(
+      id: serializer.fromJson<int>(json['id']),
+      idSulServer: serializer.fromJson<int?>(json['idSulServer']),
+      descrizione: serializer.fromJson<String>(json['descrizione']),
+      ePasto: serializer.fromJson<bool>(json['ePasto']),
+      voci: serializer.fromJson<String?>(json['voci']),
+      grammi: serializer.fromJson<double?>(json['grammi']),
+      quantita: serializer.fromJson<double?>(json['quantita']),
+      unita: serializer.fromJson<String?>(json['unita']),
+      kcal: serializer.fromJson<double?>(json['kcal']),
+      proteine: serializer.fromJson<double?>(json['proteine']),
+      carboidrati: serializer.fromJson<double?>(json['carboidrati']),
+      grassi: serializer.fromJson<double?>(json['grassi']),
+      kcal100: serializer.fromJson<double?>(json['kcal100']),
+      proteine100: serializer.fromJson<double?>(json['proteine100']),
+      carboidrati100: serializer.fromJson<double?>(json['carboidrati100']),
+      grassi100: serializer.fromJson<double?>(json['grassi100']),
+      salvatoIl: serializer.fromJson<DateTime>(json['salvatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'idSulServer': serializer.toJson<int?>(idSulServer),
+      'descrizione': serializer.toJson<String>(descrizione),
+      'ePasto': serializer.toJson<bool>(ePasto),
+      'voci': serializer.toJson<String?>(voci),
+      'grammi': serializer.toJson<double?>(grammi),
+      'quantita': serializer.toJson<double?>(quantita),
+      'unita': serializer.toJson<String?>(unita),
+      'kcal': serializer.toJson<double?>(kcal),
+      'proteine': serializer.toJson<double?>(proteine),
+      'carboidrati': serializer.toJson<double?>(carboidrati),
+      'grassi': serializer.toJson<double?>(grassi),
+      'kcal100': serializer.toJson<double?>(kcal100),
+      'proteine100': serializer.toJson<double?>(proteine100),
+      'carboidrati100': serializer.toJson<double?>(carboidrati100),
+      'grassi100': serializer.toJson<double?>(grassi100),
+      'salvatoIl': serializer.toJson<DateTime>(salvatoIl),
+    };
+  }
+
+  PreferitoCibo copyWith({
+    int? id,
+    Value<int?> idSulServer = const Value.absent(),
+    String? descrizione,
+    bool? ePasto,
+    Value<String?> voci = const Value.absent(),
+    Value<double?> grammi = const Value.absent(),
+    Value<double?> quantita = const Value.absent(),
+    Value<String?> unita = const Value.absent(),
+    Value<double?> kcal = const Value.absent(),
+    Value<double?> proteine = const Value.absent(),
+    Value<double?> carboidrati = const Value.absent(),
+    Value<double?> grassi = const Value.absent(),
+    Value<double?> kcal100 = const Value.absent(),
+    Value<double?> proteine100 = const Value.absent(),
+    Value<double?> carboidrati100 = const Value.absent(),
+    Value<double?> grassi100 = const Value.absent(),
+    DateTime? salvatoIl,
+  }) => PreferitoCibo(
+    id: id ?? this.id,
+    idSulServer: idSulServer.present ? idSulServer.value : this.idSulServer,
+    descrizione: descrizione ?? this.descrizione,
+    ePasto: ePasto ?? this.ePasto,
+    voci: voci.present ? voci.value : this.voci,
+    grammi: grammi.present ? grammi.value : this.grammi,
+    quantita: quantita.present ? quantita.value : this.quantita,
+    unita: unita.present ? unita.value : this.unita,
+    kcal: kcal.present ? kcal.value : this.kcal,
+    proteine: proteine.present ? proteine.value : this.proteine,
+    carboidrati: carboidrati.present ? carboidrati.value : this.carboidrati,
+    grassi: grassi.present ? grassi.value : this.grassi,
+    kcal100: kcal100.present ? kcal100.value : this.kcal100,
+    proteine100: proteine100.present ? proteine100.value : this.proteine100,
+    carboidrati100: carboidrati100.present
+        ? carboidrati100.value
+        : this.carboidrati100,
+    grassi100: grassi100.present ? grassi100.value : this.grassi100,
+    salvatoIl: salvatoIl ?? this.salvatoIl,
+  );
+  PreferitoCibo copyWithCompanion(PreferitiCiboCompanion data) {
+    return PreferitoCibo(
+      id: data.id.present ? data.id.value : this.id,
+      idSulServer: data.idSulServer.present
+          ? data.idSulServer.value
+          : this.idSulServer,
+      descrizione: data.descrizione.present
+          ? data.descrizione.value
+          : this.descrizione,
+      ePasto: data.ePasto.present ? data.ePasto.value : this.ePasto,
+      voci: data.voci.present ? data.voci.value : this.voci,
+      grammi: data.grammi.present ? data.grammi.value : this.grammi,
+      quantita: data.quantita.present ? data.quantita.value : this.quantita,
+      unita: data.unita.present ? data.unita.value : this.unita,
+      kcal: data.kcal.present ? data.kcal.value : this.kcal,
+      proteine: data.proteine.present ? data.proteine.value : this.proteine,
+      carboidrati: data.carboidrati.present
+          ? data.carboidrati.value
+          : this.carboidrati,
+      grassi: data.grassi.present ? data.grassi.value : this.grassi,
+      kcal100: data.kcal100.present ? data.kcal100.value : this.kcal100,
+      proteine100: data.proteine100.present
+          ? data.proteine100.value
+          : this.proteine100,
+      carboidrati100: data.carboidrati100.present
+          ? data.carboidrati100.value
+          : this.carboidrati100,
+      grassi100: data.grassi100.present ? data.grassi100.value : this.grassi100,
+      salvatoIl: data.salvatoIl.present ? data.salvatoIl.value : this.salvatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PreferitoCibo(')
+          ..write('id: $id, ')
+          ..write('idSulServer: $idSulServer, ')
+          ..write('descrizione: $descrizione, ')
+          ..write('ePasto: $ePasto, ')
+          ..write('voci: $voci, ')
+          ..write('grammi: $grammi, ')
+          ..write('quantita: $quantita, ')
+          ..write('unita: $unita, ')
+          ..write('kcal: $kcal, ')
+          ..write('proteine: $proteine, ')
+          ..write('carboidrati: $carboidrati, ')
+          ..write('grassi: $grassi, ')
+          ..write('kcal100: $kcal100, ')
+          ..write('proteine100: $proteine100, ')
+          ..write('carboidrati100: $carboidrati100, ')
+          ..write('grassi100: $grassi100, ')
+          ..write('salvatoIl: $salvatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    idSulServer,
+    descrizione,
+    ePasto,
+    voci,
+    grammi,
+    quantita,
+    unita,
+    kcal,
+    proteine,
+    carboidrati,
+    grassi,
+    kcal100,
+    proteine100,
+    carboidrati100,
+    grassi100,
+    salvatoIl,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PreferitoCibo &&
+          other.id == this.id &&
+          other.idSulServer == this.idSulServer &&
+          other.descrizione == this.descrizione &&
+          other.ePasto == this.ePasto &&
+          other.voci == this.voci &&
+          other.grammi == this.grammi &&
+          other.quantita == this.quantita &&
+          other.unita == this.unita &&
+          other.kcal == this.kcal &&
+          other.proteine == this.proteine &&
+          other.carboidrati == this.carboidrati &&
+          other.grassi == this.grassi &&
+          other.kcal100 == this.kcal100 &&
+          other.proteine100 == this.proteine100 &&
+          other.carboidrati100 == this.carboidrati100 &&
+          other.grassi100 == this.grassi100 &&
+          other.salvatoIl == this.salvatoIl);
+}
+
+class PreferitiCiboCompanion extends UpdateCompanion<PreferitoCibo> {
+  final Value<int> id;
+  final Value<int?> idSulServer;
+  final Value<String> descrizione;
+  final Value<bool> ePasto;
+  final Value<String?> voci;
+  final Value<double?> grammi;
+  final Value<double?> quantita;
+  final Value<String?> unita;
+  final Value<double?> kcal;
+  final Value<double?> proteine;
+  final Value<double?> carboidrati;
+  final Value<double?> grassi;
+  final Value<double?> kcal100;
+  final Value<double?> proteine100;
+  final Value<double?> carboidrati100;
+  final Value<double?> grassi100;
+  final Value<DateTime> salvatoIl;
+  const PreferitiCiboCompanion({
+    this.id = const Value.absent(),
+    this.idSulServer = const Value.absent(),
+    this.descrizione = const Value.absent(),
+    this.ePasto = const Value.absent(),
+    this.voci = const Value.absent(),
+    this.grammi = const Value.absent(),
+    this.quantita = const Value.absent(),
+    this.unita = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.proteine = const Value.absent(),
+    this.carboidrati = const Value.absent(),
+    this.grassi = const Value.absent(),
+    this.kcal100 = const Value.absent(),
+    this.proteine100 = const Value.absent(),
+    this.carboidrati100 = const Value.absent(),
+    this.grassi100 = const Value.absent(),
+    this.salvatoIl = const Value.absent(),
+  });
+  PreferitiCiboCompanion.insert({
+    this.id = const Value.absent(),
+    this.idSulServer = const Value.absent(),
+    required String descrizione,
+    this.ePasto = const Value.absent(),
+    this.voci = const Value.absent(),
+    this.grammi = const Value.absent(),
+    this.quantita = const Value.absent(),
+    this.unita = const Value.absent(),
+    this.kcal = const Value.absent(),
+    this.proteine = const Value.absent(),
+    this.carboidrati = const Value.absent(),
+    this.grassi = const Value.absent(),
+    this.kcal100 = const Value.absent(),
+    this.proteine100 = const Value.absent(),
+    this.carboidrati100 = const Value.absent(),
+    this.grassi100 = const Value.absent(),
+    this.salvatoIl = const Value.absent(),
+  }) : descrizione = Value(descrizione);
+  static Insertable<PreferitoCibo> custom({
+    Expression<int>? id,
+    Expression<int>? idSulServer,
+    Expression<String>? descrizione,
+    Expression<bool>? ePasto,
+    Expression<String>? voci,
+    Expression<double>? grammi,
+    Expression<double>? quantita,
+    Expression<String>? unita,
+    Expression<double>? kcal,
+    Expression<double>? proteine,
+    Expression<double>? carboidrati,
+    Expression<double>? grassi,
+    Expression<double>? kcal100,
+    Expression<double>? proteine100,
+    Expression<double>? carboidrati100,
+    Expression<double>? grassi100,
+    Expression<DateTime>? salvatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (idSulServer != null) 'id_sul_server': idSulServer,
+      if (descrizione != null) 'descrizione': descrizione,
+      if (ePasto != null) 'e_pasto': ePasto,
+      if (voci != null) 'voci': voci,
+      if (grammi != null) 'grammi': grammi,
+      if (quantita != null) 'quantita': quantita,
+      if (unita != null) 'unita': unita,
+      if (kcal != null) 'kcal': kcal,
+      if (proteine != null) 'proteine': proteine,
+      if (carboidrati != null) 'carboidrati': carboidrati,
+      if (grassi != null) 'grassi': grassi,
+      if (kcal100 != null) 'kcal100': kcal100,
+      if (proteine100 != null) 'proteine100': proteine100,
+      if (carboidrati100 != null) 'carboidrati100': carboidrati100,
+      if (grassi100 != null) 'grassi100': grassi100,
+      if (salvatoIl != null) 'salvato_il': salvatoIl,
+    });
+  }
+
+  PreferitiCiboCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? idSulServer,
+    Value<String>? descrizione,
+    Value<bool>? ePasto,
+    Value<String?>? voci,
+    Value<double?>? grammi,
+    Value<double?>? quantita,
+    Value<String?>? unita,
+    Value<double?>? kcal,
+    Value<double?>? proteine,
+    Value<double?>? carboidrati,
+    Value<double?>? grassi,
+    Value<double?>? kcal100,
+    Value<double?>? proteine100,
+    Value<double?>? carboidrati100,
+    Value<double?>? grassi100,
+    Value<DateTime>? salvatoIl,
+  }) {
+    return PreferitiCiboCompanion(
+      id: id ?? this.id,
+      idSulServer: idSulServer ?? this.idSulServer,
+      descrizione: descrizione ?? this.descrizione,
+      ePasto: ePasto ?? this.ePasto,
+      voci: voci ?? this.voci,
+      grammi: grammi ?? this.grammi,
+      quantita: quantita ?? this.quantita,
+      unita: unita ?? this.unita,
+      kcal: kcal ?? this.kcal,
+      proteine: proteine ?? this.proteine,
+      carboidrati: carboidrati ?? this.carboidrati,
+      grassi: grassi ?? this.grassi,
+      kcal100: kcal100 ?? this.kcal100,
+      proteine100: proteine100 ?? this.proteine100,
+      carboidrati100: carboidrati100 ?? this.carboidrati100,
+      grassi100: grassi100 ?? this.grassi100,
+      salvatoIl: salvatoIl ?? this.salvatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (idSulServer.present) {
+      map['id_sul_server'] = Variable<int>(idSulServer.value);
+    }
+    if (descrizione.present) {
+      map['descrizione'] = Variable<String>(descrizione.value);
+    }
+    if (ePasto.present) {
+      map['e_pasto'] = Variable<bool>(ePasto.value);
+    }
+    if (voci.present) {
+      map['voci'] = Variable<String>(voci.value);
+    }
+    if (grammi.present) {
+      map['grammi'] = Variable<double>(grammi.value);
+    }
+    if (quantita.present) {
+      map['quantita'] = Variable<double>(quantita.value);
+    }
+    if (unita.present) {
+      map['unita'] = Variable<String>(unita.value);
+    }
+    if (kcal.present) {
+      map['kcal'] = Variable<double>(kcal.value);
+    }
+    if (proteine.present) {
+      map['proteine'] = Variable<double>(proteine.value);
+    }
+    if (carboidrati.present) {
+      map['carboidrati'] = Variable<double>(carboidrati.value);
+    }
+    if (grassi.present) {
+      map['grassi'] = Variable<double>(grassi.value);
+    }
+    if (kcal100.present) {
+      map['kcal100'] = Variable<double>(kcal100.value);
+    }
+    if (proteine100.present) {
+      map['proteine100'] = Variable<double>(proteine100.value);
+    }
+    if (carboidrati100.present) {
+      map['carboidrati100'] = Variable<double>(carboidrati100.value);
+    }
+    if (grassi100.present) {
+      map['grassi100'] = Variable<double>(grassi100.value);
+    }
+    if (salvatoIl.present) {
+      map['salvato_il'] = Variable<DateTime>(salvatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PreferitiCiboCompanion(')
+          ..write('id: $id, ')
+          ..write('idSulServer: $idSulServer, ')
+          ..write('descrizione: $descrizione, ')
+          ..write('ePasto: $ePasto, ')
+          ..write('voci: $voci, ')
+          ..write('grammi: $grammi, ')
+          ..write('quantita: $quantita, ')
+          ..write('unita: $unita, ')
+          ..write('kcal: $kcal, ')
+          ..write('proteine: $proteine, ')
+          ..write('carboidrati: $carboidrati, ')
+          ..write('grassi: $grassi, ')
+          ..write('kcal100: $kcal100, ')
+          ..write('proteine100: $proteine100, ')
+          ..write('carboidrati100: $carboidrati100, ')
+          ..write('grassi100: $grassi100, ')
+          ..write('salvatoIl: $salvatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -7067,6 +9254,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $BruciateDichiarateTable(this);
   late final $SchedeSulTelefonoTable schedeSulTelefono =
       $SchedeSulTelefonoTable(this);
+  late final $VociDiarioTable vociDiario = $VociDiarioTable(this);
+  late final $PreferitiCiboTable preferitiCibo = $PreferitiCiboTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7086,6 +9275,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     versioniDelleSchede,
     bruciateDichiarate,
     schedeSulTelefono,
+    vociDiario,
+    preferitiCibo,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -10841,6 +13032,956 @@ typedef $$SchedeSulTelefonoTableProcessedTableManager =
       SchedaSulTelefono,
       PrefetchHooks Function()
     >;
+typedef $$VociDiarioTableCreateCompanionBuilder =
+    VociDiarioCompanion Function({
+      Value<int> id,
+      Value<int?> idSulServer,
+      required DateTime mangiatoIl,
+      required String pasto,
+      required String descrizione,
+      Value<double?> grammi,
+      Value<double?> quantita,
+      Value<String?> unita,
+      Value<double?> kcal,
+      Value<double?> proteine,
+      Value<double?> carboidrati,
+      Value<double?> grassi,
+      Value<double?> kcal100,
+      Value<double?> proteine100,
+      Value<double?> carboidrati100,
+      Value<double?> grassi100,
+      Value<String> fonte,
+      Value<String?> aiGrezzo,
+      Value<int?> pianoId,
+      Value<int?> alimentoId,
+      Value<DateTime> scrittaIl,
+    });
+typedef $$VociDiarioTableUpdateCompanionBuilder =
+    VociDiarioCompanion Function({
+      Value<int> id,
+      Value<int?> idSulServer,
+      Value<DateTime> mangiatoIl,
+      Value<String> pasto,
+      Value<String> descrizione,
+      Value<double?> grammi,
+      Value<double?> quantita,
+      Value<String?> unita,
+      Value<double?> kcal,
+      Value<double?> proteine,
+      Value<double?> carboidrati,
+      Value<double?> grassi,
+      Value<double?> kcal100,
+      Value<double?> proteine100,
+      Value<double?> carboidrati100,
+      Value<double?> grassi100,
+      Value<String> fonte,
+      Value<String?> aiGrezzo,
+      Value<int?> pianoId,
+      Value<int?> alimentoId,
+      Value<DateTime> scrittaIl,
+    });
+
+class $$VociDiarioTableFilterComposer
+    extends Composer<_$ArchivioSalute, $VociDiarioTable> {
+  $$VociDiarioTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get mangiatoIl => $composableBuilder(
+    column: $table.mangiatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pasto => $composableBuilder(
+    column: $table.pasto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grammi => $composableBuilder(
+    column: $table.grammi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get quantita => $composableBuilder(
+    column: $table.quantita,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unita => $composableBuilder(
+    column: $table.unita,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteine => $composableBuilder(
+    column: $table.proteine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grassi => $composableBuilder(
+    column: $table.grassi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kcal100 => $composableBuilder(
+    column: $table.kcal100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grassi100 => $composableBuilder(
+    column: $table.grassi100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fonte => $composableBuilder(
+    column: $table.fonte,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aiGrezzo => $composableBuilder(
+    column: $table.aiGrezzo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pianoId => $composableBuilder(
+    column: $table.pianoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get alimentoId => $composableBuilder(
+    column: $table.alimentoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get scrittaIl => $composableBuilder(
+    column: $table.scrittaIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$VociDiarioTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $VociDiarioTable> {
+  $$VociDiarioTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get mangiatoIl => $composableBuilder(
+    column: $table.mangiatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pasto => $composableBuilder(
+    column: $table.pasto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grammi => $composableBuilder(
+    column: $table.grammi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get quantita => $composableBuilder(
+    column: $table.quantita,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unita => $composableBuilder(
+    column: $table.unita,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteine => $composableBuilder(
+    column: $table.proteine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grassi => $composableBuilder(
+    column: $table.grassi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get kcal100 => $composableBuilder(
+    column: $table.kcal100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grassi100 => $composableBuilder(
+    column: $table.grassi100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fonte => $composableBuilder(
+    column: $table.fonte,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aiGrezzo => $composableBuilder(
+    column: $table.aiGrezzo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pianoId => $composableBuilder(
+    column: $table.pianoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get alimentoId => $composableBuilder(
+    column: $table.alimentoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get scrittaIl => $composableBuilder(
+    column: $table.scrittaIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$VociDiarioTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $VociDiarioTable> {
+  $$VociDiarioTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get mangiatoIl => $composableBuilder(
+    column: $table.mangiatoIl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pasto =>
+      $composableBuilder(column: $table.pasto, builder: (column) => column);
+
+  GeneratedColumn<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get grammi =>
+      $composableBuilder(column: $table.grammi, builder: (column) => column);
+
+  GeneratedColumn<double> get quantita =>
+      $composableBuilder(column: $table.quantita, builder: (column) => column);
+
+  GeneratedColumn<String> get unita =>
+      $composableBuilder(column: $table.unita, builder: (column) => column);
+
+  GeneratedColumn<double> get kcal =>
+      $composableBuilder(column: $table.kcal, builder: (column) => column);
+
+  GeneratedColumn<double> get proteine =>
+      $composableBuilder(column: $table.proteine, builder: (column) => column);
+
+  GeneratedColumn<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get grassi =>
+      $composableBuilder(column: $table.grassi, builder: (column) => column);
+
+  GeneratedColumn<double> get kcal100 =>
+      $composableBuilder(column: $table.kcal100, builder: (column) => column);
+
+  GeneratedColumn<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get grassi100 =>
+      $composableBuilder(column: $table.grassi100, builder: (column) => column);
+
+  GeneratedColumn<String> get fonte =>
+      $composableBuilder(column: $table.fonte, builder: (column) => column);
+
+  GeneratedColumn<String> get aiGrezzo =>
+      $composableBuilder(column: $table.aiGrezzo, builder: (column) => column);
+
+  GeneratedColumn<int> get pianoId =>
+      $composableBuilder(column: $table.pianoId, builder: (column) => column);
+
+  GeneratedColumn<int> get alimentoId => $composableBuilder(
+    column: $table.alimentoId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get scrittaIl =>
+      $composableBuilder(column: $table.scrittaIl, builder: (column) => column);
+}
+
+class $$VociDiarioTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $VociDiarioTable,
+          VoceDiario,
+          $$VociDiarioTableFilterComposer,
+          $$VociDiarioTableOrderingComposer,
+          $$VociDiarioTableAnnotationComposer,
+          $$VociDiarioTableCreateCompanionBuilder,
+          $$VociDiarioTableUpdateCompanionBuilder,
+          (
+            VoceDiario,
+            BaseReferences<_$ArchivioSalute, $VociDiarioTable, VoceDiario>,
+          ),
+          VoceDiario,
+          PrefetchHooks Function()
+        > {
+  $$VociDiarioTableTableManager(_$ArchivioSalute db, $VociDiarioTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$VociDiarioTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$VociDiarioTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$VociDiarioTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idSulServer = const Value.absent(),
+                Value<DateTime> mangiatoIl = const Value.absent(),
+                Value<String> pasto = const Value.absent(),
+                Value<String> descrizione = const Value.absent(),
+                Value<double?> grammi = const Value.absent(),
+                Value<double?> quantita = const Value.absent(),
+                Value<String?> unita = const Value.absent(),
+                Value<double?> kcal = const Value.absent(),
+                Value<double?> proteine = const Value.absent(),
+                Value<double?> carboidrati = const Value.absent(),
+                Value<double?> grassi = const Value.absent(),
+                Value<double?> kcal100 = const Value.absent(),
+                Value<double?> proteine100 = const Value.absent(),
+                Value<double?> carboidrati100 = const Value.absent(),
+                Value<double?> grassi100 = const Value.absent(),
+                Value<String> fonte = const Value.absent(),
+                Value<String?> aiGrezzo = const Value.absent(),
+                Value<int?> pianoId = const Value.absent(),
+                Value<int?> alimentoId = const Value.absent(),
+                Value<DateTime> scrittaIl = const Value.absent(),
+              }) => VociDiarioCompanion(
+                id: id,
+                idSulServer: idSulServer,
+                mangiatoIl: mangiatoIl,
+                pasto: pasto,
+                descrizione: descrizione,
+                grammi: grammi,
+                quantita: quantita,
+                unita: unita,
+                kcal: kcal,
+                proteine: proteine,
+                carboidrati: carboidrati,
+                grassi: grassi,
+                kcal100: kcal100,
+                proteine100: proteine100,
+                carboidrati100: carboidrati100,
+                grassi100: grassi100,
+                fonte: fonte,
+                aiGrezzo: aiGrezzo,
+                pianoId: pianoId,
+                alimentoId: alimentoId,
+                scrittaIl: scrittaIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idSulServer = const Value.absent(),
+                required DateTime mangiatoIl,
+                required String pasto,
+                required String descrizione,
+                Value<double?> grammi = const Value.absent(),
+                Value<double?> quantita = const Value.absent(),
+                Value<String?> unita = const Value.absent(),
+                Value<double?> kcal = const Value.absent(),
+                Value<double?> proteine = const Value.absent(),
+                Value<double?> carboidrati = const Value.absent(),
+                Value<double?> grassi = const Value.absent(),
+                Value<double?> kcal100 = const Value.absent(),
+                Value<double?> proteine100 = const Value.absent(),
+                Value<double?> carboidrati100 = const Value.absent(),
+                Value<double?> grassi100 = const Value.absent(),
+                Value<String> fonte = const Value.absent(),
+                Value<String?> aiGrezzo = const Value.absent(),
+                Value<int?> pianoId = const Value.absent(),
+                Value<int?> alimentoId = const Value.absent(),
+                Value<DateTime> scrittaIl = const Value.absent(),
+              }) => VociDiarioCompanion.insert(
+                id: id,
+                idSulServer: idSulServer,
+                mangiatoIl: mangiatoIl,
+                pasto: pasto,
+                descrizione: descrizione,
+                grammi: grammi,
+                quantita: quantita,
+                unita: unita,
+                kcal: kcal,
+                proteine: proteine,
+                carboidrati: carboidrati,
+                grassi: grassi,
+                kcal100: kcal100,
+                proteine100: proteine100,
+                carboidrati100: carboidrati100,
+                grassi100: grassi100,
+                fonte: fonte,
+                aiGrezzo: aiGrezzo,
+                pianoId: pianoId,
+                alimentoId: alimentoId,
+                scrittaIl: scrittaIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$VociDiarioTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $VociDiarioTable,
+      VoceDiario,
+      $$VociDiarioTableFilterComposer,
+      $$VociDiarioTableOrderingComposer,
+      $$VociDiarioTableAnnotationComposer,
+      $$VociDiarioTableCreateCompanionBuilder,
+      $$VociDiarioTableUpdateCompanionBuilder,
+      (
+        VoceDiario,
+        BaseReferences<_$ArchivioSalute, $VociDiarioTable, VoceDiario>,
+      ),
+      VoceDiario,
+      PrefetchHooks Function()
+    >;
+typedef $$PreferitiCiboTableCreateCompanionBuilder =
+    PreferitiCiboCompanion Function({
+      Value<int> id,
+      Value<int?> idSulServer,
+      required String descrizione,
+      Value<bool> ePasto,
+      Value<String?> voci,
+      Value<double?> grammi,
+      Value<double?> quantita,
+      Value<String?> unita,
+      Value<double?> kcal,
+      Value<double?> proteine,
+      Value<double?> carboidrati,
+      Value<double?> grassi,
+      Value<double?> kcal100,
+      Value<double?> proteine100,
+      Value<double?> carboidrati100,
+      Value<double?> grassi100,
+      Value<DateTime> salvatoIl,
+    });
+typedef $$PreferitiCiboTableUpdateCompanionBuilder =
+    PreferitiCiboCompanion Function({
+      Value<int> id,
+      Value<int?> idSulServer,
+      Value<String> descrizione,
+      Value<bool> ePasto,
+      Value<String?> voci,
+      Value<double?> grammi,
+      Value<double?> quantita,
+      Value<String?> unita,
+      Value<double?> kcal,
+      Value<double?> proteine,
+      Value<double?> carboidrati,
+      Value<double?> grassi,
+      Value<double?> kcal100,
+      Value<double?> proteine100,
+      Value<double?> carboidrati100,
+      Value<double?> grassi100,
+      Value<DateTime> salvatoIl,
+    });
+
+class $$PreferitiCiboTableFilterComposer
+    extends Composer<_$ArchivioSalute, $PreferitiCiboTable> {
+  $$PreferitiCiboTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get ePasto => $composableBuilder(
+    column: $table.ePasto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get voci => $composableBuilder(
+    column: $table.voci,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grammi => $composableBuilder(
+    column: $table.grammi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get quantita => $composableBuilder(
+    column: $table.quantita,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unita => $composableBuilder(
+    column: $table.unita,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteine => $composableBuilder(
+    column: $table.proteine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grassi => $composableBuilder(
+    column: $table.grassi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kcal100 => $composableBuilder(
+    column: $table.kcal100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grassi100 => $composableBuilder(
+    column: $table.grassi100,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get salvatoIl => $composableBuilder(
+    column: $table.salvatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PreferitiCiboTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $PreferitiCiboTable> {
+  $$PreferitiCiboTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get ePasto => $composableBuilder(
+    column: $table.ePasto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get voci => $composableBuilder(
+    column: $table.voci,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grammi => $composableBuilder(
+    column: $table.grammi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get quantita => $composableBuilder(
+    column: $table.quantita,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unita => $composableBuilder(
+    column: $table.unita,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get kcal => $composableBuilder(
+    column: $table.kcal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteine => $composableBuilder(
+    column: $table.proteine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grassi => $composableBuilder(
+    column: $table.grassi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get kcal100 => $composableBuilder(
+    column: $table.kcal100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grassi100 => $composableBuilder(
+    column: $table.grassi100,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get salvatoIl => $composableBuilder(
+    column: $table.salvatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PreferitiCiboTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $PreferitiCiboTable> {
+  $$PreferitiCiboTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get idSulServer => $composableBuilder(
+    column: $table.idSulServer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get descrizione => $composableBuilder(
+    column: $table.descrizione,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get ePasto =>
+      $composableBuilder(column: $table.ePasto, builder: (column) => column);
+
+  GeneratedColumn<String> get voci =>
+      $composableBuilder(column: $table.voci, builder: (column) => column);
+
+  GeneratedColumn<double> get grammi =>
+      $composableBuilder(column: $table.grammi, builder: (column) => column);
+
+  GeneratedColumn<double> get quantita =>
+      $composableBuilder(column: $table.quantita, builder: (column) => column);
+
+  GeneratedColumn<String> get unita =>
+      $composableBuilder(column: $table.unita, builder: (column) => column);
+
+  GeneratedColumn<double> get kcal =>
+      $composableBuilder(column: $table.kcal, builder: (column) => column);
+
+  GeneratedColumn<double> get proteine =>
+      $composableBuilder(column: $table.proteine, builder: (column) => column);
+
+  GeneratedColumn<double> get carboidrati => $composableBuilder(
+    column: $table.carboidrati,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get grassi =>
+      $composableBuilder(column: $table.grassi, builder: (column) => column);
+
+  GeneratedColumn<double> get kcal100 =>
+      $composableBuilder(column: $table.kcal100, builder: (column) => column);
+
+  GeneratedColumn<double> get proteine100 => $composableBuilder(
+    column: $table.proteine100,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get carboidrati100 => $composableBuilder(
+    column: $table.carboidrati100,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get grassi100 =>
+      $composableBuilder(column: $table.grassi100, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get salvatoIl =>
+      $composableBuilder(column: $table.salvatoIl, builder: (column) => column);
+}
+
+class $$PreferitiCiboTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $PreferitiCiboTable,
+          PreferitoCibo,
+          $$PreferitiCiboTableFilterComposer,
+          $$PreferitiCiboTableOrderingComposer,
+          $$PreferitiCiboTableAnnotationComposer,
+          $$PreferitiCiboTableCreateCompanionBuilder,
+          $$PreferitiCiboTableUpdateCompanionBuilder,
+          (
+            PreferitoCibo,
+            BaseReferences<
+              _$ArchivioSalute,
+              $PreferitiCiboTable,
+              PreferitoCibo
+            >,
+          ),
+          PreferitoCibo,
+          PrefetchHooks Function()
+        > {
+  $$PreferitiCiboTableTableManager(
+    _$ArchivioSalute db,
+    $PreferitiCiboTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PreferitiCiboTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PreferitiCiboTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PreferitiCiboTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idSulServer = const Value.absent(),
+                Value<String> descrizione = const Value.absent(),
+                Value<bool> ePasto = const Value.absent(),
+                Value<String?> voci = const Value.absent(),
+                Value<double?> grammi = const Value.absent(),
+                Value<double?> quantita = const Value.absent(),
+                Value<String?> unita = const Value.absent(),
+                Value<double?> kcal = const Value.absent(),
+                Value<double?> proteine = const Value.absent(),
+                Value<double?> carboidrati = const Value.absent(),
+                Value<double?> grassi = const Value.absent(),
+                Value<double?> kcal100 = const Value.absent(),
+                Value<double?> proteine100 = const Value.absent(),
+                Value<double?> carboidrati100 = const Value.absent(),
+                Value<double?> grassi100 = const Value.absent(),
+                Value<DateTime> salvatoIl = const Value.absent(),
+              }) => PreferitiCiboCompanion(
+                id: id,
+                idSulServer: idSulServer,
+                descrizione: descrizione,
+                ePasto: ePasto,
+                voci: voci,
+                grammi: grammi,
+                quantita: quantita,
+                unita: unita,
+                kcal: kcal,
+                proteine: proteine,
+                carboidrati: carboidrati,
+                grassi: grassi,
+                kcal100: kcal100,
+                proteine100: proteine100,
+                carboidrati100: carboidrati100,
+                grassi100: grassi100,
+                salvatoIl: salvatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> idSulServer = const Value.absent(),
+                required String descrizione,
+                Value<bool> ePasto = const Value.absent(),
+                Value<String?> voci = const Value.absent(),
+                Value<double?> grammi = const Value.absent(),
+                Value<double?> quantita = const Value.absent(),
+                Value<String?> unita = const Value.absent(),
+                Value<double?> kcal = const Value.absent(),
+                Value<double?> proteine = const Value.absent(),
+                Value<double?> carboidrati = const Value.absent(),
+                Value<double?> grassi = const Value.absent(),
+                Value<double?> kcal100 = const Value.absent(),
+                Value<double?> proteine100 = const Value.absent(),
+                Value<double?> carboidrati100 = const Value.absent(),
+                Value<double?> grassi100 = const Value.absent(),
+                Value<DateTime> salvatoIl = const Value.absent(),
+              }) => PreferitiCiboCompanion.insert(
+                id: id,
+                idSulServer: idSulServer,
+                descrizione: descrizione,
+                ePasto: ePasto,
+                voci: voci,
+                grammi: grammi,
+                quantita: quantita,
+                unita: unita,
+                kcal: kcal,
+                proteine: proteine,
+                carboidrati: carboidrati,
+                grassi: grassi,
+                kcal100: kcal100,
+                proteine100: proteine100,
+                carboidrati100: carboidrati100,
+                grassi100: grassi100,
+                salvatoIl: salvatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PreferitiCiboTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $PreferitiCiboTable,
+      PreferitoCibo,
+      $$PreferitiCiboTableFilterComposer,
+      $$PreferitiCiboTableOrderingComposer,
+      $$PreferitiCiboTableAnnotationComposer,
+      $$PreferitiCiboTableCreateCompanionBuilder,
+      $$PreferitiCiboTableUpdateCompanionBuilder,
+      (
+        PreferitoCibo,
+        BaseReferences<_$ArchivioSalute, $PreferitiCiboTable, PreferitoCibo>,
+      ),
+      PreferitoCibo,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -10873,4 +14014,8 @@ class $ArchivioSaluteManager {
       $$BruciateDichiarateTableTableManager(_db, _db.bruciateDichiarate);
   $$SchedeSulTelefonoTableTableManager get schedeSulTelefono =>
       $$SchedeSulTelefonoTableTableManager(_db, _db.schedeSulTelefono);
+  $$VociDiarioTableTableManager get vociDiario =>
+      $$VociDiarioTableTableManager(_db, _db.vociDiario);
+  $$PreferitiCiboTableTableManager get preferitiCibo =>
+      $$PreferitiCiboTableTableManager(_db, _db.preferitiCibo);
 }

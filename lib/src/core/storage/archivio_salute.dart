@@ -47,6 +47,8 @@ part 'archivio_salute.g.dart';
     VersioniDelleSchede,
     BruciateDichiarate,
     SchedeSulTelefono,
+    VociDiario,
+    PreferitiCibo,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -73,7 +75,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -554,6 +556,23 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 25 && da >= 2) {
         await m.addColumn(misureCorpo, misureCorpo.massaMagraKg);
         await m.addColumn(misureCorpo, misureCorpo.origine);
+      }
+
+      /*
+       * v25 → v26 (Parte I, I1): **il diario alimentare arriva sul telefono**.
+       *
+       * ⚠️ **Le tabelle si creano vuote, e per ora nessuno ci scrive.** Il
+       * traslocо dei dati è I3, e collegarlo all'app è il passo dopo: creare lo
+       * schema e cambiare i lettori nello stesso giro vorrebbe dire un'app che
+       * legge di qua e scrive di là, cioè pasti che spariscono.
+       *
+       * 💡 Finiscono nel backup **da sole**: `esportaPerBackup()` enumera
+       * `allTables`, e questo è il motivo per cui l'elenco non si scrive a mano
+       * (R4).
+       */
+      if (da < 26) {
+        await m.createTable(vociDiario);
+        await m.createTable(preferitiCibo);
       }
     },
   );
@@ -1894,6 +1913,101 @@ class ArchivioSalute extends _$ArchivioSalute {
     return riga?.finitoIl;
   }
 
+  // ─────────────────────── diario alimentare (I1) ───────────────────────
+
+  /// Le voci di un giorno, in ordine di pasto e poi di scrittura.
+  ///
+  /// ══ 🚨 IL GIORNO SI CONFRONTA SUL GIORNO, NON SULL'ISTANTE ═══════════
+  ///
+  /// `mangiatoIl` porta la **mezzanotte** del giorno scelto (è ciò che l'app
+  /// manda al server da sempre), quindi un confronto `>= giorno && < domani`
+  /// funziona. ⚠️ Ma non si dà per scontato: la finestra è esplicita, così il
+  /// giorno che qualcuno scriverà l'ora vera questa lettura continuerà a
+  /// rispondere giusto.
+  Future<List<VoceDiario>> vociDelGiorno(DateTime giorno) {
+    final da = _soloGiorno(giorno);
+    final a = da.add(const Duration(days: 1));
+
+    return (select(vociDiario)
+          ..where((t) => t.mangiatoIl.isBiggerOrEqualValue(da))
+          ..where((t) => t.mangiatoIl.isSmallerThanValue(a))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.mangiatoIl),
+            (t) => OrderingTerm.asc(t.scrittaIl),
+          ]))
+        .get();
+  }
+
+  /// Le voci di un intervallo, per la settimana e per i grafici.
+  ///
+  /// 💡 Una lettura sola invece di una al giorno: sette query per disegnare una
+  /// settimana sono sette viaggi nel database per una risposta che sta in uno.
+  Future<List<VoceDiario>> vociFra(DateTime da, DateTime a) {
+    final inizio = _soloGiorno(da);
+    final fine = _soloGiorno(a).add(const Duration(days: 1));
+
+    return (select(vociDiario)
+          ..where((t) => t.mangiatoIl.isBiggerOrEqualValue(inizio))
+          ..where((t) => t.mangiatoIl.isSmallerThanValue(fine))
+          ..orderBy([(t) => OrderingTerm.asc(t.mangiatoIl)]))
+        .get();
+  }
+
+  /// Quante voci ci sono in tutto. 🚨 Serve a I3: il server confronta questo
+  /// numero con il suo **prima** di cancellare qualcosa.
+  Future<int> quanteVociDelDiario() async {
+    final riga = await (selectOnly(vociDiario)
+          ..addColumns([vociDiario.id.count()]))
+        .getSingle();
+
+    return riga.read(vociDiario.id.count()) ?? 0;
+  }
+
+  /// Scrive una voce e torna il suo id locale.
+  Future<int> scriviVoceDiario(VociDiarioCompanion voce) =>
+      into(vociDiario).insert(voce);
+
+  /// Scrive un pacchetto di voci in un colpo solo — I3.
+  ///
+  /// ══ 🚨 `insertOrIgnore` SU `idSulServer`, E NON È UN DETTAGLIO ═══════
+  ///
+  /// La migrazione può girare **due volte**: l'app si chiude a metà, il telefono
+  /// perde la rete, la persona reinstalla. ⛔ Senza questa guardia il secondo
+  /// giro raddoppierebbe il diario — e nessuno se ne accorgerebbe finché non
+  /// guarda le calorie di un giorno vecchio.
+  ///
+  /// ⚠️ Le voci **nate qui** hanno `idSulServer` a `null` e non sono toccate da
+  /// questa strada: si scrivono con [scriviVoceDiario].
+  Future<void> importaVociDelDiario(List<VociDiarioCompanion> voci) async {
+    if (voci.isEmpty) return;
+
+    await batch((b) => b.insertAll(vociDiario, voci, mode: InsertMode.insertOrIgnore));
+  }
+
+  Future<void> cancellaVoceDiario(int id) =>
+      (delete(vociDiario)..where((t) => t.id.equals(id))).go();
+
+  // ── i preferiti ────────────────────────────────────────────────────────
+
+  Future<List<PreferitoCibo>> preferitiDelDiario() =>
+      (select(preferitiCibo)
+            ..orderBy([(t) => OrderingTerm.desc(t.salvatoIl)]))
+          .get();
+
+  Future<int> scriviPreferito(PreferitiCiboCompanion preferito) =>
+      into(preferitiCibo).insert(preferito);
+
+  Future<void> importaPreferiti(List<PreferitiCiboCompanion> preferiti) async {
+    if (preferiti.isEmpty) return;
+
+    await batch(
+      (b) => b.insertAll(preferitiCibo, preferiti, mode: InsertMode.insertOrIgnore),
+    );
+  }
+
+  Future<void> cancellaPreferito(int id) =>
+      (delete(preferitiCibo)..where((t) => t.id.equals(id))).go();
+
   // ─────────────────────────── corpo (S5.2) ───────────────────────────
 
   /// Registra una misura del corpo.
@@ -2850,6 +2964,169 @@ class CampioniSonno extends Table {
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
     {fonte, iniziatoIl},
+  ];
+}
+
+/// Il diario alimentare, **sul telefono** — Parte I, I1.
+///
+/// ══ 📌 PERCHÉ SI SPOSTA ═══════════════════════════════════════════════════
+///
+/// 📌 Regola R3 del progetto: *«tutto ciò che è anche lontanamente sensibile
+/// resta sul telefono»*. 🚨 Cosa mangia una persona è **dato dell'art. 9**, ed
+/// era l'ultima tabella grossa di dati personali rimasta sul server: peso,
+/// sonno, allenamenti e schede se ne sono andati fra S5, D9 e la FASE 11.
+///
+/// ══ ⛔ COSA NON C'È, E NON È UNA DIMENTICANZA ════════════════════════════
+///
+/// **Niente `tenant_id`, niente `user_id`.** Questo database è il telefono di
+/// **una** persona: una colonna che dice di chi è la riga sarebbe una colonna
+/// con sempre lo stesso valore, e il giorno che qualcuno la leggesse per
+/// filtrare avrebbe scritto un filtro che non filtra.
+///
+/// 💡 È la stessa scelta di `MisureCorpo` e `SeduteAllenamento`.
+///
+/// ══ 🚨 `idSulServer`: SERVE ALLA MIGRAZIONE, E SOLO A QUELLA ═════════════
+///
+/// Una riga che arriva dal server porta il suo id di là, così I3 può rileggere
+/// il pacchetto **due volte senza duplicare** — e il server può confrontare i
+/// conteggi prima di cancellare qualcosa.
+///
+/// ⛔ `null` per tutto ciò che nasce qui, che dopo il trasloco sarà la
+/// maggioranza. ⚠️ **Non è una chiave**: due telefoni della stessa persona
+/// possono avere id locali diversi per la stessa voce, e va bene — la copia
+/// autorevole è una sola, e viaggia nel backup.
+@DataClassName('VoceDiario')
+class VociDiario extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// L'id che questa riga aveva su `food_entries`. Vedi la nota in testa.
+  IntColumn get idSulServer => integer().nullable()();
+
+  /// Quando è stata mangiata.
+  ///
+  /// ⚠️ **Oggi l'app manda la mezzanotte del giorno scelto**, non l'ora vera:
+  /// `eaten_at` sul server vale `selectedDate`. 🚨 Qui si conserva così com'è
+  /// per non inventare un'ora che non è mai stata misurata — e per sapere
+  /// *quando* una voce è stata scritta c'è [scrittaIl], che è un dato vero.
+  DateTimeColumn get mangiatoIl => dateTime()();
+
+  /// `breakfast`, `morning_snack`, `lunch`, `afternoon_snack`, `dinner`,
+  /// `evening_snack`. 💡 La **chiave**, non l'etichetta: le etichette cambiano.
+  TextColumn get pasto => text().withLength(min: 1, max: 24)();
+
+  TextColumn get descrizione => text().withLength(min: 1, max: 255)();
+
+  RealColumn get grammi => real().nullable()();
+  RealColumn get quantita => real().nullable()();
+  TextColumn get unita => text().withLength(min: 1, max: 16).nullable()();
+
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteine => real().nullable()();
+  RealColumn get carboidrati => real().nullable()();
+  RealColumn get grassi => real().nullable()();
+
+  /// I valori per 100 g/ml, che servono a ricalcolare quando si corregge la
+  /// quantità. ⛔ Senza, cambiare «100 g» in «150 g» richiederebbe di
+  /// richiedere la stima da capo — cioè di pagare un gettone per una moltiplicazione.
+  RealColumn get kcal100 => real().nullable()();
+  RealColumn get proteine100 => real().nullable()();
+  RealColumn get carboidrati100 => real().nullable()();
+  RealColumn get grassi100 => real().nullable()();
+
+  /// `manual`, `ai_text`, `ai_photo`, `plan`, `favorite`, `catalog`…
+  ///
+  /// 💡 È quello che permette di dire «questo numero l'ha stimato l'AI» accanto
+  /// alla voce, ed è anche l'unico modo di sapere **quanto** ci si può fidare.
+  TextColumn get fonte => text().withLength(min: 1, max: 16).withDefault(
+    const Constant('manual'),
+  )();
+
+  /// La risposta grezza del modello, quando la voce viene da una stima.
+  ///
+  /// ⚠️ Serve a spiegare un numero che qualcuno contesta — *«non è stato
+  /// specificato se sono panate»* — ed è il campo che il 12/08 ha spiegato una
+  /// stima sbagliata mentre `confidence` diceva 0.85.
+  TextColumn get aiGrezzo => text().nullable()();
+
+  /// Da quale piano alimentare viene, se viene da un piano.
+  IntColumn get pianoId => integer().nullable()();
+
+  /// L'alimento del catalogo condiviso, se è stato riconosciuto.
+  ///
+  /// 🚨 **Il catalogo resta sul server** ed è giusto così: non è di nessuno.
+  /// Qui c'è solo il riferimento.
+  IntColumn get alimentoId => integer().nullable()();
+
+  /// Quando la riga è stata **scritta**, che è un'altra cosa da [mangiatoIl].
+  ///
+  /// 💡 È il campo che distingue una cena **programmata** alle 10 del mattino da
+  /// una cena mangiata alle 21 — la stessa distinzione che il consiglio del
+  /// giorno usa da 3b-AC, dove si chiama `scritto_alle` e viene da `created_at`.
+  DateTimeColumn get scrittaIl =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  /// ⚠️ **L'indice unico è ciò che rende vero `insertOrIgnore`** — I1.
+  ///
+  /// ⛔ `insertOrIgnore` ignora su **violazione di vincolo**: senza questo, una
+  /// migrazione ripetuta scriverebbe tutto due volte, e il difetto si vedrebbe
+  /// solo guardando le calorie di un giorno vecchio.
+  ///
+  /// 💡 I `null` non danno fastidio: in SQLite due `NULL` non sono uguali,
+  /// quindi le voci **nate qui** — `idSulServer` nullo — convivono quante si
+  /// vuole. È esattamente la proprietà che serve.
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {idSulServer},
+  ];
+}
+
+/// I preferiti del diario — Parte I, I1.
+///
+/// 💡 Un piatto che si ripete: si salva una volta e si riusa. ⛔ Sul server
+/// stavano in `food_favorites`, e viaggiano con il diario perché sono fatti
+/// della stessa sostanza — quello che quella persona mangia di solito.
+@DataClassName('PreferitoCibo')
+class PreferitiCibo extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  IntColumn get idSulServer => integer().nullable()();
+
+  TextColumn get descrizione => text().withLength(min: 1, max: 255)();
+
+  /// Se è un **pasto intero** invece di un singolo alimento.
+  BoolColumn get ePasto => boolean().withDefault(const Constant(false))();
+
+  /// Le voci che lo compongono, quando è un pasto. JSON.
+  TextColumn get voci => text().nullable()();
+
+  RealColumn get grammi => real().nullable()();
+  RealColumn get quantita => real().nullable()();
+  TextColumn get unita => text().withLength(min: 1, max: 16).nullable()();
+
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteine => real().nullable()();
+  RealColumn get carboidrati => real().nullable()();
+  RealColumn get grassi => real().nullable()();
+
+  RealColumn get kcal100 => real().nullable()();
+  RealColumn get proteine100 => real().nullable()();
+  RealColumn get carboidrati100 => real().nullable()();
+  RealColumn get grassi100 => real().nullable()();
+
+  DateTimeColumn get salvatoIl => dateTime().withDefault(currentDateAndTime)();
+
+  /// ⚠️ **L'indice unico è ciò che rende vero `insertOrIgnore`** — I1.
+  ///
+  /// ⛔ `insertOrIgnore` ignora su **violazione di vincolo**: senza questo, una
+  /// migrazione ripetuta scriverebbe tutto due volte, e il difetto si vedrebbe
+  /// solo guardando le calorie di un giorno vecchio.
+  ///
+  /// 💡 I `null` non danno fastidio: in SQLite due `NULL` non sono uguali,
+  /// quindi le voci **nate qui** — `idSulServer` nullo — convivono quante si
+  /// vuole. È esattamente la proprietà che serve.
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {idSulServer},
   ];
 }
 

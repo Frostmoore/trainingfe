@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
+import 'features/diary/data/trasloco_del_diario.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
@@ -49,6 +52,36 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _invitoDallInstallazione(),
     );
+
+    /*
+     * ══ 📦 IL DIARIO VIENE A CASA — Parte I / I3, 02/09/2026 ═══════════════
+     *
+     * 🚨 **Quando c'è un accesso, non al primo fotogramma.** All'avvio la
+     * sessione può non esserci ancora — il token si legge dal disco, e chi apre
+     * l'app da spenta passa per qualche istante di «non lo so». ⛔ Partire lì
+     * vorrebbe dire un 401, il trasloco segnato come non riuscito, e un giro a
+     * vuoto a ogni avvio.
+     *
+     * 💡 `listenManual` e non `ref.listen`: quello vive dentro `build`, e questo
+     * deve sopravvivere ai ridisegni — è un gesto che si fa **una volta nella
+     * vita dell'installazione**, non a ogni fotogramma.
+     *
+     * ⚠️ E non blocca niente: se non riesce, si riprova al prossimo accesso.
+     * `Trasloco.porta()` non solleva — torna un esito, e chi lo ignora non
+     * rompe niente.
+     */
+    ref.listenManual(authControllerProvider, (_, stato) {
+      if (stato.isAuthenticated) unawaited(_portaIlDiarioACasa());
+    }, fireImmediately: true);
+  }
+
+  /// 📦 Una volta sola per installazione: ci pensa `Trasloco` a ricordarselo.
+  Future<void> _portaIlDiarioACasa() async {
+    final esito = await ref.read(traslocoProvider).porta();
+
+    if (esito == EsitoTrasloco.fatto) {
+      debugPrint('trasloco: il diario è sul telefono');
+    }
   }
 
   Future<void> _invitoDallInstallazione() async {

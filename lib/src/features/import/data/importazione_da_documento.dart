@@ -134,17 +134,29 @@ class ImportazioneDaDocumento {
       }
     }
 
-    /*
-     * ⚠️ **Le note del modello valgono come un dubbio**: la regola 7 del prompt
-     * gli dice di segnalare lì le parti illeggibili che ha saltato — cioè le
-     * righe che nella bozza **non ci sono**, e che nessuna confidenza può
-     * raccontare.
-     */
+    return incerti;
+  }
+
+  /// Quello che il documento diceva **intorno** alle righe.
+  ///
+  /// ══ ⛔ NON E' UN DUBBIO, E PER UN GIORNO LO E' STATO ══════════════════
+  ///
+  /// La regola 7 del prompt dice al modello di segnalare nelle note le parti
+  /// illeggibili che ha saltato, e da lì era sembrato naturale infilarle fra i
+  /// dubbi. 🚨 **Su un documento vero il modello le usa per tutt'altro**: ci
+  /// mette la frequenza settimanale, la durata della seduta, le regole di
+  /// progressione — un paragrafo intero, su ogni import.
+  ///
+  /// ⛔ Finiva nel riquadro **rosso** dei «punti da guardare». Un avviso rosso
+  /// che compare sempre e dice cose generiche insegna a saltare i riquadri
+  /// rossi — e il giorno che ce n'è uno vero, nessuno lo legge.
+  ///
+  /// 💡 Quindi si mostra, perché è roba scritta sul foglio e buttarla sarebbe
+  /// perdere informazione, ma **in chiaro e non in allarme**.
+  String? get noteDelDocumento {
     final note = bozza?['notes']?.toString().trim() ?? '';
 
-    if (note.isNotEmpty) incerti.add(note);
-
-    return incerti;
+    return note.isEmpty ? null : note;
   }
 
   /// ⚠️ **`bozza ?? {}` e non `bozza?[...]`**, e non e' pignoleria: dentro un
@@ -154,8 +166,7 @@ class ImportazioneDaDocumento {
   String get nome {
     final b = bozza ?? const <String, dynamic>{};
 
-    final letto =
-        (genere == GenereImportato.piano ? b['nome'] : b['name'])
+    final letto = (genere == GenereImportato.piano ? b['nome'] : b['name'])
             ?.toString()
             .trim() ??
         '';
@@ -186,11 +197,11 @@ enum StatoImportazione {
   fallita;
 
   static StatoImportazione da(String? valore) => switch (valore) {
-    'in_lavorazione' => StatoImportazione.inLavorazione,
-    'pronta' => StatoImportazione.pronta,
-    'fallita' => StatoImportazione.fallita,
-    _ => StatoImportazione.inCoda,
-  };
+        'in_lavorazione' => StatoImportazione.inLavorazione,
+        'pronta' => StatoImportazione.pronta,
+        'fallita' => StatoImportazione.fallita,
+        _ => StatoImportazione.inCoda,
+      };
 }
 
 /// Le chiamate al server per importare un documento.

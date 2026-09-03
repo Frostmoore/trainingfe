@@ -52,6 +52,7 @@ class OrigineDellaBozza {
     required this.tipo,
     required this.righeDaControllare,
     this.dubbi = const [],
+    this.note,
   });
 
   /// L'importazione sul server: si chiude dopo il salvataggio.
@@ -87,6 +88,13 @@ class OrigineDellaBozza {
   /// perché portano chi controlla dritto sulle righe che contano.
   final List<String> dubbi;
 
+  /// Quello che il documento diceva **intorno** alle righe.
+  ///
+  /// ⛔ **Non è un dubbio**, e non va nel riquadro rosso: su un documento vero
+  /// sono la frequenza, la durata della seduta, le regole di progressione. Un
+  /// allarme che compare sempre insegna a ignorare gli allarmi.
+  final String? note;
+
   bool get daFotografia => tipo == TipoDiDocumento.immagini;
 
   /// L'avvertenza da mostrare in revisione.
@@ -95,7 +103,7 @@ class OrigineDellaBozza {
   /// obbligatoria comunque, e un avviso che compare sempre si smette di leggere.
   String? get avvertenza => daFotografia
       ? 'Questa bozza viene da una fotografia, e l\'analisi delle immagini è '
-            'generalmente meno accurata di quella dei PDF. Controlla ogni riga '
-            'con l\'originale.'
+          'generalmente meno accurata di quella dei PDF. Controlla ogni riga '
+          'con l\'originale.'
       : null;
 }

@@ -65,6 +65,32 @@ class CappelloDellaRevisione extends StatelessWidget {
           ),
 
         /*
+         * 💡 **Quello che c'era scritto intorno alle righe**, in chiaro.
+         *
+         * ⛔ Non nel riquadro rosso: su un documento vero qui dentro finiscono
+         * la frequenza settimanale, la durata della seduta e le regole di
+         * progressione — cose utili e per niente allarmanti. 🚨 Un avviso rosso
+         * che compare sempre insegna a saltare gli avvisi rossi.
+         */
+        if (origine.note != null)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Gap.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sul documento c\'era scritto anche',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Gap.xs),
+                  Text(origine.note!, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ),
+
+        /*
          * ══ 🚨 I DUBBI DEL MODELLO, IN CIMA E NON SEPOLTI ══════════════════
          *
          * Sono la parte **più utile** di tutta la risposta: portano chi controlla

@@ -182,6 +182,6 @@ class SceltaDeiDocumenti {
   /// legge, uno in meno no.
   TipoDiDocumento _tipoDi(List<DocumentoScelto> documenti) =>
       documenti.every((d) => p.extension(d.nome).toLowerCase() == '.pdf')
-      ? TipoDiDocumento.pdf
-      : TipoDiDocumento.immagini;
+          ? TipoDiDocumento.pdf
+          : TipoDiDocumento.immagini;
 }

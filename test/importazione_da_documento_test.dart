@@ -84,10 +84,21 @@ void main() {
       expect(importazione.tipo, TipoDiDocumento.immagini);
       expect(importazione.quantiDocumenti, 3);
 
-      // La riga incerta **e** la nota del modello: due segnalazioni, non una.
-      expect(importazione.dubbi, hasLength(2));
-      expect(importazione.dubbi.first, contains('Croci ai cavi'));
-      expect(importazione.dubbi.last, contains('illeggibile'));
+      /*
+       * 🚨 **Solo la riga incerta.** Le note del modello NON sono un dubbio, e
+       * per un giorno lo sono state: su un documento vero (K7) il modello ci
+       * mette la frequenza settimanale, la durata della seduta e le regole di
+       * progressione — un paragrafo su ogni import, che finiva nel riquadro
+       * rosso dei «punti da guardare».
+       *
+       * ⛔ Un allarme che compare sempre insegna a saltare gli allarmi, e il
+       * giorno che ce n'è uno vero nessuno lo legge.
+       */
+      expect(importazione.dubbi, hasLength(1));
+      expect(importazione.dubbi.single, contains('Croci ai cavi'));
+
+      // 💡 Ma non si buttano: si mostrano in chiaro, fuori dal rosso.
+      expect(importazione.noteDelDocumento, contains('illeggibile'));
     });
 
     test('una bozza che non c\'è ancora non fa esplodere niente', () {

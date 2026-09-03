@@ -151,14 +151,14 @@ PastoDelPiano _pastoDa(Map<String, dynamic> dati) {
 }
 
 AlimentoDelPiano _alimentoDa(Map<String, dynamic> dati) => AlimentoDelPiano(
-  descrizione: dati['descrizione']?.toString() ?? '',
-  grammi: (dati['grammi'] as num?)?.toDouble(),
+      descrizione: dati['descrizione']?.toString() ?? '',
+      grammi: (dati['grammi'] as num?)?.toDouble(),
 
-  /*
+      /*
    * 🚨 **`origineValori: 'ai'`, e non è un'etichetta di comodo.** Dice che quei
    * numeri non li ha scritti una persona: è il campo su cui l'app decide se un
    * valore si può sovrascrivere con una stima, e trattarli come `manual`
    * vorrebbe dire proteggere per sempre una cifra letta male da una fotografia.
    */
-  origineValori: 'ai',
-);
+      origineValori: 'ai',
+    );

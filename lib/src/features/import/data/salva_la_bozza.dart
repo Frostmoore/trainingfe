@@ -159,11 +159,12 @@ class SalvaLaBozza {
     SchedaAllenamento scheda,
     int importazioneId, {
     required int indice,
-  }) => _archivio.scriviSchedaImportata(
-    origineId: 'importazione:$importazioneId:$indice',
-    nome: scheda.nome,
-    scheda: jsonEncode(scheda.toJson()),
-  );
+  }) =>
+      _archivio.scriviSchedaImportata(
+        origineId: 'importazione:$importazioneId:$indice',
+        nome: scheda.nome,
+        scheda: jsonEncode(scheda.toJson()),
+      );
 }
 
 final salvaLaBozzaProvider = Provider<SalvaLaBozza>(

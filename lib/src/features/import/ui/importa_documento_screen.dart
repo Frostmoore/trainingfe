@@ -119,12 +119,12 @@ class _ImportaDocumentoScreenState
             title: Text(
               _eScheda
                   ? 'Dichiaro che questa scheda me l\'ha data chi mi segue in '
-                        'palestra, o l\'ho scritta io, e che la importo sotto '
-                        'la mia responsabilità.'
+                      'palestra, o l\'ho scritta io, e che la importo sotto '
+                      'la mia responsabilità.'
                   : 'Dichiaro che questo piano è stato redatto da un '
-                        'professionista abilitato (medico, biologo '
-                        'nutrizionista o dietista) e che lo importo sotto la '
-                        'mia responsabilità.',
+                      'professionista abilitato (medico, biologo '
+                      'nutrizionista o dietista) e che lo importo sotto la '
+                      'mia responsabilità.',
             ),
           ),
 
@@ -206,7 +206,7 @@ class _ImportaDocumentoScreenState
       setState(
         () => _errore =
             'Più di ${SceltaDeiDocumenti.alMassimo} pagine non riesco a '
-            'leggerle in una volta.',
+                'leggerle in una volta.',
       );
 
       return;
@@ -230,9 +230,9 @@ class _ImportaDocumentoScreenState
 
   String? _troppoGrande(DocumentiScelti scelti) =>
       scelti.byteTotali > ImportaDocumentoScreen.tetto
-      ? 'Insieme superano i 10 MB: non riesco a caricarli. Prova con meno '
-            'pagine, o con il PDF invece delle fotografie.'
-      : null;
+          ? 'Insieme superano i 10 MB: non riesco a caricarli. Prova con meno '
+              'pagine, o con il PDF invece delle fotografie.'
+          : null;
 
   // ───────────────────────── il viaggio ─────────────────────────
 
@@ -290,8 +290,7 @@ class _ImportaDocumentoScreenState
 
       if (importazione.stato == StatoImportazione.fallita) {
         setState(() {
-          _errore =
-              'Non sono riuscito a leggere questo documento. '
+          _errore = 'Non sono riuscito a leggere questo documento. '
               '${importazione.errore ?? ''}\n\n'
               'I gettoni non sono stati scalati.';
           _inCorso = false;
@@ -333,6 +332,7 @@ class _ImportaDocumentoScreenState
       tipo: importazione.tipo,
       righeDaControllare: importazione.righe,
       dubbi: importazione.dubbi,
+      note: importazione.noteDelDocumento,
     );
 
     final bozza = importazione.bozza ?? const <String, dynamic>{};
@@ -421,14 +421,14 @@ class _Spiegazione extends StatelessWidget {
             Text(
               scheda
                   ? 'Carichi il PDF o le fotografie della scheda che ti hanno '
-                        'dato. Un modello la ricopia riga per riga, tu la '
-                        'controlli nello stesso editor con cui scriveresti una '
-                        'scheda da zero, e solo allora diventa la tua.'
+                      'dato. Un modello la ricopia riga per riga, tu la '
+                      'controlli nello stesso editor con cui scriveresti una '
+                      'scheda da zero, e solo allora diventa la tua.'
                   : 'Carichi il PDF o le fotografie del piano che ti ha dato il '
-                        'tuo professionista. Un modello lo ricopia riga per '
-                        'riga, tu lo controlli nello stesso editor con cui '
-                        'scriveresti un piano da zero, e solo allora diventa il '
-                        'tuo.',
+                      'tuo professionista. Un modello lo ricopia riga per '
+                      'riga, tu lo controlli nello stesso editor con cui '
+                      'scriveresti un piano da zero, e solo allora diventa il '
+                      'tuo.',
               style: testi.bodyMedium,
             ),
             const SizedBox(height: Gap.sm),

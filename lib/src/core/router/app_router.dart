@@ -17,8 +17,9 @@ import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/forma/ui/schermata_forma.dart';
 import '../../features/home/ui/home_shell.dart';
+import '../../features/import/data/importazione_da_documento.dart';
+import '../../features/import/ui/importa_documento_screen.dart';
 import '../../features/nutrition/ui/compositore_consigli.dart';
-import '../../features/nutrition/ui/importa_piano_screen.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/schermata_benvenuto.dart';
@@ -142,6 +143,12 @@ class AppRoutes {
   /// allena. Questa e' una funzione **della persona**: importa il piano che le
   /// ha dato il suo professionista, e nessun trainer la vede o la usa.
   static const importaPiano = '/diario/importa-piano';
+
+  /// 🆕 K5 — l'importazione di una **scheda** da un documento.
+  ///
+  /// ⚠️ Due rotte e una schermata sola: quello che cambia è il `genere`, e due
+  /// schermate gemelle vorrebbero dire due posti dove correggere ogni cosa.
+  static const importaScheda = '/schede/importa';
 
   /// Le schede scritte dal trainer — G7.2.
   ///
@@ -473,7 +480,23 @@ final routerProvider = Provider<GoRouter>((ref) {
        */
       GoRoute(
         path: AppRoutes.importaPiano,
-        builder: (_, _) => const PortaDelleChiavi(child: ImportaPianoScreen()),
+        builder: (_, _) => const PortaDelleChiavi(
+          child: ImportaDocumentoScreen(genere: GenereImportato.piano),
+        ),
+      ),
+
+      /*
+       * 🆕 K5 - l'importazione di una scheda da un documento.
+       *
+       * 🚨 E' dell'iscritto, non del trainer, esattamente come il piano: la
+       * scheda importata resta **sul telefono**, e il server non ha nessuna
+       * rotta che permetta a qualcun altro di leggerla.
+       */
+      GoRoute(
+        path: AppRoutes.importaScheda,
+        builder: (_, _) => const PortaDelleChiavi(
+          child: ImportaDocumentoScreen(genere: GenereImportato.scheda),
+        ),
       ),
       GoRoute(
         path: AppRoutes.compositorePiano,

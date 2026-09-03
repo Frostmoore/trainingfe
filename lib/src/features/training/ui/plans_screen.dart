@@ -12,6 +12,7 @@ import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
 import '../../acquisti/data/costo_delle_funzioni.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
+import '../../import/ui/importa_documento_screen.dart';
 import '../../profile/corpo_controller.dart';
 import '../../progress/ui/progress_screen.dart';
 import '../data/calorie_allenamento.dart';
@@ -246,10 +247,26 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               message:
                   'Il tuo trainer non te ne ha ancora assegnata una, '
                   'ma puoi scrivertene una tu.',
-              action: FilledButton.icon(
-                onPressed: () => nuovaScheda(context),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Crea una scheda'),
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => nuovaScheda(context),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Crea una scheda'),
+                  ),
+                  const SizedBox(height: Gap.sm),
+
+                  /*
+                   * 🆕 **K5.2 — e se ce l'ha gia' su un foglio, la importa.**
+                   *
+                   * 🚨 Qui e non in un menu: chi apre questa schermata e non
+                   * trova niente e' esattamente chi ha la scheda **stampata in
+                   * borsa**. Una funzione che esiste e non si trova, per chi
+                   * guarda, e' identica al non averla.
+                   */
+                  const _ImportaUnaScheda(),
+                ],
               ),
             )
           : RefreshIndicator(
@@ -298,10 +315,18 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                     const SizedBox(height: Gap.md),
                 itemBuilder: (context, index) => switch (index) {
                   0 => const _ProgrammaLaSettimana(),
-                  _ when index == elenco.length + 1 => OutlinedButton.icon(
-                    onPressed: () => nuovaScheda(context),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Nuova scheda'),
+                  _ when index == elenco.length + 1 => Column(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => nuovaScheda(context),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Nuova scheda'),
+                      ),
+                      const SizedBox(height: Gap.sm),
+
+                      // 🆕 K5.2 — vedi la nota nel vuoto qui sopra.
+                      const _ImportaUnaScheda(),
+                    ],
                   ),
                   _ => _SchedaCard(
                     scheda: elenco[index - 1],
@@ -1022,6 +1047,24 @@ class _AvviaAllenamento extends ConsumerWidget {
 ///
 /// 🚨 Chi chiude il foglio senza scegliere **non entra**: un editor che si apre
 /// lo stesso renderebbe la domanda una formalita' da saltare.
+/// Il pulsante che porta all'importazione da un documento — K5.2.
+///
+/// ⚠️ **Dice il prezzo**, e lo dice qui: 📌 *«scoprire il prezzo dopo aver
+/// caricato è il modo di far arrabbiare qualcuno per un numero che avrebbe
+/// accettato senza problemi»*.
+class _ImportaUnaScheda extends StatelessWidget {
+  const _ImportaUnaScheda();
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: () => context.push(AppRoutes.importaScheda),
+    icon: const Icon(Icons.document_scanner_outlined),
+    label: const Text(
+      'Importa da PDF o foto · ${ImportaDocumentoScreen.gettoni} gettoni',
+    ),
+  );
+}
+
 Future<void> nuovaScheda(BuildContext context) async {
   final tipo = await chiediIlTipoDiScheda(context);
 

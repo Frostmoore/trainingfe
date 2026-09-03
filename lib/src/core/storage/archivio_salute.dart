@@ -50,6 +50,7 @@ part 'archivio_salute.g.dart';
     VociDiario,
     PreferitiCibo,
     ConsigliDelGiorno,
+    DocumentiImportati,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -76,7 +77,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -604,6 +605,25 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (da < 28) {
         await m.createTable(consigliDelGiorno);
       }
+
+      /*
+       * v28 → v29 (K1-bis): l'originale di un documento importato vive qui.
+       *
+       * 🚨 **Perche' una tabella e non una colonna.** Un import puo' essere
+       * **cinque pagine fotografate**, e `pianiRicevuti.pdfOriginale` e' una
+       * stringa sola: metterci il primo percorso perderebbe gli altri quattro
+       * **in silenzio** — e chi apre l'originale fra sei mesi vedrebbe una
+       * pagina e crederebbe che il documento fosse quello.
+       *
+       * ⚠️ E serve anche alle **schede**, che una colonna per l'originale non
+       * ce l'hanno affatto: `schedeSulTelefono` non ha mai avuto un documento
+       * da cui viene.
+       *
+       * 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
+       */
+      if (da < 29) {
+        await m.createTable(documentiImportati);
+      }
     },
   );
 
@@ -952,7 +972,6 @@ class ArchivioSalute extends _$ArchivioSalute {
         'WHERE seduta_id IN '
         '(SELECT id FROM sedute_allenamento WHERE id_server IS NOT NULL)',
       ),
-
       'daily_burns': await quante(bruciateDichiarate, 'WHERE da_server = 1'),
     };
   }
@@ -1177,11 +1196,11 @@ class ArchivioSalute extends _$ArchivioSalute {
 
       try {
         spostate +=
-            await (update(serieDelleSedute)
-                  ..where((t) => t.esercizioId.equals(rinvio.key)))
-                .write(
-                  SerieDelleSeduteCompanion(esercizioId: Value(rinvio.value)),
-                );
+            await (update(
+              serieDelleSedute,
+            )..where((t) => t.esercizioId.equals(rinvio.key))).write(
+              SerieDelleSeduteCompanion(esercizioId: Value(rinvio.value)),
+            );
       } on Object catch (e) {
         debugPrint(
           'riconciliazione ${rinvio.key}→${rinvio.value} non riuscita: $e',
@@ -1300,10 +1319,11 @@ class ArchivioSalute extends _$ArchivioSalute {
 
       if (!cambiata) continue;
 
-      await (update(schedeSulTelefono)..where((t) => t.id.equals(riga.id)))
-          .write(
-            SchedeSulTelefonoCompanion(scheda: Value(jsonEncode(decodificata))),
-          );
+      await (update(
+        schedeSulTelefono,
+      )..where((t) => t.id.equals(riga.id))).write(
+        SchedeSulTelefonoCompanion(scheda: Value(jsonEncode(decodificata))),
+      );
 
       toccate++;
     }
@@ -1368,23 +1388,23 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     return {
       for (final voce in perEsercizio.entries)
-        voce.key: (voce.value.values.toList()
-              ..sort((a, b) => a.data.compareTo(b.data)))
-            // ⚠️ `takeLast`: si tengono le **ultime** sedute, non le prime.
-            // Con `take()` l'analisi parlerebbe di com'era sei mesi fa.
-            .reversed
-            .take(quanteSedute)
-            .toList()
-            .reversed
-            .toList(),
+        voce.key:
+            (voce.value.values.toList()
+                  ..sort((a, b) => a.data.compareTo(b.data)))
+                // ⚠️ `takeLast`: si tengono le **ultime** sedute, non le prime.
+                // Con `take()` l'analisi parlerebbe di com'era sei mesi fa.
+                .reversed
+                .take(quanteSedute)
+                .toList()
+                .reversed
+                .toList(),
     };
   }
 
   /// L'analisi già scritta per una scheda, se c'è.
-  Future<AnalisiScheda?> analisiDellaScheda(int schedaLocale) =>
-      (select(analisiDelleSchede)
-            ..where((t) => t.schedaLocale.equals(schedaLocale)))
-          .getSingleOrNull();
+  Future<AnalisiScheda?> analisiDellaScheda(int schedaLocale) => (select(
+    analisiDelleSchede,
+  )..where((t) => t.schedaLocale.equals(schedaLocale))).getSingleOrNull();
 
   /// Scrive (o riscrive) l'analisi di una scheda.
   ///
@@ -1436,10 +1456,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// nata prima della v23 — la riga c'è, la sua storia no. ⚠️ Non lo chiama
   /// nessuno in produzione, e non deve: la storia di una scheda si perde solo
   /// insieme alla scheda.
-  Future<void> dimenticaLeVersioni(int schedaLocale) =>
-      (delete(versioniDelleSchede)
-            ..where((t) => t.schedaLocale.equals(schedaLocale)))
-          .go();
+  Future<void> dimenticaLeVersioni(int schedaLocale) => (delete(
+    versioniDelleSchede,
+  )..where((t) => t.schedaLocale.equals(schedaLocale))).go();
 
   /// Registra com'è fatta una scheda **adesso**, se è cambiata.
   ///
@@ -1485,11 +1504,12 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     final adesso = quando ?? DateTime.now();
 
-    final quante = await (selectOnly(versioniDelleSchede)
-          ..addColumns([versioniDelleSchede.id.count()])
-          ..where(versioniDelleSchede.schedaLocale.equals(schedaLocale)))
-        .getSingle()
-        .then((r) => r.read(versioniDelleSchede.id.count()) ?? 0);
+    final quante =
+        await (selectOnly(versioniDelleSchede)
+              ..addColumns([versioniDelleSchede.id.count()])
+              ..where(versioniDelleSchede.schedaLocale.equals(schedaLocale)))
+            .getSingle()
+            .then((r) => r.read(versioniDelleSchede.id.count()) ?? 0);
 
     final dentroLaFinestra =
         ultima != null &&
@@ -1497,8 +1517,9 @@ class ArchivioSalute extends _$ArchivioSalute {
         adesso.difference(ultima.quando) < finestraDiModifica;
 
     if (dentroLaFinestra) {
-      await (update(versioniDelleSchede)
-            ..where((t) => t.id.equals(ultima.id))).write(
+      await (update(
+        versioniDelleSchede,
+      )..where((t) => t.id.equals(ultima.id))).write(
         VersioniDelleSchedeCompanion(
           quando: Value(adesso),
           impronta: Value(impronta),
@@ -1562,8 +1583,7 @@ class ArchivioSalute extends _$ArchivioSalute {
     };
 
     await (delete(versioniDelleSchede)..where(
-          (t) =>
-              t.schedaLocale.equals(schedaLocale) & t.id.isNotIn(daTenere),
+          (t) => t.schedaLocale.equals(schedaLocale) & t.id.isNotIn(daTenere),
         ))
         .go();
   }
@@ -1986,9 +2006,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// Quante voci ci sono in tutto. 🚨 Serve a I3: il server confronta questo
   /// numero con il suo **prima** di cancellare qualcosa.
   Future<int> quanteVociDelDiario() async {
-    final riga = await (selectOnly(vociDiario)
-          ..addColumns([vociDiario.id.count()]))
-        .getSingle();
+    final riga = await (selectOnly(
+      vociDiario,
+    )..addColumns([vociDiario.id.count()])).getSingle();
 
     return riga.read(vociDiario.id.count()) ?? 0;
   }
@@ -2006,9 +2026,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// pasto non fa scattare niente — e non lo dice a nessuno, perché il consiglio
   /// resta quello di prima.
   Future<DateTime?> ultimaScritturaDelDiario() async {
-    final riga = await (selectOnly(vociDiario)
-          ..addColumns([vociDiario.scrittaIl.max()]))
-        .getSingleOrNull();
+    final riga = await (selectOnly(
+      vociDiario,
+    )..addColumns([vociDiario.scrittaIl.max()])).getSingleOrNull();
 
     return riga?.read(vociDiario.scrittaIl.max());
   }
@@ -2043,7 +2063,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> importaVociDelDiario(List<VociDiarioCompanion> voci) async {
     if (voci.isEmpty) return;
 
-    await batch((b) => b.insertAll(vociDiario, voci, mode: InsertMode.insertOrIgnore));
+    await batch(
+      (b) => b.insertAll(vociDiario, voci, mode: InsertMode.insertOrIgnore),
+    );
   }
 
   Future<void> cancellaVoceDiario(int id) =>
@@ -2076,12 +2098,11 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// usato niente ha tutti gli zeri, e senza un terzo criterio l'ordine fra
   /// quelli sarebbe quello che decide SQLite — cioè diverso a ogni lettura.
   Future<List<PreferitoCibo>> preferitiDelDiario() =>
-      (select(preferitiCibo)
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.volteUsato),
-              (t) => OrderingTerm.desc(t.usatoIl),
-              (t) => OrderingTerm.desc(t.salvatoIl),
-            ]))
+      (select(preferitiCibo)..orderBy([
+            (t) => OrderingTerm.desc(t.volteUsato),
+            (t) => OrderingTerm.desc(t.usatoIl),
+            (t) => OrderingTerm.desc(t.salvatoIl),
+          ]))
           .get();
 
   Future<PreferitoCibo?> preferitoDelDiario(int id) =>
@@ -2130,7 +2151,9 @@ class ArchivioSalute extends _$ArchivioSalute {
      * più e non sono ancora tornati**, e un'interruzione lì li perderebbe tutti.
      */
     await transaction(() async {
-      await (delete(preferitiCibo)..where((t) => t.idSulServer.isNotNull())).go();
+      await (delete(
+        preferitiCibo,
+      )..where((t) => t.idSulServer.isNotNull())).go();
 
       await batch((b) => b.insertAll(preferitiCibo, preferiti));
     });
@@ -2146,9 +2169,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ `null` è un esito normale, non un guasto: chi ha reinstallato l'app, o
   /// chi apre da un secondo telefono, quel testo non ce l'ha — e sul server non
   /// c'è più. 💡 Chi legge mostra l'ultimo che ha, con la sua data.
-  Future<ConsiglioDelGiorno?> consiglioDellaFascia(String fascia) =>
-      (select(consigliDelGiorno)..where((t) => t.fascia.equals(fascia)))
-          .getSingleOrNull();
+  Future<ConsiglioDelGiorno?> consiglioDellaFascia(String fascia) => (select(
+    consigliDelGiorno,
+  )..where((t) => t.fascia.equals(fascia))).getSingleOrNull();
 
   /// L'ultimo consiglio che questo telefono ha, di qualunque fascia.
   Future<ConsiglioDelGiorno?> ultimoConsiglio() =>
@@ -2215,8 +2238,9 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     if (tenuti.length < 3) return;
 
-    await (delete(consigliDelGiorno)
-          ..where((t) => t.generatoIl.isSmallerThanValue(tenuti.last.generatoIl)))
+    await (delete(consigliDelGiorno)..where(
+          (t) => t.generatoIl.isSmallerThanValue(tenuti.last.generatoIl),
+        ))
         .go();
   }
 
@@ -2348,9 +2372,7 @@ class ArchivioSalute extends _$ArchivioSalute {
               ..limit(quante))
             .get();
 
-    return righe.reversed
-        .map((r) => r.massaGrassaPct!)
-        .toList(growable: false);
+    return righe.reversed.map((r) => r.massaGrassaPct!).toList(growable: false);
   }
 
   /// Scrive una misura **arrivata da Health Connect** — 3b-W.2.
@@ -2387,9 +2409,9 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     final quando = _soloGiorno(giorno);
 
-    final esistente =
-        await (select(misureCorpo)..where((t) => t.giorno.equals(quando)))
-            .getSingleOrNull();
+    final esistente = await (select(
+      misureCorpo,
+    )..where((t) => t.giorno.equals(quando))).getSingleOrNull();
 
     if (esistente?.origine == origineManuale) return false;
 
@@ -2734,6 +2756,52 @@ class ArchivioSalute extends _$ArchivioSalute {
     return true;
   }
 
+  /// Scrive una scheda **importata da un documento**, senza duplicarla — K3.3.
+  ///
+  /// ══ 🚨 PERCHE' NON BASTA `aggiungiScheda` ═══════════════════════════════
+  ///
+  /// Quella **inserisce e basta**. ⛔ Chi torna indietro dalla revisione e
+  /// riconferma si ritroverebbe le stesse schede due volte, con lo stesso nome e
+  /// lo stesso contenuto: nessun errore, solo un elenco che si sporca — e per
+  /// chi non è abbonato anche il limite delle tre che scatta per niente.
+  ///
+  /// ⚠️ `origineIdStabile` **non è `unique` su questa tabella**, e non può
+  /// diventarlo: le schede arrivate dalla chat lo usano con un'altra semantica,
+  /// e ce ne sono già in giro con lo stesso valore. 💡 Quindi il controllo si fa
+  /// qui, guardando anche `origine`.
+  Future<void> scriviSchedaImportata({
+    required String origineId,
+    required String nome,
+    required String scheda,
+  }) async {
+    final esistente =
+        await (select(schedeSulTelefono)..where(
+              (t) =>
+                  t.origine.equals('importata') &
+                  t.origineIdStabile.equals(origineId),
+            ))
+            .getSingleOrNull();
+
+    if (esistente == null) {
+      await aggiungiScheda(
+        nome: nome,
+        scheda: scheda,
+        mia: true,
+        origine: 'importata',
+        origineIdStabile: origineId,
+      );
+
+      return;
+    }
+
+    /*
+     * 💡 `aggiornaScheda` e non una `update` a mano: mette al sicuro la
+     * versione precedente prima di sovrascrivere, che è la regola di 3b-I.E — e
+     * qui serve davvero, perché il «prima» è la trascrizione grezza dell'AI.
+     */
+    await aggiornaScheda(id: esistente.id, nome: nome, scheda: scheda);
+  }
+
   /// C'è già? Serve alla chat per dire «aggiunta» invece di «aggiungi».
   ///
   /// 💡 Senza, l'unico modo di sapere se si è già premuto il pulsante è provare
@@ -2884,6 +2952,43 @@ class ArchivioSalute extends _$ArchivioSalute {
       ),
       mode: InsertMode.insertOrReplace,
     );
+  }
+
+  /// Registra i documenti da cui e' nata una scheda o un piano — K1-bis.
+  ///
+  /// 🚨 **`insertOrReplace` sulla chiave `origineId`**: chi torna indietro e
+  /// riconferma la stessa importazione non deve lasciarsi dietro due righe che
+  /// puntano agli stessi file.
+  Future<void> registraDocumentiImportati({
+    required String origineId,
+    required List<String> percorsi,
+    required String tipo,
+  }) async {
+    await into(documentiImportati).insert(
+      DocumentiImportatiCompanion.insert(
+        origineId: origineId,
+        percorsi: json.encode(percorsi),
+        tipo: tipo,
+        importatoIl: DateTime.now(),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
+  /// I percorsi relativi dell'originale, o una lista vuota se non c'e'.
+  ///
+  /// ⚠️ **Vuota e non `null`**: chi la riceve la scorre, e un `null` da qui
+  /// sarebbe un controllo in piu' in ogni punto in cui si legge.
+  Future<List<String>> documentiDellOrigine(String origineId) async {
+    final riga = await (select(
+      documentiImportati,
+    )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
+
+    if (riga == null) return const [];
+
+    return ((json.decode(riga.percorsi) as List?) ?? const [])
+        .map((e) => e.toString())
+        .toList();
   }
 
   Future<List<PianoRicevuto>> piani() {
@@ -3249,9 +3354,9 @@ class VociDiario extends Table {
   ///
   /// 💡 È quello che permette di dire «questo numero l'ha stimato l'AI» accanto
   /// alla voce, ed è anche l'unico modo di sapere **quanto** ci si può fidare.
-  TextColumn get fonte => text().withLength(min: 1, max: 16).withDefault(
-    const Constant('manual'),
-  )();
+  TextColumn get fonte => text()
+      .withLength(min: 1, max: 16)
+      .withDefault(const Constant('manual'))();
 
   /// La risposta grezza del modello, quando la voce viene da una stima.
   ///
@@ -3274,8 +3379,7 @@ class VociDiario extends Table {
   /// 💡 È il campo che distingue una cena **programmata** alle 10 del mattino da
   /// una cena mangiata alle 21 — la stessa distinzione che il consiglio del
   /// giorno usa da 3b-AC, dove si chiama `scritto_alle` e viene da `created_at`.
-  DateTimeColumn get scrittaIl =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get scrittaIl => dateTime().withDefault(currentDateAndTime)();
 
   /// ⚠️ **L'indice unico è ciò che rende vero `insertOrIgnore`** — I1.
   ///
@@ -3409,6 +3513,56 @@ class ConsigliDelGiorno extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
     {fascia},
   ];
+}
+
+/// I documenti da cui e' nata una scheda o un piano importato — K1-bis.
+///
+/// ══ 🚨 SUL SERVER NON C'E' PIU' NIENTE ════════════════════════════════════
+///
+/// 📌 Il committente, il 03/09/2026: *«Naturalmente niente deve stare più sul
+/// server, come avevamo detto»*.
+///
+/// ⛔ Fino al 03/09 il PDF restava di la' **sette giorni**, e l'app se lo
+/// rifaceva mandare per mostrarlo accanto alla bozza. 💡 Era un giro inutile:
+/// il documento ce l'ha **il telefono**, che e' chi l'ha scelto. Ora il job lo
+/// cancella appena ha finito, e questa tabella e' l'**unica** copia che resta.
+///
+/// ⚠️ **Quindi perderla vuol dire perdere l'originale per sempre**: e' per
+/// questo che i file stanno in `Documents/foto/piani`, che e' nel backup, e non
+/// in una cache.
+///
+/// ══ ⚠️ E MANDA IN PENSIONE `pianiRicevuti.pdfOriginale` ══════════════════
+///
+/// Quella colonna la scriveva **solo** la revisione dei piani importati, e non
+/// la leggeva **nessuno**: l'originale si e' salvato per settimane senza che ci
+/// fosse un modo di riaprirlo. ⛔ Ed e' una stringa sola, mentre un import puo'
+/// essere cinque pagine.
+///
+/// 🚨 Da K resta li' **vuota**, e non si cancella: togliere una colonna in
+/// SQLite vuol dire riscrivere la tabella, e un backup fatto ieri la contiene
+/// ancora.
+@DataClassName('DocumentoImportato')
+class DocumentiImportati extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// `importazione:<id>` — la stessa chiave che le schede scrivono in
+  /// `origineIdStabile` e i piani in `origineId`.
+  ///
+  /// 🚨 **Senza l'indice del giorno**: una scheda multiday divisa in quattro
+  /// genera quattro schede, ma il documento da cui vengono e' **uno**.
+  TextColumn get origineId => text().unique()();
+
+  /// I percorsi **relativi** dentro `Documents/foto/piani`, come lista JSON.
+  ///
+  /// ⚠️ Relativi e non assoluti: la cartella dei documenti cambia a ogni
+  /// reinstallazione su iOS, e un percorso assoluto salvato oggi punta al vuoto
+  /// domani.
+  TextColumn get percorsi => text()();
+
+  /// `pdf` o `immagini` — serve a scegliere l'icona e l'avvertenza.
+  TextColumn get tipo => text().withLength(min: 1, max: 16)();
+
+  DateTimeColumn get importatoIl => dateTime()();
 }
 
 /// Peso e misure — S5.2.
@@ -4100,7 +4254,6 @@ class SettimanaProgrammata extends Table {
   Set<Column<Object>> get primaryKey => {giorno};
 }
 
-
 /// L'analisi della progressione di una scheda — 3b-I.A, 27/08/2026.
 ///
 /// ══ 🚨 UNA RIGA PER SCHEDA, E IL JSON DENTRO ══════════════════════════════
@@ -4159,7 +4312,6 @@ class AnalisiDelleSchede extends Table {
   @override
   Set<Column<Object>> get primaryKey => {schedaLocale};
 }
-
 
 /// Quanto dura una «sessione di modifica»: dentro, la versione si sostituisce.
 ///

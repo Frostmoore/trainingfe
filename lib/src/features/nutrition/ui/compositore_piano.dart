@@ -6,6 +6,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../import/data/importazione_da_documento.dart';
+import '../../import/data/origine_della_bozza.dart';
+import '../../import/data/salva_la_bozza.dart';
+import '../../import/ui/barra_del_documento.dart';
+import '../../import/ui/cappello_della_revisione.dart';
 import '../compositore_piano_controller.dart';
 import '../data/piano_alimentare.dart';
 
@@ -39,10 +44,24 @@ import '../data/piano_alimentare.dart';
 /// committente: è lì che il difetto delle tendine del profilo è stato misurato,
 /// ed è lì che va provato ogni widget nuovo.
 class CompositorePiano extends ConsumerStatefulWidget {
-  const CompositorePiano({this.pianoId, super.key});
+  const CompositorePiano({this.pianoId, this.bozza, this.origine, super.key});
 
-  /// `null` = piano nuovo.
+  /// `null` = piano nuovo. È la strada del trainer: si carica dal server.
   final int? pianoId;
+
+  /// 🆕 **Apri su questo, che non è salvato da nessuna parte** — K3.
+  ///
+  /// 💡 Arriva da un documento importato. ⚠️ Con `bozza != null` non si legge
+  /// niente dal server: quel piano **non esiste** ancora da nessuna parte.
+  final PianoAlimentare? bozza;
+
+  /// 🆕 Da dove viene la bozza, e dove va a finire — K3.
+  ///
+  /// 🚨 **È l'unico interruttore della modalità revisione.** Un secondo campo
+  /// `bool revisione` sarebbe una seconda verità sullo stesso fatto: si possono
+  /// disallineare, e il giorno che si disallineano il builder mostra la barra
+  /// del documento senza avere il documento.
+  final OrigineDellaBozza? origine;
 
   @override
   ConsumerState<CompositorePiano> createState() => _CompositorePianoState();
@@ -56,7 +75,20 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.pianoId == null && !_caricato) {
+    /*
+     * 🆕 **La bozza importata** — K3.
+     *
+     * ⚠️ Si copia nello stato **una volta sola**, come si fa già per il piano
+     * che arriva dal server: da qui in poi il modulo è la fonte di verità, e
+     * quello che la persona sta correggendo non deve essere buttato via da
+     * niente.
+     */
+    if (widget.bozza != null && !_caricato) {
+      _piano = widget.bozza;
+      _caricato = true;
+    }
+
+    if (widget.pianoId == null && widget.bozza == null && !_caricato) {
       // Un piano nuovo nasce con **un** giorno: cominciare da zero giorni
       // vorrebbe dire mostrare una schermata vuota a chi ha appena premuto
       // «nuovo piano».
@@ -64,7 +96,7 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
       _caricato = true;
     }
 
-    if (widget.pianoId != null && !_caricato) {
+    if (widget.pianoId != null && widget.bozza == null && !_caricato) {
       final stato = ref.watch(pianoProvider(widget.pianoId!));
 
       return stato.when(
@@ -98,10 +130,15 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
     }
 
     final piano = _piano!;
+    final origine = widget.origine;
 
     return Scaffold(
       appBar: IntestazioneApp(
-        titolo: piano.nuovo ? 'Nuovo piano' : piano.nome,
+        titolo: origine != null
+            ? 'Controlla il piano'
+            : piano.nuovo
+                ? 'Nuovo piano'
+                : piano.nome,
         azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
@@ -111,17 +148,35 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salva'),
+                /*
+                 * 🚨 **«Ho controllato», non «Salva»** — K4.
+                 *
+                 * 💡 Chiedere una **dichiarazione** invece di un assenso
+                 * costringe a decidere, e chi non ha controllato se ne accorge
+                 * nel momento in cui la legge.
+                 */
+                : Text(origine != null ? 'Ho controllato' : 'Salva'),
           ),
         ],
       ),
+
+      /*
+       * 📌 *«un tasto in basso a sx per vedere il documento originale»*.
+       *
+       * ⛔ Fissa e non dentro l'elenco: il confronto si fa riga per riga, e un
+       * pulsante che scorre via fa smettere di confrontare dopo la quinta.
+       */
+      bottomNavigationBar:
+          origine == null ? null : BarraDelDocumento(origine: origine),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
+          if (origine != null) ...[
+            CappelloDellaRevisione(origine: origine),
+            const SizedBox(height: Gap.md),
+          ],
           _TestaDelPiano(piano: piano, onCambio: () => setState(() {})),
-
           const SizedBox(height: Gap.lg),
-
           _SceltaGiorno(
             piano: piano,
             corrente: _giornoCorrente,
@@ -131,9 +186,7 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
               _giornoCorrente = piano.giorni.length - 1;
             }),
           ),
-
           const SizedBox(height: Gap.md),
-
           if (piano.giorni.isNotEmpty)
             _Giorno(
               giorno: piano.giorni[_giornoCorrente],
@@ -144,6 +197,75 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
     );
   }
 
+  /// Salva una bozza importata **su questo telefono**, e chiude l'importazione.
+  ///
+  /// ⚠️ **Si chiede conferma prima**, e la domanda non è «sei sicuro?»: è *«hai
+  /// confrontato tutto?»*. 💡 Chiedere una dichiarazione invece di un assenso
+  /// costringe a decidere, e chi non ha controllato se ne accorge nel momento in
+  /// cui la legge.
+  Future<void> _salvaLImportato(
+    PianoAlimentare piano,
+    OrigineDellaBozza origine,
+  ) async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hai confrontato tutto?'),
+        content: Text(
+          'Stai per salvare questo piano come tuo. Le '
+          '${origine.righeDaControllare} righe qui sopra le ha ricopiate '
+          'un\'intelligenza artificiale dal tuo documento: un grammaggio letto '
+          'male non dà nessun errore, sembra un valore come gli altri.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Torno a controllare'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Le ho confrontate'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma != true || !mounted) return;
+
+    setState(() => _salvando = true);
+
+    try {
+      await ref.read(salvaLaBozzaProvider).piano(piano, origine: origine);
+
+      /*
+       * ⚠️ **La chiusura non deve poter far fallire il salvataggio.** Il piano
+       * è già al sicuro sul telefono; la riga di là scade da sola. 🚨 Un errore
+       * di rete qui mostrerebbe un guasto per una cosa che è andata bene.
+       */
+      try {
+        await ref.read(importazioniProvider).chiudi(origine.importazioneId);
+      } on Object {
+        // Vedi il commento qui sopra.
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Piano salvato sul telefono.')),
+      );
+
+      Navigator.of(context).pop(true);
+    } on Object catch (e) {
+      if (!mounted) return;
+
+      setState(() => _salvando = false);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(e).message)));
+    }
+  }
+
   Future<void> _salva() async {
     final piano = _piano!;
 
@@ -151,6 +273,23 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Dai un nome al piano.')));
+
+      return;
+    }
+
+    /*
+     * ══ 🚨 UN IMPORT SI SALVA IN CASA, NON SUL SERVER — K3.3 ═══════════════
+     *
+     * ⛔ È il punto in cui si può sbagliare **in silenzio**: un piano importato
+     * salvato di là comparirebbe lo stesso nell'elenco, e nessuno se ne
+     * accorgerebbe finché qualcuno non guarda il database — dove ci sarebbe una
+     * **dieta** legata a una persona, cioè un dato dell'art. 9 con un nome
+     * sopra.
+     */
+    final origine = widget.origine;
+
+    if (origine != null) {
+      await _salvaLImportato(piano, origine);
 
       return;
     }
@@ -198,7 +337,6 @@ class _TestaDelPiano extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Nome del piano'),
           onChanged: (v) => piano.nome = v,
         ),
-
         const SizedBox(height: Gap.md),
 
         /*
@@ -308,9 +446,7 @@ class _Giorno extends StatelessWidget {
             onCambio();
           },
         ),
-
         const SizedBox(height: Gap.md),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -323,9 +459,7 @@ class _Giorno extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: Gap.sm),
-
         for (final pasto in giorno.pasti)
           _Pasto(
             pasto: pasto,
@@ -335,9 +469,7 @@ class _Giorno extends StatelessWidget {
               onCambio();
             },
           ),
-
         const SizedBox(height: Gap.sm),
-
         OutlinedButton.icon(
           onPressed: () {
             giorno.pasti.add(PastoDelPiano());
@@ -389,9 +521,8 @@ class _Pasto extends ConsumerWidget {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _tipi.containsKey(pasto.pasto)
-                        ? pasto.pasto
-                        : 'lunch',
+                    initialValue:
+                        _tipi.containsKey(pasto.pasto) ? pasto.pasto : 'lunch',
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Pasto',
@@ -424,9 +555,7 @@ class _Pasto extends ConsumerWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: Gap.sm),
-
             for (final alimento in pasto.alimenti)
               _Alimento(
                 alimento: alimento,
@@ -436,9 +565,7 @@ class _Pasto extends ConsumerWidget {
                   onCambio();
                 },
               ),
-
             const SizedBox(height: Gap.sm),
-
             Row(
               children: [
                 Expanded(
@@ -456,7 +583,6 @@ class _Pasto extends ConsumerWidget {
                 ),
               ],
             ),
-
             Align(
               alignment: Alignment.centerRight,
               child: Text(

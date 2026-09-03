@@ -19,7 +19,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/archivio_salute.dart';
 import '../../health/health_controller.dart';
+import '../../nutrition/data/piano_alimentare.dart';
 import '../../training/data/scheda_allenamento.dart';
+import 'origine_della_bozza.dart';
 
 /// Il risultato del salvataggio, che a volte è **più di una scheda**.
 class BozzaSalvata {
@@ -64,12 +66,14 @@ class SalvaLaBozza {
   Future<BozzaSalvata> scheda(
     SchedaAllenamento scheda, {
     required bool abbonato,
-    required int importazioneId,
+    required OrigineDellaBozza origine,
   }) async {
+    await _registraIDocumenti(origine);
+
     final divide = !abbonato && scheda.giorni.length > 1;
 
     if (!divide) {
-      await _scriviScheda(scheda, importazioneId, indice: 0);
+      await _scriviScheda(scheda, origine.importazioneId, indice: 0);
 
       return const BozzaSalvata(quante: 1, divisa: false);
     }
@@ -89,33 +93,76 @@ class SalvaLaBozza {
         giorni: [giorno],
       );
 
-      await _scriviScheda(singola, importazioneId, indice: i);
+      await _scriviScheda(singola, origine.importazioneId, indice: i);
     }
 
     return BozzaSalvata(quante: scheda.giorni.length, divisa: true);
   }
 
-  /// ⚠️ **`origineIdStabile` porta anche l'indice del giorno.**
+  /// Salva un piano alimentare importato **su questo telefono**.
+  ///
+  /// ══ ⚠️ NESSUNA DIVISIONE, E NON E' UNA DIMENTICANZA ═════════════════════
+  ///
+  /// Un piano a più giorni non è un privilegio da abbonati: è la forma normale
+  /// di una dieta, e spezzarla in sette piani da un giorno la renderebbe
+  /// illeggibile. 🚨 Il limite delle schede riguarda gli allenamenti, e
+  /// applicarlo qui per simmetria vorrebbe dire inventare una regola che nessuno
+  /// ha mai scritto.
+  ///
+  /// ══ 🚨 E DIVENTA INDISTINGUIBILE DA UNO ARRIVATO IN CHAT ════════════════
+  ///
+  /// La forma salvata è la **stessa**, ed è giusto: un piano è un piano, e due
+  /// forme diverse vorrebbero dire due strade da mantenere — di cui una,
+  /// quella meno percorsa, si romperebbe in silenzio.
+  Future<BozzaSalvata> piano(
+    PianoAlimentare piano, {
+    required OrigineDellaBozza origine,
+  }) async {
+    await _registraIDocumenti(origine);
+
+    await _archivio.salvaPianoImportato(
+      importazioneId: origine.importazioneId,
+      nome: piano.nome.trim().isEmpty ? 'Piano importato' : piano.nome.trim(),
+      piano: jsonEncode(piano.toJson()),
+    );
+
+    return const BozzaSalvata(quante: 1, divisa: false);
+  }
+
+  /// Registra l'originale, **prima** di scrivere quello che ne è stato tratto.
+  ///
+  /// 🚨 In quest'ordine perché un guasto a metà deve lasciare l'originale senza
+  /// la trascrizione, e non la trascrizione senza l'originale: la prima si rifà
+  /// spendendo cinquanta gettoni, la seconda è un piano che si seguirà per mesi
+  /// senza avere più niente con cui confrontarlo.
+  ///
+  /// ⚠️ **Senza l'indice del giorno**: una scheda divisa in quattro viene da un
+  /// documento **solo**.
+  Future<void> _registraIDocumenti(OrigineDellaBozza origine) =>
+      _archivio.registraDocumentiImportati(
+        origineId: 'importazione:${origine.importazioneId}',
+        percorsi: origine.documenti,
+        tipo: origine.tipo.name,
+      );
+
+  /// ⚠️ **L'identità porta anche l'indice del giorno.**
   ///
   /// 🚨 Senza, le quattro schede nate dallo stesso import avrebbero la stessa
   /// origine: un salvataggio ripetuto — la persona torna indietro e riconferma —
-  /// ne riscriverebbe una sola, e le altre tre resterebbero quelle di prima.
+  /// ne riscriverebbe **una sola**, e le altre tre resterebbero quelle di prima.
+  ///
+  /// 💡 `scriviSchedaImportata` e non `aggiungiScheda`: la seconda inserisce e
+  /// basta, e riconfermare la stessa revisione lascerebbe l'elenco pieno di
+  /// doppioni identici — che per chi non è abbonato fa anche scattare il limite
+  /// delle tre per niente.
   Future<void> _scriviScheda(
     SchedaAllenamento scheda,
     int importazioneId, {
     required int indice,
-  }) => _archivio.aggiungiScheda(
+  }) => _archivio.scriviSchedaImportata(
+    origineId: 'importazione:$importazioneId:$indice',
     nome: scheda.nome,
     scheda: jsonEncode(scheda.toJson()),
-
-    /*
-     * 💡 **`mia: true`**: chi importa un documento suo diventa proprietario di
-     * quella scheda. ⚠️ Non è arrivata da un trainer, e trattarla come ricevuta
-     * la renderebbe non modificabile.
-     */
-    mia: true,
-    origine: 'importata',
-    origineIdStabile: 'importazione:$importazioneId:$indice',
   );
 }
 

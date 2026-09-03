@@ -19,6 +19,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 
+import '../../../core/media/archivio_foto.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/origine_della_bozza.dart';
 
@@ -98,7 +99,7 @@ class BarraDelDocumento extends StatelessWidget {
     if (origine.documenti.isEmpty) return;
 
     if (origine.documenti.length == 1) {
-      await OpenFilex.open(origine.documenti.first);
+      await _mostra(origine.documenti.first);
 
       return;
     }
@@ -124,6 +125,18 @@ class BarraDelDocumento extends StatelessWidget {
       ),
     );
 
-    if (quale != null) await OpenFilex.open(quale);
+    if (quale != null) await _mostra(quale);
+  }
+
+  /// ⚠️ **I percorsi in [OrigineDellaBozza.documenti] sono relativi**, e
+  /// `OpenFilex` vuole quello assoluto.
+  ///
+  /// 🚨 Dandogli il relativo non si ottiene un errore: si ottiene un'apertura
+  /// che non succede — cioè il pulsante *«vedi l'originale»*, che è l'unica cosa
+  /// che rende una revisione una revisione, che non fa niente.
+  Future<void> _mostra(String relativo) async {
+    final file = await const ArchivioFoto().fileDi(relativo);
+
+    await OpenFilex.open(file.path);
   }
 }

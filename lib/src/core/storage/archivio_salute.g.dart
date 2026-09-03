@@ -9655,6 +9655,381 @@ class ConsigliDelGiornoCompanion extends UpdateCompanion<ConsiglioDelGiorno> {
   }
 }
 
+class $DocumentiImportatiTable extends DocumentiImportati
+    with TableInfo<$DocumentiImportatiTable, DocumentoImportato> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DocumentiImportatiTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _origineIdMeta = const VerificationMeta(
+    'origineId',
+  );
+  @override
+  late final GeneratedColumn<String> origineId = GeneratedColumn<String>(
+    'origine_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _percorsiMeta = const VerificationMeta(
+    'percorsi',
+  );
+  @override
+  late final GeneratedColumn<String> percorsi = GeneratedColumn<String>(
+    'percorsi',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 16,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _importatoIlMeta = const VerificationMeta(
+    'importatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> importatoIl = GeneratedColumn<DateTime>(
+    'importato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    origineId,
+    percorsi,
+    tipo,
+    importatoIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'documenti_importati';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DocumentoImportato> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('origine_id')) {
+      context.handle(
+        _origineIdMeta,
+        origineId.isAcceptableOrUnknown(data['origine_id']!, _origineIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_origineIdMeta);
+    }
+    if (data.containsKey('percorsi')) {
+      context.handle(
+        _percorsiMeta,
+        percorsi.isAcceptableOrUnknown(data['percorsi']!, _percorsiMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_percorsiMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tipoMeta);
+    }
+    if (data.containsKey('importato_il')) {
+      context.handle(
+        _importatoIlMeta,
+        importatoIl.isAcceptableOrUnknown(
+          data['importato_il']!,
+          _importatoIlMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_importatoIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DocumentoImportato map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DocumentoImportato(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      origineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine_id'],
+      )!,
+      percorsi: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}percorsi'],
+      )!,
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      )!,
+      importatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}importato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $DocumentiImportatiTable createAlias(String alias) {
+    return $DocumentiImportatiTable(attachedDatabase, alias);
+  }
+}
+
+class DocumentoImportato extends DataClass
+    implements Insertable<DocumentoImportato> {
+  final int id;
+
+  /// `importazione:<id>` — la stessa chiave che le schede scrivono in
+  /// `origineIdStabile` e i piani in `origineId`.
+  ///
+  /// 🚨 **Senza l'indice del giorno**: una scheda multiday divisa in quattro
+  /// genera quattro schede, ma il documento da cui vengono e' **uno**.
+  final String origineId;
+
+  /// I percorsi **relativi** dentro `Documents/foto/piani`, come lista JSON.
+  ///
+  /// ⚠️ Relativi e non assoluti: la cartella dei documenti cambia a ogni
+  /// reinstallazione su iOS, e un percorso assoluto salvato oggi punta al vuoto
+  /// domani.
+  final String percorsi;
+
+  /// `pdf` o `immagini` — serve a scegliere l'icona e l'avvertenza.
+  final String tipo;
+  final DateTime importatoIl;
+  const DocumentoImportato({
+    required this.id,
+    required this.origineId,
+    required this.percorsi,
+    required this.tipo,
+    required this.importatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['origine_id'] = Variable<String>(origineId);
+    map['percorsi'] = Variable<String>(percorsi);
+    map['tipo'] = Variable<String>(tipo);
+    map['importato_il'] = Variable<DateTime>(importatoIl);
+    return map;
+  }
+
+  DocumentiImportatiCompanion toCompanion(bool nullToAbsent) {
+    return DocumentiImportatiCompanion(
+      id: Value(id),
+      origineId: Value(origineId),
+      percorsi: Value(percorsi),
+      tipo: Value(tipo),
+      importatoIl: Value(importatoIl),
+    );
+  }
+
+  factory DocumentoImportato.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DocumentoImportato(
+      id: serializer.fromJson<int>(json['id']),
+      origineId: serializer.fromJson<String>(json['origineId']),
+      percorsi: serializer.fromJson<String>(json['percorsi']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      importatoIl: serializer.fromJson<DateTime>(json['importatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'origineId': serializer.toJson<String>(origineId),
+      'percorsi': serializer.toJson<String>(percorsi),
+      'tipo': serializer.toJson<String>(tipo),
+      'importatoIl': serializer.toJson<DateTime>(importatoIl),
+    };
+  }
+
+  DocumentoImportato copyWith({
+    int? id,
+    String? origineId,
+    String? percorsi,
+    String? tipo,
+    DateTime? importatoIl,
+  }) => DocumentoImportato(
+    id: id ?? this.id,
+    origineId: origineId ?? this.origineId,
+    percorsi: percorsi ?? this.percorsi,
+    tipo: tipo ?? this.tipo,
+    importatoIl: importatoIl ?? this.importatoIl,
+  );
+  DocumentoImportato copyWithCompanion(DocumentiImportatiCompanion data) {
+    return DocumentoImportato(
+      id: data.id.present ? data.id.value : this.id,
+      origineId: data.origineId.present ? data.origineId.value : this.origineId,
+      percorsi: data.percorsi.present ? data.percorsi.value : this.percorsi,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      importatoIl: data.importatoIl.present
+          ? data.importatoIl.value
+          : this.importatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentoImportato(')
+          ..write('id: $id, ')
+          ..write('origineId: $origineId, ')
+          ..write('percorsi: $percorsi, ')
+          ..write('tipo: $tipo, ')
+          ..write('importatoIl: $importatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, origineId, percorsi, tipo, importatoIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DocumentoImportato &&
+          other.id == this.id &&
+          other.origineId == this.origineId &&
+          other.percorsi == this.percorsi &&
+          other.tipo == this.tipo &&
+          other.importatoIl == this.importatoIl);
+}
+
+class DocumentiImportatiCompanion extends UpdateCompanion<DocumentoImportato> {
+  final Value<int> id;
+  final Value<String> origineId;
+  final Value<String> percorsi;
+  final Value<String> tipo;
+  final Value<DateTime> importatoIl;
+  const DocumentiImportatiCompanion({
+    this.id = const Value.absent(),
+    this.origineId = const Value.absent(),
+    this.percorsi = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.importatoIl = const Value.absent(),
+  });
+  DocumentiImportatiCompanion.insert({
+    this.id = const Value.absent(),
+    required String origineId,
+    required String percorsi,
+    required String tipo,
+    required DateTime importatoIl,
+  }) : origineId = Value(origineId),
+       percorsi = Value(percorsi),
+       tipo = Value(tipo),
+       importatoIl = Value(importatoIl);
+  static Insertable<DocumentoImportato> custom({
+    Expression<int>? id,
+    Expression<String>? origineId,
+    Expression<String>? percorsi,
+    Expression<String>? tipo,
+    Expression<DateTime>? importatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (origineId != null) 'origine_id': origineId,
+      if (percorsi != null) 'percorsi': percorsi,
+      if (tipo != null) 'tipo': tipo,
+      if (importatoIl != null) 'importato_il': importatoIl,
+    });
+  }
+
+  DocumentiImportatiCompanion copyWith({
+    Value<int>? id,
+    Value<String>? origineId,
+    Value<String>? percorsi,
+    Value<String>? tipo,
+    Value<DateTime>? importatoIl,
+  }) {
+    return DocumentiImportatiCompanion(
+      id: id ?? this.id,
+      origineId: origineId ?? this.origineId,
+      percorsi: percorsi ?? this.percorsi,
+      tipo: tipo ?? this.tipo,
+      importatoIl: importatoIl ?? this.importatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (origineId.present) {
+      map['origine_id'] = Variable<String>(origineId.value);
+    }
+    if (percorsi.present) {
+      map['percorsi'] = Variable<String>(percorsi.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (importatoIl.present) {
+      map['importato_il'] = Variable<DateTime>(importatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentiImportatiCompanion(')
+          ..write('id: $id, ')
+          ..write('origineId: $origineId, ')
+          ..write('percorsi: $percorsi, ')
+          ..write('tipo: $tipo, ')
+          ..write('importatoIl: $importatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -9686,6 +10061,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
   late final $PreferitiCiboTable preferitiCibo = $PreferitiCiboTable(this);
   late final $ConsigliDelGiornoTable consigliDelGiorno =
       $ConsigliDelGiornoTable(this);
+  late final $DocumentiImportatiTable documentiImportati =
+      $DocumentiImportatiTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9708,6 +10085,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     vociDiario,
     preferitiCibo,
     consigliDelGiorno,
+    documentiImportati,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -14643,6 +15021,215 @@ typedef $$ConsigliDelGiornoTableProcessedTableManager =
       ConsiglioDelGiorno,
       PrefetchHooks Function()
     >;
+typedef $$DocumentiImportatiTableCreateCompanionBuilder =
+    DocumentiImportatiCompanion Function({
+      Value<int> id,
+      required String origineId,
+      required String percorsi,
+      required String tipo,
+      required DateTime importatoIl,
+    });
+typedef $$DocumentiImportatiTableUpdateCompanionBuilder =
+    DocumentiImportatiCompanion Function({
+      Value<int> id,
+      Value<String> origineId,
+      Value<String> percorsi,
+      Value<String> tipo,
+      Value<DateTime> importatoIl,
+    });
+
+class $$DocumentiImportatiTableFilterComposer
+    extends Composer<_$ArchivioSalute, $DocumentiImportatiTable> {
+  $$DocumentiImportatiTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get percorsi => $composableBuilder(
+    column: $table.percorsi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get importatoIl => $composableBuilder(
+    column: $table.importatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DocumentiImportatiTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $DocumentiImportatiTable> {
+  $$DocumentiImportatiTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origineId => $composableBuilder(
+    column: $table.origineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get percorsi => $composableBuilder(
+    column: $table.percorsi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get importatoIl => $composableBuilder(
+    column: $table.importatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DocumentiImportatiTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $DocumentiImportatiTable> {
+  $$DocumentiImportatiTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get origineId =>
+      $composableBuilder(column: $table.origineId, builder: (column) => column);
+
+  GeneratedColumn<String> get percorsi =>
+      $composableBuilder(column: $table.percorsi, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get importatoIl => $composableBuilder(
+    column: $table.importatoIl,
+    builder: (column) => column,
+  );
+}
+
+class $$DocumentiImportatiTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $DocumentiImportatiTable,
+          DocumentoImportato,
+          $$DocumentiImportatiTableFilterComposer,
+          $$DocumentiImportatiTableOrderingComposer,
+          $$DocumentiImportatiTableAnnotationComposer,
+          $$DocumentiImportatiTableCreateCompanionBuilder,
+          $$DocumentiImportatiTableUpdateCompanionBuilder,
+          (
+            DocumentoImportato,
+            BaseReferences<
+              _$ArchivioSalute,
+              $DocumentiImportatiTable,
+              DocumentoImportato
+            >,
+          ),
+          DocumentoImportato,
+          PrefetchHooks Function()
+        > {
+  $$DocumentiImportatiTableTableManager(
+    _$ArchivioSalute db,
+    $DocumentiImportatiTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DocumentiImportatiTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DocumentiImportatiTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DocumentiImportatiTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> origineId = const Value.absent(),
+                Value<String> percorsi = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<DateTime> importatoIl = const Value.absent(),
+              }) => DocumentiImportatiCompanion(
+                id: id,
+                origineId: origineId,
+                percorsi: percorsi,
+                tipo: tipo,
+                importatoIl: importatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String origineId,
+                required String percorsi,
+                required String tipo,
+                required DateTime importatoIl,
+              }) => DocumentiImportatiCompanion.insert(
+                id: id,
+                origineId: origineId,
+                percorsi: percorsi,
+                tipo: tipo,
+                importatoIl: importatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DocumentiImportatiTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $DocumentiImportatiTable,
+      DocumentoImportato,
+      $$DocumentiImportatiTableFilterComposer,
+      $$DocumentiImportatiTableOrderingComposer,
+      $$DocumentiImportatiTableAnnotationComposer,
+      $$DocumentiImportatiTableCreateCompanionBuilder,
+      $$DocumentiImportatiTableUpdateCompanionBuilder,
+      (
+        DocumentoImportato,
+        BaseReferences<
+          _$ArchivioSalute,
+          $DocumentiImportatiTable,
+          DocumentoImportato
+        >,
+      ),
+      DocumentoImportato,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -14681,4 +15268,6 @@ class $ArchivioSaluteManager {
       $$PreferitiCiboTableTableManager(_db, _db.preferitiCibo);
   $$ConsigliDelGiornoTableTableManager get consigliDelGiorno =>
       $$ConsigliDelGiornoTableTableManager(_db, _db.consigliDelGiorno);
+  $$DocumentiImportatiTableTableManager get documentiImportati =>
+      $$DocumentiImportatiTableTableManager(_db, _db.documentiImportati);
 }

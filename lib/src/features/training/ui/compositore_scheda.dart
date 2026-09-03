@@ -6,11 +6,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../import/data/importazione_da_documento.dart';
 import '../../import/data/origine_della_bozza.dart';
 import '../../import/data/salva_la_bozza.dart';
 import '../../import/ui/barra_del_documento.dart';
 import '../../import/ui/cappello_della_revisione.dart';
-import '../../nutrition/data/importazione_piano.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
 import 'widgets/campo_esercizio.dart';
@@ -138,8 +138,8 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
         titolo: origine != null
             ? 'Controlla la scheda'
             : scheda.nuova
-            ? 'Nuova scheda'
-            : scheda.nome,
+                ? 'Nuova scheda'
+                : scheda.nome,
         azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
@@ -167,10 +167,8 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
        * ⛔ Fissa e non dentro l'elenco: il confronto si fa riga per riga, e un
        * pulsante che scorre via fa smettere di confrontare dopo la quinta.
        */
-      bottomNavigationBar: origine == null
-          ? null
-          : BarraDelDocumento(origine: origine),
-
+      bottomNavigationBar:
+          origine == null ? null : BarraDelDocumento(origine: origine),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
@@ -178,11 +176,8 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
             CappelloDellaRevisione(origine: origine),
             const SizedBox(height: Gap.md),
           ],
-
           _TestaDellaScheda(scheda: scheda, onCambio: () => setState(() {})),
-
           const SizedBox(height: Gap.lg),
-
           _SceltaGiorno(
             scheda: scheda,
             corrente: _giornoCorrente,
@@ -194,9 +189,7 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
               _giornoCorrente = scheda.giorni.length - 1;
             }),
           ),
-
           const SizedBox(height: Gap.md),
-
           if (scheda.giorni.isNotEmpty)
             _Giorno(
               // 🚨 `clamp`: togliere l'ultimo giorno lascia `_giornoCorrente`
@@ -207,14 +200,13 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
               onCambio: () => setState(() {}),
               onEliminaGiorno: scheda.giorni.length > 1
                   ? () => setState(() {
-                      scheda.giorni.removeAt(
-                        _giornoCorrente.clamp(0, scheda.giorni.length - 1),
-                      );
-                      _giornoCorrente = 0;
-                    })
+                        scheda.giorni.removeAt(
+                          _giornoCorrente.clamp(0, scheda.giorni.length - 1),
+                        );
+                        _giornoCorrente = 0;
+                      })
                   : null,
             ),
-
           const SizedBox(height: Gap.xl),
         ],
       ),
@@ -259,16 +251,11 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
     setState(() => _salvando = true);
 
     try {
-      final abbonato =
-          ref.read(authControllerProvider).user?.abbonato ?? false;
+      final abbonato = ref.read(authControllerProvider).user?.abbonato ?? false;
 
       final esito = await ref
           .read(salvaLaBozzaProvider)
-          .scheda(
-            scheda,
-            abbonato: abbonato,
-            importazioneId: origine.importazioneId,
-          );
+          .scheda(scheda, abbonato: abbonato, origine: origine);
 
       /*
        * ⚠️ **La chiusura non deve poter far fallire il salvataggio.** La scheda
@@ -277,9 +264,7 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
        * è andata bene.
        */
       try {
-        await ref
-            .read(importazioniPianiProvider)
-            .chiudi(origine.importazioneId);
+        await ref.read(importazioniProvider).chiudi(origine.importazioneId);
       } on Object {
         // Vedi il commento qui sopra.
       }
@@ -397,7 +382,6 @@ class _TestaDellaScheda extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Nome della scheda'),
           onChanged: (v) => scheda.nome = v,
         ),
-
         const SizedBox(height: Gap.md),
 
         /*
@@ -421,9 +405,7 @@ class _TestaDellaScheda extends StatelessWidget {
           ),
           onChanged: (v) => scheda.rifAllievo = v,
         ),
-
         const SizedBox(height: Gap.md),
-
         TextFormField(
           initialValue: scheda.note,
           maxLines: 2,
@@ -530,9 +512,7 @@ class _Giorno extends StatelessWidget {
               ),
           ],
         ),
-
         const SizedBox(height: Gap.md),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -545,9 +525,7 @@ class _Giorno extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: Gap.sm),
-
         for (final esercizio in giorno.esercizi)
           _Esercizio(
             esercizio: esercizio,
@@ -557,9 +535,7 @@ class _Giorno extends StatelessWidget {
               onCambio();
             },
           ),
-
         const SizedBox(height: Gap.sm),
-
         OutlinedButton.icon(
           onPressed: () {
             giorno.esercizi.add(EsercizioDellaScheda());
@@ -760,18 +736,14 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                   : 'Invece di ${widget.esercizio.nome}',
               style: theme.textTheme.titleMedium,
             ),
-
             const SizedBox(height: Gap.xs),
-
             Text(
               'Chi le sceglie deve trovarci serie e ripetizioni, o non saprebbe cosa fare.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
               ),
             ),
-
             const SizedBox(height: Gap.md),
-
             if (alternative.isEmpty)
               Text(
                 'Nessuna alternativa.',
@@ -779,7 +751,6 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                   color: theme.colorScheme.outline,
                 ),
               ),
-
             for (final alt in alternative)
               Padding(
                 padding: const EdgeInsets.only(bottom: Gap.sm),
@@ -832,9 +803,7 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                   ],
                 ),
               ),
-
             const SizedBox(height: Gap.sm),
-
             if (alternative.length < massimo)
               OutlinedButton.icon(
                 onPressed: () =>
@@ -852,9 +821,7 @@ class _FoglioAlternativeState extends State<_FoglioAlternative> {
                   color: theme.colorScheme.outline,
                 ),
               ),
-
             const SizedBox(height: Gap.md),
-
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               style: FilledButton.styleFrom(

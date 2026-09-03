@@ -46,9 +46,25 @@ class ArchivioFoto {
   }
 
   /// Scrive i byte e torna il percorso **relativo** da salvare a database.
+  ///
+  /// ══ 🚨 `estensione` NON E' UN DETTAGLIO COSMETICO — K1-bis, 03/09/2026 ═══
+  ///
+  /// ⛔ Fino al 03/09 il nome finiva **sempre** in `.jpg`. Per le foto andava
+  /// bene, ma la revisione dei piani importati salvava di qui il **PDF
+  /// originale**: finiva sul disco chiamato `.jpg`, e `OpenFilex` lo apriva —
+  /// o meglio non lo apriva — con un visualizzatore di immagini.
+  ///
+  /// 🚨 Nessun errore da nessuna parte: il file c'era, il percorso era giusto,
+  /// il database era coerente. Semplicemente il pulsante *«vedi l'originale»* —
+  /// cioe' l'unica cosa che rende una revisione una revisione — non mostrava
+  /// niente.
+  ///
+  /// ⚠️ Il valore di partenza resta `jpg` perche' e' quello che vale per tutte
+  /// le foto, che sono la quasi totalita' dei chiamanti.
   Future<String> salva({
     required TipoFoto tipo,
     required Uint8List byte,
+    String estensione = 'jpg',
   }) async {
     final cartella = await cartellaDi(tipo);
 
@@ -66,8 +82,15 @@ class ArchivioFoto {
      * restano diversi comunque. Non serve che sopravviva al riavvio dell'app —
      * lo distingue gia' l'ora.
      */
+    /*
+     * ⚠️ **Senza il punto e in minuscolo**, comunque arrivi: `p.extension()`
+     * lo restituisce con il punto (`.PDF`), e concatenarlo cosi' com'e' darebbe
+     * `...-0..PDF`.
+     */
+    final coda = estensione.replaceAll('.', '').toLowerCase();
+
     final nome =
-        '${DateTime.now().microsecondsSinceEpoch}-${_progressivo++}.jpg';
+        '${DateTime.now().microsecondsSinceEpoch}-${_progressivo++}.$coda';
 
     await File(p.join(cartella.path, nome)).writeAsBytes(byte);
 

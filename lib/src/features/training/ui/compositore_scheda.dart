@@ -5,6 +5,12 @@ import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../auth/auth_controller.dart';
+import '../../import/data/origine_della_bozza.dart';
+import '../../import/data/salva_la_bozza.dart';
+import '../../import/ui/barra_del_documento.dart';
+import '../../import/ui/cappello_della_revisione.dart';
+import '../../nutrition/data/importazione_piano.dart';
 import '../compositore_scheda_controller.dart';
 import '../data/scheda_allenamento.dart';
 import 'widgets/campo_esercizio.dart';
@@ -30,10 +36,29 @@ import 'widgets/scelta_muscoli.dart';
 /// stesso, e il server distingue da solo. Due rotte per la stessa cosa
 /// divergerebbero alla prima modifica.
 class CompositoreScheda extends ConsumerStatefulWidget {
-  const CompositoreScheda({this.schedaId, super.key});
+  const CompositoreScheda({
+    this.schedaId,
+    this.bozza,
+    this.origine,
+    super.key,
+  });
 
-  /// `null` = scheda nuova.
+  /// `null` = scheda nuova. È la strada del trainer: si carica dal server.
   final int? schedaId;
+
+  /// 🆕 **Apri su questa, che non è salvata da nessuna parte** — K3.
+  ///
+  /// 💡 Arriva da un documento importato. ⚠️ Con `bozza != null` non si legge
+  /// niente dal server: quella scheda **non esiste** ancora da nessuna parte.
+  final SchedaAllenamento? bozza;
+
+  /// 🆕 Da dove viene la bozza, e dove va a finire — K3.
+  ///
+  /// 🚨 **È l'unico interruttore della modalità revisione.** Un secondo campo
+  /// `bool revisione` sarebbe una seconda verità sullo stesso fatto: si possono
+  /// disallineare, e il giorno che si disallineano il builder mostra la barra
+  /// del documento senza avere il documento.
+  final OrigineDellaBozza? origine;
 
   @override
   ConsumerState<CompositoreScheda> createState() => _CompositoreSchedaState();
@@ -47,7 +72,20 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.schedaId == null && !_caricato) {
+    /*
+     * 🆕 **La bozza importata** — K3.
+     *
+     * ⚠️ Si copia nello stato **una volta sola**, come si fa già per la scheda
+     * che arriva dal server: da qui in poi il modulo è la fonte di verità, e
+     * quello che la persona sta correggendo non deve essere buttato via da
+     * niente.
+     */
+    if (widget.bozza != null && !_caricato) {
+      _scheda = widget.bozza;
+      _caricato = true;
+    }
+
+    if (widget.schedaId == null && widget.bozza == null && !_caricato) {
       // Una scheda nuova nasce con **un** giorno e **un** esercizio vuoto:
       // cominciare da zero vorrebbe dire mostrare una schermata vuota a chi ha
       // appena premuto «nuova scheda».
@@ -59,7 +97,7 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
       _caricato = true;
     }
 
-    if (widget.schedaId != null && !_caricato) {
+    if (widget.schedaId != null && widget.bozza == null && !_caricato) {
       final stato = ref.watch(schedaProvider(widget.schedaId!));
 
       return stato.when(
@@ -93,10 +131,15 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
     }
 
     final scheda = _scheda!;
+    final origine = widget.origine;
 
     return Scaffold(
       appBar: IntestazioneApp(
-        titolo: scheda.nuova ? 'Nuova scheda' : scheda.nome,
+        titolo: origine != null
+            ? 'Controlla la scheda'
+            : scheda.nuova
+            ? 'Nuova scheda'
+            : scheda.nome,
         azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
@@ -106,13 +149,36 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salva'),
+                /*
+                 * 🚨 **«Ho controllato tutto», non «Salva»** — K4.
+                 *
+                 * 💡 Chiedere una **dichiarazione** invece di un assenso
+                 * costringe a decidere, e chi non ha controllato se ne accorge
+                 * nel momento in cui la legge.
+                 */
+                : Text(origine != null ? 'Ho controllato' : 'Salva'),
           ),
         ],
       ),
+
+      /*
+       * 📌 *«un tasto in basso a sx per vedere il documento originale»*.
+       *
+       * ⛔ Fissa e non dentro l'elenco: il confronto si fa riga per riga, e un
+       * pulsante che scorre via fa smettere di confrontare dopo la quinta.
+       */
+      bottomNavigationBar: origine == null
+          ? null
+          : BarraDelDocumento(origine: origine),
+
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
+          if (origine != null) ...[
+            CappelloDellaRevisione(origine: origine),
+            const SizedBox(height: Gap.md),
+          ],
+
           _TestaDellaScheda(scheda: scheda, onCambio: () => setState(() {})),
 
           const SizedBox(height: Gap.lg),
@@ -155,6 +221,93 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
     );
   }
 
+  /// Salva una bozza importata **su questo telefono**, e chiude l'importazione.
+  ///
+  /// ⚠️ **Si chiede conferma prima**, e la domanda non è «sei sicuro?»: è *«hai
+  /// confrontato tutto?»*. 💡 Chiedere una dichiarazione invece di un assenso
+  /// costringe a decidere, e chi non ha controllato se ne accorge nel momento in
+  /// cui la legge.
+  Future<void> _salvaLImportata(
+    SchedaAllenamento scheda,
+    OrigineDellaBozza origine,
+  ) async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hai confrontato tutto?'),
+        content: Text(
+          'Stai per salvare questa scheda come tua. Le '
+          '${origine.righeDaControllare} righe qui sopra le ha lette '
+          'un\'intelligenza artificiale dal tuo documento, e possono contenere '
+          'errori che sembrano giusti.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Torno a controllare'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Ho controllato tutto'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma != true || !mounted) return;
+
+    setState(() => _salvando = true);
+
+    try {
+      final abbonato =
+          ref.read(authControllerProvider).user?.abbonato ?? false;
+
+      final esito = await ref
+          .read(salvaLaBozzaProvider)
+          .scheda(
+            scheda,
+            abbonato: abbonato,
+            importazioneId: origine.importazioneId,
+          );
+
+      /*
+       * ⚠️ **La chiusura non deve poter far fallire il salvataggio.** La scheda
+       * è già al sicuro sul telefono; la riga di là scade da sola dopo sette
+       * giorni. 🚨 Un errore di rete qui mostrerebbe un guasto per una cosa che
+       * è andata bene.
+       */
+      try {
+        await ref
+            .read(importazioniPianiProvider)
+            .chiudi(origine.importazioneId);
+      } on Object {
+        // Vedi il commento qui sopra.
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            esito.divisa
+                ? '${esito.quante} schede salvate, una per giorno.'
+                : 'Scheda salvata sul telefono.',
+          ),
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    } on Object catch (e) {
+      if (!mounted) return;
+
+      setState(() => _salvando = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(e).message)),
+      );
+    }
+  }
+
   Future<void> _salva() async {
     final scheda = _scheda!;
 
@@ -178,6 +331,22 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Metti almeno un esercizio.')),
       );
+
+      return;
+    }
+
+    /*
+     * ══ 🚨 UN IMPORT SI SALVA IN CASA, NON SUL SERVER — K3.3 ═══════════════
+     *
+     * ⛔ È il punto in cui si può sbagliare **in silenzio**: una scheda
+     * importata salvata di là comparirebbe lo stesso nell'elenco, e nessuno se
+     * ne accorgerebbe finché qualcuno non guarda il database — dove ci sarebbe
+     * un programma di allenamento con un nome sopra, cioè l'opposto di D9-bis.
+     */
+    final origine = widget.origine;
+
+    if (origine != null) {
+      await _salvaLImportata(scheda, origine);
 
       return;
     }

@@ -102,7 +102,7 @@ class ImportazioniPiani {
     required bool dichiarazione,
   }) async {
     final risposta = await _api.upload<Map<String, dynamic>>(
-      '/importazioni-piani',
+      '/importazioni',
       FormData.fromMap({
         'file': MultipartFile.fromBytes(byte, filename: nomeFile),
         'dichiarazione': dichiarazione ? '1' : '0',
@@ -114,7 +114,7 @@ class ImportazioniPiani {
 
   Future<ImportazionePiano> stato(int id) async {
     final risposta = await _api.get<Map<String, dynamic>>(
-      '/importazioni-piani/$id',
+      '/importazioni/$id',
     );
 
     return ImportazionePiano.fromJson(risposta);
@@ -122,7 +122,7 @@ class ImportazioniPiani {
 
   /// Il PDF originale, per guardarlo accanto alla bozza — N20.4.
   Future<Uint8List> pdf(int id) =>
-      _api.scaricaByte('/importazioni-piani/$id/pdf');
+      _api.scaricaByte('/importazioni/$id/pdf');
 
   /// Chiude l'importazione: il PDF e la bozza se ne vanno dal server.
   ///
@@ -130,7 +130,7 @@ class ImportazioniPiani {
   /// confermato non resta sul server: se lo tenessimo avremmo una dieta legata
   /// a una persona sui loro sistemi, cioè un dato dell'art. 9 con un nome
   /// sopra. Il telefono se la porta via, e la riga si cancella.
-  Future<void> chiudi(int id) => _api.delete('/importazioni-piani/$id');
+  Future<void> chiudi(int id) => _api.delete('/importazioni/$id');
 }
 
 final importazioniPianiProvider = Provider<ImportazioniPiani>(

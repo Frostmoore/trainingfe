@@ -130,11 +130,24 @@ PianoAlimentare pianoDallaBozza(Map<String, dynamic> bozza) {
   );
 }
 
+/// Un pasto e **le sue alternative**.
+///
+/// ══ 🚨 LE ALTERNATIVE SONO ALTERNATIVE, NON PASTI IN PIU' ═════════════════
+///
+/// ⛔ Fino al 03/09/2026 lo schema del modello non aveva **nessun posto** dove
+/// metterle, e su un documento vero il modello faceva l'unica cosa che poteva:
+/// le trascriveva come **pasti normali**. Una giornata da cinque pasti ne
+/// mostrava otto, e chi la legge crede di doverli mangiare tutti.
+///
+/// 💡 Adesso arrivano dentro il pasto che sostituiscono, ed è lì che vanno:
+/// `PastoDelPiano.alternative` esiste da D2, e la scheda «Dal piano» le mostra
+/// con «oppure» accanto a quello che rimpiazzano.
 PastoDelPiano _pastoDa(Map<String, dynamic> dati) {
   final orario = dati['orario']?.toString().trim() ?? '';
+  final tipo = dati['tipo']?.toString() ?? 'snack';
 
   return PastoDelPiano(
-    pasto: dati['tipo']?.toString() ?? 'snack',
+    pasto: tipo,
 
     /*
      * 💡 **L'orario diventa il titolo del pasto.** Il compositore non ha un
@@ -147,8 +160,37 @@ PastoDelPiano _pastoDa(Map<String, dynamic> dati) {
       for (final a in (dati['alimenti'] as List?) ?? const [])
         _alimentoDa((a as Map).cast<String, dynamic>()),
     ],
+    alternative: [
+      for (final v in (dati['alternative'] as List?) ?? const [])
+        _alternativaDa((v as Map).cast<String, dynamic>(), tipo),
+    ],
   );
 }
+
+/// ⚠️ **Un'alternativa non ha alternative sue**, e non è una semplificazione:
+/// l'alternativa di un'alternativa non esiste su nessun foglio, e lo schema del
+/// modello si ferma a un livello per lo stesso motivo.
+PastoDelPiano _alternativaDa(Map<String, dynamic> dati, String tipoDelPasto) =>
+    PastoDelPiano(
+      /*
+   * 🚨 **Il `pasto` è quello del principale**, non quello scritto
+   * sull'alternativa. «Colazione alternativa» non è un tipo di pasto: i tipi
+   * sono quattro (`breakfast`, `lunch`, `dinner`, `snack`), e inventarne un
+   * quinto romperebbe tutto ciò che li legge — a partire dal diario, che sul
+   * tipo decide in quale pasto della giornata finisce quello che si registra.
+   *
+   * 💡 Chi sceglie un'alternativa la mangia **al posto** del principale, quindi
+   * il tipo giusto è esattamente quello.
+   */
+      pasto: tipoDelPasto,
+
+      // 💡 Il nome che il documento le dà, che è l'unica cosa che la distingue.
+      titolo: dati['tipo']?.toString(),
+      alimenti: [
+        for (final a in (dati['alimenti'] as List?) ?? const [])
+          _alimentoDa((a as Map).cast<String, dynamic>()),
+      ],
+    );
 
 AlimentoDelPiano _alimentoDa(Map<String, dynamic> dati) => AlimentoDelPiano(
       descrizione: dati['descrizione']?.toString() ?? '',

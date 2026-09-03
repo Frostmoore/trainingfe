@@ -246,12 +246,9 @@ class _Pasto extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: Gap.sm),
-
             for (final alimento in pasto.alimenti)
               _Alimento(alimento: alimento, onScelti: onScelti),
-
             const SizedBox(height: Gap.sm),
 
             /*
@@ -266,6 +263,108 @@ class _Pasto extends StatelessWidget {
               onPressed: () => onScelti(pasto.alimenti),
               icon: const Icon(Icons.done_all, size: 18),
               label: const Text('Ho mangiato tutto'),
+            ),
+
+            /*
+             * ══ 🚨 LE ALTERNATIVE DEL PASTO INTERO — 03/09/2026 ═════════════
+             *
+             * ⛔ **Non si vedevano da nessuna parte.** `PastoDelPiano.alternative`
+             * esiste da D2, ma questa scheda mostrava solo quelle del singolo
+             * alimento: un piano che diceva *«Colazione alternativa: 3 uova,
+             * pane 80 g, arancia»* arrivava fin qui e poi spariva.
+             *
+             * 🚨 E per un piano **importato** era peggio: fino al 03/09 il
+             * modello non aveva un posto dove metterle e le trascriveva come
+             * **pasti in più**, quindi la giornata ne mostrava otto invece di
+             * cinque — e sembravano tutti da mangiare.
+             *
+             * 💡 Qui sotto, e non in cima: si legge prima quello che il piano
+             * prescrive, poi il modo diverso di farlo. ⚠️ L'ordine non è
+             * estetico — invertirlo metterebbe la variante prima della regola.
+             */
+            for (final variante in pasto.alternative)
+              _Variante(variante: variante, onScelti: onScelti),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un modo diverso di fare **tutto il pasto** — 03/09/2026.
+///
+/// 🚨 **Registrarla registra i suoi alimenti al posto dei principali**, che è
+/// l'unica ragione per cui un'alternativa esiste. ⛔ Aggiungerli *in più*
+/// sarebbe il contrario: una giornata con due pranzi.
+class _Variante extends StatelessWidget {
+  const _Variante({required this.variante, required this.onScelti});
+
+  final PastoDelPiano variante;
+  final void Function(List<AlimentoDelPiano>) onScelti;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final nome = variante.titolo?.trim().isNotEmpty == true
+        ? variante.titolo!
+        : 'In alternativa';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.sm),
+      child: Container(
+        padding: const EdgeInsets.all(Gap.sm),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                /*
+                 * 💡 **«oppure» scritto**, non un'icona. È la parola che spiega
+                 * in un colpo che questa non si somma a quello sopra: un
+                 * simbolo lascerebbe la domanda aperta proprio a chi non ha
+                 * voglia di pensarci.
+                 */
+                Text(
+                  'oppure',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: Gap.xs),
+                Expanded(
+                  child: Text(nome, style: theme.textTheme.labelLarge),
+                ),
+                if (variante.kcal > 0)
+                  Text(
+                    '${variante.kcal.round()} kcal',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+              ],
+            ),
+            for (final alimento in variante.alimenti)
+              Padding(
+                padding: const EdgeInsets.only(left: Gap.sm),
+                child: _Alimento(alimento: alimento, onScelti: onScelti),
+              ),
+            const SizedBox(height: Gap.xs),
+
+            /*
+             * ⚠️ **«Ho mangiato questa»**, non «Aggiungi». Il verbo dice cosa è
+             * successo, non cosa fa il programma: chi ha mangiato l'alternativa
+             * deve riconoscere la propria giornata nella frase.
+             */
+            OutlinedButton.icon(
+              onPressed: () => onScelti(variante.alimenti),
+              icon: const Icon(Icons.done_all, size: 16),
+              label: const Text('Ho mangiato questa'),
             ),
           ],
         ),
@@ -317,9 +416,8 @@ class _Alimento extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Text('oppure', style: theme.textTheme.labelSmall),
               title: Text(alt.descrizione, style: theme.textTheme.bodySmall),
-              subtitle: alt.kcal == null
-                  ? null
-                  : Text('${alt.kcal!.round()} kcal'),
+              subtitle:
+                  alt.kcal == null ? null : Text('${alt.kcal!.round()} kcal'),
               trailing: IconButton(
                 onPressed: () => onScelti([alt]),
                 icon: const Icon(Icons.add_circle_outline, size: 20),

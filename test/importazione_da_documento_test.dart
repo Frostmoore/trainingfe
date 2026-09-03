@@ -208,6 +208,14 @@ void main() {
                   {'descrizione': 'Fiocchi d\'avena', 'grammi': 80},
                   {'descrizione': 'Un cucchiaio di miele'},
                 ],
+                'alternative': [
+                  {
+                    'tipo': 'Colazione alternativa',
+                    'alimenti': [
+                      {'descrizione': 'Pane tostato', 'grammi': 80},
+                    ],
+                  },
+                ],
               },
             ],
           },
@@ -224,6 +232,32 @@ void main() {
       // 💡 L'orario non si butta via: «Colazione · 07:30» non è «Colazione».
       expect(pasto.titolo, '07:30');
       expect(pasto.alimenti.first.grammi, 80);
+
+      /*
+       * ══ 🚨 LE ALTERNATIVE SONO ALTERNATIVE, NON PASTI IN PIU' ═══════════
+       *
+       * ⛔ Fino al 03/09/2026 lo schema del modello non aveva un posto dove
+       * metterle, e su un documento vero le trascriveva come **pasti normali**:
+       * una giornata da cinque pasti ne mostrava otto, e chi la legge crede di
+       * doverli mangiare tutti.
+       */
+      expect(piano.giorni.single.pasti, hasLength(1), reason: 'un pasto solo');
+      expect(pasto.alternative, hasLength(1));
+
+      final variante = pasto.alternative.single;
+
+      /*
+       * 🚨 **Il tipo è quello del pasto che sostituisce**, non «Colazione
+       * alternativa». I tipi sono quattro, e inventarne un quinto romperebbe il
+       * diario, che sul tipo decide in quale pasto della giornata finisce quello
+       * che si registra.
+       */
+      expect(variante.pasto, 'breakfast');
+
+      // 💡 Il nome del documento resta, ed è l'unica cosa che la distingue.
+      expect(variante.titolo, 'Colazione alternativa');
+      expect(variante.alimenti.single.descrizione, 'Pane tostato');
+      expect(variante.alimenti.single.grammi, 80);
 
       /*
        * 🚨 Il grammaggio che non c'era resta **vuoto**. Riempirlo con una

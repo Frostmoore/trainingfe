@@ -56,6 +56,19 @@ class LetturaConMedia {
        * a chi si e' riposato apposta — cioe' a tutti, nel verso sbagliato.
        */
       MetricaSalute.calorieAttive => false,
+
+      /*
+       * 💡 **E nemmeno i passi**, per la stessa ragione e con una in più:
+       * camminare più del solito è una bella giornata, camminarne meno è un
+       * giorno in ufficio. ⛔ Nessuno dei due dice niente sul recupero.
+       *
+       * ⚠️ E soprattutto: il conteggio dipende da **dove si tiene il telefono**.
+       * Una giornata con la borsa a tracolla invece che in tasca fa crollare i
+       * passi senza che il corpo se ne sia accorto — trasformarlo in un allarme
+       * vorrebbe dire far dipendere un giudizio sulla salute da come ci si è
+       * vestiti.
+       */
+      MetricaSalute.passi => false,
     };
   }
 }

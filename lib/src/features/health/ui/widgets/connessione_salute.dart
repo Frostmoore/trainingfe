@@ -92,7 +92,6 @@ class _ConnessioneSaluteState extends ConsumerState<ConnessioneSalute>
           Text(stato.errore!, style: TextStyle(color: theme.colorScheme.error)),
           const SizedBox(height: Gap.sm),
         ],
-
         FilledButton.icon(
           style: bottonePieno(altezza: 52),
           onPressed: stato.inCorso
@@ -109,7 +108,6 @@ class _ConnessioneSaluteState extends ConsumerState<ConnessioneSalute>
             stato.collegato ? 'Aggiorna adesso' : 'Collega Health Connect',
           ),
         ),
-
         if (stato.collegato) ...[
           const SizedBox(height: Gap.sm),
           Center(

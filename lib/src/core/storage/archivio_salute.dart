@@ -81,14 +81,14 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onUpgrade: (m, da, a) async {
-      // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
-      if (da < 2) await m.createTable(misureCorpo);
+        onUpgrade: (m, da, a) async {
+          // v1 → v2 (S5.2): peso e misure escono dal server e arrivano qui.
+          if (da < 2) await m.createTable(misureCorpo);
 
-      // v2 → v3 (S5.3): e le foto dei progressi con loro.
-      if (da < 3) await m.createTable(fotoProgressi);
+          // v2 → v3 (S5.3): e le foto dei progressi con loro.
+          if (da < 3) await m.createTable(fotoProgressi);
 
-      /*
+          /*
        * v3 → v4 (S7.4): le schede ricevute dal trainer via chat.
        *
        * ⛔ **La tabella non esiste più**: la v15 l'ha fusa dentro
@@ -99,22 +99,22 @@ class ArchivioSalute extends _$ArchivioSalute {
        * non c'è più» vuol dire che chi non ha ancora aggiornato non arriva
        * **mai** alla v15 — l'aggiornamento gli esplode a metà strada.
        */
-      if (da < 4) {
-        await customStatement(
-          'CREATE TABLE IF NOT EXISTS schede_ricevute ('
-          'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
-          'messaggio_id INTEGER NOT NULL UNIQUE, '
-          'mittente_id INTEGER NOT NULL, '
-          'nome TEXT NOT NULL, '
-          'scheda TEXT NOT NULL, '
-          'ricevuta_il INTEGER NOT NULL)',
-        );
-      }
+          if (da < 4) {
+            await customStatement(
+              'CREATE TABLE IF NOT EXISTS schede_ricevute ('
+              'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+              'messaggio_id INTEGER NOT NULL UNIQUE, '
+              'mittente_id INTEGER NOT NULL, '
+              'nome TEXT NOT NULL, '
+              'scheda TEXT NOT NULL, '
+              'ricevuta_il INTEGER NOT NULL)',
+            );
+          }
 
-      // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
-      if (da < 5) await _riaccreditaLeNotti();
+          // v4 → v5 (12/08/2026): `notteDi()` ha cambiato regola.
+          if (da < 5) await _riaccreditaLeNotti();
 
-      /*
+          /*
            * v5 → v6 (G8): i piani alimentari ricevuti, i rifiutati, e
            * l'identita' stabile sulle schede.
            *
@@ -123,19 +123,19 @@ class ArchivioSalute extends _$ArchivioSalute {
            * aggiorna** — mai su quello di chi installa da zero, cioe' mai sui
            * nostri.
            */
-      if (da < 6) {
-        await m.createTable(pianiRicevuti);
-        await m.createTable(contenutiRifiutati);
-        // ⚠️ A mano, per la stessa ragione del passo `da < 4` qui sopra.
-        await customStatement(
-          'ALTER TABLE schede_ricevute ADD COLUMN origine_id TEXT',
-        );
-        await customStatement(
-          'ALTER TABLE schede_ricevute ADD COLUMN aggiornato_il INTEGER',
-        );
-      }
+          if (da < 6) {
+            await m.createTable(pianiRicevuti);
+            await m.createTable(contenutiRifiutati);
+            // ⚠️ A mano, per la stessa ragione del passo `da < 4` qui sopra.
+            await customStatement(
+              'ALTER TABLE schede_ricevute ADD COLUMN origine_id TEXT',
+            );
+            await customStatement(
+              'ALTER TABLE schede_ricevute ADD COLUMN aggiornato_il INTEGER',
+            );
+          }
 
-      /*
+          /*
            * v6 -> v7 (18/08/2026): notti e pennichelle si riconoscono davvero.
            *
            * La regola precedente decideva la giornata guardando l'ora d'inizio
@@ -149,9 +149,9 @@ class ArchivioSalute extends _$ArchivioSalute {
            * sempre — e il difetto sembrerebbe corretto solo a chi installa da
            * zero, cioe' a noi.
            */
-      if (da < 7) await _riaccreditaLeNotti();
+          if (da < 7) await _riaccreditaLeNotti();
 
-      /*
+          /*
            * v7 -> v8 (N20): il piano importato da PDF, e il suo originale.
            *
            * 🚨 **Due colonne nullable e nessuna tabella nuova**, di
@@ -166,12 +166,12 @@ class ArchivioSalute extends _$ArchivioSalute {
            * altrimenti fra un mese non c'e' piu' niente con cui confrontare i
            * numeri che si stanno seguendo.
            */
-      if (da < 8) {
-        await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
-        await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
-      }
+          if (da < 8) {
+            await m.addColumn(pianiRicevuti, pianiRicevuti.pdfOriginale);
+            await m.addColumn(pianiRicevuti, pianiRicevuti.importato);
+          }
 
-      /*
+          /*
            * v8 -> v9 (FASE 1.8): gli allenamenti registrati dall'orologio.
            *
            * 🚨 **Una tabella nuova e non due colonne**, al contrario di v7->v8:
@@ -185,9 +185,9 @@ class ArchivioSalute extends _$ArchivioSalute {
            * `allTables` invece di elencare a mano, proprio perche' una tabella
            * aggiunta dopo non resti fuori senza che nessuno se ne accorga.
            */
-      if (da < 9) await m.createTable(allenamentiDaOrologio);
+          if (da < 9) await m.createTable(allenamentiDaOrologio);
 
-      /*
+          /*
            * v9 -> v10 (FASE 1-bis): «questo allenamento non si unisce a
            * nessuno».
            *
@@ -197,14 +197,14 @@ class ArchivioSalute extends _$ArchivioSalute {
            * colonna l'errore non sarebbe riparabile: uno dei due allenamenti
            * sparirebbe dallo storico per sempre.
            */
-      if (da < 10) {
-        await m.addColumn(
-          allenamentiDaOrologio,
-          allenamentiDaOrologio.staccato,
-        );
-      }
+          if (da < 10) {
+            await m.addColumn(
+              allenamentiDaOrologio,
+              allenamentiDaOrologio.staccato,
+            );
+          }
 
-      /*
+          /*
        * ══ 🏋️ v10 → v11 (FASE 11): gli allenamenti tornano a casa ═══════════
        *
        * 📌 Il committente, 21/08/2026: *«Nessun allenamento deve risiedere sul
@@ -219,13 +219,13 @@ class ArchivioSalute extends _$ArchivioSalute {
        * 💡 Finiscono nel backup **da sole**: `esportaPerBackup()` enumera
        * `allTables`, non un elenco scritto a mano.
        */
-      if (da < 11) {
-        await m.createTable(seduteAllenamento);
-        await m.createTable(serieDelleSedute);
-        await m.createTable(bruciateDichiarate);
-      }
+          if (da < 11) {
+            await m.createTable(seduteAllenamento);
+            await m.createTable(serieDelleSedute);
+            await m.createTable(bruciateDichiarate);
+          }
 
-      /*
+          /*
        * ⚠️ v11 → v12 (FASE 11.3, poche ore dopo): da dove viene una bruciata.
        *
        * 🚨 Senza, `conteggiDelTrasloco()` contava **tutte** le righe locali. Oggi
@@ -233,11 +233,11 @@ class ArchivioSalute extends _$ArchivioSalute {
        * una dichiarazione fatta prima del trasloco avrebbe fatto rispondere
        * `409` al server **per sempre**.
        */
-      if (da < 12) {
-        await m.addColumn(bruciateDichiarate, bruciateDichiarate.daServer);
-      }
+          if (da < 12) {
+            await m.addColumn(bruciateDichiarate, bruciateDichiarate.daServer);
+          }
 
-      /*
+          /*
        * v12 → v13 (3b-B.16): le schede del server vivono sul telefono.
        *
        * 📌 *«tutto deve stare sul telefono … perché potrei non avere rete
@@ -251,9 +251,9 @@ class ArchivioSalute extends _$ArchivioSalute {
        * 💡 Nel backup ci finisce **da sola**: `esportaPerBackup()` enumera
        * `allTables`, non un elenco scritto a mano.
        */
-      if (da < 13) await m.createTable(schedeSulTelefono);
+          if (da < 13) await m.createTable(schedeSulTelefono);
 
-      /*
+          /*
        * v13 -> v14 (3b-B.17, poche ore dopo): niente piu' sincronizzazione.
        *
        * 📌 *«Basta, niente server, sticazzi crea solo problemi»*.
@@ -266,12 +266,12 @@ class ArchivioSalute extends _$ArchivioSalute {
        * ⚠️ Si ricrea invece di alterare: la v13 e' vissuta **poche ore** e su un
        * telefono solo, e quello che c'era dentro lo rimette l'importazione.
        */
-      if (da < 14) {
-        await m.deleteTable('schede_sul_telefono');
-        await m.createTable(schedeSulTelefono);
-      }
+          if (da < 14) {
+            await m.deleteTable('schede_sul_telefono');
+            await m.createTable(schedeSulTelefono);
+          }
 
-      /*
+          /*
        * ══ 🗃️ v14 → v15 (3b-B.17.6, 25/08/2026): UN ARCHIVIO SOLO ═══════════
        *
        * 📌 *«Che vuol dire stanno in una seconda tabella locale? Uniamole»*.
@@ -293,24 +293,24 @@ class ArchivioSalute extends _$ArchivioSalute {
        * dati: è così che `id` diventa `autoIncrement` senza perdere gli id già
        * assegnati, a cui punta `AllenamentiDaOrologio.schedaAssegnata`.
        */
-      if (da < 15) {
-        await m.alterTable(
-          TableMigration(
-            schedeSulTelefono,
-            newColumns: [schedeSulTelefono.origine],
-            columnTransformer: {
-              // 💡 Il segno dell'id diceva già da dove veniva: qui diventa una
-              // colonna, che lo dice ad alta voce.
-              schedeSulTelefono.origine: const CustomExpression<String>(
-                "CASE WHEN mia THEN 'mia' ELSE 'server' END",
-              ),
-              schedeSulTelefono.idOrigine: const CustomExpression<int>(
-                'CASE WHEN id > 0 THEN id ELSE NULL END',
-              ),
-              schedeSulTelefono.origineIdStabile:
-                  const CustomExpression<String>('NULL'),
+          if (da < 15) {
+            await m.alterTable(
+              TableMigration(
+                schedeSulTelefono,
+                newColumns: [schedeSulTelefono.origine],
+                columnTransformer: {
+                  // 💡 Il segno dell'id diceva già da dove veniva: qui diventa una
+                  // colonna, che lo dice ad alta voce.
+                  schedeSulTelefono.origine: const CustomExpression<String>(
+                    "CASE WHEN mia THEN 'mia' ELSE 'server' END",
+                  ),
+                  schedeSulTelefono.idOrigine: const CustomExpression<int>(
+                    'CASE WHEN id > 0 THEN id ELSE NULL END',
+                  ),
+                  schedeSulTelefono.origineIdStabile:
+                      const CustomExpression<String>('NULL'),
 
-              /*
+                  /*
                * ══ 🚨 OGNI COLONNA NUOVA VA DICHIARATA ANCHE QUI ═════════════
                *
                * ⛔ **Questo passo non è finito il giorno in cui è stato
@@ -330,30 +330,30 @@ class ArchivioSalute extends _$ArchivioSalute {
                * data di nascita non ce l'ha, e inventargliela vorrebbe dire
                * dare a tutte le vecchie la stessa età.
                */
-              schedeSulTelefono.creataIl: const CustomExpression<DateTime>(
-                'NULL',
+                  schedeSulTelefono.creataIl: const CustomExpression<DateTime>(
+                    'NULL',
+                  ),
+                },
               ),
-            },
-          ),
-        );
+            );
 
-        /*
+            /*
          * ⚠️ **`ricevuta_il` se non è mai stata corretta**: `aggiornato_il` è
          * nullable, e una scheda mai ricorretta dal trainer ce l'ha a `NULL`.
          * Senza il `COALESCE` finirebbe in cima all'elenco (o in fondo) a
          * seconda di come SQLite ordina i nulli — cioè a caso.
          */
-        await customStatement(
-          'INSERT INTO schede_sul_telefono '
-          '(nome, scheda, aggiornata_il, mia, origine, id_origine, origine_id_stabile) '
-          "SELECT nome, scheda, COALESCE(aggiornato_il, ricevuta_il), 0, 'chat', "
-          'messaggio_id, origine_id FROM schede_ricevute',
-        );
+            await customStatement(
+              'INSERT INTO schede_sul_telefono '
+              '(nome, scheda, aggiornata_il, mia, origine, id_origine, origine_id_stabile) '
+              "SELECT nome, scheda, COALESCE(aggiornato_il, ricevuta_il), 0, 'chat', "
+              'messaggio_id, origine_id FROM schede_ricevute',
+            );
 
-        await m.deleteTable('schede_ricevute');
-      }
+            await m.deleteTable('schede_ricevute');
+          }
 
-      /*
+          /*
        * ⚠️ v15 → v16 (3b-B.20.5): il tipo dichiarato a mano.
        *
        * 📌 *«voglio poterci assegnare anche un tipo di allenamento diverso dalla
@@ -364,14 +364,14 @@ class ArchivioSalute extends _$ArchivioSalute {
        * sola vorrebbe dire che a ogni risincronizzazione si contendono il
        * campo. 🚨 Nasce vuota, ed è giusto: nessuno ha ancora dichiarato niente.
        */
-      if (da < 16) {
-        await m.addColumn(
-          allenamentiDaOrologio,
-          allenamentiDaOrologio.tipoScelto,
-        );
-      }
+          if (da < 16) {
+            await m.addColumn(
+              allenamentiDaOrologio,
+              allenamentiDaOrologio.tipoScelto,
+            );
+          }
 
-      /*
+          /*
        * 📸 v16 → v17 (3b-B.20.8): la foto di un allenamento del polso.
        *
        * 📌 *«Anche nella schermata di allenamento con orologio devo poter
@@ -380,22 +380,23 @@ class ArchivioSalute extends _$ArchivioSalute {
        * 🚨 Una colonna **nuova**, non `sessioneId` con un id negativo: gli id
        * firmati sono la convenzione che B.17.6 ha appena tolto dalle schede.
        */
-      if (da < 17) {
-        await m.addColumn(fotoProgressi, fotoProgressi.allenamentoOrologioId);
-      }
+          if (da < 17) {
+            await m.addColumn(
+                fotoProgressi, fotoProgressi.allenamentoOrologioId);
+          }
 
-      /*
+          /*
        * 🔥 v17 → v18 (3b-C.4): le calorie di un allenamento del polso si
        * possono correggere, come quelle di una seduta dell'app.
        */
-      if (da < 18) {
-        await m.addColumn(
-          allenamentiDaOrologio,
-          allenamentiDaOrologio.kcalCorrette,
-        );
-      }
+          if (da < 18) {
+            await m.addColumn(
+              allenamentiDaOrologio,
+              allenamentiDaOrologio.kcalCorrette,
+            );
+          }
 
-      /*
+          /*
        * 📅 v18 → v19 (3b-C.6): quando è nata una scheda.
        *
        * ⚠️ **Resta vuota per quelle che c'erano già**, e va bene: chi legge cade
@@ -403,8 +404,8 @@ class ArchivioSalute extends _$ArchivioSalute {
        * vecchie la stessa età, e l'ordine «le ultime tre» diventerebbe casuale
        * proprio per chi ne ha di più.
        */
-      if (da < 19) {
-        /*
+          if (da < 19) {
+            /*
          * ══ 🚨 «SE NON C'È GIÀ», E NON È PRUDENZA GENERICA ══════════════════
          *
          * ⛔ **`addColumn` qui esplodeva davvero**, e non solo nel test. Il
@@ -423,18 +424,19 @@ class ArchivioSalute extends _$ArchivioSalute {
          * v14 vero. Senza, sarebbe esplosa sul telefono di chi aggiorna — mai
          * sul nostro, che installa da zero.
          */
-        final colonne = await customSelect(
-          'PRAGMA table_info(schede_sul_telefono)',
-        ).get();
+            final colonne = await customSelect(
+              'PRAGMA table_info(schede_sul_telefono)',
+            ).get();
 
-        final ceGia = colonne.any((r) => r.read<String>('name') == 'creata_il');
+            final ceGia =
+                colonne.any((r) => r.read<String>('name') == 'creata_il');
 
-        if (!ceGia) {
-          await m.addColumn(schedeSulTelefono, schedeSulTelefono.creataIl);
-        }
-      }
+            if (!ceGia) {
+              await m.addColumn(schedeSulTelefono, schedeSulTelefono.creataIl);
+            }
+          }
 
-      /*
+          /*
        * 🏃 v19 → v20 (3b-G.7): la spunta «conta come extra», sulle sedute del
        * polso e su quelle dell'app.
        *
@@ -446,26 +448,27 @@ class ArchivioSalute extends _$ArchivioSalute {
        * 💡 Nessuna delle due tabelle e' mai passata da un `alterTable`, quindi
        * qui il controllo «se non c'e' gia'» non serve.
        */
-      if (da < 20) {
-        await m.addColumn(
-          allenamentiDaOrologio,
-          allenamentiDaOrologio.contaComeExtra,
-        );
-        await m.addColumn(seduteAllenamento, seduteAllenamento.contaComeExtra);
-      }
+          if (da < 20) {
+            await m.addColumn(
+              allenamentiDaOrologio,
+              allenamentiDaOrologio.contaComeExtra,
+            );
+            await m.addColumn(
+                seduteAllenamento, seduteAllenamento.contaComeExtra);
+          }
 
-      /*
+          /*
        * 📅 v20 → v21 (3b-I.B): la settimana programmata.
        *
        * 💡 Tabella nuova, quindi `createTable` e basta: non c'e' niente da
        * convertire, e chi aggiorna si trova sette caselle vuote — che e'
        * esattamente lo stato «non ho ancora programmato niente».
        */
-      if (da < 21) {
-        await m.createTable(settimanaProgrammata);
-      }
+          if (da < 21) {
+            await m.createTable(settimanaProgrammata);
+          }
 
-      /*
+          /*
        * v21 → v22 (3b-I.A): l'analisi della progressione, scritta dall'AI.
        *
        * 🚨 **Una tabella e non `SharedPreferences`.** Le preferenze sono un
@@ -476,11 +479,11 @@ class ArchivioSalute extends _$ArchivioSalute {
        * 💡 E così entra nel backup da sola: `esportaPerBackup()` enumera
        * `allTables`, e questo è il motivo per cui l'elenco non si scrive a mano.
        */
-      if (da < 22) {
-        await m.createTable(analisiDelleSchede);
-      }
+          if (da < 22) {
+            await m.createTable(analisiDelleSchede);
+          }
 
-      /*
+          /*
        * ══ 📐 v22 → v23 (3b-I.E): le versioni della scheda ═══════════════════
        *
        * 📌 *«ci deve essere qualcosa che tiene traccia del modo in cui cambia la
@@ -499,14 +502,14 @@ class ArchivioSalute extends _$ArchivioSalute {
        * un gettone a chi ce l'aveva, ed è l'unica ragione per cui vale la pena
        * dirlo qui invece di farlo in silenzio.
        */
-      if (da < 23) {
-        await m.createTable(versioniDelleSchede);
+          if (da < 23) {
+            await m.createTable(versioniDelleSchede);
 
-        await customStatement('DROP TABLE IF EXISTS analisi_delle_schede');
-        await m.createTable(analisiDelleSchede);
-      }
+            await customStatement('DROP TABLE IF EXISTS analisi_delle_schede');
+            await m.createTable(analisiDelleSchede);
+          }
 
-      /*
+          /*
        * ══ v23 → v24 (3b-I.F): il riassunto di tutta la scheda ═══════════════
        *
        * 💡 **Una colonna e non una tabella**: è una frase sola, che nasce e
@@ -532,11 +535,11 @@ class ArchivioSalute extends _$ArchivioSalute {
        * v14: senza quel test il difetto si sarebbe visto solo sul telefono di
        * chi aggiorna da lontano — cioè mai sui nostri.
        */
-      if (da < 24 && da >= 23) {
-        await m.addColumn(analisiDelleSchede, analisiDelleSchede.riassunto);
-      }
+          if (da < 24 && da >= 23) {
+            await m.addColumn(analisiDelleSchede, analisiDelleSchede.riassunto);
+          }
 
-      /*
+          /*
        * ══ ⚖️ v24 → v25 (3b-W): la bilancia scrive nelle misure ═════════════
        *
        * Due colonne su `misureCorpo`: la **massa magra**, quando una bilancia
@@ -555,12 +558,12 @@ class ArchivioSalute extends _$ArchivioSalute {
        * ⚠️ Chi invece è già alla v2 o oltre non ce le ha, e per lui
        * l'`addColumn` serve davvero. 💡 Due strade verso la stessa forma.
        */
-      if (da < 25 && da >= 2) {
-        await m.addColumn(misureCorpo, misureCorpo.massaMagraKg);
-        await m.addColumn(misureCorpo, misureCorpo.origine);
-      }
+          if (da < 25 && da >= 2) {
+            await m.addColumn(misureCorpo, misureCorpo.massaMagraKg);
+            await m.addColumn(misureCorpo, misureCorpo.origine);
+          }
 
-      /*
+          /*
        * v25 → v26 (Parte I, I1): **il diario alimentare arriva sul telefono**.
        *
        * ⚠️ **Le tabelle si creano vuote, e per ora nessuno ci scrive.** Il
@@ -572,12 +575,12 @@ class ArchivioSalute extends _$ArchivioSalute {
        * `allTables`, e questo è il motivo per cui l'elenco non si scrive a mano
        * (R4).
        */
-      if (da < 26) {
-        await m.createTable(vociDiario);
-        await m.createTable(preferitiCibo);
-      }
+          if (da < 26) {
+            await m.createTable(vociDiario);
+            await m.createTable(preferitiCibo);
+          }
 
-      /*
+          /*
        * v26 → v27 (I2.5): i preferiti si ricordano **quante volte** sono stati
        * usati.
        *
@@ -589,12 +592,12 @@ class ArchivioSalute extends _$ArchivioSalute {
        * `createTable` qui sopra, e un `addColumn` gli darebbe «duplicate column
        * name». È la stessa forma del passo `da < 25 && da >= 2`.
        */
-      if (da < 27 && da >= 26) {
-        await m.addColumn(preferitiCibo, preferitiCibo.volteUsato);
-        await m.addColumn(preferitiCibo, preferitiCibo.usatoIl);
-      }
+          if (da < 27 && da >= 26) {
+            await m.addColumn(preferitiCibo, preferitiCibo.volteUsato);
+            await m.addColumn(preferitiCibo, preferitiCibo.usatoIl);
+          }
 
-      /*
+          /*
        * v27 → v28 (I5.3): il consiglio del giorno si tiene qui.
        *
        * 🚨 Sul server il testo **non esiste più**: `ai_advices.body` è stata
@@ -602,11 +605,11 @@ class ArchivioSalute extends _$ArchivioSalute {
        * sparirebbe alla prima cache: il server risponde `cached: true` e non ha
        * più niente da consegnare.
        */
-      if (da < 28) {
-        await m.createTable(consigliDelGiorno);
-      }
+          if (da < 28) {
+            await m.createTable(consigliDelGiorno);
+          }
 
-      /*
+          /*
        * v28 → v29 (K1-bis): l'originale di un documento importato vive qui.
        *
        * 🚨 **Perche' una tabella e non una colonna.** Un import puo' essere
@@ -621,11 +624,11 @@ class ArchivioSalute extends _$ArchivioSalute {
        *
        * 💡 Finisce nel backup da sola: `esportaPerBackup()` enumera `allTables`.
        */
-      if (da < 29) {
-        await m.createTable(documentiImportati);
-      }
-    },
-  );
+          if (da < 29) {
+            await m.createTable(documentiImportati);
+          }
+        },
+      );
 
   /// Ricalcola `notte` su tutti i campioni già salvati — v4 → v5, e di nuovo
   /// v6 → v7.
@@ -779,19 +782,20 @@ class ArchivioSalute extends _$ArchivioSalute {
       );
 
       for (final a in allenamenti) {
-        await (update(allenamentiDaOrologio)..where(
-              (t) =>
-                  t.fonte.equals(a.fonte) & t.iniziatoIl.equals(a.iniziatoIl),
-            ))
+        await (update(allenamentiDaOrologio)
+              ..where(
+                (t) =>
+                    t.fonte.equals(a.fonte) & t.iniziatoIl.equals(a.iniziatoIl),
+              ))
             .write(
-              AllenamentiDaOrologioCompanion(
-                tipo: Value(a.tipo),
-                finitoIl: Value(a.finitoIl),
-                kcal: Value(a.kcal),
-                distanzaMetri: Value(a.distanzaMetri),
-                passi: Value(a.passi),
-              ),
-            );
+          AllenamentiDaOrologioCompanion(
+            tipo: Value(a.tipo),
+            finitoIl: Value(a.finitoIl),
+            kcal: Value(a.kcal),
+            distanzaMetri: Value(a.distanzaMetri),
+            passi: Value(a.passi),
+          ),
+        );
       }
     });
 
@@ -811,25 +815,25 @@ class ArchivioSalute extends _$ArchivioSalute {
     int? schedaServerId,
     String? nomeScheda,
     DateTime? quando,
-  }) => into(seduteAllenamento).insert(
-    SeduteAllenamentoCompanion.insert(
-      schedaServerId: Value(schedaServerId),
-      nomeScheda: Value(nomeScheda),
-      iniziataIl: quando ?? DateTime.now(),
-    ),
-  );
+  }) =>
+      into(seduteAllenamento).insert(
+        SeduteAllenamentoCompanion.insert(
+          schedaServerId: Value(schedaServerId),
+          nomeScheda: Value(nomeScheda),
+          iniziataIl: quando ?? DateTime.now(),
+        ),
+      );
 
   /// La seduta ancora aperta, se ce n'è una.
   ///
   /// ⚠️ **La più recente**, non «l'unica»: se per un difetto ne restassero due
   /// aperte, riprendere la più vecchia sarebbe la scelta peggiore — si
   /// scriverebbero le serie di oggi dentro la seduta di ieri.
-  Future<SedutaAllenamento?> sedutaAperta() =>
-      (select(seduteAllenamento)
-            ..where((t) => t.finitaIl.isNull())
-            ..orderBy([(t) => OrderingTerm.desc(t.iniziataIl)])
-            ..limit(1))
-          .getSingleOrNull();
+  Future<SedutaAllenamento?> sedutaAperta() => (select(seduteAllenamento)
+        ..where((t) => t.finitaIl.isNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.iniziataIl)])
+        ..limit(1))
+      .getSingleOrNull();
 
   /// Chiude una seduta.
   ///
@@ -840,13 +844,15 @@ class ArchivioSalute extends _$ArchivioSalute {
     DateTime? quando,
     int? kcal,
     bool? kcalAMano,
-  }) => (update(seduteAllenamento)..where((t) => t.id.equals(id))).write(
-    SeduteAllenamentoCompanion(
-      finitaIl: Value(quando ?? DateTime.now()),
-      kcal: kcal == null ? const Value.absent() : Value(kcal),
-      kcalAMano: kcalAMano == null ? const Value.absent() : Value(kcalAMano),
-    ),
-  );
+  }) =>
+      (update(seduteAllenamento)..where((t) => t.id.equals(id))).write(
+        SeduteAllenamentoCompanion(
+          finitaIl: Value(quando ?? DateTime.now()),
+          kcal: kcal == null ? const Value.absent() : Value(kcal),
+          kcalAMano:
+              kcalAMano == null ? const Value.absent() : Value(kcalAMano),
+        ),
+      );
 
   /// Scrive le calorie **a mano** su una seduta — 🚨 e segna che sono a mano.
   ///
@@ -880,9 +886,10 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// resterebbero righe orfane: nessuna schermata le mostra, ma il backup se le
   /// porta in giro per sempre.
   Future<void> cancellaSeduta(int id) => transaction(() async {
-    await (delete(serieDelleSedute)..where((t) => t.sedutaId.equals(id))).go();
-    await (delete(seduteAllenamento)..where((t) => t.id.equals(id))).go();
-  });
+        await (delete(serieDelleSedute)..where((t) => t.sedutaId.equals(id)))
+            .go();
+        await (delete(seduteAllenamento)..where((t) => t.id.equals(id))).go();
+      });
 
   /// Le sedute, dalla più recente.
   Future<List<SedutaAllenamento>> sedute({int quante = 200, DateTime? da}) =>
@@ -915,7 +922,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   }) async {
     final esistente = await (select(
       seduteAllenamento,
-    )..where((t) => t.idServer.equals(idServer))).getSingleOrNull();
+    )..where((t) => t.idServer.equals(idServer)))
+        .getSingleOrNull();
 
     final valori = SeduteAllenamentoCompanion(
       idServer: Value(idServer),
@@ -930,7 +938,8 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (esistente != null) {
       await (update(
         seduteAllenamento,
-      )..where((t) => t.id.equals(esistente.id))).write(valori);
+      )..where((t) => t.id.equals(esistente.id)))
+          .write(valori);
 
       return esistente.id;
     }
@@ -977,11 +986,10 @@ class ArchivioSalute extends _$ArchivioSalute {
   }
 
   /// Le serie di una seduta, nell'ordine in cui sono state fatte.
-  Future<List<SerieSeduta>> serieDi(int sedutaId) =>
-      (select(serieDelleSedute)
-            ..where((t) => t.sedutaId.equals(sedutaId))
-            ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
-          .get();
+  Future<List<SerieSeduta>> serieDi(int sedutaId) => (select(serieDelleSedute)
+        ..where((t) => t.sedutaId.equals(sedutaId))
+        ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
+      .get();
 
   /// Le serie di **più** sedute in una query sola.
   ///
@@ -993,11 +1001,10 @@ class ArchivioSalute extends _$ArchivioSalute {
   ) async {
     if (seduteIds.isEmpty) return const {};
 
-    final righe =
-        await (select(serieDelleSedute)
-              ..where((t) => t.sedutaId.isIn(seduteIds))
-              ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
-            .get();
+    final righe = await (select(serieDelleSedute)
+          ..where((t) => t.sedutaId.isIn(seduteIds))
+          ..orderBy([(t) => OrderingTerm.asc(t.numero)]))
+        .get();
 
     final per = <int, List<SerieSeduta>>{};
     for (final r in righe) {
@@ -1022,26 +1029,26 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   /// Le calorie dichiarate a mano per un giorno, o `null`.
   Future<int?> bruciateAManoDel(DateTime giorno) async {
-    final riga =
-        await (select(bruciateDichiarate)..where(
-              (t) => t.giorno.equals(
-                DateTime(giorno.year, giorno.month, giorno.day),
-              ),
-            ))
-            .getSingleOrNull();
+    final riga = await (select(bruciateDichiarate)
+          ..where(
+            (t) => t.giorno.equals(
+              DateTime(giorno.year, giorno.month, giorno.day),
+            ),
+          ))
+        .getSingleOrNull();
 
     return riga?.kcal;
   }
 
   /// Le calorie dichiarate a mano in un intervallo, per giorno.
   Future<Map<DateTime, int>> bruciateAManoFra(DateTime da, DateTime a) async {
-    final righe =
-        await (select(bruciateDichiarate)..where(
-              (t) =>
-                  t.giorno.isBiggerOrEqualValue(da) &
-                  t.giorno.isSmallerOrEqualValue(a),
-            ))
-            .get();
+    final righe = await (select(bruciateDichiarate)
+          ..where(
+            (t) =>
+                t.giorno.isBiggerOrEqualValue(da) &
+                t.giorno.isSmallerOrEqualValue(a),
+          ))
+        .get();
 
     return {for (final r in righe) r.giorno: r.kcal};
   }
@@ -1055,21 +1062,23 @@ class ArchivioSalute extends _$ArchivioSalute {
     DateTime giorno,
     int kcal, {
     bool daServer = false,
-  }) => into(bruciateDichiarate).insert(
-    BruciateDichiarateCompanion.insert(
-      giorno: DateTime(giorno.year, giorno.month, giorno.day),
-      kcal: kcal,
-      daServer: Value(daServer),
-    ),
-    mode: InsertMode.insertOrReplace,
-  );
+  }) =>
+      into(bruciateDichiarate).insert(
+        BruciateDichiarateCompanion.insert(
+          giorno: DateTime(giorno.year, giorno.month, giorno.day),
+          kcal: kcal,
+          daServer: Value(daServer),
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
 
   Future<void> togliBruciateAMano(DateTime giorno) =>
-      (delete(bruciateDichiarate)..where(
-            (t) => t.giorno.equals(
-              DateTime(giorno.year, giorno.month, giorno.day),
-            ),
-          ))
+      (delete(bruciateDichiarate)
+            ..where(
+              (t) => t.giorno.equals(
+                DateTime(giorno.year, giorno.month, giorno.day),
+              ),
+            ))
           .go();
 
   /// Gli allenamenti dell'orologio, dal più recente.
@@ -1109,17 +1118,17 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// mezza nuova — e nessuno se ne accorgerebbe, perché entrambe sono
   /// settimane plausibili.
   Future<void> scriviLaSettimana(List<int?> giorni) => transaction(() async {
-    await delete(settimanaProgrammata).go();
+        await delete(settimanaProgrammata).go();
 
-    for (var i = 0; i < giorni.length && i < 7; i++) {
-      await into(settimanaProgrammata).insert(
-        SettimanaProgrammataCompanion.insert(
-          giorno: Value(i + 1),
-          schedaLocale: Value(giorni[i]),
-        ),
-      );
-    }
-  });
+        for (var i = 0; i < giorni.length && i < 7; i++) {
+          await into(settimanaProgrammata).insert(
+            SettimanaProgrammataCompanion.insert(
+              giorno: Value(i + 1),
+              schedaLocale: Value(giorni[i]),
+            ),
+          );
+        }
+      });
 
   /// La storia di ogni esercizio di una scheda — 3b-I.A, 27/08/2026.
   ///
@@ -1195,12 +1204,12 @@ class ArchivioSalute extends _$ArchivioSalute {
       if (rinvio.key == rinvio.value) continue;
 
       try {
-        spostate +=
-            await (update(
-              serieDelleSedute,
-            )..where((t) => t.esercizioId.equals(rinvio.key))).write(
-              SerieDelleSeduteCompanion(esercizioId: Value(rinvio.value)),
-            );
+        spostate += await (update(
+          serieDelleSedute,
+        )..where((t) => t.esercizioId.equals(rinvio.key)))
+            .write(
+          SerieDelleSeduteCompanion(esercizioId: Value(rinvio.value)),
+        );
       } on Object catch (e) {
         debugPrint(
           'riconciliazione ${rinvio.key}→${rinvio.value} non riuscita: $e',
@@ -1321,7 +1330,8 @@ class ArchivioSalute extends _$ArchivioSalute {
 
       await (update(
         schedeSulTelefono,
-      )..where((t) => t.id.equals(riga.id))).write(
+      )..where((t) => t.id.equals(riga.id)))
+          .write(
         SchedeSulTelefonoCompanion(scheda: Value(jsonEncode(decodificata))),
       );
 
@@ -1388,23 +1398,23 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     return {
       for (final voce in perEsercizio.entries)
-        voce.key:
-            (voce.value.values.toList()
-                  ..sort((a, b) => a.data.compareTo(b.data)))
-                // ⚠️ `takeLast`: si tengono le **ultime** sedute, non le prime.
-                // Con `take()` l'analisi parlerebbe di com'era sei mesi fa.
-                .reversed
-                .take(quanteSedute)
-                .toList()
-                .reversed
-                .toList(),
+        voce.key: (voce.value.values.toList()
+              ..sort((a, b) => a.data.compareTo(b.data)))
+            // ⚠️ `takeLast`: si tengono le **ultime** sedute, non le prime.
+            // Con `take()` l'analisi parlerebbe di com'era sei mesi fa.
+            .reversed
+            .take(quanteSedute)
+            .toList()
+            .reversed
+            .toList(),
     };
   }
 
   /// L'analisi già scritta per una scheda, se c'è.
   Future<AnalisiScheda?> analisiDellaScheda(int schedaLocale) => (select(
-    analisiDelleSchede,
-  )..where((t) => t.schedaLocale.equals(schedaLocale))).getSingleOrNull();
+        analisiDelleSchede,
+      )..where((t) => t.schedaLocale.equals(schedaLocale)))
+          .getSingleOrNull();
 
   /// Scrive (o riscrive) l'analisi di una scheda.
   ///
@@ -1432,15 +1442,14 @@ class ArchivioSalute extends _$ArchivioSalute {
      * schermo si sarebbe visto come una frase dell'AI che dice il contrario del
      * vero.
      */
-    final righe =
-        await (select(versioniDelleSchede)
-              ..where((t) => t.schedaLocale.equals(schedaLocale))
-              ..orderBy([
-                (t) => OrderingTerm.desc(t.quando),
-                (t) => OrderingTerm.desc(t.id),
-              ])
-              ..limit(quante))
-            .get();
+    final righe = await (select(versioniDelleSchede)
+          ..where((t) => t.schedaLocale.equals(schedaLocale))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.quando),
+            (t) => OrderingTerm.desc(t.id),
+          ])
+          ..limit(quante))
+        .get();
 
     // ⚠️ Si legge dalla più recente per prendere **le ultime** `quante`, e poi si
     // gira: chi confronta le versioni ha bisogno dell'ordine del tempo.
@@ -1457,8 +1466,9 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// nessuno in produzione, e non deve: la storia di una scheda si perde solo
   /// insieme alla scheda.
   Future<void> dimenticaLeVersioni(int schedaLocale) => (delete(
-    versioniDelleSchede,
-  )..where((t) => t.schedaLocale.equals(schedaLocale))).go();
+        versioniDelleSchede,
+      )..where((t) => t.schedaLocale.equals(schedaLocale)))
+          .go();
 
   /// Registra com'è fatta una scheda **adesso**, se è cambiata.
   ///
@@ -1490,36 +1500,34 @@ class ArchivioSalute extends _$ArchivioSalute {
   }) async {
     final impronta = improntaDellaScheda(scheda);
 
-    final ultima =
-        await (select(versioniDelleSchede)
-              ..where((t) => t.schedaLocale.equals(schedaLocale))
-              ..orderBy([
-                (t) => OrderingTerm.desc(t.quando),
-                (t) => OrderingTerm.desc(t.id),
-              ])
-              ..limit(1))
-            .getSingleOrNull();
+    final ultima = await (select(versioniDelleSchede)
+          ..where((t) => t.schedaLocale.equals(schedaLocale))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.quando),
+            (t) => OrderingTerm.desc(t.id),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
 
     if (ultima != null && ultima.impronta == impronta) return;
 
     final adesso = quando ?? DateTime.now();
 
-    final quante =
-        await (selectOnly(versioniDelleSchede)
-              ..addColumns([versioniDelleSchede.id.count()])
-              ..where(versioniDelleSchede.schedaLocale.equals(schedaLocale)))
-            .getSingle()
-            .then((r) => r.read(versioniDelleSchede.id.count()) ?? 0);
+    final quante = await (selectOnly(versioniDelleSchede)
+          ..addColumns([versioniDelleSchede.id.count()])
+          ..where(versioniDelleSchede.schedaLocale.equals(schedaLocale)))
+        .getSingle()
+        .then((r) => r.read(versioniDelleSchede.id.count()) ?? 0);
 
-    final dentroLaFinestra =
-        ultima != null &&
+    final dentroLaFinestra = ultima != null &&
         quante > 1 &&
         adesso.difference(ultima.quando) < finestraDiModifica;
 
     if (dentroLaFinestra) {
       await (update(
         versioniDelleSchede,
-      )..where((t) => t.id.equals(ultima.id))).write(
+      )..where((t) => t.id.equals(ultima.id)))
+          .write(
         VersioniDelleSchedeCompanion(
           quando: Value(adesso),
           impronta: Value(impronta),
@@ -1547,14 +1555,13 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// niente con cui confrontare. ⛔ Quelle in mezzo invece invecchiano davvero:
   /// «com'era a marzo» non serve a nessuno se c'è aprile.
   Future<void> _potaLeVersioni(int schedaLocale) async {
-    final tutte =
-        await (select(versioniDelleSchede)
-              ..where((t) => t.schedaLocale.equals(schedaLocale))
-              ..orderBy([
-                (t) => OrderingTerm.asc(t.quando),
-                (t) => OrderingTerm.asc(t.id),
-              ]))
-            .get();
+    final tutte = await (select(versioniDelleSchede)
+          ..where((t) => t.schedaLocale.equals(schedaLocale))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.quando),
+            (t) => OrderingTerm.asc(t.id),
+          ]))
+        .get();
 
     if (tutte.length <= quanteVersioni + 1) return;
 
@@ -1582,9 +1589,10 @@ class ArchivioSalute extends _$ArchivioSalute {
       for (final r in tutte.skip(tutte.length - quanteVersioni)) r.id,
     };
 
-    await (delete(versioniDelleSchede)..where(
-          (t) => t.schedaLocale.equals(schedaLocale) & t.id.isNotIn(daTenere),
-        ))
+    await (delete(versioniDelleSchede)
+          ..where(
+            (t) => t.schedaLocale.equals(schedaLocale) & t.id.isNotIn(daTenere),
+          ))
         .go();
   }
 
@@ -1607,11 +1615,12 @@ class ArchivioSalute extends _$ArchivioSalute {
     final da = _soloGiorno(giorno);
     final a = da.add(const Duration(days: 1));
 
-    return (select(allenamentiDaOrologio)..where(
-          (t) =>
-              t.iniziatoIl.isBiggerOrEqualValue(da) &
-              t.iniziatoIl.isSmallerThanValue(a),
-        ))
+    return (select(allenamentiDaOrologio)
+          ..where(
+            (t) =>
+                t.iniziatoIl.isBiggerOrEqualValue(da) &
+                t.iniziatoIl.isSmallerThanValue(a),
+          ))
         .get();
   }
 
@@ -1630,24 +1639,24 @@ class ArchivioSalute extends _$ArchivioSalute {
     final da = _soloGiorno(giorno);
     final a = da.add(const Duration(days: 1));
 
-    final dalPolso =
-        await (select(allenamentiDaOrologio)..where(
-              (t) =>
-                  t.contaComeExtra.equals(true) &
-                  t.nascosto.equals(false) &
-                  t.iniziatoIl.isBiggerOrEqualValue(da) &
-                  t.iniziatoIl.isSmallerThanValue(a),
-            ))
-            .get();
+    final dalPolso = await (select(allenamentiDaOrologio)
+          ..where(
+            (t) =>
+                t.contaComeExtra.equals(true) &
+                t.nascosto.equals(false) &
+                t.iniziatoIl.isBiggerOrEqualValue(da) &
+                t.iniziatoIl.isSmallerThanValue(a),
+          ))
+        .get();
 
-    final dallApp =
-        await (select(seduteAllenamento)..where(
-              (t) =>
-                  t.contaComeExtra.equals(true) &
-                  t.iniziataIl.isBiggerOrEqualValue(da) &
-                  t.iniziataIl.isSmallerThanValue(a),
-            ))
-            .get();
+    final dallApp = await (select(seduteAllenamento)
+          ..where(
+            (t) =>
+                t.contaComeExtra.equals(true) &
+                t.iniziataIl.isBiggerOrEqualValue(da) &
+                t.iniziataIl.isSmallerThanValue(a),
+          ))
+        .get();
 
     var totale = 0;
 
@@ -1753,15 +1762,16 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// e — insieme a `insertOrIgnore` — garantisce che una rilettura non li tocchi.
   AllenamentiDaOrologioCompanion _companionAllenamento(
     AllenamentoDaOrologio a,
-  ) => AllenamentiDaOrologioCompanion.insert(
-    fonte: a.fonte,
-    tipo: a.tipo,
-    iniziatoIl: a.iniziatoIl,
-    finitoIl: a.finitoIl,
-    kcal: Value(a.kcal),
-    distanzaMetri: Value(a.distanzaMetri),
-    passi: Value(a.passi),
-  );
+  ) =>
+      AllenamentiDaOrologioCompanion.insert(
+        fonte: a.fonte,
+        tipo: a.tipo,
+        iniziatoIl: a.iniziatoIl,
+        finitoIl: a.finitoIl,
+        kcal: Value(a.kcal),
+        distanzaMetri: Value(a.distanzaMetri),
+        passi: Value(a.passi),
+      );
 
   // ─────────────────────────── lettura ───────────────────────────
 
@@ -1898,14 +1908,88 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// 💡 Le bruciate che entrano nell'obiettivo vengono da `kcalDelleSedute`.
   /// ⚠️ Questo resta perché è un dato vero e serve ai controlli netto/lordo di
   /// 3b-G.4: `totale del giorno − attive del giorno ≈ metabolismo basale`.
+  /// I passi di una giornata, **tutti** — 06/09/2026.
+  ///
+  /// 📌 Il committente: *«è vero che i passi vengono conteggiati nell'esercizio,
+  /// ma solo per quanto riguarda le calorie bruciate DURANTE quell'esercizio;
+  /// per il resto della giornata cammino lo stesso e gli altri devono comunque
+  /// essere conteggiati»*.
+  ///
+  /// 🚨 Quindi questo numero **comprende** i passi fatti allenandosi: è quello
+  /// che si mostra, ed è quello che una persona conta quando dice «oggi ho fatto
+  /// diecimila passi». ⚠️ Chi deve stimare le **calorie** toglie di mezzo quelli
+  /// della seduta — vedi [passiFuoriDagliAllenamenti] — perché lì sarebbero
+  /// contati due volte.
+  ///
+  /// 💡 Stessa forma di [kcalAttiveDi]: si somma per sorgente e si tiene **la
+  /// più alta**, non il totale. ⛔ Il telefono in tasca e l'orologio al polso
+  /// contano gli stessi passi, e sommarli li raddoppierebbe.
+  Future<int> passiDi(DateTime giorno) async {
+    final righe = await (select(lettureSalute)
+          ..where(
+            (t) =>
+                t.metrica.equals(MetricaSalute.passi.codice) &
+                t.giorno.equals(_soloGiorno(giorno)),
+          ))
+        .get();
+
+    if (righe.isEmpty) return 0;
+
+    final perSorgente = <String, double>{};
+
+    for (final r in righe) {
+      perSorgente[r.fonte] = (perSorgente[r.fonte] ?? 0) + r.valore;
+    }
+
+    return perSorgente.values.reduce((a, b) => a > b ? a : b).round();
+  }
+
+  /// I passi **fuori** dagli allenamenti, per la stima delle calorie.
+  ///
+  /// ⛔ **Non si mostra a nessuno**: è un numero di servizio. Chi legge «passi»
+  /// si aspetta tutti i suoi, compresi quelli della corsa.
+  ///
+  /// 🚨 Serve solo a non contare due volte lo stesso movimento: le calorie della
+  /// seduta le abbiamo già dall'orologio, e stimarle un'altra volta dai passi di
+  /// quella stessa mezz'ora le sommerebbe a se stesse.
+  ///
+  /// ⚠️ Mai negativo: se una sorgente conta i passi della seduta e un'altra no,
+  /// la sottrazione può sfondare lo zero.
+  Future<int> passiFuoriDagliAllenamenti(DateTime giorno) async {
+    final tutti = await passiDi(giorno);
+
+    /*
+     * ⚠️ **Si filtra su `iniziatoIl`**, perché questa tabella una colonna
+     * `giorno` non ce l'ha: porta l'inizio e la fine di ogni seduta.
+     *
+     * 💡 Una seduta che scavalca la mezzanotte conta nel giorno in cui è
+     * **cominciata**, che è come la racconta chi l'ha fatta.
+     */
+    final da = _soloGiorno(giorno);
+    final a = da.add(const Duration(days: 1));
+
+    final sedute = await (select(allenamentiDaOrologio)
+          ..where(
+            (t) =>
+                t.iniziatoIl.isBiggerOrEqualValue(da) &
+                t.iniziatoIl.isSmallerThanValue(a),
+          ))
+        .get();
+
+    final dentro = sedute.fold<int>(0, (somma, s) => somma + (s.passi ?? 0));
+    final fuori = tutti - dentro;
+
+    return fuori > 0 ? fuori : 0;
+  }
+
   Future<int> kcalAttiveDi(DateTime giorno) async {
-    final righe =
-        await (select(lettureSalute)..where(
-              (t) =>
-                  t.metrica.equals(MetricaSalute.calorieAttive.codice) &
-                  t.giorno.equals(_soloGiorno(giorno)),
-            ))
-            .get();
+    final righe = await (select(lettureSalute)
+          ..where(
+            (t) =>
+                t.metrica.equals(MetricaSalute.calorieAttive.codice) &
+                t.giorno.equals(_soloGiorno(giorno)),
+          ))
+        .get();
 
     if (righe.isEmpty) return 0;
 
@@ -1928,11 +2012,10 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   /// La notte più recente per cui esiste almeno un campione.
   Future<DateTime?> ultimaNotteConDati() async {
-    final riga =
-        await (select(campioniSonno)
-              ..orderBy([(t) => OrderingTerm.desc(t.notte)])
-              ..limit(1))
-            .getSingleOrNull();
+    final riga = await (select(campioniSonno)
+          ..orderBy([(t) => OrderingTerm.desc(t.notte)])
+          ..limit(1))
+        .getSingleOrNull();
 
     return riga?.notte;
   }
@@ -1954,11 +2037,10 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// stamattina battono le 22:00 di ieri sera, che è esattamente la risposta
   /// giusta.
   Future<DateTime?> ultimoRisveglio() async {
-    final riga =
-        await (select(campioniSonno)
-              ..orderBy([(t) => OrderingTerm.desc(t.finitoIl)])
-              ..limit(1))
-            .getSingleOrNull();
+    final riga = await (select(campioniSonno)
+          ..orderBy([(t) => OrderingTerm.desc(t.finitoIl)])
+          ..limit(1))
+        .getSingleOrNull();
 
     return riga?.finitoIl;
   }
@@ -2008,7 +2090,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<int> quanteVociDelDiario() async {
     final riga = await (selectOnly(
       vociDiario,
-    )..addColumns([vociDiario.id.count()])).getSingle();
+    )..addColumns([vociDiario.id.count()]))
+        .getSingle();
 
     return riga.read(vociDiario.id.count()) ?? 0;
   }
@@ -2028,7 +2111,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<DateTime?> ultimaScritturaDelDiario() async {
     final riga = await (selectOnly(
       vociDiario,
-    )..addColumns([vociDiario.scrittaIl.max()])).getSingleOrNull();
+    )..addColumns([vociDiario.scrittaIl.max()]))
+        .getSingleOrNull();
 
     return riga?.read(vociDiario.scrittaIl.max());
   }
@@ -2097,13 +2181,13 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ **`salvatoIl` come terzo criterio**, e non come primo: chi non ha mai
   /// usato niente ha tutti gli zeri, e senza un terzo criterio l'ordine fra
   /// quelli sarebbe quello che decide SQLite — cioè diverso a ogni lettura.
-  Future<List<PreferitoCibo>> preferitiDelDiario() =>
-      (select(preferitiCibo)..orderBy([
-            (t) => OrderingTerm.desc(t.volteUsato),
-            (t) => OrderingTerm.desc(t.usatoIl),
-            (t) => OrderingTerm.desc(t.salvatoIl),
-          ]))
-          .get();
+  Future<List<PreferitoCibo>> preferitiDelDiario() => (select(preferitiCibo)
+        ..orderBy([
+          (t) => OrderingTerm.desc(t.volteUsato),
+          (t) => OrderingTerm.desc(t.usatoIl),
+          (t) => OrderingTerm.desc(t.salvatoIl),
+        ]))
+      .get();
 
   Future<PreferitoCibo?> preferitoDelDiario(int id) =>
       (select(preferitiCibo)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -2153,7 +2237,8 @@ class ArchivioSalute extends _$ArchivioSalute {
     await transaction(() async {
       await (delete(
         preferitiCibo,
-      )..where((t) => t.idSulServer.isNotNull())).go();
+      )..where((t) => t.idSulServer.isNotNull()))
+          .go();
 
       await batch((b) => b.insertAll(preferitiCibo, preferiti));
     });
@@ -2170,15 +2255,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// chi apre da un secondo telefono, quel testo non ce l'ha — e sul server non
   /// c'è più. 💡 Chi legge mostra l'ultimo che ha, con la sua data.
   Future<ConsiglioDelGiorno?> consiglioDellaFascia(String fascia) => (select(
-    consigliDelGiorno,
-  )..where((t) => t.fascia.equals(fascia))).getSingleOrNull();
+        consigliDelGiorno,
+      )..where((t) => t.fascia.equals(fascia)))
+          .getSingleOrNull();
 
   /// L'ultimo consiglio che questo telefono ha, di qualunque fascia.
-  Future<ConsiglioDelGiorno?> ultimoConsiglio() =>
-      (select(consigliDelGiorno)
-            ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
-            ..limit(1))
-          .getSingleOrNull();
+  Future<ConsiglioDelGiorno?> ultimoConsiglio() => (select(consigliDelGiorno)
+        ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
+        ..limit(1))
+      .getSingleOrNull();
 
   /// Scrive il consiglio di una fascia, e **pota**.
   ///
@@ -2230,17 +2315,17 @@ class ArchivioSalute extends _$ArchivioSalute {
      * scambiano un backup possono avere id in ordine diverso, e potare per id
      * butterebbe via il consiglio più recente invece del più vecchio.
      */
-    final tenuti =
-        await (select(consigliDelGiorno)
-              ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
-              ..limit(3))
-            .get();
+    final tenuti = await (select(consigliDelGiorno)
+          ..orderBy([(t) => OrderingTerm.desc(t.generatoIl)])
+          ..limit(3))
+        .get();
 
     if (tenuti.length < 3) return;
 
-    await (delete(consigliDelGiorno)..where(
-          (t) => t.generatoIl.isSmallerThanValue(tenuti.last.generatoIl),
-        ))
+    await (delete(consigliDelGiorno)
+          ..where(
+            (t) => t.generatoIl.isSmallerThanValue(tenuti.last.generatoIl),
+          ))
         .go();
   }
 
@@ -2365,12 +2450,11 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// passato invece che sul presente**, cioè un numero che si muove al
   /// contrario.
   Future<List<double>> massaGrassaRecente({int quante = 7}) async {
-    final righe =
-        await (select(misureCorpo)
-              ..where((t) => t.massaGrassaPct.isNotNull())
-              ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
-              ..limit(quante))
-            .get();
+    final righe = await (select(misureCorpo)
+          ..where((t) => t.massaGrassaPct.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+          ..limit(quante))
+        .get();
 
     return righe.reversed.map((r) => r.massaGrassaPct!).toList(growable: false);
   }
@@ -2411,7 +2495,8 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     final esistente = await (select(
       misureCorpo,
-    )..where((t) => t.giorno.equals(quando))).getSingleOrNull();
+    )..where((t) => t.giorno.equals(quando)))
+        .getSingleOrNull();
 
     if (esistente?.origine == origineManuale) return false;
 
@@ -2441,9 +2526,8 @@ class ArchivioSalute extends _$ArchivioSalute {
         massaGrassaPct: massaGrassaPct == null
             ? const Value.absent()
             : Value(massaGrassaPct),
-        massaMagraKg: massaMagraKg == null
-            ? const Value.absent()
-            : Value(massaMagraKg),
+        massaMagraKg:
+            massaMagraKg == null ? const Value.absent() : Value(massaMagraKg),
         origine: const Value(origineSalute),
       ),
     );
@@ -2457,12 +2541,11 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// importazione prende tutto, le successive partono da qui. ⚠️ `null` vuol
   /// dire «non ho mai importato niente», ed è il caso della prima volta.
   Future<DateTime?> ultimoGiornoImportato() async {
-    final riga =
-        await (select(misureCorpo)
-              ..where((t) => t.origine.equals(origineSalute))
-              ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
-              ..limit(1))
-            .getSingleOrNull();
+    final riga = await (select(misureCorpo)
+          ..where((t) => t.origine.equals(origineSalute))
+          ..orderBy([(t) => OrderingTerm.desc(t.giorno)])
+          ..limit(1))
+        .getSingleOrNull();
 
     return riga?.giorno;
   }
@@ -2476,7 +2559,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<List<FotoProgresso>> galleria() {
     return (select(
       fotoProgressi,
-    )..orderBy([(t) => OrderingTerm.desc(t.scattataIl)])).get();
+    )..orderBy([(t) => OrderingTerm.desc(t.scattataIl)]))
+        .get();
   }
 
   /// Le foto di una sessione di allenamento.
@@ -2565,13 +2649,15 @@ class ArchivioSalute extends _$ArchivioSalute {
 
   /// Tutte le schede che il telefono ha, dalla più recente.
   Future<List<SchedaSulTelefono>> tutteLeSchede() => (select(
-    schedeSulTelefono,
-  )..orderBy([(t) => OrderingTerm.desc(t.aggiornataIl)])).get();
+        schedeSulTelefono,
+      )..orderBy([(t) => OrderingTerm.desc(t.aggiornataIl)]))
+          .get();
 
   /// Una scheda, o `null` se non c'è.
   Future<SchedaSulTelefono?> laScheda(int id) => (select(
-    schedeSulTelefono,
-  )..where((t) => t.id.equals(id))).getSingleOrNull();
+        schedeSulTelefono,
+      )..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
 
   /// Una scheda scesa dal server, cercata **col suo id di là** — o `null`.
   ///
@@ -2579,9 +2665,10 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// all'importazione, che ha in mano l'id del server e deve sapere se quella
   /// scheda è già arrivata.
   Future<SchedaSulTelefono?> laSchedaDalServer(int idServer) =>
-      (select(schedeSulTelefono)..where(
-            (t) => t.origine.equals('server') & t.idOrigine.equals(idServer),
-          ))
+      (select(schedeSulTelefono)
+            ..where(
+              (t) => t.origine.equals('server') & t.idOrigine.equals(idServer),
+            ))
           .getSingleOrNull();
 
   /// Aggiunge una scheda, e ne restituisce l'id **su questo telefono**.
@@ -2652,12 +2739,14 @@ class ArchivioSalute extends _$ArchivioSalute {
      */
     final prima = await (select(
       schedeSulTelefono,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    )..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
 
     if (prima != null) {
       final quante = await (select(
         versioniDelleSchede,
-      )..where((t) => t.schedaLocale.equals(id))).get();
+      )..where((t) => t.schedaLocale.equals(id)))
+          .get();
 
       if (quante.isEmpty) {
         await into(versioniDelleSchede).insert(
@@ -2709,13 +2798,13 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (origineId != null && await eRifiutato(origineId)) return false;
 
     if (origineId != null) {
-      final esistente =
-          await (select(schedeSulTelefono)..where(
-                (t) =>
-                    t.origine.equals('chat') &
-                    t.origineIdStabile.equals(origineId),
-              ))
-              .getSingleOrNull();
+      final esistente = await (select(schedeSulTelefono)
+            ..where(
+              (t) =>
+                  t.origine.equals('chat') &
+                  t.origineIdStabile.equals(origineId),
+            ))
+          .getSingleOrNull();
 
       if (esistente != null) {
         /*
@@ -2728,7 +2817,8 @@ class ArchivioSalute extends _$ArchivioSalute {
 
         await (update(
           schedeSulTelefono,
-        )..where((t) => t.id.equals(esistente.id))).write(
+        )..where((t) => t.id.equals(esistente.id)))
+            .write(
           SchedeSulTelefonoCompanion(
             idOrigine: Value(messaggioId),
             nome: Value(nome),
@@ -2774,13 +2864,13 @@ class ArchivioSalute extends _$ArchivioSalute {
     required String nome,
     required String scheda,
   }) async {
-    final esistente =
-        await (select(schedeSulTelefono)..where(
-              (t) =>
-                  t.origine.equals('importata') &
-                  t.origineIdStabile.equals(origineId),
-            ))
-            .getSingleOrNull();
+    final esistente = await (select(schedeSulTelefono)
+          ..where(
+            (t) =>
+                t.origine.equals('importata') &
+                t.origineIdStabile.equals(origineId),
+          ))
+        .getSingleOrNull();
 
     if (esistente == null) {
       await aggiungiScheda(
@@ -2807,11 +2897,11 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// 💡 Senza, l'unico modo di sapere se si è già premuto il pulsante è provare
   /// — e riprovare su un messaggio vecchio è la cosa più naturale del mondo.
   Future<bool> schedaGiaSalvata(int messaggioId) async {
-    final riga =
-        await (select(schedeSulTelefono)..where(
-              (t) => t.origine.equals('chat') & t.idOrigine.equals(messaggioId),
-            ))
-            .getSingleOrNull();
+    final riga = await (select(schedeSulTelefono)
+          ..where(
+            (t) => t.origine.equals('chat') & t.idOrigine.equals(messaggioId),
+          ))
+        .getSingleOrNull();
 
     return riga != null;
   }
@@ -2876,14 +2966,16 @@ class ArchivioSalute extends _$ArchivioSalute {
     if (origineId != null) {
       final esistente = await (select(
         pianiRicevuti,
-      )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
+      )..where((t) => t.origineId.equals(origineId)))
+          .getSingleOrNull();
 
       if (esistente != null) {
         if (esistente.messaggioId >= messaggioId) return false;
 
         await (update(
           pianiRicevuti,
-        )..where((t) => t.id.equals(esistente.id))).write(
+        )..where((t) => t.id.equals(esistente.id)))
+            .write(
           PianiRicevutiCompanion(
             messaggioId: Value(messaggioId),
             mittenteId: Value(mittenteId),
@@ -2982,7 +3074,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<List<String>> documentiDellOrigine(String origineId) async {
     final riga = await (select(
       documentiImportati,
-    )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
+    )..where((t) => t.origineId.equals(origineId)))
+        .getSingleOrNull();
 
     if (riga == null) return const [];
 
@@ -2994,13 +3087,15 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<List<PianoRicevuto>> piani() {
     return (select(
       pianiRicevuti,
-    )..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)])).get();
+    )..orderBy([(t) => OrderingTerm.desc(t.ricevutaIl)]))
+        .get();
   }
 
   Future<bool> pianoGiaSalvato(int messaggioId) async {
     final riga = await (select(
       pianiRicevuti,
-    )..where((t) => t.messaggioId.equals(messaggioId))).getSingleOrNull();
+    )..where((t) => t.messaggioId.equals(messaggioId)))
+        .getSingleOrNull();
 
     return riga != null;
   }
@@ -3012,7 +3107,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<void> dimenticaPiano(int id) async {
     final riga = await (select(
       pianiRicevuti,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    )..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
 
     if (riga?.origineId != null) {
       await into(contenutiRifiutati).insert(
@@ -3030,7 +3126,8 @@ class ArchivioSalute extends _$ArchivioSalute {
   Future<bool> eRifiutato(String origineId) async {
     final riga = await (select(
       contenutiRifiutati,
-    )..where((t) => t.origineId.equals(origineId))).getSingleOrNull();
+    )..where((t) => t.origineId.equals(origineId)))
+        .getSingleOrNull();
 
     return riga != null;
   }
@@ -3174,12 +3271,12 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// `SELECT *` su questo archivio sono quattro, e `jsonDecode` li restituisce
   /// tutti come tipi Dart nativi.
   static Variable<Object> _variabile(Object? valore) => switch (valore) {
-    null => const Variable<String>(null),
-    final int v => Variable<int>(v),
-    final double v => Variable<double>(v),
-    final bool v => Variable<bool>(v),
-    _ => Variable<String>(valore.toString()),
-  };
+        null => const Variable<String>(null),
+        final int v => Variable<int>(v),
+        final double v => Variable<double>(v),
+        final bool v => Variable<bool>(v),
+        _ => Variable<String>(valore.toString()),
+      };
 
   static DateTime _soloGiorno(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -3258,8 +3355,8 @@ class LettureSalute extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {fonte, metrica, misurataIl},
-  ];
+        {fonte, metrica, misurataIl},
+      ];
 }
 
 /// I blocchi del sonno, uno per fase.
@@ -3280,8 +3377,8 @@ class CampioniSonno extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {fonte, iniziatoIl},
-  ];
+        {fonte, iniziatoIl},
+      ];
 }
 
 /// Il diario alimentare, **sul telefono** — Parte I, I1.
@@ -3392,8 +3489,8 @@ class VociDiario extends Table {
   /// vuole. È esattamente la proprietà che serve.
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {idSulServer},
-  ];
+        {idSulServer},
+      ];
 }
 
 /// I preferiti del diario — Parte I, I1.
@@ -3457,8 +3554,8 @@ class PreferitiCibo extends Table {
   /// vuole. È esattamente la proprietà che serve.
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {idSulServer},
-  ];
+        {idSulServer},
+      ];
 }
 
 /// Il consiglio del giorno, **tenuto qui** — Parte I, I5.3, 03/09/2026.
@@ -3511,8 +3608,8 @@ class ConsigliDelGiorno extends Table {
   /// aggiungerebbe una riga.
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {fascia},
-  ];
+        {fascia},
+      ];
 }
 
 /// I documenti da cui e' nata una scheda o un piano importato — K1-bis.
@@ -3691,6 +3788,7 @@ extension MinutiDelCampione on CampioneSonno {
 /// chi la riceve la tiene anche se domani cambia palestra, e un elenco di id
 /// non gli servirebbe a niente.
 @DataClassName('PianoRicevuto')
+
 /// I piani alimentari arrivati dal trainer via chat — G8.4.
 ///
 /// 🚨 **Gemella delle schede, e per la stessa ragione**: vivono sul
@@ -3747,6 +3845,7 @@ class PianiRicevuti extends Table {
 }
 
 @DataClassName('ContenutoRifiutato')
+
 /// Cio' che l'allievo ha buttato, e che non deve tornare — G8.10.
 ///
 /// ⚠️ **Senza questa tabella il salvataggio automatico e' una trappola**: chi
@@ -3762,6 +3861,7 @@ class ContenutiRifiutati extends Table {
 }
 
 @DataClassName('SchedaSulTelefono')
+
 /// Le schede, **sul telefono e basta** — 3b-B.17, 24/08/2026.
 ///
 /// ══ 📌 LA DECISIONE ═══════════════════════════════════════════════════════
@@ -3869,8 +3969,8 @@ class SchedeSulTelefono extends Table {
   /// messaggi e id di schede deve comprendere anche la provenienza.
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {origine, idOrigine},
-  ];
+        {origine, idOrigine},
+      ];
 }
 
 /// Gli allenamenti che ha registrato l'orologio — FASE 1.8.
@@ -4046,8 +4146,8 @@ class AllenamentiDaOrologio extends Table {
   /// coppia ogni avvio dell'app aggiungerebbe di nuovo tutto.
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {fonte, iniziatoIl},
-  ];
+        {fonte, iniziatoIl},
+      ];
 }
 
 /// Una seduta di allenamento registrata **con l'app** — FASE 11.1, 21/08/2026.
@@ -4140,10 +4240,10 @@ class SerieDelleSedute extends Table {
 
   /// L'`id` **locale** della seduta: qui il legame è interno al telefono.
   IntColumn get sedutaId => integer().references(
-    SeduteAllenamento,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+        SeduteAllenamento,
+        #id,
+        onDelete: KeyAction.cascade,
+      )();
 
   IntColumn get esercizioId => integer()();
   TextColumn get nomeEsercizio => text()();
@@ -4180,8 +4280,8 @@ class SerieDelleSedute extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {sedutaId, esercizioId, numero},
-  ];
+        {sedutaId, esercizioId, numero},
+      ];
 }
 
 /// Le calorie bruciate **dichiarate a mano** per un giorno — FASE 11.1.

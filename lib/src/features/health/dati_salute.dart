@@ -36,7 +36,25 @@ enum MetricaSalute {
   /// per volta. Il tetto è per **singolo campione**, non per la giornata — e un
   /// valore assurdo qui non sposta una media come farebbe un HRV sbagliato:
   /// sposta **quanto qualcuno può mangiare**.
-  calorieAttive('active_kcal', 'Calorie attive', 'kcal', 0.0, 5000.0);
+  calorieAttive('active_kcal', 'Calorie attive', 'kcal', 0.0, 5000.0),
+
+  /// I passi della giornata — 06/09/2026.
+  ///
+  /// ══ 🚨 PRIMA NON LI PRENDEVAMO AFFATTO ════════════════════════════════
+  ///
+  /// 📌 Il committente: *«passi non li prendiamo proprio, o meglio, li prendiamo
+  /// solo se parte di un allenamento»*. ⛔ Ed era esatto: `HealthDataType.STEPS`
+  /// non compariva da nessuna parte, e la colonna `passi` che esiste vive su
+  /// `allenamenti_da_orologio` — cioè conta **solo** quelli fatti dentro una
+  /// sessione avviata.
+  ///
+  /// 🚨 **E non è un dato in più fra i tanti**: senza questo, in un giorno senza
+  /// palestra non c'è **nessun** segnale del movimento quotidiano. È metà del
+  /// motivo per cui la Carica non scendeva mai.
+  ///
+  /// ⚠️ Il tetto è per **singolo campione**, non per la giornata: Health Connect
+  /// scrive tanti record brevi, non un numero al giorno.
+  passi('steps', 'Passi', 'passi', 0.0, 100000.0);
 
   const MetricaSalute(
     this.codice,
@@ -88,11 +106,11 @@ enum FaseSonno {
   bool get dorme => this != FaseSonno.sveglio;
 
   static FaseSonno daCodice(int codice) => switch (codice) {
-    2 => FaseSonno.leggero,
-    3 => FaseSonno.profondo,
-    4 => FaseSonno.rem,
-    _ => FaseSonno.sveglio,
-  };
+        2 => FaseSonno.leggero,
+        3 => FaseSonno.profondo,
+        4 => FaseSonno.rem,
+        _ => FaseSonno.sveglio,
+      };
 
   /// La traduzione dalla scala di Health Connect alla nostra.
   ///
@@ -101,11 +119,11 @@ enum FaseSonno {
   /// fase che non si sa interpretare gonfia i minuti dormiti, che è l'errore
   /// che rende il giudizio troppo generoso proprio a chi ha dormito male.
   static FaseSonno daHealthConnect(int codice) => switch (codice) {
-    4 || 2 => FaseSonno.leggero,
-    5 => FaseSonno.profondo,
-    6 => FaseSonno.rem,
-    _ => FaseSonno.sveglio,
-  };
+        4 || 2 => FaseSonno.leggero,
+        5 => FaseSonno.profondo,
+        6 => FaseSonno.rem,
+        _ => FaseSonno.sveglio,
+      };
 }
 
 /// Un punto del grafico: la media di una metrica in un giorno.
@@ -193,14 +211,14 @@ enum Giudizio {
   bad;
 
   static Giudizio daNome(String nome) => switch (nome) {
-    'ok' => Giudizio.ok,
-    'warn' => Giudizio.warn,
-    _ => Giudizio.bad,
-  };
+        'ok' => Giudizio.ok,
+        'warn' => Giudizio.warn,
+        _ => Giudizio.bad,
+      };
 
   String get nome => switch (this) {
-    Giudizio.ok => 'ok',
-    Giudizio.warn => 'warn',
-    Giudizio.bad => 'bad',
-  };
+        Giudizio.ok => 'ok',
+        Giudizio.warn => 'warn',
+        Giudizio.bad => 'bad',
+      };
 }

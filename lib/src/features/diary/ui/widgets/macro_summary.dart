@@ -40,9 +40,8 @@ class MacroSummary extends ConsumerWidget {
      * 💡 La precedenza è la stessa di sempre: **il piano del trainer vince sul
      * calcolo**, e il calcolo vince sul nulla (D8).
      */
-    final esito = day.hasTarget
-        ? null
-        : ref.watch(targetLocaleProvider).valueOrNull;
+    final esito =
+        day.hasTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
     /*
@@ -64,9 +63,8 @@ class MacroSummary extends ConsumerWidget {
      * `daily_burns`. ⚠️ Con quelle tabelle via sarebbero diventati **zero senza
      * un errore**, e l'obiettivo calorico avrebbe smesso di comprenderle.
      */
-    final aMano = ref
-        .watch(bruciateAManoDelGiornoProvider(day.date))
-        .valueOrNull;
+    final aMano =
+        ref.watch(bruciateAManoDelGiornoProvider(day.date)).valueOrNull;
 
     final bruciate = BruciateDelGiorno.scegli(
       manuale: aMano,
@@ -165,7 +163,6 @@ class MacroSummary extends ConsumerWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: Gap.xs),
 
             /*
@@ -255,8 +252,26 @@ class MacroSummary extends ConsumerWidget {
               ],
             ),
 
+            /*
+             * ══ 🆕 I PASSI, SOTTO LE BRUCIATE — 06/09/2026 ═════════════════
+             *
+             * 📌 Il committente: *«il numero totale di passi che ho fatto, che
+             * metteremo nella prima card delle calorie, sotto Bruciate»*.
+             *
+             * 🚨 **Sono TUTTI i passi**, quelli fatti allenandosi compresi: è
+             * quello che una persona conta quando dice «oggi ne ho fatti
+             * diecimila». ⛔ La sottrazione dei passi della seduta serve solo
+             * alla stima delle calorie, dove conterebbero due volte — e quel
+             * numero non si mostra a nessuno.
+             *
+             * ⚠️ **Sparisce quando è zero**, e non mostra «0 passi»: prima che
+             * il permesso a Health Connect venga concesso di nuovo, zero vuol
+             * dire «non lo sappiamo», non «non hai camminato». 💡 Una riga che
+             * dice zero a chi ha camminato tutto il giorno è peggio di una riga
+             * che non c'è.
+             */
+            _Passi(giorno: day.date),
             const SizedBox(height: Gap.xs),
-
             if (haTarget) ...[
               const SizedBox(height: Gap.sm),
               ClipRRect(
@@ -327,7 +342,6 @@ class MacroSummary extends ConsumerWidget {
                   ),
                 ),
             ],
-
             const SizedBox(height: Gap.md),
 
             /*
@@ -422,6 +436,68 @@ Future<void> _bruciateAMano(
   await ref
       .read(diaryActionsProvider)
       .setDailyBurn(valore.isEmpty ? null : int.tryParse(valore));
+}
+
+/// I passi della giornata, sotto le bruciate — 06/09/2026.
+///
+/// ⚠️ **`ConsumerWidget` e non un parametro**: il numero arriva da un provider
+/// che si aggiorna quando l'orologio manda dati nuovi, e passarlo dall'alto
+/// avrebbe voluto dire far ridisegnare tutta la card a ogni sincronizzazione.
+class _Passi extends ConsumerWidget {
+  const _Passi({required this.giorno});
+
+  final DateTime giorno;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final passi = ref.watch(passiDelGiornoProvider(giorno)).valueOrNull ?? 0;
+
+    /*
+     * 🚨 **Zero vuol dire «non lo sappiamo», non «non hai camminato».** Finché
+     * il permesso `STEPS` non viene concesso — e va concesso di nuovo, perché
+     * l'elenco dei consensi è cambiato — qui arriva zero.
+     *
+     * ⛔ Mostrare «0 passi» a chi ha camminato tutto il giorno direbbe una cosa
+     * falsa con l'aria di un dato misurato.
+     */
+    if (passi <= 0) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.xs),
+      child: Row(
+        children: [
+          Icon(
+            Icons.directions_walk_rounded,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${_conIPunti(passi)} passi',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 💡 `10.482` e non `10482`: a colpo d'occhio le migliaia si contano da sole.
+  static String _conIPunti(int n) {
+    final testo = n.toString();
+    final fuori = StringBuffer();
+
+    for (var i = 0; i < testo.length; i++) {
+      if (i > 0 && (testo.length - i) % 3 == 0) fuori.write('.');
+
+      fuori.write(testo[i]);
+    }
+
+    return fuori.toString();
+  }
 }
 
 class _Macro extends StatelessWidget {

@@ -53,8 +53,7 @@ void main() {
       expect(
         PonteSalute.tipiDaLeggere,
         isNot(contains(HealthDataType.TOTAL_CALORIES_BURNED)),
-        reason:
-            'Comprende il metabolismo basale: per la giornata vale solo '
+        reason: 'Comprende il metabolismo basale: per la giornata vale solo '
             'ACTIVE_ENERGY_BURNED, o si contano due volte ~1.600 kcal.',
       );
     });
@@ -69,8 +68,25 @@ void main() {
     /// 💡 Passi e distanza sono il dato buono **di una corsa**, non della
     /// giornata: li lascia il pacchetto dentro la sessione. Chiederli a parte
     /// vorrebbe dire tirarsi in casa migliaia di campioni che nessuno guarda.
-    test('passi e distanza si chiedono ma non si leggono a parte', () {
-      expect(PonteSalute.tipiDaLeggere, isNot(contains(HealthDataType.STEPS)));
+    test('🆕 i passi ADESSO si leggono, la distanza no', () {
+      /*
+       * ══ 🚨 QUESTO TEST DICEVA IL CONTRARIO — cambiato il 06/09/2026 ═════
+       *
+       * Si chiamava *«passi e distanza si chiedono ma non si leggono a parte»*,
+       * e per i passi era una decisione: il permesso se l'era portato dietro
+       * l'import degli allenamenti, e li si leggeva **solo dentro una sessione**.
+       *
+       * 📌 Il committente: *«per il resto della giornata cammino lo stesso e gli
+       * altri devono comunque essere conteggiati»*. ⛔ E senza, in un giorno
+       * senza palestra non c'era **nessun** segnale del movimento quotidiano —
+       * metà del motivo per cui la Carica non scendeva mai.
+       *
+       * ⚠️ **La distanza resta fuori**, e non per dimenticanza: dice quanto ti
+       * sei spostato, che è un passo più vicino a dove sei stato. 🚨 Il giorno
+       * che servisse, prima del codice si aggiornano il registro dei trattamenti
+       * e l'informativa.
+       */
+      expect(PonteSalute.tipiDaLeggere, contains(HealthDataType.STEPS));
       expect(
         PonteSalute.tipiDaLeggere,
         isNot(contains(HealthDataType.DISTANCE_DELTA)),

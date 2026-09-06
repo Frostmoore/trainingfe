@@ -50,6 +50,20 @@ class PonteSalute {
     HealthDataType.ACTIVE_ENERGY_BURNED,
 
     /*
+     * 🆕 I passi della giornata — 06/09/2026.
+     *
+     * 🚨 **Il permesso `READ_STEPS` c'era gia' nel manifest**, se l'era portato
+     * dietro l'import degli allenamenti. ⛔ Ma dichiararlo non basta: l'elenco
+     * da chiedere lo costruisce il pacchetto `health` **dai tipi**, e senza
+     * questa riga il permesso restava `granted=false` per sempre — con nessuno
+     * a cui veniva chiesto niente.
+     *
+     * ⚠️ **Aggiungerlo cambia la schermata dei consensi**: chi ha gia' l'app
+     * deve concedere di nuovo, o i passi restano a zero senza nessun errore.
+     */
+    HealthDataType.STEPS,
+
+    /*
      * 🆕 FASE 1.8 — gli allenamenti.
      *
      * 💡 Health Connect e' il **magazzino**, non la fonte: ci scrivono l'app
@@ -397,8 +411,8 @@ class PonteSalute {
     final da = giorniIndietro != null
         ? a.subtract(Duration(days: giorniIndietro))
         : ultimo == null
-        ? a.subtract(const Duration(days: 365 * 5))
-        : ultimo.subtract(const Duration(days: 7));
+            ? a.subtract(const Duration(days: 365 * 5))
+            : ultimo.subtract(const Duration(days: 7));
 
     /*
      * ⛔ **Senza il permesso non si prova nemmeno.** `getHealthDataFromTypes`
@@ -599,7 +613,8 @@ class PonteSalute {
   @visibleForTesting
   static List<AllenamentoDaOrologio> allenamentiDa(
     List<HealthDataPoint> punti,
-  ) => _allenamentiDa(punti);
+  ) =>
+      _allenamentiDa(punti);
 
   static List<AllenamentoDaOrologio> _allenamentiDa(
     List<HealthDataPoint> punti,
@@ -761,24 +776,26 @@ class PonteSalute {
       valore is NumericHealthValue ? valore.numericValue.toDouble() : null;
 
   static MetricaSalute? _metricaDi(HealthDataType tipo) => switch (tipo) {
-    HealthDataType.HEART_RATE_VARIABILITY_RMSSD => MetricaSalute.hrv,
-    HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
-    HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
-    HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
-    _ => null,
-  };
+        HealthDataType.HEART_RATE_VARIABILITY_RMSSD => MetricaSalute.hrv,
+        HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
+        HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
+        HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
+        HealthDataType.STEPS => MetricaSalute.passi,
+        _ => null,
+      };
 
   /// ⚠️ `SLEEP_ASLEEP` è la fase «dorme ma non sappiamo come»: la si conta come
   /// **leggero**, che è il comportamento del vecchio `SleepStage`. Non come
   /// profondo: sarebbe la lettura più generosa proprio dove serve prudenza.
   static FaseSonno? _faseDi(HealthDataType tipo) => switch (tipo) {
-    HealthDataType.SLEEP_DEEP => FaseSonno.profondo,
-    HealthDataType.SLEEP_REM => FaseSonno.rem,
-    HealthDataType.SLEEP_LIGHT ||
-    HealthDataType.SLEEP_ASLEEP => FaseSonno.leggero,
-    HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
-    _ => null,
-  };
+        HealthDataType.SLEEP_DEEP => FaseSonno.profondo,
+        HealthDataType.SLEEP_REM => FaseSonno.rem,
+        HealthDataType.SLEEP_LIGHT ||
+        HealthDataType.SLEEP_ASLEEP =>
+          FaseSonno.leggero,
+        HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
+        _ => null,
+      };
 }
 
 /// Il valore **più recente** di un giorno, e l'ora a cui è arrivato — 3b-W.

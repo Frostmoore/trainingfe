@@ -16,14 +16,14 @@ import 'health_controller.dart';
 /// riavvio dell'app.
 final serieSaluteProvider = FutureProvider.autoDispose
     .family<List<MediaGiornaliera>, MetricaSalute>((ref, metrica) async {
-      // 🚨 Tutte le `ref.watch` prima del primo `await`: dopo una pausa
-      // asincrona non registrano più la dipendenza. Vedi `recuperoProvider`.
-      final consenso = ref.watch(consensoSaluteProvider.future);
-      final archivio = ref.watch(archivioSaluteProvider);
+  // 🚨 Tutte le `ref.watch` prima del primo `await`: dopo una pausa
+  // asincrona non registrano più la dipendenza. Vedi `recuperoProvider`.
+  final consenso = ref.watch(consensoSaluteProvider.future);
+  final archivio = ref.watch(archivioSaluteProvider);
 
-      ref.watch(healthControllerProvider);
+  ref.watch(healthControllerProvider);
 
-      if (!await consenso) return const [];
+  if (!await consenso) return const [];
 
-      return archivio.mediePerGiorno(metrica);
-    });
+  return archivio.mediePerGiorno(metrica);
+});

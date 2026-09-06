@@ -47,7 +47,6 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
         const SizedBox(height: Gap.md),
         const GraficoMetrica(metrica: MetricaSalute.battitoARiposo),
         const SizedBox(height: Gap.lg),
-
         Card(
           child: Padding(
             padding: const EdgeInsets.all(Gap.md),
@@ -143,11 +142,9 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
             ),
           ),
         ),
-
         const SizedBox(height: Gap.md),
         Text('Cosa leggiamo', style: theme.textTheme.titleSmall),
         const SizedBox(height: Gap.xs),
-
         const _Voce(
           icona: Icons.bedtime_outlined,
           titolo: 'Le fasi del sonno',
@@ -199,12 +196,10 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
         const _Voce(
           icona: Icons.fitness_center_outlined,
           titolo: 'Gli allenamenti',
-          testo:
-              'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
+          testo: 'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
               'storico anche quando ti alleni senza aprire l\'app, e puoi dire '
               'quale scheda hai fatto.',
         ),
-
         const SizedBox(height: Gap.md),
         Card(
           color: theme.colorScheme.surfaceContainerHighest,
@@ -287,10 +282,11 @@ class _Voce extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icona),
-    title: Text(titolo, style: const TextStyle(fontWeight: FontWeight.w600)),
-    subtitle: Text(testo),
-    isThreeLine: true,
-  );
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icona),
+        title:
+            Text(titolo, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(testo),
+        isThreeLine: true,
+      );
 }

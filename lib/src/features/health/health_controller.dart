@@ -57,6 +57,26 @@ final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
 /// 💡 `family` sul giorno perché la scheda cibo si può sfogliare indietro, e
 /// il numero è quello **di quel giorno** — non quello di oggi mostrato accanto a
 /// una data di tre giorni fa.
+/// I passi di un giorno, **tutti** — 06/09/2026.
+///
+/// 📌 Il committente: *«i passi vengono conteggiati nell'esercizio, ma solo per
+/// quanto riguarda le calorie bruciate DURANTE quell'esercizio; per il resto
+/// della giornata cammino lo stesso e gli altri devono comunque essere
+/// conteggiati»*.
+///
+/// 🚨 Quindi qui ci sono **tutti**, quelli della corsa compresi: è il numero che
+/// una persona riconosce come «i miei passi di oggi». ⛔ Chi stima le calorie usa
+/// `ArchivioSalute.passiFuoriDagliAllenamenti`, che è un'altra cosa e non si
+/// mostra a nessuno.
+final passiDelGiornoProvider =
+    FutureProvider.autoDispose.family<int, DateTime>((ref, giorno) async {
+  // ⚠️ Si ridisegna quando arrivano dati nuovi, come le bruciate: senza,
+  // resterebbe il numero letto all'apertura dell'app.
+  ref.watch(revisioneAllenamentiProvider);
+
+  return ref.watch(archivioSaluteProvider).passiDi(giorno);
+});
+
 /// Le bruciate dell'orologio di un giorno — **dalle sedute**, 3b-G.3.
 ///
 /// ⚠️ **Il nome è rimasto** perché lo leggono cinque schermate e cambiarlo
@@ -64,11 +84,11 @@ final revisioneAllenamentiProvider = StateProvider<int>((ref) => 0);
 /// significato: restano «le calorie che l'orologio dice che hai bruciato
 /// allenandoti». ⛔ Cambia da dove le prende — vedi `bruciate_dalle_sedute.dart`
 /// per il perché, che è lungo e vale la pena.
-final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
-    .family<int, DateTime>((ref, giorno) async {
-      ref.watch(revisioneAllenamentiProvider);
+final kcalAttiveDelGiornoProvider =
+    FutureProvider.autoDispose.family<int, DateTime>((ref, giorno) async {
+  ref.watch(revisioneAllenamentiProvider);
 
-      /*
+  /*
        * ⚠️ **`valueOrNull` e non `await`, ed è deliberato** — 3b-G.4.
        *
        * 🚨 Il basale serve solo alla correzione netto/lordo, che oggi non
@@ -80,14 +100,13 @@ final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
        * 💡 Se il basale non c'è ancora non si corregge (che è comunque il
        * ripiego giusto), e quando arriva questo provider si rifà da solo.
        */
-      final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
+  final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
 
-      final sedute = await ref
-          .watch(archivioSaluteProvider)
-          .seduteDellOrologioDi(giorno);
+  final sedute =
+      await ref.watch(archivioSaluteProvider).seduteDellOrologioDi(giorno);
 
-      return kcalDelleSedute(sedute, bmr: bmr);
-    });
+  return kcalDelleSedute(sedute, bmr: bmr);
+});
 
 /// Le bruciate che si sommano **anche nel modello a stima** — 3b-G.7.
 ///
@@ -103,14 +122,14 @@ final kcalAttiveDelGiornoProvider = FutureProvider.autoDispose
 /// «fuori dal solito» resta marcata anche cambiando modello — è un dato della
 /// seduta, non dell'impostazione — e senza questo zero riapparirebbe come
 /// margine doppio il giorno che qualcuno passa a «misurata».
-final bruciateExtraDelGiornoProvider = FutureProvider.autoDispose
-    .family<int, DateTime>((ref, giorno) async {
-      ref.watch(revisioneAllenamentiProvider);
+final bruciateExtraDelGiornoProvider =
+    FutureProvider.autoDispose.family<int, DateTime>((ref, giorno) async {
+  ref.watch(revisioneAllenamentiProvider);
 
-      if (ref.watch(modelloCalorieProvider) != ModelloCalorie.stima) return 0;
+  if (ref.watch(modelloCalorieProvider) != ModelloCalorie.stima) return 0;
 
-      return ref.watch(archivioSaluteProvider).kcalExtraDi(giorno);
-    });
+  return ref.watch(archivioSaluteProvider).kcalExtraDi(giorno);
+});
 
 /// L'andamento di una metrica negli ultimi giorni — 3b-O.5.3.
 ///
@@ -122,16 +141,16 @@ final bruciateExtraDelGiornoProvider = FutureProvider.autoDispose
 /// giorno, e disegnarli tutti darebbe un pettine invece di un andamento.
 final andamentoMetricaProvider = FutureProvider.autoDispose
     .family<List<double>, MetricaSalute>((ref, metrica) async {
-      ref.watch(healthControllerProvider);
+  ref.watch(healthControllerProvider);
 
-      final righe = await ref
-          .watch(archivioSaluteProvider)
-          .mediePerGiorno(metrica, giorni: 7);
+  final righe = await ref
+      .watch(archivioSaluteProvider)
+      .mediePerGiorno(metrica, giorni: 7);
 
-      // ⚠️ Dal più vecchio al più recente: `mediePerGiorno` ordina già così, e
-      // invertirlo darebbe un disegno plausibile e sbagliato.
-      return righe.map((r) => r.media).toList();
-    });
+  // ⚠️ Dal più vecchio al più recente: `mediePerGiorno` ordina già così, e
+  // invertirlo darebbe un disegno plausibile e sbagliato.
+  return righe.map((r) => r.media).toList();
+});
 
 /// Le calorie attive **di oggi**.
 ///
@@ -164,27 +183,27 @@ final andamentoMetricaProvider = FutureProvider.autoDispose
 /// caricamento.
 final kcalAttivePerGiorniProvider = FutureProvider.autoDispose
     .family<Map<String, int>, String>((ref, giorniUnitiDaVirgole) async {
-      final archivio = ref.watch(archivioSaluteProvider);
-      final esito = <String, int>{};
+  final archivio = ref.watch(archivioSaluteProvider);
+  final esito = <String, int>{};
 
-      // 3b-G.3: dalle sedute, non dal flusso. Vedi `kcalAttiveDelGiornoProvider`.
-      ref.watch(revisioneAllenamentiProvider);
+  // 3b-G.3: dalle sedute, non dal flusso. Vedi `kcalAttiveDelGiornoProvider`.
+  ref.watch(revisioneAllenamentiProvider);
 
-      final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
+  final bmr = ref.watch(metabolismoBasaleProvider).valueOrNull;
 
-      for (final etichetta in giorniUnitiDaVirgole.split(',')) {
-        final giorno = DateTime.tryParse(etichetta);
+  for (final etichetta in giorniUnitiDaVirgole.split(',')) {
+    final giorno = DateTime.tryParse(etichetta);
 
-        if (giorno == null) continue;
+    if (giorno == null) continue;
 
-        esito[etichetta] = kcalDelleSedute(
-          await archivio.seduteDellOrologioDi(giorno),
-          bmr: bmr,
-        );
-      }
+    esito[etichetta] = kcalDelleSedute(
+      await archivio.seduteDellOrologioDi(giorno),
+      bmr: bmr,
+    );
+  }
 
-      return esito;
-    });
+  return esito;
+});
 
 final kcalAttiveOggiProvider = FutureProvider.autoDispose<int>((ref) async {
   final adesso = DateTime.now();
@@ -216,13 +235,14 @@ class StatoSalute {
     String? errore,
     String? ultimaSincronizzazione,
     bool azzeraErrore = false,
-  }) => StatoSalute(
-    collegato: collegato ?? this.collegato,
-    inCorso: inCorso ?? this.inCorso,
-    errore: azzeraErrore ? null : (errore ?? this.errore),
-    ultimaSincronizzazione:
-        ultimaSincronizzazione ?? this.ultimaSincronizzazione,
-  );
+  }) =>
+      StatoSalute(
+        collegato: collegato ?? this.collegato,
+        inCorso: inCorso ?? this.inCorso,
+        errore: azzeraErrore ? null : (errore ?? this.errore),
+        ultimaSincronizzazione:
+            ultimaSincronizzazione ?? this.ultimaSincronizzazione,
+      );
 }
 
 /// Chi governa il collegamento e la sincronizzazione — S3.4 / A5.
@@ -296,8 +316,7 @@ class HealthController extends StateNotifier<StatoSalute> {
       state = state.copyWith(
         inCorso: false,
         collegato: false,
-        errore:
-            'Prima serve il tuo consenso al trattamento dei dati sanitari: '
+        errore: 'Prima serve il tuo consenso al trattamento dei dati sanitari: '
             'lo trovi in Profilo → Privacy e consensi.',
       );
 
@@ -310,8 +329,7 @@ class HealthController extends StateNotifier<StatoSalute> {
       state = state.copyWith(
         inCorso: false,
         collegato: false,
-        errore:
-            'Non è stato possibile collegare Health Connect. '
+        errore: 'Non è stato possibile collegare Health Connect. '
             'Se hai già rifiutato in passato, il permesso va riattivato dalle '
             'impostazioni di sistema.',
       );
@@ -366,7 +384,7 @@ class HealthController extends StateNotifier<StatoSalute> {
       ).format(DateTime.now()),
       errore: quanti == 0
           ? 'Collegato, ma non è arrivato ancora nessun dato. '
-                'Succede se il tuo orologio non ha ancora sincronizzato con il telefono.'
+              'Succede se il tuo orologio non ha ancora sincronizzato con il telefono.'
           : null,
       azzeraErrore: quanti > 0,
     );
@@ -468,11 +486,11 @@ class HealthController extends StateNotifier<StatoSalute> {
 
 final healthControllerProvider =
     StateNotifierProvider<HealthController, StatoSalute>(
-      (ref) => HealthController(
-        ref.watch(ponteSaluteProvider),
-        ref.watch(archivioSaluteProvider),
+  (ref) => HealthController(
+    ref.watch(ponteSaluteProvider),
+    ref.watch(archivioSaluteProvider),
 
-        /*
+    /*
      * Il consenso si **rilegge** a ogni gesto, e non si cattura una volta: si
      * revoca da un'altra schermata, e una copia presa all'avvio direbbe «sì» a
      * chi ha appena detto di no.
@@ -481,27 +499,27 @@ final healthControllerProvider =
      * «in dubbio è no» — perché la stessa domanda se la fa anche
      * `recuperoProvider`, e due implementazioni divergono sempre.
      */
-        () => ref.read(consensoSaluteProvider.future),
+    () => ref.read(consensoSaluteProvider.future),
 
-        /*
+    /*
      * 🚨 `ref.read` e non `ref.watch` — la stessa distinzione che il 19/08 è
      * costata l'utente che spariva dopo un ripristino. Con `watch` questo
      * controller si ricreerebbe **a ogni incremento del contatore**, cioè a ogni
      * sincronizzazione: si ricrea il controller che ha appena finito di
      * sincronizzare, e la cosa si morde la coda.
      */
-        () => ref.read(revisioneAllenamentiProvider.notifier).state++,
+    () => ref.read(revisioneAllenamentiProvider.notifier).state++,
 
-        /*
+    /*
      * ⚖️ 3b-W — e la stessa cosa per le misure del corpo.
      *
      * ⚠️ `ref.read` come sopra, e per lo stesso motivo: con `watch` il
      * controller si ricreerebbe a ogni pesata arrivata dalla bilancia — cioe'
      * subito dopo averla scritta lui.
      */
-        () => ref.read(revisioneCorpoProvider.notifier).state++,
-      ),
-    );
+    () => ref.read(revisioneCorpoProvider.notifier).state++,
+  ),
+);
 
 /// La risincronizzazione d'avvio — A5.
 ///

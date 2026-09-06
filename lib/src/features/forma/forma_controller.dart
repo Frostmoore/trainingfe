@@ -36,6 +36,7 @@ import '../health/health_controller.dart';
 import '../training/data/storico_unificato.dart';
 import '../training/storico_unificato_controller.dart';
 import 'indici_di_forma.dart';
+import 'reattivita.dart';
 
 /// Un pezzo della carica, **con i numeri che l'hanno prodotto**.
 ///
@@ -78,6 +79,7 @@ class Forma {
   const Forma({
     required this.stanchezza,
     required this.prontezza,
+    required this.reattivita,
     this.acuto = 0,
     this.cronico = 0,
     this.ingredienti = const [],
@@ -85,7 +87,18 @@ class Forma {
   });
 
   final Indice stanchezza;
+
+  /// ⚠️ **Resta**, ma non è più quello che il tachimetro mostra: è lo z-score
+  /// contro le proprie medie notturne, cioè *«come stai oggi rispetto al
+  /// solito»*. 💡 Serve ancora alla scheda del sonno e al grafico di «Oggi».
   final Indice prontezza;
+
+  /// 🆕 Quanto sei reattivo **adesso** — il modello a tre processi, 06/09/2026.
+  ///
+  /// ⛔ `null` quando manca la notte: senza sapere da quanto sei sveglio il
+  /// modello non ha il suo ingrediente principale, e un numero inventato lì
+  /// sarebbe preciso e falso.
+  final Reattivita? reattivita;
 
   /// Il carico degli ultimi 7 giorni, in `EWMA`.
   final double acuto;
@@ -253,6 +266,19 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   // ── Il sonno ─────────────────────────────────────────────────────────────
   final minuti = <double>[];
 
+  /*
+   * 🆕 **L'ultima notte per intero, non solo i suoi minuti** — 06/09/2026.
+   *
+   * 💡 La Reattività ha bisogno di `GiudizioNotte.a`, cioè **l'ora del
+   * risveglio**: è da lì che si contano le ore in piedi, ed è l'ingrediente
+   * principale del processo omeostatico.
+   *
+   * ⛔ Dedurla da «mezzanotte + qualcosa» sarebbe una finzione: chi si sveglia
+   * alle 5:30 e chi si sveglia alle 11 hanno giornate diverse, ed è esattamente
+   * quello che il modello deve distinguere.
+   */
+  GiudizioNotte? ultimaNotte;
+
   for (var i = 0; i < _finestra; i++) {
     final n = await AnalizzatoreSonno.notte(
       archivio,
@@ -260,7 +286,10 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
     );
 
     // ⚠️ I buchi non si riempiono: una notte senza dati non è una notte da zero.
-    if (n != null) minuti.add(n.minutiDormiti.toDouble());
+    if (n != null) {
+      minuti.add(n.minutiDormiti.toDouble());
+      ultimaNotte ??= n;
+    }
   }
 
   double? zSonno;
@@ -318,6 +347,33 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
     debugPrint('forma: la storia delle calorie non si legge — $e');
   }
 
+  /*
+   * 🆕 **La reattività di adesso** — 06/09/2026.
+   *
+   * ⚠️ Si calcola qui e non dentro il modello perché ha bisogno dell'**ora**, e
+   * un `DateTime.now()` dentro `ModelloDellaReattivita` renderebbe la formula
+   * impossibile da provare alle quattro di notte — cioè proprio all'ora in cui
+   * conta di più.
+   */
+  final zCarico = _zDelCarico(carico);
+
+  final reattivita = await _reattivitaAdesso(
+    adesso: oggi,
+    notte: ultimaNotte,
+    diario: ref.watch(diarioLocaleProvider),
+    zHrv: zHrv,
+    zBattito: zBattito,
+    zCarico: zCarico,
+  );
+
+  final prontezza = IndiciDiForma.prontezza(
+    zHrv: zHrv,
+    zBattito: zBattito,
+    zSonno: zSonno,
+    zCibo: zCibo,
+    nottiDiStoria: minuti.length,
+  );
+
   return Forma(
     acuto: IndiciDiForma.ewma(
       carico.sublist(carico.length - IndiciDiForma.giorniAcuti),
@@ -362,15 +418,106 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
       ),
     ],
     stanchezza: IndiciDiForma.stanchezza(carico)._conStoria(storiaCarico),
-    prontezza: IndiciDiForma.prontezza(
-      zHrv: zHrv,
-      zBattito: zBattito,
-      zSonno: zSonno,
-      zCibo: zCibo,
-      nottiDiStoria: minuti.length,
-    ),
+    prontezza: prontezza,
+    reattivita: reattivita,
   );
 });
+
+/// Quanto sei reattivo **adesso** — 06/09/2026.
+///
+/// ══ 🚨 PERCHE' NON E' LA PRONTEZZA DI PRIMA ═══════════════════════════════
+///
+/// 📌 Il committente: *«deve essere un valore che cambia durante la giornata, in
+/// base proprio a quanto sono reattivi gli esseri umani di media»*, e *«non è una
+/// batteria, è più un tachimetro»*.
+///
+/// ⛔ La Prontezza vecchia era uno **z-score contro le proprie medie** di HRV,
+/// battito e sonno: tutte misure **notturne**, quindi per costruzione un verdetto
+/// del mattino che non si muoveva di un punto fino al giorno dopo.
+///
+/// 💡 Questa parte dal **modello a tre processi** (Åkerstedt & Folkard) — la
+/// stessa matematica dei sistemi di rischio-fatica dell'aviazione — e usa HRV,
+/// battito e carico come **modificatori**, non come fondamenta.
+Future<Reattivita?> _reattivitaAdesso({
+  required DateTime adesso,
+  required GiudizioNotte? notte,
+  required DiarioLocale diario,
+  required double? zHrv,
+  required double? zBattito,
+  required double? zCarico,
+}) async {
+  /*
+   * ⛔ **Senza notte non c'è reattività**, e non è pigrizia: senza sapere quando
+   * ti sei svegliato non si sa da quanto sei in piedi, che è metà del modello.
+   * 🚨 Inventare un risveglio alle 7 darebbe un numero preciso e falso a chi si
+   * alza alle 5 o alle 11.
+   */
+  if (notte == null) return null;
+
+  final oreSveglio = (adesso.difference(notte.a).inMinutes / 60)
+      .clamp(0, 24)
+      .toDouble();
+
+  /*
+   * 🍽️ **L'ultimo pasto vero**, non l'ora di pranzo media.
+   *
+   * 💡 È il pezzo che il modello pubblicato non ha e noi sì: il diario sta sul
+   * telefono, quindi sappiamo *quando* e *quanto* ha mangiato davvero. Un pranzo
+   * alle 15:30 abbassa la reattività alle 16:30, non alle 14.
+   */
+  double? oreDalPasto;
+  double? kcalDelPasto;
+
+  final pasti = await diario.pastiScrittiDel(adesso);
+
+  if (pasti.isNotEmpty) {
+    final ultimo = pasti.reduce(
+      (a, b) => a.scrittaIl.isAfter(b.scrittaIl) ? a : b,
+    );
+
+    final ore = adesso.difference(ultimo.scrittaIl).inMinutes / 60;
+
+    // ⚠️ Mai negativo: una voce scritta «nel futuro» — succede, con l'orologio
+    // storto — darebbe una digestione che non è ancora cominciata.
+    if (ore >= 0) {
+      oreDalPasto = ore;
+      kcalDelPasto = ultimo.kcal.toDouble();
+    }
+  }
+
+  return ModelloDellaReattivita.calcola(
+    // 💡 Con i minuti: alle 14:30 il circadiano non è quello delle 14.
+    oraDecimale: adesso.hour + adesso.minute / 60,
+    oreSveglio: oreSveglio,
+    oreDormite: notte.minutiDormiti / 60,
+    oreDalPasto: oreDalPasto,
+    kcalDelPasto: kcalDelPasto,
+    zHrv: zHrv,
+    zBattito: zBattito,
+    zCarico: zCarico,
+  );
+}
+
+/// Quanto è stato pesante il carico di oggi rispetto alla propria finestra.
+///
+/// ⚠️ `null` con meno di due giorni: uno z-score su un giorno solo non è uno
+/// z-score, è quel giorno diviso se stesso.
+double? _zDelCarico(List<double> carico) {
+  final visti = carico.where((c) => c > 0).toList();
+
+  if (visti.length < 2) return null;
+
+  final stat = IndiciDiForma.mediaEDeviazione(visti);
+
+  if (stat == null) return null;
+
+  // 💡 `carico` è dal più recente all'indietro, come `minuti`.
+  return IndiciDiForma.z(
+    valore: carico.first,
+    media: stat.$1,
+    deviazione: stat.$2,
+  );
+}
 
 /// Da quanti giorni si osservano gli **allenamenti**.
 ///

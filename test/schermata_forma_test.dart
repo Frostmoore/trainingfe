@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/forma/carica_batteria.dart';
 import 'package:training_companion/src/features/forma/forma_controller.dart';
 import 'package:training_companion/src/features/forma/indici_di_forma.dart';
+import 'package:training_companion/src/features/forma/reattivita.dart';
 import 'package:training_companion/src/features/forma/ui/schermata_forma.dart';
 
 import 'aiuto/intestazione.dart';
@@ -31,16 +32,17 @@ void main() {
     double peso = 1,
     bool invertito = false,
     bool soloInNegativo = false,
-  }) => IngredienteCarica(
-    nome: nome,
-    unita: 'ms',
-    peso: peso,
-    z: z,
-    oggi: oggi,
-    media: media,
-    invertito: invertito,
-    soloInNegativo: soloInNegativo,
-  );
+  }) =>
+      IngredienteCarica(
+        nome: nome,
+        unita: 'ms',
+        peso: peso,
+        z: z,
+        oggi: oggi,
+        media: media,
+        invertito: invertito,
+        soloInNegativo: soloInNegativo,
+      );
 
   Forma forma({
     double? carico = 1.42,
@@ -51,42 +53,47 @@ void main() {
     double cronico = 338,
     List<IngredienteCarica>? ingredienti,
     List<double>? giorni,
-  }) => Forma(
-    stanchezza: Indice(
-      valore: carico,
-      giorniDiStoria: storiaCarico,
-      giorniPerEsserePieno: IndiciDiForma.giorniCronici,
-    ),
-    prontezza: Indice(
-      valore: carica,
-      giorniDiStoria: notti,
-      giorniPerEsserePieno: IndiciDiForma.nottiPerLaProntezza,
-    ),
-    acuto: acuto,
-    cronico: cronico,
-    caricoPerGiorno: giorni ?? List<double>.filled(28, 120),
-    ingredienti:
-        ingredienti ??
-        [
-          pezzo('Variabilità cardiaca', z: -1.2, oggi: 48, media: 65),
-          pezzo(
-            'Battito a riposo',
-            z: 0.9,
-            oggi: 58,
-            media: 54,
-            invertito: true,
-          ),
-          pezzo('Sonno', z: 0.3, oggi: 430, media: 415, peso: 1.5),
-          pezzo(
-            'Cibo',
-            z: -0.8,
-            oggi: 1800,
-            media: 2200,
-            peso: 0.5,
-            soloInNegativo: true,
-          ),
-        ],
-  );
+
+    /// 🆕 06/09/2026 — `null` di partenza: questi test guardano la schermata,
+    /// non il modello a tre processi, che ha i suoi in `reattivita_test.dart`.
+    Reattivita? reattivita,
+  }) =>
+      Forma(
+        reattivita: reattivita,
+        stanchezza: Indice(
+          valore: carico,
+          giorniDiStoria: storiaCarico,
+          giorniPerEsserePieno: IndiciDiForma.giorniCronici,
+        ),
+        prontezza: Indice(
+          valore: carica,
+          giorniDiStoria: notti,
+          giorniPerEsserePieno: IndiciDiForma.nottiPerLaProntezza,
+        ),
+        acuto: acuto,
+        cronico: cronico,
+        caricoPerGiorno: giorni ?? List<double>.filled(28, 120),
+        ingredienti: ingredienti ??
+            [
+              pezzo('Variabilità cardiaca', z: -1.2, oggi: 48, media: 65),
+              pezzo(
+                'Battito a riposo',
+                z: 0.9,
+                oggi: 58,
+                media: 54,
+                invertito: true,
+              ),
+              pezzo('Sonno', z: 0.3, oggi: 430, media: 415, peso: 1.5),
+              pezzo(
+                'Cibo',
+                z: -0.8,
+                oggi: 1800,
+                media: 2200,
+                peso: 0.5,
+                soloInNegativo: true,
+              ),
+            ],
+      );
 
   Future<void> apri(WidgetTester tester, Forma f) async {
     /*

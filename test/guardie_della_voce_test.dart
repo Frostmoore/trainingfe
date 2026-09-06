@@ -46,7 +46,8 @@ void main() {
     });
 
     test('💡 e senza niente da cui derivarli restano nulli', () {
-      final v = normalizzaLaVoce(descrizione: 'Boh', quantita: 2, unita: 'manciata');
+      final v =
+          normalizzaLaVoce(descrizione: 'Boh', quantita: 2, unita: 'manciata');
 
       expect(v.grammi, isNull);
       // ⚠️ E l'unità non si tocca: senza peso non c'è niente da convertire.
@@ -239,6 +240,82 @@ void main() {
       final v = normalizzaLaVoce(descrizione: 'Boh', proteine: 900);
 
       expect(v.proteine, 900);
+    });
+  });
+
+  group('la quantita deve dire la stessa cosa dei grammi', () {
+    test('🚨 il caso vero: «Un cinnamon roll» a 1 g con 315 kcal', () {
+      /*
+       * 📌 Riferito dal committente il 06/09/2026, con la fotografia: due voci
+       * «Un cinnamon roll», **1 g** ciascuna, **315 e 318 kcal**.
+       *
+       * 🚨 Riprodotto chiamando il modello vero, la risposta era:
+       *
+       *     qty 1.0 · unit 'g' · grams 100.0 · kcal 315
+       *
+       * ⛔ Cioe' il modello ha contato **i pezzi** in `qty` e ha scritto `g`
+       * nell'unita', mentre in `grams` aveva il peso giusto. La coppia diceva
+       * «un grammo», il peso diceva «cento grammi», e le calorie erano quelle
+       * dei cento.
+       *
+       * ⚠️ **Nessuna guardia poteva vederlo**: `g` e' un'unita' validissima, e
+       * le calorie erano giuste, quindi nemmeno quella sulla massa si accorgeva
+       * di niente.
+       */
+      final v = normalizzaLaVoce(
+        descrizione: 'Un cinnamon roll',
+        quantita: 1,
+        unita: 'g',
+        grammi: 100,
+        kcal: 315,
+      );
+
+      // 💡 Fra i due si crede a `grams`: e' il campo su cui sono calcolate le
+      // calorie, ed e' quello che il prompt dichiara obbligatorio.
+      expect(v.grammi, 100);
+      expect(v.quantita, 100);
+      expect(v.unita, 'g');
+
+      // ⛔ E i valori per 100 g si derivano lo stesso, quindi correggere la
+      // quantita' a mano ricalcola davvero.
+      expect(v.kcal100, 315);
+    });
+
+    test('⚠️ ma le conversioni domestiche non si riscrivono', () {
+      /*
+       * 🚨 Un cucchiaio d'olio e' «~14 g», non esattamente 14: pretendere
+       * l'uguaglianza esatta trasformerebbe «1 cucchiaio» in «14 g» a ogni
+       * voce — un'informazione **peggiore** di quella che c'era.
+       */
+      final v = normalizzaLaVoce(
+        descrizione: 'Un cucchiaio di olio',
+        quantita: 1,
+        unita: 'cucchiaio',
+        grammi: 14,
+        kcal: 126,
+      );
+
+      expect(v.quantita, 1);
+      expect(v.unita, 'cucchiaio');
+    });
+
+    test('💡 e i millilitri restano millilitri', () {
+      /*
+       * ⚠️ 500 ml di succo pesano 525 g (densita' 1,05). La quantita' giusta
+       * resta **500 ml**: riscriverla in 525 g direbbe un numero che nessuno ha
+       * pronunciato, e piu' difficile da rileggere.
+       */
+      final v = normalizzaLaVoce(
+        descrizione: "Succo d'arancia",
+        quantita: 500,
+        unita: 'ml',
+        grammi: 525,
+        kcal: 225,
+      );
+
+      expect(v.quantita, 500);
+      expect(v.unita, 'ml');
+      expect(v.grammi, 525);
     });
   });
 }

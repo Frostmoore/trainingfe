@@ -162,6 +162,7 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
         minutiDormiti: notte?.minutiDormiti.toDouble(),
         zHrv: abbastanza ? hrv.zDi(giorno) : null,
         zBattito: abbastanza ? battito.zDi(giorno) : null,
+        oreSveglio: _oreSveglio(notte: notte, quantiFa: quantiFa, adesso: oggi),
       ),
     );
   }
@@ -224,6 +225,17 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
         calorieAllenamento: spese.allenamento,
         riferimentoAllenamento: rif.allenamento,
         riferimentoAttivita: rif.attivita,
+
+        /*
+         * 🚨 **Le ore di veglia di ADESSO, non quelle di una giornata intera.**
+         * ⛔ Passare qui il valore di riferimento vorrebbe dire addebitare alle
+         * otto del mattino la stanchezza di sedici ore — cioè far ricomparire il
+         * difetto opposto a quello che si sta chiudendo.
+         *
+         * 💡 È questo il numero che fa scendere la Carica **ora per ora**, ed è
+         * l'unico ingrediente che non ha bisogno di nessun sensore.
+         */
+        oreSveglio: oggiCosi.oreSveglio ?? CaricaBatteria.oreSveglioSenzaNotte,
       ),
     ),
     affidabilita: ultimo.affidabilita,
@@ -237,6 +249,44 @@ final caricaProvider = FutureProvider.autoDispose<Carica?>((ref) async {
 /// Una metrica letta una volta sola, con la sua baseline.
 ///
 /// 💡 Sa rispondere «lo z-score di questo giorno» senza tornare al database.
+/// Da quante ore si è svegli — 06/09/2026.
+///
+/// ══ 🚨 DUE CASI, E SONO DIVERSI ═══════════════════════════════════════════
+///
+/// **Il giorno in corso** (`quantiFa == 0`): il tempo passato dal **risveglio
+/// vero**, che `GiudizioNotte.a` sa dire. 💡 È questo il numero che fa scendere
+/// la Carica ora per ora invece che a scatti, e senza chiedere niente a nessun
+/// sensore.
+///
+/// **Un giorno finito**: `24 −` le ore dormite quella notte. ⚠️ È
+/// un'approssimazione — la notte che chiude la giornata non è quella che la
+/// apre — ma è l'unica possibile con quello che c'è, ed è onesta: chi dorme
+/// cinque ore sta in piedi diciannove.
+///
+/// ⛔ **`null` non vuol dire zero.** Chi lo riceve usa
+/// `CaricaBatteria.oreSveglioSenzaNotte`, che è 16: uno zero rimetterebbe la
+/// batteria a non scendere mai, cioè esattamente il difetto che tutto questo
+/// esiste per chiudere.
+double? _oreSveglio({
+  required GiudizioNotte? notte,
+  required int quantiFa,
+  required DateTime adesso,
+}) {
+  if (notte == null) return null;
+
+  if (quantiFa == 0) {
+    /*
+     * ⚠️ **Mai negativo, e mai più di 24.** Un orologio che scrive una notte
+     * finita «domani» — succede, con i fusi e con le sincronizzazioni tardive —
+     * darebbe ore negative, e una scarica negativa **ricaricherebbe** la
+     * batteria stando svegli.
+     */
+    return (adesso.difference(notte.a).inMinutes / 60).clamp(0, 24).toDouble();
+  }
+
+  return (24 - notte.minutiDormiti / 60).clamp(0, 24).toDouble();
+}
+
 class _Serie {
   const _Serie(this._perGiorno, this._baseline);
 
@@ -249,11 +299,7 @@ class _Serie {
 
     if (base == null || valore == null) return null;
 
-    return IndiciDiForma.z(
-      valore: valore,
-      media: base.$1,
-      deviazione: base.$2,
-    );
+    return IndiciDiForma.z(valore: valore, media: base.$1, deviazione: base.$2);
   }
 }
 

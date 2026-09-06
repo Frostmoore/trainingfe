@@ -77,7 +77,9 @@ enum Affidabilita {
     // è consumato, cioè manca il numeratore di tutta la scarica.
     if (senzaAttivita) livello = Affidabilita.bassa;
 
-    if (senzaSonno && livello == Affidabilita.alta) livello = Affidabilita.media;
+    if (senzaSonno && livello == Affidabilita.alta) {
+      livello = Affidabilita.media;
+    }
 
     if (senzaFisiologia && livello == Affidabilita.alta) {
       livello = Affidabilita.media;
@@ -118,6 +120,7 @@ class GiornataPerLaCarica {
     this.minutiDormiti,
     this.zHrv,
     this.zBattito,
+    this.oreSveglio,
   });
 
   final DateTime giorno;
@@ -139,6 +142,16 @@ class GiornataPerLaCarica {
   /// abbastanza — vedi [CaricaBatteria.giorniPerLaFisiologia].
   final double? zHrv;
   final double? zBattito;
+
+  /// Da quante ore si è svegli — 06/09/2026.
+  ///
+  /// 💡 Per un giorno **finito** è `24 −` le ore dormite quella notte; per il
+  /// giorno **in corso** è il tempo passato dal risveglio vero, che
+  /// `GiudizioNotte.a` sa dire.
+  ///
+  /// ⚠️ `null` quando non si sa: chi calcola usa
+  /// [CaricaBatteria.oreSveglioSenzaNotte], che è 16 e **non** zero.
+  final double? oreSveglio;
 }
 
 /// Il calcolo, tutto qui dentro.
@@ -180,6 +193,45 @@ abstract final class CaricaBatteria {
   /// 💡 Meno della metà dell'allenamento: *«un allenamento strutturato viene
   /// considerato più affaticante, a parità di calorie»*.
   static const scaricaDellAttivita = 10.0;
+
+  /// Le ore di veglia di una giornata normale.
+  ///
+  /// 💡 Sedici: dormendone otto, sono le altre.
+  static const oreSveglioDiRiferimento = 16.0;
+
+  /// Punti di scarica per una veglia di riferimento — 06/09/2026.
+  ///
+  /// ══ 🚨 PERCHE' ESISTE, E COSA C'ERA PRIMA ═════════════════════════════
+  ///
+  /// 📌 Il committente: *«non posso avere la stessa carica o prontezza se sto in
+  /// piedi da 18 ore o se sto in piedi da 3… va aggiustata sta cosa»*.
+  ///
+  /// ⛔ **Aveva ragione, e il difetto era peggio di così**: [scarica] guardava
+  /// **soltanto** le calorie attive, e la prima riga diceva
+  /// `if (calorieAttive == null) return 0`. 🚨 Su un orologio che scrive le
+  /// calorie attive **solo dentro la finestra di un allenamento** — come lo Zepp
+  /// del committente, verificato il 26/08 — questo vuol dire che in un giorno
+  /// senza allenamento la scarica era **esattamente zero**: la batteria non
+  /// scendeva mai, e la mattina dopo recuperava da 100 verso 100.
+  ///
+  /// 💡 Stare svegli costa **da solo**, e non dipende da nessun sensore: è
+  /// l'unico ingrediente che c'è sempre, anche con l'orologio nel cassetto.
+  ///
+  /// ⚠️ **Venti punti su sedici ore**, cioè 1,25 all'ora: una giornata sedentaria
+  /// costa 20, che una notte buona ricarica quasi tutta. 🚨 Diciotto ore in piedi
+  /// ne costano 22,5 e tre ne costano 3,75 — che è esattamente la differenza che
+  /// prima non si vedeva.
+  ///
+  /// 📌 È un **parametro di progetto** come tutti quelli qui sopra, non una
+  /// costante fisiologica: va calibrato quando ci saranno dati veri.
+  static const scaricaDellaVeglia = 20.0;
+
+  /// Quante ore si suppone si sia stati svegli quando non lo si sa.
+  ///
+  /// ⚠️ **Non zero.** Uno zero direbbe «non si è alzato dal letto», che è la cosa
+  /// meno probabile fra tutte; e soprattutto rimetterebbe la batteria nel
+  /// comportamento di prima proprio nei giorni senza dati.
+  static const oreSveglioSenzaNotte = oreSveglioDiRiferimento;
 
   /// ⚠️ **Il tetto alla scarica giornaliera**, ed è una difesa non un'estetica:
   /// *«per impedire che errori del wearable o attività eccezionali distruggano
@@ -321,16 +373,37 @@ abstract final class CaricaBatteria {
   ///
   /// 💡 Se le calorie dell'allenamento non si sanno, tutto diventa attività
   /// quotidiana — *«la stima sarà meno accurata»*, ma esiste.
+  /// [oreSveglio] è **l'unico ingrediente che non dipende da un sensore**, ed è
+  /// il motivo per cui questa funzione non torna più zero quando l'orologio non
+  /// ha mandato niente. Vedi [scaricaDellaVeglia].
   static double scarica({
     required double? calorieAttive,
     required double? calorieAllenamento,
     required double riferimentoAllenamento,
     required double riferimentoAttivita,
+    double oreSveglio = oreSveglioSenzaNotte,
   }) {
-    // ⛔ Senza calorie non si sa quanto si è consumato: la batteria **non
-    // scende**. Inventare una scarica media sarebbe far calare la carica a chi
-    // ha lasciato l'orologio nel cassetto.
-    if (calorieAttive == null) return 0;
+    /*
+     * ── La veglia, che c'è sempre ──────────────────────────────────────────
+     *
+     * 🚨 **Si calcola PRIMA di uscire per mancanza di calorie**, e qui stava il
+     * difetto: la vecchia prima riga era `if (calorieAttive == null) return 0`,
+     * e portava via con sé anche questa parte — che con i sensori non c'entra
+     * niente.
+     */
+    final daVeglia =
+        scaricaDellaVeglia *
+        (math.max(oreSveglio, 0) / oreSveglioDiRiferimento);
+
+    /*
+     * ⛔ **Senza calorie non si sa quanto ci si è mossi**, e non si inventa:
+     * chi ha lasciato l'orologio nel cassetto non deve vedersi addebitare un
+     * allenamento che forse non ha fatto. 💡 Ma la veglia resta, perché quella
+     * è successa comunque.
+     */
+    if (calorieAttive == null) {
+      return daVeglia.clamp(0.0, scaricaMassimaAlGiorno).toDouble();
+    }
 
     final allenamento = calorieAllenamento ?? 0;
     final quotidiana = math.max(calorieAttive - allenamento, 0);
@@ -343,7 +416,7 @@ abstract final class CaricaBatteria {
         ? scaricaDellAttivita * (quotidiana / riferimentoAttivita)
         : 0.0;
 
-    return (daAllenamento + daAttivita)
+    return (daVeglia + daAllenamento + daAttivita)
         .clamp(0.0, scaricaMassimaAlGiorno)
         .toDouble();
   }
@@ -461,15 +534,17 @@ abstract final class CaricaBatteria {
         attivitaPersonale: attivitaPersonale,
       );
 
-      final sera = (mattina -
-              scarica(
-                calorieAttive: g.calorieAttive,
-                calorieAllenamento: g.calorieAllenamento,
-                riferimentoAllenamento: rif.allenamento,
-                riferimentoAttivita: rif.attivita,
-              ))
-          .clamp(0.0, 100.0)
-          .toDouble();
+      final sera =
+          (mattina -
+                  scarica(
+                    calorieAttive: g.calorieAttive,
+                    calorieAllenamento: g.calorieAllenamento,
+                    riferimentoAllenamento: rif.allenamento,
+                    riferimentoAttivita: rif.attivita,
+                    oreSveglio: g.oreSveglio ?? oreSveglioSenzaNotte,
+                  ))
+              .clamp(0.0, 100.0)
+              .toDouble();
 
       fuori.add(
         GiornoDiCarica(

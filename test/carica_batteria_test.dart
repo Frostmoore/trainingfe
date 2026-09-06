@@ -133,6 +133,18 @@ void main() {
         calorieAllenamento: 600,
         riferimentoAllenamento: 630,
         riferimentoAttivita: 420,
+
+        /*
+         * ⚠️ **`oreSveglio: 0` per isolare le calorie.** L'esempio della
+         * specifica è **anteriore** alla scarica da veglia (06/09/2026): i suoi
+         * numeri descrivono solo la parte che dipende dai sensori.
+         *
+         * ⛔ Lasciare il valore di riferimento qui vorrebbe dire un test che
+         * dice «la specifica» e verifica un'altra cosa — e il giorno che la
+         * parte delle calorie si rompesse, questo resterebbe verde perché il
+         * totale finisce comunque contro il tetto.
+         */
+        oreSveglio: 0,
       );
 
       expect(d, closeTo(30.9, 0.1));
@@ -178,11 +190,76 @@ void main() {
       expect(d, CaricaBatteria.scaricaMassimaAlGiorno);
     });
 
-    test('senza calorie la batteria NON scende', () {
+    test('senza calorie scende SOLO per la veglia', () {
       /*
-       * ⛔ Inventare una scarica media farebbe calare la carica a chi ha
-       * lasciato l'orologio nel cassetto: gli si direbbe che è stanco perché
-       * non lo stiamo guardando.
+       * ══ 🚨 QUESTO TEST DICEVA IL CONTRARIO — cambiato il 06/09/2026 ═════
+       *
+       * ⛔ Si chiamava *«senza calorie la batteria NON scende»*, e difendeva una
+       * cosa giusta a metà: inventare un'**attività** che non si è misurata
+       * sarebbe dire a qualcuno che è stanco perché non lo stiamo guardando.
+       *
+       * 🚨 Ma portava via con sé anche la veglia, che con i sensori non c'entra
+       * niente. 📌 Il committente: *«non posso avere la stessa carica se sto in
+       * piedi da 18 ore o se sto in piedi da 3»*. E su un orologio che scrive le
+       * calorie attive solo dentro un allenamento, quel `return 0` voleva dire
+       * che **nei giorni senza palestra la batteria non scendeva mai**.
+       *
+       * 💡 Le due cose adesso sono separate: dell'attività non si inventa
+       * niente, della veglia si sa tutto.
+       */
+      final senzaSensori = CaricaBatteria.scarica(
+        calorieAttive: null,
+        calorieAllenamento: null,
+        riferimentoAllenamento: 630,
+        riferimentoAttivita: 420,
+        oreSveglio: 16,
+      );
+
+      // 💡 Sedici ore = la veglia di riferimento = i suoi punti pieni.
+      expect(senzaSensori, closeTo(CaricaBatteria.scaricaDellaVeglia, 0.01));
+
+      // ⛔ E appena sveglio non si è ancora consumato niente.
+      expect(
+        CaricaBatteria.scarica(
+          calorieAttive: null,
+          calorieAllenamento: null,
+          riferimentoAllenamento: 630,
+          riferimentoAttivita: 420,
+          oreSveglio: 0,
+        ),
+        0,
+      );
+    });
+
+    test('diciotto ore in piedi non sono come tre', () {
+      /*
+       * 📌 È **la frase del committente**, tradotta in numeri: *«non posso avere
+       * la stessa carica o prontezza se sto in piedi da 18 ore o se sto in piedi
+       * da 3»*.
+       *
+       * 🚨 Prima di oggi questi due erano **lo stesso numero**, e il numero era
+       * zero.
+       */
+      double dopo(double ore) => CaricaBatteria.scarica(
+            calorieAttive: null,
+            calorieAllenamento: null,
+            riferimentoAllenamento: 630,
+            riferimentoAttivita: 420,
+            oreSveglio: ore,
+          );
+
+      expect(dopo(18), greaterThan(dopo(3)));
+
+      // 💡 1,25 punti all'ora: quindici ore di differenza fanno ~18,75 punti.
+      expect(dopo(18) - dopo(3), closeTo(18.75, 0.01));
+    });
+
+    test('la veglia non può ricaricare', () {
+      /*
+       * ⚠️ Un orologio che scrive una notte finita «domani» — succede, con i
+       * fusi e le sincronizzazioni tardive — darebbe ore negative. 🚨 Una
+       * scarica negativa **aggiungerebbe** carica stando svegli, che è il verso
+       * esattamente sbagliato.
        */
       expect(
         CaricaBatteria.scarica(
@@ -190,6 +267,7 @@ void main() {
           calorieAllenamento: null,
           riferimentoAllenamento: 630,
           riferimentoAttivita: 420,
+          oreSveglio: -5,
         ),
         0,
       );
@@ -201,6 +279,7 @@ void main() {
         calorieAllenamento: null,
         riferimentoAllenamento: 630,
         riferimentoAttivita: 420,
+        oreSveglio: 0,
       );
 
       // 💡 420 su un riferimento di 420 = 10 punti pieni di attività.
@@ -321,18 +400,18 @@ void main() {
      * 📌 La decisione: *«Ovviamente la giornata inizia al risveglio»*.
      */
     List<GiornataPerLaCarica> conNotte({required bool oggiHaDormito}) => [
-      GiornataPerLaCarica(
-        giorno: giorno(1),
-        calorieAttive: 900,
-        calorieAllenamento: 600,
-        minutiDormiti: 480,
-      ),
-      GiornataPerLaCarica(
-        giorno: giorno(2),
-        calorieAttive: 15,
-        minutiDormiti: oggiHaDormito ? 450 : null,
-      ),
-    ];
+          GiornataPerLaCarica(
+            giorno: giorno(1),
+            calorieAttive: 900,
+            calorieAllenamento: 600,
+            minutiDormiti: 480,
+          ),
+          GiornataPerLaCarica(
+            giorno: giorno(2),
+            calorieAttive: 15,
+            minutiDormiti: oggiHaDormito ? 450 : null,
+          ),
+        ];
 
     test('alle 00:50, senza la notte di oggi, si sta ancora vivendo ieri', () {
       expect(
@@ -367,8 +446,7 @@ void main() {
       expect(
         CaricaBatteria.indiceDelGiornoInCorso(
           giorni: conNotte(oggiHaDormito: false),
-          oraLocale:
-              CaricaBatteria.oraOltreLaQualeIlGiornoEComunqueCominciato,
+          oraLocale: CaricaBatteria.oraOltreLaQualeIlGiornoEComunqueCominciato,
         ),
         1,
       );
@@ -445,7 +523,8 @@ void main() {
         oraLocale: 0,
       );
 
-      final spese = CaricaBatteria.speseDalRisveglio(giorni: giorni, da: inCorso);
+      final spese =
+          CaricaBatteria.speseDalRisveglio(giorni: giorni, da: inCorso);
 
       final adesso = CaricaBatteria.adesso(
         caricaDelMattino: catena[inCorso].mattina,
@@ -477,6 +556,21 @@ void main() {
 
   group('la catena, che è il motivo per cui la Carica esiste', () {
     test('l\'esempio completo della specifica, dal primo giorno', () {
+      /*
+       * ══ ⚠️ `oreSveglio: 0`, E VA SPIEGATO — 06/09/2026 ═══════════════════
+       *
+       * 🚨 **Questo e' l'ancora**: dice se l'implementazione e' quella
+       * *chiesta*, non solo una che gira. I suoi numeri vengono dall'esempio
+       * scritto nella specifica, che e' **anteriore** alla scarica da veglia.
+       *
+       * ⛔ Riscrivere i numeri attesi sarebbe stato il modo rapido e sbagliato:
+       * l'ancora avrebbe smesso di ancorare a qualcosa, e la prossima volta che
+       * la catena si rompe davvero nessuno lo saprebbe.
+       *
+       * 💡 Azzerando la veglia, l'esempio verifica ancora **esattamente** cio'
+       * per cui e' stato scritto. Il comportamento nuovo ha il suo test, qui
+       * sotto.
+       */
       final c = CaricaBatteria.catena(
         tdeeDiBase: 2100,
         giorni: [
@@ -485,8 +579,13 @@ void main() {
             calorieAttive: 900,
             calorieAllenamento: 600,
             minutiDormiti: 480,
+            oreSveglio: 0,
           ),
-          GiornataPerLaCarica(giorno: giorno(2), minutiDormiti: 450),
+          GiornataPerLaCarica(
+            giorno: giorno(2),
+            minutiDormiti: 450,
+            oreSveglio: 0,
+          ),
         ],
       );
 
@@ -496,6 +595,37 @@ void main() {
 
       // 📌 Recupero 0.666 su 40.9 mancanti ≈ 27.2 → 86.3.
       expect(c.last.mattina, closeTo(86.3, 0.2));
+    });
+
+    test('lo stesso giorno, con la veglia, costa di piu', () {
+      /*
+       * 💡 E' l'esempio della specifica con le sedici ore di veglia rimesse: la
+       * scarica sale da 30,9 a 50,9, **contro il tetto di 50**.
+       *
+       * ⚠️ E dice una cosa da sorvegliare: una giornata con un allenamento vero
+       * e una veglia normale **arriva al tetto**. 🚨 Quando il tetto si tocca, la
+       * differenza fra un allenamento duro e uno durissimo sparisce — e' il
+       * prezzo dichiarato di `scaricaMassimaAlGiorno`, e il giorno che desse
+       * fastidio si alza quella, non si toglie la veglia.
+       */
+      final c = CaricaBatteria.catena(
+        tdeeDiBase: 2100,
+        giorni: [
+          GiornataPerLaCarica(
+            giorno: giorno(1),
+            calorieAttive: 900,
+            calorieAllenamento: 600,
+            minutiDormiti: 480,
+            oreSveglio: 16,
+          ),
+        ],
+      );
+
+      expect(c.first.mattina, 90);
+      expect(
+        c.first.sera,
+        closeTo(90 - CaricaBatteria.scaricaMassimaAlGiorno, 0.1),
+      );
     });
 
     test('la fatica non recuperata si trascina', () {
@@ -524,7 +654,8 @@ void main() {
         expect(
           c[i].mattina,
           lessThan(c[i - 1].mattina),
-          reason: 'il giorno $i non ha trascinato la fatica del giorno ${i - 1}',
+          reason:
+              'il giorno $i non ha trascinato la fatica del giorno ${i - 1}',
         );
       }
     });
@@ -551,10 +682,15 @@ void main() {
       expect(c.last.mattina, greaterThan(c[1].mattina));
     });
 
-    test('un giorno senza orologio non scarica, ma recupera', () {
+    test('un giorno senza orologio scarica solo la veglia, e recupera', () {
       /*
-       * ⛔ Chi lascia l'orologio a casa non deve trovarsi la batteria scesa: non
-       * si sa cosa ha fatto, e inventarlo sarebbe peggio che ammetterlo.
+       * ⛔ Chi lascia l'orologio a casa non deve trovarsi addebitata
+       * un'**attività** che non si è misurata: quella non si inventa.
+       *
+       * 🚨 Ma la giornata l'ha vissuta lo stesso, ed è cambiato il 06/09/2026:
+       * prima `c.first.sera` era **esattamente 50**, cioè la batteria stava
+       * ferma. Adesso scende dei punti della veglia — qui il valore di
+       * riferimento, perché `oreSveglio` non è stato passato.
        */
       final c = CaricaBatteria.catena(
         tdeeDiBase: 2100,
@@ -565,8 +701,11 @@ void main() {
         ],
       );
 
-      expect(c.first.sera, 50);
-      expect(c.last.mattina, greaterThan(50));
+      expect(
+          c.first.sera, closeTo(50 - CaricaBatteria.scaricaDellaVeglia, 0.01));
+
+      // 💡 E la notte recupera comunque: è il punto di tutta la catena.
+      expect(c.last.mattina, greaterThan(c.first.sera));
     });
 
     test('si può ripartire da una carica già nota', () {
@@ -580,7 +719,8 @@ void main() {
       expect(c.single.mattina, 42);
     });
 
-    test('la fisiologia del giorno DOPO decide il recupero di questa notte', () {
+    test('la fisiologia del giorno DOPO decide il recupero di questa notte',
+        () {
       /*
        * ⚠️ Si dorme **fra** i due giorni, e HRV e battito si misurano al
        * risveglio: usare quelli di oggi vorrebbe dire far decidere a ieri come
@@ -610,11 +750,11 @@ void main() {
   group('l\'affidabilità', () {
     test('cresce coi giorni', () {
       Affidabilita a(int giorni) => Affidabilita.da(
-        giorniValidi: giorni,
-        senzaSonno: false,
-        senzaFisiologia: false,
-        senzaAttivita: false,
-      );
+            giorniValidi: giorni,
+            senzaSonno: false,
+            senzaFisiologia: false,
+            senzaAttivita: false,
+          );
 
       expect(a(3), Affidabilita.bassa);
       expect(a(10), Affidabilita.media);

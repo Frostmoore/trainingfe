@@ -145,7 +145,9 @@ final _storiaCalorieProvider = FutureProvider.autoDispose<List<double>>((
    */
   ref.watch(revisioneDiarioProvider);
 
-  final serie = await ref.watch(serieDelCiboProvider).calorie(giorni: _finestra);
+  final serie = await ref
+      .watch(serieDelCiboProvider)
+      .calorie(giorni: _finestra);
 
   final ultimi = serie.consumed;
 

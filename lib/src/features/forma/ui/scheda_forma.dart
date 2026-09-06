@@ -325,7 +325,6 @@ class _SezioneProntezza extends StatelessWidget {
   }
 }
 
-
 /// 🔋 La Carica vera: quanto stress si può ancora sostenere — 3b-K.
 ///
 /// ══ 🚨 QUI LA BATTERIA È LA FORMA GIUSTA ══════════════════════════════════

@@ -223,8 +223,10 @@ class _Quadrante extends CustomPainter {
       );
 
       final a = Offset(
-        centro.dx + math.cos(angolo) * (raggio + spessore * (centrale ? 0.7 : 0.5)),
-        centro.dy + math.sin(angolo) * (raggio + spessore * (centrale ? 0.7 : 0.5)),
+        centro.dx +
+            math.cos(angolo) * (raggio + spessore * (centrale ? 0.7 : 0.5)),
+        centro.dy +
+            math.sin(angolo) * (raggio + spessore * (centrale ? 0.7 : 0.5)),
       );
 
       canvas.drawLine(

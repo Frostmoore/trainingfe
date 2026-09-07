@@ -112,6 +112,55 @@ abstract final class CalorieDalCammino {
   /// preciso su un rumore.
   static const passiMinimi = 500;
 
+  /// I passi che il fattore di attività **non copre già** — 08/09/2026.
+  ///
+  /// ══ 🚨 SENZA QUESTO, IL CAMMINO SI CONTA DUE VOLTE ═══════════════════════
+  ///
+  /// 📌 Il committente, l'08/09: *«ok con la strada a»*.
+  ///
+  /// ⛔ **Il 07/09 le calorie del cammino si sommavano intere sopra il TDEE**, e
+  /// il TDEE il cammino ce l'ha già dentro. Non è un sospetto: i gradini del
+  /// modello «misurata» sono definiti **a passi al giorno** — `desk` fino a
+  /// 4.000, `standing` fino a 8.000, `on_feet` fino a 13.000 — e
+  /// `livelloSuggeritoDaiPassi()` il gradino lo sceglie **leggendo i passi** da
+  /// Health Connect. I fattori stessi vengono da *«BMR + termogenesi + passi
+  /// misurati»*.
+  ///
+  /// 🚨 **È la regola che il progetto aveva già difeso due volte**: il 26/08 sul
+  /// livello che dichiarava gli allenamenti, e in
+  /// `bruciateExtraDelGiornoProvider`, che torna zero in «misurata» *«perché lì
+  /// entrano già tutte»*.
+  ///
+  /// ⚠️ **E la verifica del 07/09 non poteva accorgersene**: confrontava la
+  /// stima con le **attive dell'orologio**, che sono la stessa grandezza già
+  /// dentro il fattore. Due numeri che concordano non dicono che il numero vada
+  /// sommato.
+  ///
+  /// ══ 💡 IL TETTO NON E' INVENTATO: E' QUELLO CHE HA SCELTO LA PERSONA ══════
+  ///
+  /// [tettoDelGradino] è `LivelloAttivita.passiFinoA` del gradino scelto. ⛔ Non
+  /// una costante nuova, e non una media: il numero con cui quella persona ha
+  /// descritto la propria giornata.
+  ///
+  /// 🚨 **`null` vuol dire zero eccedenza**, e copre tre casi che devono
+  /// comportarsi uguale:
+  ///
+  /// | Caso | Perché zero |
+  /// |---|---|
+  /// | Modello **«stima»** | Il fattore contiene già tutto, sport compreso |
+  /// | Gradino **`labour`** | Non ha tetto: la sua giornata è già il massimo |
+  /// | **Non ha ancora scelto** | Niente si muove da solo prima che risponda |
+  ///
+  /// ⚠️ Si prende il **tetto** del gradino e non il suo centro: sbaglia per
+  /// difetto, che su quante calorie qualcuno può mangiare è il verso giusto.
+  static int inEccesso({required int passi, required int? tettoDelGradino}) {
+    if (tettoDelGradino == null) return 0;
+
+    final eccesso = passi - tettoDelGradino;
+
+    return eccesso > 0 ? eccesso : 0;
+  }
+
   /// Quanti km valgono quei passi.
   static double km({required int passi, double? altezzaCm}) =>
       passi *

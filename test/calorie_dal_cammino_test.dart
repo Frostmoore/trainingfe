@@ -121,4 +121,86 @@ void main() {
     // ⚠️ E non così basso da rendere la stima inutile.
     expect(CalorieDalCammino.costoAlKgPerKm, greaterThan(0.4));
   });
+
+  /*
+   * ══ 🚨 IL CAMMINO SI CONTAVA DUE VOLTE — 08/09/2026 ══════════════════════
+   *
+   * ⛔ Dal 07/09 all'08/09 le calorie del cammino si sommavano **intere** sopra
+   * un TDEE che il cammino ce l'ha già dentro: i gradini del modello «misurata»
+   * sono definiti **a passi al giorno** e `livelloSuggeritoDaiPassi()` sceglie
+   * il gradino leggendo i passi da Health Connect.
+   *
+   * 🚨 **Nessun test poteva accorgersene**, e nemmeno la verifica contro
+   * l'orologio: quella confrontava la nostra stima con le **attive**, che sono
+   * la stessa grandezza già dentro il fattore. Due numeri che concordano non
+   * dicono che il numero vada sommato.
+   *
+   * 📌 Il committente, l'08/09: *«ok con la strada a»*.
+   */
+  group('🚶 solo i passi sopra il proprio gradino', () {
+    test('⛔ sotto il tetto del gradino, l\'eccedenza è zero', () {
+      // `standing` = «fino a 8.000». Chi ne fa 6.000 sta dentro la giornata che
+      // il suo fattore già descrive: non ha camminato *in più*.
+      expect(
+        CalorieDalCammino.inEccesso(passi: 6000, tettoDelGradino: 8000),
+        0,
+      );
+    });
+
+    test('✅ sopra, conta solo la differenza', () {
+      expect(
+        CalorieDalCammino.inEccesso(passi: 22470, tettoDelGradino: 8000),
+        14470,
+      );
+    });
+
+    test('⚠️ esattamente al tetto è ancora zero', () {
+      /*
+       * 💡 Il tetto è il confine del gradino, non il primo passo del successivo:
+       * chi ne fa esattamente 8.000 sta ancora dentro «fino a 8.000».
+       */
+      expect(
+        CalorieDalCammino.inEccesso(passi: 8000, tettoDelGradino: 8000),
+        0,
+      );
+    });
+
+    test('🚨 senza tetto non si somma NIENTE, e sono tre casi diversi', () {
+      /*
+       * ⛔ `null` arriva da tre situazioni che devono comportarsi uguale:
+       * il modello «stima» (il fattore contiene già tutto, sport compreso), il
+       * gradino `labour` (non ha tetto: la sua giornata è già il massimo), e chi
+       * non ha ancora scelto (niente si muove da solo prima che risponda).
+       *
+       * 🚨 Il ripiego naturale sarebbe stato «allora conta tutto», ed è proprio
+       * il difetto: darebbe a chi non ha risposto il margine più generoso.
+       */
+      expect(
+        CalorieDalCammino.inEccesso(passi: 22470, tettoDelGradino: null),
+        0,
+      );
+    });
+
+    test('💡 e sull\'eccedenza le calorie sono molto meno di prima', () {
+      /*
+       * ⚠️ È il senso della correzione, e va misurato: 8.192 passi a 95 kg
+       * davano ~275 kcal contati interi. Con `standing` (fino a 8.000) ne
+       * restano 192 di eccedenza, cioè una manciata di calorie.
+       *
+       * 🚨 **E va bene così**: il margine grosso deve arrivare solo nei giorni
+       * davvero fuori scala, dove è vero. Una giornata come tante non è un
+       * merito da premiare — è la giornata su cui il fattore è stato tarato.
+       */
+      final interi = CalorieDalCammino.kcal(passi: 8192, pesoKg: 95);
+      final eccedenza = CalorieDalCammino.kcal(
+        passi: CalorieDalCammino.inEccesso(passi: 8192, tettoDelGradino: 8000),
+        pesoKg: 95,
+      );
+
+      expect(interi, greaterThan(250));
+
+      // ⛔ Sotto `passiMinimi`: 192 passi non sono movimento, sono rumore.
+      expect(eccedenza, 0);
+    });
+  });
 }

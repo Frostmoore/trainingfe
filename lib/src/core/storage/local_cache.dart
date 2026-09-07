@@ -202,5 +202,16 @@ class LocalCache {
   Future<void> setBool(String key, {required bool value}) =>
       _prefs.setBool(key, value);
 
+  /// 🚨 **Torna `null` quando la chiave non c'e', e non `0`** — 08/09/2026.
+  ///
+  /// ⚠️ Stessa ragione di [getBool]: uno zero salvato e una chiave mai scritta
+  /// sono due cose diverse. ⛔ Su un obiettivo — di passi, di calorie — lo zero
+  /// di ripiego sarebbe pure il peggiore possibile: una barra gia' piena, o una
+  /// divisione per zero.
+  int? getInt(String key) => _prefs.getInt(key);
+
+  Future<void> setInt(String key, {required int value}) =>
+      _prefs.setInt(key, value);
+
   Future<void> remove(String key) => _prefs.remove(key);
 }

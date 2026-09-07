@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import '../profile/corpo_controller.dart';
+import '../profile/data/modello_calorie.dart';
+import '../profile/livello_attivita.dart';
 import '../profile/profile_controller.dart';
 import 'calorie_dal_cammino.dart';
 import 'data/calorie_allenamento.dart';
@@ -161,16 +163,42 @@ final bruciateLocaliDelGiornoProvider = FutureProvider.autoDispose
 ///
 /// ⚠️ Usa i passi **fuori dagli allenamenti**: quelli fatti correndo hanno già
 /// le loro calorie, e contarli anche qui li sommerebbe a se stessi.
+///
+/// ══ 🚨 E SOLO QUELLI SOPRA IL PROPRIO GRADINO — 08/09/2026 ════════════════
+///
+/// ⛔ **Fino all'08/09 sommava i passi interi**, sopra un TDEE che il cammino ce
+/// l'ha già dentro: i gradini del modello «misurata» sono definiti **a passi al
+/// giorno**, e il gradino si suggerisce leggendo i passi. 💡 La spiegazione
+/// completa sta in [CalorieDalCammino.inEccesso].
+///
+/// ⚠️ **Zero in tutti i casi in cui non si sa**: modello «stima», gradino
+/// `labour`, o nessuna scelta fatta. 🚨 Non è prudenza generica — è la stessa
+/// regola di `bruciateExtraDelGiornoProvider`, che in «misurata» torna zero
+/// *«perché lì entrano già tutte»*.
 final caloriePassiDelGiornoProvider = FutureProvider.autoDispose
     .family<int, DateTime>((ref, giorno) async {
       ref.watch(revisioneAllenamentiProvider);
+
+      /*
+       * ⛔ **Fuori dal modello «misurata» non si stima niente**, e si esce
+       * prima di leggere l'archivio: nel modello a stima il fattore contiene
+       * già lo sport, e sommarci sopra qualunque cosa è il difetto del 26/08.
+       */
+      final modello = ref.watch(modelloCalorieProvider);
+
+      if (modello != ModelloCalorie.misurata) return 0;
 
       final passi = await ref
           .watch(archivioSaluteProvider)
           .passiFuoriDagliAllenamenti(giorno);
 
       return CalorieDalCammino.kcal(
-        passi: passi,
+        passi: CalorieDalCammino.inEccesso(
+          passi: passi,
+          tettoDelGradino: ModelloCalorie.misurata
+              .livello(ref.watch(livelloAttivitaProvider))
+              ?.passiFinoA,
+        ),
         pesoKg: ref.watch(corpoOggiProvider).valueOrNull?.weightKg,
         altezzaCm: ref.watch(profileProvider).valueOrNull?.heightCm?.toDouble(),
       );

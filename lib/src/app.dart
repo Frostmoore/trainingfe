@@ -114,7 +114,7 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
      */
     if (SondaDelleAttive.accesa) {
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => const SondaDelleAttive().racconta(),
+        (_) => SondaDelleAttive(ref).racconta(),
       );
     }
 

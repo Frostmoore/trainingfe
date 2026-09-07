@@ -10,24 +10,33 @@ import 'package:training_companion/src/features/training/calorie_dal_cammino.dar
 /// plausibile, e chi lo segue mangia trecento calorie di troppo tutti i giorni
 /// per mesi.
 void main() {
-  group('l\'ancora sulla realtà', () {
-    test('🎯 8.500 passi a 87 kg e 175 cm fanno ~269 kcal', () {
+  group('l\'ordine di grandezza', () {
+    test('⚠️ una giornata normale sta in una banda sensata', () {
       /*
-       * 📌 **È il numero vero del committente.** Il 06/09/2026 il suo orologio
-       * diceva **269 kcal** di calorie attive, e quel giorno aveva fatto circa
-       * 8.500 passi.
+       * ══ ⛔ QUESTO TEST DICEVA DI ESSERE UN'ANCORA, E NON LO ERA ══════════
        *
-       * 🚨 È l'unica verifica esterna che questa formula abbia: l'orologio fa lo
-       * stesso conto per conto suo e non ce lo dice, quindi il suo numero è il
-       * nostro banco di prova.
+       * 🚨 Si chiamava *«8.500 passi a 87 kg e 175 cm fanno ~269 kcal»* e
+       * sosteneva di verificare la formula contro il numero vero dell'orologio
+       * del committente.
+       *
+       * ⛔ **Peso e altezza erano quelli del profilo demo del PDF di prova**
+       * (*«uomo di 30 anni, 1.75 m, 85 kg»*), non i suoi — che pesa **95/96
+       * kg** — e i passi di quel giorno non erano stati misurati ma scelti.
+       * 💡 Due incognite adattate a una sola osservazione tornano **sempre**.
+       *
+       * ⚠️ Quindi adesso questo test dice quello che sa davvero: che una
+       * giornata di cammino normale, per una persona di quella corporatura, dà
+       * un numero **di quell'ordine di grandezza**. 🚨 Non che sia giusto: che
+       * non sia assurdo. La verifica vera è nell'handoff, e serve il telefono.
        */
       final kcal = CalorieDalCammino.kcal(
-        passi: 8500,
-        pesoKg: 87,
-        altezzaCm: 175,
+        passi: 8000,
+        pesoKg: 95,
+        altezzaCm: 178,
       );
 
-      expect(kcal, closeTo(269, 15));
+      // 💡 Fra due caffè e un pasto: se uscisse 40 o 900, la formula è rotta.
+      expect(kcal, inInclusiveRange(200, 400));
     });
 
     test('💡 e i chilometri sono quelli che direbbe un contapassi', () {

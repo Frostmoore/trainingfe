@@ -36,10 +36,24 @@
 /// dimenticata è codice che nessuno rilegge.
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 
+import '../profile/corpo_controller.dart';
+import '../profile/profile_controller.dart';
+import '../training/calorie_dal_cammino.dart';
+import 'health_controller.dart';
+
 class SondaDelleAttive {
-  const SondaDelleAttive([this._salute]);
+  const SondaDelleAttive(this._ref, [this._salute]);
+
+  /// 🚨 **Serve a leggere i dati VERI della persona**, non dei letterali.
+  ///
+  /// 📌 Il committente, il 07/09: *«ma perché? Cioè nell'app i dati ci sono
+  /// tutti»*. ⛔ Aveva ragione: una verifica fatta con un peso inventato non è
+  /// una verifica, ed è esattamente l'errore che questa sonda serve a non
+  /// rifare.
+  final WidgetRef _ref;
 
   final Health? _salute;
 
@@ -159,6 +173,8 @@ class SondaDelleAttive {
       adesso,
     );
 
+    await _ilContoDellApp(adesso);
+
     _riga('══════ fine ══════');
   }
 
@@ -209,6 +225,32 @@ class SondaDelleAttive {
     );
 
     /*
+     * ══ 🚨 PER SORGENTE, E NON SOLO IL TOTALE ═════════════════════════════
+     *
+     * ⛔ La prima versione sommava tutto e basta: 17.010 passi in due giorni,
+     * da **due** sorgenti che contano **gli stessi passi**. Quel numero era il
+     * doppio del vero, e nessuno se ne sarebbe accorto guardandolo.
+     *
+     * 💡 `ArchivioSalute.passiDi()` fa la cosa giusta — somma per sorgente e
+     * tiene **la più alta** — ma questa sonda serve proprio a controllare che
+     * la cosa giusta sia quella: stampare il totale grezzo nascondeva la
+     * domanda invece di rispondere.
+     */
+    final perSorgente = <String, double>{};
+
+    for (final p in punti) {
+      final v = p.value is NumericHealthValue
+          ? (p.value as NumericHealthValue).numericValue.toDouble()
+          : 0.0;
+
+      perSorgente[p.sourceName] = (perSorgente[p.sourceName] ?? 0) + v;
+    }
+
+    for (final s in perSorgente.entries) {
+      _riga('$etichetta  «${s.key}» → ${s.value.round()}');
+    }
+
+    /*
      * 🎯 **È questa la riga che risponde alla domanda.** Se «fuori» è ~0
      * l'orologio scrive solo dentro gli allenamenti; se è un numero vero, il
      * movimento quotidiano c'è e la sottrazione basta.
@@ -224,6 +266,43 @@ class SondaDelleAttive {
     for (final o in ore) {
       _riga('$etichetta  $o:00 → ${perOra[o]!.round()}');
     }
+  }
+
+  /// Il numero che l'app **mostrerebbe**, con i dati veri della persona.
+  ///
+  /// ══ 🎯 E' QUESTO CHE SI CONFRONTA CON L'OROLOGIO ══════════════════════
+  ///
+  /// 🚨 Non una formula riempita a mano con dei numeri plausibili: **peso dalla
+  /// bilancia, altezza dal profilo, passi dall'archivio**, cioè esattamente
+  /// quello che `caloriePassiDelGiornoProvider` userà.
+  ///
+  /// 💡 Se questo numero e quello dell'orologio si somigliano, la stima è
+  /// verificata. Se non si somigliano, si sa **di quanto** e si sa **perché**,
+  /// perché tutti gli ingredienti sono stampati qui accanto.
+  Future<void> _ilContoDellApp(DateTime giorno) async {
+    final archivio = _ref.read(archivioSaluteProvider);
+
+    final tutti = await archivio.passiDi(giorno);
+    final fuori = await archivio.passiFuoriDagliAllenamenti(giorno);
+
+    final kg = _ref.read(corpoOggiProvider).valueOrNull?.weightKg;
+    final cm = _ref.read(profileProvider).valueOrNull?.heightCm?.toDouble();
+
+    _riga('── il conto che farebbe l\'app ──');
+    _riga('  peso     ${kg ?? "(non lo sa)"}');
+    _riga('  altezza  ${cm ?? "(non lo sa)"}');
+
+    /*
+     * ⚠️ **Due numeri di passi, e sono diversi apposta**: quello che si mostra
+     * comprende i passi fatti allenandosi, quello che stima le calorie no —
+     * altrimenti conterebbe due volte lo stesso movimento.
+     */
+    _riga('  passi    $tutti in tutto · $fuori fuori dagli allenamenti');
+
+    _riga(
+      '  🎯 stima  ${CalorieDalCammino.kcal(passi: fuori, pesoKg: kg, altezzaCm: cm)} kcal'
+      '  ← confronta con quello che dice l\'orologio',
+    );
   }
 
   /// Quanti campioni, ogni quanto, e in che intervallo di valori.

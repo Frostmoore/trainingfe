@@ -28,9 +28,32 @@
 /// volte — lo stesso difetto per cui non si legge mai
 /// `TOTAL_CALORIES_BURNED`.
 ///
-/// ⚠️ **Il conto torna con la realtà, ed è la ragione per cui ci si può
-/// fidare**: 8.500 passi, 175 cm, 87 kg danno ~268 kcal — e l'orologio del
-/// committente, quel giorno, ne diceva **269**.
+/// ══ ⛔ QUESTA FORMULA NON E' ANCORA STATA VERIFICATA SUL VERO ═════════════
+///
+/// 🚨 **E qui c'era scritto il contrario.** Il 07/09/2026 questo commento
+/// diceva: *«il conto torna con la realtà: 8.500 passi, 175 cm, 87 kg danno
+/// ~268 kcal — e l'orologio del committente ne diceva 269»*.
+///
+/// ⛔ **Non era una verifica.** Peso e altezza venivano dal **profilo demo del
+/// PDF di prova** (*«uomo di 30 anni, 1.75 m, 85 kg»*), non dal committente —
+/// che ne pesa **95/96**; e i passi di quel giorno non erano stati misurati, ma
+/// scelti. 💡 Due incognite adattate a una sola osservazione danno sempre un
+/// risultato che «torna»: è il modo classico di scambiare un'ipotesi per una
+/// prova.
+///
+/// ⚠️ **Con i numeri veri il conto resta plausibile** — a 95 kg servono circa
+/// 7.400–7.800 passi per fare 269 kcal, che è una giornata normale — ma
+/// *plausibile* non è *verificato*.
+///
+/// ⏳ **Cosa serve per verificarla davvero**, e sta nell'handoff:
+///
+///   1. i passi **veri** di un giorno, **per sorgente**: la sonda li sommava
+///      fra orologio e telefono, che contano gli stessi passi due volte;
+///   2. peso e altezza **dal profilo**, non da un documento di prova;
+///   3. il numero che l'orologio mostra **quello stesso giorno**.
+///
+/// 🚨 Finché quei tre non ci sono insieme, questa formula è una stima ragionata
+/// e va detto — non un conto validato.
 library;
 
 abstract final class CalorieDalCammino {

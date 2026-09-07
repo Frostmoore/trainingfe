@@ -53,7 +53,8 @@ void main() {
       expect(
         PonteSalute.tipiDaLeggere,
         isNot(contains(HealthDataType.TOTAL_CALORIES_BURNED)),
-        reason: 'Comprende il metabolismo basale: per la giornata vale solo '
+        reason:
+            'Comprende il metabolismo basale: per la giornata vale solo '
             'ACTIVE_ENERGY_BURNED, o si contano due volte ~1.600 kcal.',
       );
     });
@@ -68,7 +69,7 @@ void main() {
     /// 💡 Passi e distanza sono il dato buono **di una corsa**, non della
     /// giornata: li lascia il pacchetto dentro la sessione. Chiederli a parte
     /// vorrebbe dire tirarsi in casa migliaia di campioni che nessuno guarda.
-    test('🆕 i passi ADESSO si leggono, la distanza no', () {
+    test('🆕 i passi si CHIEDONO ma non si leggono grezzi', () {
       /*
        * ══ 🚨 QUESTO TEST DICEVA IL CONTRARIO — cambiato il 06/09/2026 ═════
        *
@@ -86,7 +87,38 @@ void main() {
        * che servisse, prima del codice si aggiornano il registro dei trattamenti
        * e l'informativa.
        */
-      expect(PonteSalute.tipiDaLeggere, contains(HealthDataType.STEPS));
+      /*
+       * ══ 🚨 E I PASSI NON PASSANO DA `tipiDaLeggere` — corretto il 07/09 ══
+       *
+       * ⛔ Il 06/09 avevo messo `STEPS` fra i tipi da leggere, e questo test
+       * pretendeva che ci fosse.
+       *
+       * ⚠️ Il 07/09 il confronto con l'aggregato ha mostrato che la somma dei
+       * record grezzi **diverge** — di poco, e in tutti e due i versi: 23.471
+       * contro 22.470 un giorno, 7.533 contro 8.192 un altro.
+       *
+       * 🚨 **La deduplicazione non è un problema nostro.** Health Connect sa
+       * quali record si sovrappongono, sorgente per sorgente; noi possiamo solo
+       * indovinare, e ogni euristica sbaglia su un caso diverso.
+       *
+       * 💡 Quindi il permesso **serve** — resta fra quelli da autorizzare,
+       * perché senza l'aggregato non risponde — ma il tipo **non** va nel giro
+       * dei record grezzi.
+       */
+      expect(
+        PonteSalute.tipiDaAutorizzare,
+        contains(HealthDataType.STEPS),
+        reason: "senza il permesso l'aggregato non risponde",
+      );
+
+      expect(
+        PonteSalute.tipiDaLeggere,
+        isNot(contains(HealthDataType.STEPS)),
+        reason: "i record grezzi si sovrappongono: si usa l'aggregato",
+      );
+
+      // ⚠️ La distanza resta fuori da tutti e due i giri per la lettura: dice
+      // quanto ti sei spostato, che è un passo più vicino a dove sei stato.
       expect(
         PonteSalute.tipiDaLeggere,
         isNot(contains(HealthDataType.DISTANCE_DELTA)),

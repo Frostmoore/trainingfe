@@ -67,18 +67,42 @@ class PonteSalute {
     HealthDataType.ACTIVE_ENERGY_BURNED,
 
     /*
-     * 🆕 I passi della giornata — 06/09/2026.
+     * ══ ⛔ `STEPS` NON STA QUI, E CI E' STATO PER UN GIORNO ════════════════
      *
-     * 🚨 **Il permesso `READ_STEPS` c'era gia' nel manifest**, se l'era portato
-     * dietro l'import degli allenamenti. ⛔ Ma dichiararlo non basta: l'elenco
-     * da chiedere lo costruisce il pacchetto `health` **dai tipi**, e senza
-     * questa riga il permesso restava `granted=false` per sempre — con nessuno
-     * a cui veniva chiesto niente.
+     * 🚨 Il 06/09/2026 l'ho aggiunto a questo elenco, e i passi hanno cominciato
+     * ad arrivare come **record grezzi**, uno per campione, sommati per
+     * sorgente da `ArchivioSalute.passiDi()`.
      *
-     * ⚠️ **Aggiungerlo cambia la schermata dei consensi**: chi ha gia' l'app
-     * deve concedere di nuovo, o i passi restano a zero senza nessun errore.
+     * ⚠️ **Il confronto con l'aggregato, misurato il 07/09**, dice che quella
+     * somma sbaglia — ma non sempre e non nel verso che sembrava:
+     *
+     *     giorno   somma grezza   aggregato
+     *     09-04       24.435        24.506
+     *     09-05       23.471        22.470
+     *     09-06        7.533         8.192
+     *     09-07        1.413         1.195
+     *
+     * ⛔ **I ventiquattromila erano veri**: quei giorni aveva camminato davvero
+     * cosi' tanto, e la prima diagnosi — «e' doppio conteggio» — era sbagliata.
+     * 🚨 Ma nei giorni in cui **due sorgenti scrivono insieme** i conti
+     * divergono in tutti e due i versi, perche' il massimo per sorgente perde i
+     * pezzi che una sorgente ha e l'altra no.
+     *
+     * 💡 **La ragione vera per cui si usa l'aggregato non e' quindi il doppio
+     * conteggio: e' che la deduplicazione non e' un problema nostro.** Health
+     * Connect sa quali record si sovrappongono e quali no, sorgente per
+     * sorgente; noi possiamo solo indovinare, e ogni euristica — somma, massimo,
+     * media — sbaglia su un caso diverso.
+     *
+     * ⚠️ E il commento di [passiAlGiorno] lo diceva gia', anche se con una
+     * motivazione piu' netta di quella che i dati sostengono.
+     *
+     * 💡 In piu': una riga al giorno invece di trecento campioni.
+     *
+     * ⚠️ `STEPS` resta fra i tipi da **autorizzare**: senza il permesso
+     * l'aggregato non risponde. E' esattamente la distinzione che questo elenco
+     * esiste per fare.
      */
-    HealthDataType.STEPS,
 
     /*
      * 🆕 FASE 1.8 — gli allenamenti.
@@ -354,6 +378,111 @@ class PonteSalute {
   /// dato, o un telefono senza Health Connect. ⛔ **Non zero**: zero passi
   /// sarebbe un'affermazione, e su un suggerimento di dieta un'affermazione
   /// inventata è la cosa che non deve succedere.
+  /// Una lettura di passi per ciascuno degli ultimi [giorni].
+  ///
+  /// ⚠️ **`fonte: 'aggregato'` e non il nome dell'app.** Il totale non viene da
+  /// una sorgente sola: e' Health Connect che ha scelto fra le sue. 🚨 Scriverci
+  /// «huami» o «phone» direbbe una cosa falsa, e `ArchivioSalute.passiDi()` —
+  /// che tiene la sorgente **piu' alta** — tornerebbe a poter sommare due
+  /// versioni dello stesso giorno.
+  ///
+  /// 💡 `misurataIl` e' la mezzanotte del giorno: con l'indice unico
+  /// `(fonte, metrica, misurataIl)`, risincronizzare lo stesso giorno **non**
+  /// crea una seconda riga.
+  ///
+  /// ⛔ **E quindi non aggiorna nemmeno quella che c'e'**: il totale di oggi,
+  /// scritto stamattina, resta quello di stamattina. Se ne occupa
+  /// [aggiornaIPassiDiOggi], che riscrive.
+  Future<List<LetturaSalute>> _passiAggregati(int giorni) async {
+    final fuori = <LetturaSalute>[];
+    final oggi = DateTime.now();
+
+    for (var i = 0; i <= giorni; i++) {
+      final g = DateTime(
+        oggi.year,
+        oggi.month,
+        oggi.day,
+      ).subtract(Duration(days: i));
+
+      final totale = await passiDelGiorno(g);
+
+      if (totale == null) continue;
+
+      fuori.add(
+        LetturaSalute(
+          id: 0,
+          fonte: 'aggregato',
+          metrica: MetricaSalute.passi.codice,
+          misurataIl: g,
+          giorno: g,
+          valore: totale.toDouble(),
+        ),
+      );
+    }
+
+    return fuori;
+  }
+
+  /// Riscrive il totale di **oggi**, che durante il giorno cresce.
+  ///
+  /// 🚨 L'indice unico impedisce di inserire due volte lo stesso giorno, ed e'
+  /// giusto — ma vuol dire che il numero di stamattina resterebbe li' fino a
+  /// domani. ⛔ Chi guarda alle otto di sera vedrebbe i passi delle otto del
+  /// mattino, con l'aria di un dato aggiornato.
+  Future<void> aggiornaIPassiDiOggi() async {
+    final oggi = DateTime.now();
+    final totale = await passiDelGiorno(oggi);
+
+    if (totale == null) return;
+
+    await _archivio.riscriviIPassi(
+      giorno: DateTime(oggi.year, oggi.month, oggi.day),
+      passi: totale,
+    );
+  }
+
+  /// I passi di **un giorno**, dall'aggregato — 07/09/2026.
+  ///
+  /// 🚨 **Un numero al giorno, non un campione ogni cinque minuti.** Health
+  /// Connect tiene record sovrapposti — minuto per minuto **e** aggregati per
+  /// finestra — e da due sorgenti diverse. Sommare i grezzi conta lo stesso
+  /// passo piu' volte: il 05/09/2026 dava **23.471** passi.
+  ///
+  /// 💡 `getTotalStepsInInterval` fa la deduplicazione dentro Health Connect,
+  /// per priorita' di sorgente. E' l'unico modo di avere un numero che voglia
+  /// dire quello che sembra.
+  ///
+  /// ⚠️ `null` quando non c'e' niente: nessun permesso, nessun dato, o un
+  /// telefono senza Health Connect. ⛔ **Non zero** — zero passi sarebbe
+  /// un'affermazione.
+  Future<int?> passiDelGiorno(DateTime giorno) async {
+    try {
+      await _salute.configure();
+
+      final da = DateTime(giorno.year, giorno.month, giorno.day);
+      final a = da.add(const Duration(days: 1));
+
+      /*
+       * ⚠️ **Mai oltre adesso.** Chiedere fino a mezzanotte di stanotte per il
+       * giorno in corso funziona, ma su alcune versioni l'aggregato con una fine
+       * nel futuro torna `null` invece del parziale — e il sintomo sarebbe
+       * «oggi zero passi, ieri ottomila».
+       */
+      final adesso = DateTime.now();
+      final fine = a.isAfter(adesso) ? adesso : a;
+
+      if (!fine.isAfter(da)) return null;
+
+      final totale = await _salute.getTotalStepsInInterval(da, fine);
+
+      return totale == null || totale <= 0 ? null : totale;
+    } on Object catch (errore) {
+      debugPrint('passi del giorno: non leggibili — $errore');
+
+      return null;
+    }
+  }
+
   Future<int?> passiAlGiorno({int giorni = 30}) async {
     if (giorni <= 0) return null;
 
@@ -604,6 +733,18 @@ class PonteSalute {
       }
     }
 
+    /*
+     * ══ 🚶 I PASSI, UN GIORNO ALLA VOLTA — 07/09/2026 ═════════════════════
+     *
+     * 🚨 **Non passano dal ciclo qui sopra**, e non e' una svista: quello
+     * raccoglie i record grezzi, e i passi grezzi si sovrappongono fra loro e
+     * fra le sorgenti. Sommandoli, il 05/09 ne uscivano **23.471**.
+     *
+     * 💡 Qui si chiede a Health Connect il **totale aggregato** di ogni giorno,
+     * che la deduplicazione la fa lei. Una riga al giorno, non trecento.
+     */
+    letture.addAll(await _passiAggregati(giorniIndietro));
+
     final conLaGiornataGiusta = _assegnaLeGiornate(campioni);
 
     final a1 = await _archivio.scriviLetture(letture);
@@ -796,7 +937,11 @@ class PonteSalute {
     HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
     HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
     HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
-    HealthDataType.STEPS => MetricaSalute.passi,
+    /*
+     * ⛔ **`STEPS` non passa piu' di qui** — 07/09/2026. I passi si scrivono un
+     * giorno alla volta con l'aggregato, non campione per campione: vedi
+     * [passiDelGiorno] e il commento in `_tipiDaLeggere`.
+     */
     _ => null,
   };
 

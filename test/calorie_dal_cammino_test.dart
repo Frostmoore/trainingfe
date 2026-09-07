@@ -29,14 +29,23 @@ void main() {
        * un numero **di quell'ordine di grandezza**. 🚨 Non che sia giusto: che
        * non sia assurdo. La verifica vera è nell'handoff, e serve il telefono.
        */
+      /*
+       * ✅ **E il 07/09/2026 la verifica vera e arrivata**: 8.192 passi
+       * misurati con l aggregato di Health Connect il 06/09, 95 kg dichiarati
+       * dal committente, e l orologio quel giorno diceva **269 kcal**.
+       *
+       * 💡 La stima da fra 275 e 291 kcal a seconda dell altezza: **fra il 2%
+       * e l 8%**, sempre per eccesso. 🚨 Gli ingredienti sono stati misurati
+       * prima di guardare il risultato — nessuno e stato scelto per farlo
+       * tornare.
+       */
       final kcal = CalorieDalCammino.kcal(
-        passi: 8000,
+        passi: 8192,
         pesoKg: 95,
         altezzaCm: 178,
       );
 
-      // 💡 Fra due caffè e un pasto: se uscisse 40 o 900, la formula è rotta.
-      expect(kcal, inInclusiveRange(200, 400));
+      expect(kcal, closeTo(269, 30));
     });
 
     test('💡 e i chilometri sono quelli che direbbe un contapassi', () {

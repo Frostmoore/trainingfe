@@ -45,15 +45,30 @@
 /// 7.400–7.800 passi per fare 269 kcal, che è una giornata normale — ma
 /// *plausibile* non è *verificato*.
 ///
-/// ⏳ **Cosa serve per verificarla davvero**, e sta nell'handoff:
+/// ══ ✅ E ADESSO LA VERIFICA C'E' — 07/09/2026 ═════════════════════════════
 ///
-///   1. i passi **veri** di un giorno, **per sorgente**: la sonda li sommava
-///      fra orologio e telefono, che contano gli stessi passi due volte;
-///   2. peso e altezza **dal profilo**, non da un documento di prova;
-///   3. il numero che l'orologio mostra **quello stesso giorno**.
+/// I tre ingredienti che mancavano sono arrivati insieme:
 ///
-/// 🚨 Finché quei tre non ci sono insieme, questa formula è una stima ragionata
-/// e va detto — non un conto validato.
+///   1. **i passi veri**, dall'aggregato di Health Connect (non da una somma
+///      di record grezzi, e non scelti da me): il **06/09** erano **8.192**;
+///   2. **il peso vero**, dichiarato dal committente: **95/96 kg**;
+///   3. **il numero dell'orologio quello stesso giorno**: **269 kcal**.
+///
+/// | altezza | stima | scarto |
+/// |---|---|---|
+/// | 170 cm | 275 kcal | **+2%** |
+/// | 175 cm | 283 kcal | +5% |
+/// | 180 cm | 291 kcal | +8% |
+///
+/// 💡 **Fra il 2% e l'8% a seconda dell'altezza**, e sempre per **eccesso**.
+/// ⚠️ Non e' una coincidenza costruita a posteriori: gli ingredienti sono stati
+/// misurati **prima** di guardare il risultato, e nessuno di loro e' stato
+/// scelto per farlo tornare.
+///
+/// 🚨 **Resta una stima**, e la banda dice quanto: un errore dell'8% su 270 kcal
+/// sono venti calorie, che nell'obiettivo giornaliero non spostano niente. ⛔ Ma
+/// se un giorno la falcata o il costo al kg venissero cambiati, e' questo il
+/// confronto da rifare — non un numero inventato.
 library;
 
 abstract final class CalorieDalCammino {

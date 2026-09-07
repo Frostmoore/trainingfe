@@ -43,6 +43,7 @@ import '../profile/corpo_controller.dart';
 import '../profile/profile_controller.dart';
 import '../training/calorie_dal_cammino.dart';
 import 'health_controller.dart';
+import 'ponte_salute.dart';
 
 class SondaDelleAttive {
   const SondaDelleAttive(this._ref, [this._salute]);
@@ -106,6 +107,18 @@ class SondaDelleAttive {
       HealthDataType.HEART_RATE,
       HealthDataType.RESTING_HEART_RATE,
     ];
+
+    /*
+     * ══ 🚨 L'ARCHIVIO SI LEGGE PRIMA, E NON HA BISOGNO DI PERMESSI ════════
+     *
+     * ⛔ **La prima versione chiedeva i permessi e poi leggeva l'archivio.** Con
+     * la richiesta ferma dietro uno schermo bloccato, la sonda non arrivava mai
+     * a stampare cosa l'app ha **gia' in casa** — che e' l'unica cosa che
+     * risponde alla domanda «e ieri?», e che non richiede nessun permesso.
+     *
+     * 💡 L'archivio locale e' roba nostra: e' il database SQLite dell'app.
+     */
+    await _ilContoDellApp(adesso);
 
     final concessi = await salute.hasPermissions(tipi) ?? false;
 
@@ -173,7 +186,26 @@ class SondaDelleAttive {
       adesso,
     );
 
-    await _ilContoDellApp(adesso);
+    /*
+     * 🚶 **E l'aggregato, che è quello che l'app userà da adesso.**
+     *
+     * 🚨 Sotto ci sono i totali per sorgente dei record **grezzi**: servono a
+     * far vedere il problema, non a essere usati. ⛔ Il 05/09 sommandoli
+     * uscivano 23.471 passi.
+     */
+    _riga("── l'aggregato di Health Connect ──");
+
+    for (var i = 0; i < 4; i++) {
+      final g = DateTime(
+        adesso.year,
+        adesso.month,
+        adesso.day,
+      ).subtract(Duration(days: i));
+
+      _riga(
+        '  ${_data(g)}  ${await PonteSalute(_ref.read(archivioSaluteProvider)).passiDelGiorno(g) ?? "(niente)"}',
+      );
+    }
 
     _riga('══════ fine ══════');
   }
@@ -279,30 +311,41 @@ class SondaDelleAttive {
   /// 💡 Se questo numero e quello dell'orologio si somigliano, la stima è
   /// verificata. Se non si somigliano, si sa **di quanto** e si sa **perché**,
   /// perché tutti gli ingredienti sono stampati qui accanto.
-  Future<void> _ilContoDellApp(DateTime giorno) async {
+  Future<void> _ilContoDellApp(DateTime oggi) async {
     final archivio = _ref.read(archivioSaluteProvider);
-
-    final tutti = await archivio.passiDi(giorno);
-    final fuori = await archivio.passiFuoriDagliAllenamenti(giorno);
 
     final kg = _ref.read(corpoOggiProvider).valueOrNull?.weightKg;
     final cm = _ref.read(profileProvider).valueOrNull?.heightCm?.toDouble();
 
-    _riga('── il conto che farebbe l\'app ──');
+    _riga("── il conto che farebbe l'app ──");
     _riga('  peso     ${kg ?? "(non lo sa)"}');
     _riga('  altezza  ${cm ?? "(non lo sa)"}');
 
     /*
-     * ⚠️ **Due numeri di passi, e sono diversi apposta**: quello che si mostra
+     * ⚠️ **Piu' giorni, non solo oggi.** 📌 Il committente: *«non li vedo
+     * neanche di ieri»*. 🚨 Se l'archivio fosse vuoto **solo per oggi** sarebbe
+     * un problema di sincronizzazione; se e' vuoto **per tutti** e' il permesso.
+     * Sono due guasti diversi e si distinguono solo guardandone piu' di uno.
+     *
+     * 💡 **Due numeri di passi, e sono diversi apposta**: quello che si mostra
      * comprende i passi fatti allenandosi, quello che stima le calorie no —
      * altrimenti conterebbe due volte lo stesso movimento.
      */
-    _riga('  passi    $tutti in tutto · $fuori fuori dagli allenamenti');
+    for (var i = 0; i < 4; i++) {
+      final g = DateTime(
+        oggi.year,
+        oggi.month,
+        oggi.day,
+      ).subtract(Duration(days: i));
 
-    _riga(
-      '  🎯 stima  ${CalorieDalCammino.kcal(passi: fuori, pesoKg: kg, altezzaCm: cm)} kcal'
-      '  ← confronta con quello che dice l\'orologio',
-    );
+      final tutti = await archivio.passiDi(g);
+      final fuori = await archivio.passiFuoriDagliAllenamenti(g);
+
+      _riga(
+        '  ${_data(g)}  passi $tutti (fuori $fuori)  →  '
+        '${CalorieDalCammino.kcal(passi: fuori, pesoKg: kg, altezzaCm: cm)} kcal',
+      );
+    }
   }
 
   /// Quanti campioni, ogni quanto, e in che intervallo di valori.

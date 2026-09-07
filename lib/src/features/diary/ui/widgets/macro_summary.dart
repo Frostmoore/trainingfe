@@ -456,12 +456,17 @@ class _Passi extends ConsumerWidget {
     final passi = ref.watch(passiDelGiornoProvider(giorno)).valueOrNull ?? 0;
 
     /*
-     * 🚨 **Zero vuol dire «non lo sappiamo», non «non hai camminato».** Finché
-     * il permesso `STEPS` non viene concesso — e va concesso di nuovo, perché
-     * l'elenco dei consensi è cambiato — qui arriva zero.
+     * 🚨 **Zero vuol dire «non lo sappiamo», non «non hai camminato».** Arriva
+     * zero in due casi diversi: finché il permesso `STEPS` non è concesso, e nel
+     * frame in cui il provider sta ancora caricando.
      *
      * ⛔ Mostrare «0 passi» a chi ha camminato tutto il giorno direbbe una cosa
      * falsa con l'aria di un dato misurato.
+     *
+     * ⚠️ **E la riga compare solo con la card a schermo**, cioè nella scheda
+     * Diario: verificato il 07/09/2026 con una traccia temporanea, che diceva
+     * `valore=8192 → mostro=true` appena si apriva quella scheda. 💡 Chi la
+     * cerca dalla schermata «Oggi» non la trova, e non è un difetto.
      */
     if (passi <= 0) return const SizedBox.shrink();
 

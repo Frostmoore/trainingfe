@@ -30,6 +30,7 @@ import '../../riassunto_settimana.dart';
 import '../../saldo_calorico.dart';
 import 'barra_del_consumo.dart';
 import 'onda_metrica.dart';
+import 'passi_del_giorno.dart';
 
 /// Le schede del riepilogo di oggi — D5.
 
@@ -438,6 +439,21 @@ class CaloriesCard extends ConsumerWidget {
                   quotidiano: quotidiano,
                   allenamento: bruciate.kcal.toDouble(),
                 ),
+
+                /*
+                 * ══ 🚶 I PASSI, SOTTO LE BRUCIATE — 07/09/2026 ═════════════
+                 *
+                 * 📌 Il committente: *«i passi li dobbiamo mettere in Oggi
+                 * (sotto a Bruciate), non in diario»*.
+                 *
+                 * ⛔ **Il 06/09 li avevo messi nel Diario**, leggendo «la prima
+                 * card delle calorie» come quella di là. Sta qui, ed è anche il
+                 * posto che ha più senso: da oggi i passi **sono** la fonte del
+                 * consumo quotidiano, perché l'orologio le calorie attive non
+                 * le scrive. 💡 Stanno sotto la legenda che divide quotidiano e
+                 * allenamento: sono quello che riempie la prima delle due.
+                 */
+                PassiDelGiorno(giorno: giorno),
               ],
             ],
           ),

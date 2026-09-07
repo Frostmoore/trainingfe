@@ -10,6 +10,7 @@ import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/diary/data/trasloco_del_diario.dart';
+import 'features/health/sonda_delle_attive.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
@@ -101,6 +102,22 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
 
   @override
   Widget build(BuildContext context) {
+    /*
+     * 🔬 **Solo con `--dart-define=DIAGNOSTICA=attive`** — 07/09/2026.
+     *
+     * Guarda cosa scrive davvero l'orologio nelle calorie attive e nei passi,
+     * campione per campione, e non tocca niente. ⛔ Nelle build normali
+     * `accesa` è `false` e il compilatore toglie tutto.
+     *
+     * ⚠️ **Va tolta quando la domanda ha risposta**: una diagnostica dimenticata
+     * è codice che nessuno rilegge. Vedi `sonda_delle_attive.dart`.
+     */
+    if (SondaDelleAttive.accesa) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => const SondaDelleAttive().racconta(),
+      );
+    }
+
     final palestra = ref.watch(brandingControllerProvider).branding;
 
     /*

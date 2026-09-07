@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/dashboard/ui/widgets/passi_del_giorno.dart';
+import 'package:training_companion/src/features/health/dati_salute.dart';
 import 'package:training_companion/src/features/health/health_controller.dart';
 
 /// La riga dei passi — 07/09/2026.
@@ -157,5 +158,61 @@ void main() {
     // Nessun passo scritto, ma potrebbero esserci sedute: la sottrazione non
     // deve sfondare lo zero.
     expect(await archivio.passiFuoriDagliAllenamenti(oggi), 0);
+  });
+
+  /*
+   * ══ 🚨 IL GIORNO CONGELATO — 08/09/2026 ══════════════════════════════════
+   *
+   * ⛔ **Il test qui sopra passava, e l'app era rotta lo stesso.** Provava che
+   * `riscriviIPassi` sostituisce — ed è vero — ma il ponte quella non la
+   * chiamava: metteva i passi fra le `letture`, cioè in una INSERT.
+   *
+   * 🚨 **Misurato sul telefono l'08/09**: 1.195 passi nell'archivio per il
+   * 07/09, 4.500 nell'aggregato di Health Connect. Il giorno era stato letto
+   * alle 00:38, quando 1.195 era il numero giusto, e non si è più mosso.
+   *
+   * ⚠️ Un test che sorveglia la porta accanto è peggio di nessun test: dà la
+   * sensazione della copertura. Questi due sorvegliano quella vera.
+   */
+  group('🧊 un giorno già scritto', () {
+    LetturaSalute passi(DateTime giorno, int quanti) => LetturaSalute(
+      id: 0,
+      fonte: 'aggregato',
+      metrica: MetricaSalute.passi.codice,
+      misurataIl: giorno,
+      giorno: giorno,
+      valore: quanti.toDouble(),
+    );
+
+    test('⛔ con `scriviLetture` NON si aggiorna — ed è la trappola', () async {
+      final archivio = ArchivioSalute.inMemoria();
+
+      addTearDown(archivio.close);
+
+      await archivio.scriviLetture([passi(oggi, 1195)]);
+
+      /*
+       * 🚨 **E torna 1, cioè «scritta una».** L'indice unico la scarta in
+       * silenzio — `insertOrIgnore` fa esattamente il suo mestiere — ma chi
+       * legge il valore di ritorno crede di aver aggiornato il giorno.
+       */
+      expect(await archivio.scriviLetture([passi(oggi, 4500)]), 1);
+      expect(
+        await archivio.passiDi(oggi),
+        1195,
+        reason: 'la INSERT su un giorno presente non fa niente',
+      );
+    });
+
+    test('✅ con `riscriviIPassi` sì, ed è la strada che usa il ponte', () async {
+      final archivio = ArchivioSalute.inMemoria();
+
+      addTearDown(archivio.close);
+
+      await archivio.scriviLetture([passi(oggi, 1195)]);
+      await archivio.riscriviIPassi(giorno: oggi, passi: 4500);
+
+      expect(await archivio.passiDi(oggi), 4500);
+    });
   });
 }

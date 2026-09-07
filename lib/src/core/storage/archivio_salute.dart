@@ -1916,43 +1916,28 @@ class ArchivioSalute extends _$ArchivioSalute {
         .get();
   }
 
-  /// Le calorie bruciate con l'attività in un giorno — FASE 1.
-  ///
-  /// ── 🚨 Perché il MASSIMO fra le sorgenti, e non la somma ─────────────
-  ///
-  /// Health Connect può ricevere le calorie attive da **più applicazioni
-  /// insieme**: l'orologio le misura, e intanto il telefono le stima dai passi.
-  /// Sommando tutto, una camminata verrebbe contata **due volte** — e il numero
-  /// resterebbe plausibile.
-  ///
-  /// 💡 Si somma **dentro ogni sorgente** e si tiene la **più alta**: chi ha
-  /// misurato di più è quasi sempre il dispositivo che la persona indossava,
-  /// mentre la stima dai passi del telefono in tasca è la più povera. ⚠️ Non è
-  /// perfetto — due orologi diversi darebbero comunque il maggiore invece della
-  /// realtà — ma sbaglia **per difetto**, che sul margine calorico è il verso
-  /// giusto.
-  ///
-  /// ── ⚠️ E non esce mai da questo telefono ─────────────────────────────────
-  ///
-  /// È un dato di salute: vive qui e finisce **nel backup**, e il server non lo
-  /// vede. La somma con l'obiettivo si fa **a runtime** nell'app.
-  /// ══ ⚠️ DAL 26/08 NON ALIMENTA PIU' L'OBIETTIVO — 3b-G.3 ════════════════
-  ///
-  /// Questo è il **flusso giornaliero** delle calorie attive: tutto il movimento
-  /// del giorno, allenamenti compresi. ⛔ Nel modello «misurata» il movimento di
-  /// tutti i giorni sta **già dentro il fattore di attività quotidiana**, quindi
-  /// sommarlo lo conterebbe due volte.
-  ///
-  /// 💡 Le bruciate che entrano nell'obiettivo vengono da `kcalDelleSedute`.
-  /// ⚠️ Questo resta perché è un dato vero e serve ai controlli netto/lordo di
-  /// 3b-G.4: `totale del giorno − attive del giorno ≈ metabolismo basale`.
   /// Riscrive i passi di un giorno — 07/09/2026.
   ///
-  /// 🚨 **Serve perché il giorno in corso cresce.** L'indice unico
-  /// `(fonte, metrica, misurataIl)` impedisce di inserire due volte lo stesso
-  /// giorno — ed è giusto — ma vuol dire che il totale scritto stamattina
-  /// resterebbe lì fino a domani. ⛔ Chi guarda alle otto di sera vedrebbe i
-  /// passi delle otto del mattino, con l'aria di un dato aggiornato.
+  /// ══ 🚨 SENZA QUESTO, UN GIORNO RESTA COM'ERA PER SEMPRE ═════════════════
+  ///
+  /// L'indice unico `(fonte, metrica, misurataIl)` impedisce di inserire due
+  /// volte lo stesso giorno, ed è giusto: due versioni dello stesso giorno che
+  /// competono sarebbero peggio. ⛔ Ma vuol dire anche che una INSERT su un
+  /// giorno già presente **non fa niente, e non lo dice**.
+  ///
+  /// 🚨 **Misurato l'08/09/2026 sul telefono del committente**: l'archivio dava
+  /// 1.195 passi per il 07/09, l'aggregato di Health Connect ne dava **4.500**.
+  /// Quel giorno era stato letto per la prima volta alle 00:38, quando i passi
+  /// erano davvero 1.195 — e lì era rimasto per ventiquattr'ore, attraverso due
+  /// risincronizzazioni e un riavvio.
+  ///
+  /// ⚠️ **Il commento che stava qui diceva un'altra cosa**, e più mite: *«il
+  /// totale scritto stamattina resterebbe lì fino a domani»*. Non fino a
+  /// domani: **per sempre**. Un giorno letto mentre è a metà resta a metà, con
+  /// l'aria di un dato completo — e nessuno torna a controllare l'altroieri.
+  ///
+  /// 💡 Chi la chiama è `PonteSalute._riscriviIPassiAggregati`, per **ogni**
+  /// giorno della finestra a ogni sincronizzazione: non solo per oggi.
   Future<void> riscriviIPassi({
     required DateTime giorno,
     required int passi,
@@ -2064,6 +2049,36 @@ class ArchivioSalute extends _$ArchivioSalute {
     return fuori > 0 ? fuori : 0;
   }
 
+  /// Le calorie bruciate con l'attività in un giorno — FASE 1.
+  ///
+  /// ── 🚨 Perché il MASSIMO fra le sorgenti, e non la somma ─────────────
+  ///
+  /// Health Connect può ricevere le calorie attive da **più applicazioni
+  /// insieme**: l'orologio le misura, e intanto il telefono le stima dai passi.
+  /// Sommando tutto, una camminata verrebbe contata **due volte** — e il numero
+  /// resterebbe plausibile.
+  ///
+  /// 💡 Si somma **dentro ogni sorgente** e si tiene la **più alta**: chi ha
+  /// misurato di più è quasi sempre il dispositivo che la persona indossava,
+  /// mentre la stima dai passi del telefono in tasca è la più povera. ⚠️ Non è
+  /// perfetto — due orologi diversi darebbero comunque il maggiore invece della
+  /// realtà — ma sbaglia **per difetto**, che sul margine calorico è il verso
+  /// giusto.
+  ///
+  /// ── ⚠️ E non esce mai da questo telefono ─────────────────────────────────
+  ///
+  /// È un dato di salute: vive qui e finisce **nel backup**, e il server non lo
+  /// vede. La somma con l'obiettivo si fa **a runtime** nell'app.
+  /// ══ ⚠️ DAL 26/08 NON ALIMENTA PIU' L'OBIETTIVO — 3b-G.3 ════════════════
+  ///
+  /// Questo è il **flusso giornaliero** delle calorie attive: tutto il movimento
+  /// del giorno, allenamenti compresi. ⛔ Nel modello «misurata» il movimento di
+  /// tutti i giorni sta **già dentro il fattore di attività quotidiana**, quindi
+  /// sommarlo lo conterebbe due volte.
+  ///
+  /// 💡 Le bruciate che entrano nell'obiettivo vengono da `kcalDelleSedute`.
+  /// ⚠️ Questo resta perché è un dato vero e serve ai controlli netto/lordo di
+  /// 3b-G.4: `totale del giorno − attive del giorno ≈ metabolismo basale`.
   Future<int> kcalAttiveDi(DateTime giorno) async {
     final righe =
         await (select(lettureSalute)..where(

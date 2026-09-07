@@ -386,16 +386,36 @@ class PonteSalute {
   /// che tiene la sorgente **piu' alta** — tornerebbe a poter sommare due
   /// versioni dello stesso giorno.
   ///
-  /// 💡 `misurataIl` e' la mezzanotte del giorno: con l'indice unico
-  /// `(fonte, metrica, misurataIl)`, risincronizzare lo stesso giorno **non**
-  /// crea una seconda riga.
+  /// ══ 🚨 PERCHE' RISCRIVE INVECE DI INSERIRE — 08/09/2026 ═══════════
   ///
-  /// ⛔ **E quindi non aggiorna nemmeno quella che c'e'**: il totale di oggi,
-  /// scritto stamattina, resta quello di stamattina. Se ne occupa
-  /// [aggiornaIPassiDiOggi], che riscrive.
-  Future<List<LetturaSalute>> _passiAggregati(int giorni) async {
-    final fuori = <LetturaSalute>[];
+  /// ⛔ **Fino al 08/09 questo metodo tornava delle `LetturaSalute` che
+  /// finivano in `scriviLetture`, cioe' in una INSERT.** L'indice unico
+  /// `(fonte, metrica, misurataIl)` faceva fallire l'inserimento di un giorno
+  /// gia' presente — in silenzio, com'e' giusto per un indice — e il risultato
+  /// era che **ogni giorno restava congelato al primo valore mai scritto**.
+  ///
+  /// 🚨 **Misurato sul telefono del committente il 08/09**: l'archivio dava
+  /// 1.195 passi per il 07/09, l'aggregato di Health Connect ne dava **4.500**.
+  /// Il 07/09 era stato letto per la prima volta alle 00:38 di quel giorno,
+  /// quando di passi ce n'erano 1.195 — e li' e' rimasto. Due
+  /// risincronizzazioni complete e un riavvio dell'app non l'hanno spostato.
+  ///
+  /// ⚠️ **E non era il difetto che il commento vecchio descriveva.** Quello
+  /// diceva «il totale di stamattina resta quello di stamattina» e rimandava a
+  /// un metodo `aggiornaIPassiDiOggi` che nessuno chiamava: raccontava un
+  /// ritardo di qualche ora, mentre il dato era **definitivo**. Un giorno
+  /// letto mentre e' a meta' resta a meta' per sempre, e quel numero e'
+  /// perfettamente plausibile — nessuno lo va a controllare l'indomani.
+  ///
+  /// 💡 Adesso ogni giorno della finestra passa da
+  /// `ArchivioSalute.riscriviIPassi()`, che **cancella e riscrive**. Costa una
+  /// DELETE per giorno a sincronizzazione, ed e' il prezzo per avere un numero
+  /// che vuol dire quello che sembra.
+  ///
+  /// Torna **quanti giorni** ha scritto.
+  Future<int> _riscriviIPassiAggregati(int giorni) async {
     final oggi = DateTime.now();
+    var scritti = 0;
 
     for (var i = 0; i <= giorni; i++) {
       final g = DateTime(
@@ -406,39 +426,19 @@ class PonteSalute {
 
       final totale = await passiDelGiorno(g);
 
+      /*
+       * ⛔ **`null` non cancella niente.** Un giorno che Health Connect non sa
+       * piu' raccontare — permesso revocato, sorgente disinstallata — deve
+       * lasciare in piedi quello che avevamo: sostituire un dato vero con
+       * l'assenza e' peggio che tenerlo vecchio.
+       */
       if (totale == null) continue;
 
-      fuori.add(
-        LetturaSalute(
-          id: 0,
-          fonte: 'aggregato',
-          metrica: MetricaSalute.passi.codice,
-          misurataIl: g,
-          giorno: g,
-          valore: totale.toDouble(),
-        ),
-      );
+      await _archivio.riscriviIPassi(giorno: g, passi: totale);
+      scritti++;
     }
 
-    return fuori;
-  }
-
-  /// Riscrive il totale di **oggi**, che durante il giorno cresce.
-  ///
-  /// 🚨 L'indice unico impedisce di inserire due volte lo stesso giorno, ed e'
-  /// giusto — ma vuol dire che il numero di stamattina resterebbe li' fino a
-  /// domani. ⛔ Chi guarda alle otto di sera vedrebbe i passi delle otto del
-  /// mattino, con l'aria di un dato aggiornato.
-  Future<void> aggiornaIPassiDiOggi() async {
-    final oggi = DateTime.now();
-    final totale = await passiDelGiorno(oggi);
-
-    if (totale == null) return;
-
-    await _archivio.riscriviIPassi(
-      giorno: DateTime(oggi.year, oggi.month, oggi.day),
-      passi: totale,
-    );
+    return scritti;
   }
 
   /// I passi di **un giorno**, dall'aggregato — 07/09/2026.
@@ -742,16 +742,19 @@ class PonteSalute {
      *
      * 💡 Qui si chiede a Health Connect il **totale aggregato** di ogni giorno,
      * che la deduplicazione la fa lei. Una riga al giorno, non trecento.
+     *
+     * ⚠️ **E non entrano in `letture`**: quelle si inseriscono, e un giorno
+     * gia' presente non si aggiornerebbe mai piu'. Vedi
+     * [_riscriviIPassiAggregati].
      */
-    letture.addAll(await _passiAggregati(giorniIndietro));
-
     final conLaGiornataGiusta = _assegnaLeGiornate(campioni);
 
     final a1 = await _archivio.scriviLetture(letture);
     final a2 = await _archivio.scriviCampioniSonno(conLaGiornataGiusta);
     final a3 = await _archivio.scriviAllenamenti(allenamenti);
+    final a4 = await _riscriviIPassiAggregati(giorniIndietro);
 
-    return a1 + a2 + a3;
+    return a1 + a2 + a3 + a4;
   }
 
   /// Gli allenamenti, ripuliti — FASE 1.8.

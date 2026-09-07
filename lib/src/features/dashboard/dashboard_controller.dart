@@ -333,9 +333,11 @@ final contestoConsiglioProvider =
       final oggi = DateTime.now();
       final oggiPerLaSettimana = DateTime(oggi.year, oggi.month, oggi.day);
 
+      // 🆕 07/09/2026 — comprende il cammino della giornata: senza, il consiglio
+      // credeva che una giornata da diecimila passi fosse una giornata ferma.
       final bruciate = await ref
           .watch(
-            bruciateLocaliDelGiornoProvider(
+            bruciateStimateDelGiornoProvider(
               DateTime(oggi.year, oggi.month, oggi.day),
             ).future,
           )
@@ -411,7 +413,9 @@ final contestoConsiglioProvider =
             ).future,
           )
           .catchError((Object e) {
-            debugPrint('contestoConsiglio: la settimana bruciata non si legge — $e');
+            debugPrint(
+              'contestoConsiglio: la settimana bruciata non si legge — $e',
+            );
 
             return const <String, int>{};
           });
@@ -424,13 +428,13 @@ final contestoConsiglioProvider =
             return const <MisuraCorpo>[];
           });
 
-      final notizia = await ref
-          .watch(ultimaNotiziaProvider.future)
-          .catchError((Object e) {
-            debugPrint('contestoConsiglio: l\'ultima notizia non si legge — $e');
+      final notizia = await ref.watch(ultimaNotiziaProvider.future).catchError((
+        Object e,
+      ) {
+        debugPrint('contestoConsiglio: l\'ultima notizia non si legge — $e');
 
-            return null;
-          });
+        return null;
+      });
 
       /*
        * ══ 🍽️ IL CIBO, CHE DA I5 LO MANDA IL TELEFONO ══════════════════════

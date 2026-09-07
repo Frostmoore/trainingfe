@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import '../profile/corpo_controller.dart';
+import '../profile/profile_controller.dart';
+import 'calorie_dal_cammino.dart';
 import 'data/calorie_allenamento.dart';
 import 'data/session_models.dart';
 import 'data/tipo_scelto.dart';
@@ -149,6 +151,59 @@ final bruciateLocaliDelGiornoProvider = FutureProvider.autoDispose
       );
 
       return per[_etichetta(giorno)] ?? 0;
+    });
+
+/// Le calorie del **cammino** di un giorno — 07/09/2026.
+///
+/// 🚨 **Esiste perché l'orologio non scrive le calorie attive.** La sonda del
+/// 07/09 ha trovato zero campioni in due giorni: i 269 kcal che il committente
+/// vede li calcola l'app dell'orologio e non li manda a Health Connect.
+///
+/// ⚠️ Usa i passi **fuori dagli allenamenti**: quelli fatti correndo hanno già
+/// le loro calorie, e contarli anche qui li sommerebbe a se stessi.
+final caloriePassiDelGiornoProvider = FutureProvider.autoDispose
+    .family<int, DateTime>((ref, giorno) async {
+      ref.watch(revisioneAllenamentiProvider);
+
+      final passi = await ref
+          .watch(archivioSaluteProvider)
+          .passiFuoriDagliAllenamenti(giorno);
+
+      return CalorieDalCammino.kcal(
+        passi: passi,
+        pesoKg: ref.watch(corpoOggiProvider).valueOrNull?.weightKg,
+        altezzaCm: ref.watch(profileProvider).valueOrNull?.heightCm?.toDouble(),
+      );
+    });
+
+/// Le bruciate **stimate** da noi: le sedute più il cammino — 07/09/2026.
+///
+/// ══ 🚨 PERCHE' SI SOMMANO QUESTE DUE E NON LE ALTRE ═══════════════════════
+///
+/// ⛔ La catena di `BruciateDelGiorno` **sostituisce** invece di sommare, e per
+/// un'ottima ragione: l'orologio che misura una giornata ha già dentro
+/// l'allenamento che la nostra formula stima, e sommarli darebbe a chi si allena
+/// il doppio del margine calorico.
+///
+/// 💡 Ma sedute e cammino sono **disgiunti per costruzione**: i passi sono
+/// quelli **fuori** dalle sessioni. Sommarli non conta niente due volte, e
+/// insieme sono «quello che stimiamo noi» — cioè un gradino solo della catena.
+///
+/// ⚠️ E stando sul gradino **più basso**, se un giorno arrivasse un orologio che
+/// scrive le attive di tutta la giornata, quelle vincerebbero e questo numero
+/// sparirebbe da solo. 🚨 È l'unico modo di aggiungere il cammino senza
+/// rischiare di contarlo due volte su un altro telefono.
+final bruciateStimateDelGiornoProvider = FutureProvider.autoDispose
+    .family<int, DateTime>((ref, giorno) async {
+      final sedute = await ref.watch(
+        bruciateLocaliDelGiornoProvider(giorno).future,
+      );
+
+      final cammino = await ref.watch(
+        caloriePassiDelGiornoProvider(giorno).future,
+      );
+
+      return sedute + cammino;
     });
 
 /// La dichiarazione a mano di un giorno, o `null` se non ce n'è.

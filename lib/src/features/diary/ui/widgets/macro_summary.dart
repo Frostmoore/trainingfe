@@ -40,8 +40,9 @@ class MacroSummary extends ConsumerWidget {
      * 💡 La precedenza è la stessa di sempre: **il piano del trainer vince sul
      * calcolo**, e il calcolo vince sul nulla (D8).
      */
-    final esito =
-        day.hasTarget ? null : ref.watch(targetLocaleProvider).valueOrNull;
+    final esito = day.hasTarget
+        ? null
+        : ref.watch(targetLocaleProvider).valueOrNull;
     final locale = esito?.target;
 
     /*
@@ -63,15 +64,17 @@ class MacroSummary extends ConsumerWidget {
      * `daily_burns`. ⚠️ Con quelle tabelle via sarebbero diventati **zero senza
      * un errore**, e l'obiettivo calorico avrebbe smesso di comprenderle.
      */
-    final aMano =
-        ref.watch(bruciateAManoDelGiornoProvider(day.date)).valueOrNull;
+    final aMano = ref
+        .watch(bruciateAManoDelGiornoProvider(day.date))
+        .valueOrNull;
 
     final bruciate = BruciateDelGiorno.scegli(
       manuale: aMano,
       daHealth:
           ref.watch(kcalAttiveDelGiornoProvider(day.date)).valueOrNull ?? 0,
       stimate:
-          ref.watch(bruciateLocaliDelGiornoProvider(day.date)).valueOrNull ?? 0,
+          ref.watch(bruciateStimateDelGiornoProvider(day.date)).valueOrNull ??
+          0,
     );
 
     /*

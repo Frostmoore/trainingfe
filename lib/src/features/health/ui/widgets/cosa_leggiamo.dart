@@ -165,6 +165,34 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
         ),
 
         /*
+         * ══ 🆕 IL BATTITO DURANTE IL GIORNO — 07/09/2026 ═══════════════════
+         *
+         * 🚨 **Va detto, ed è il dato più granulare che raccogliamo.** Un
+         * campione ogni pochi minuti per tutta la giornata: dice quando ti
+         * muovi, quando ti agiti, quando dormi male.
+         *
+         * ⛔ Presentarlo come «un dettaglio in più del battito a riposo» sarebbe
+         * la scorciatoia comoda e disonesta: è un'altra cosa, e chi legge deve
+         * poter dire di no proprio a questa.
+         */
+        const _Voce(
+          icona: Icons.timeline_outlined,
+          titolo: 'Il battito durante il giorno',
+          testo:
+              'Serve al Training Effect Index, che conta i minuti passati a uno '
+              'sforzo vero. È il dato più fitto che leggiamo: un valore ogni '
+              'pochi minuti. Resta sul telefono come tutto il resto.',
+        ),
+        const _Voce(
+          icona: Icons.directions_walk_rounded,
+          titolo: 'I passi della giornata',
+          testo:
+              'Tutti, non solo quelli fatti allenandoti. Da lì stimiamo le '
+              'calorie del movimento quotidiano, perché il tuo orologio quelle '
+              'non le scrive.',
+        ),
+
+        /*
            * 🆕 FASE 1.8→1.10 — le due voci nuove.
            *
            * 🚨 **Vanno dette prima di chiedere il permesso**, non dopo. Questa
@@ -196,7 +224,8 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
         const _Voce(
           icona: Icons.fitness_center_outlined,
           titolo: 'Gli allenamenti',
-          testo: 'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
+          testo:
+              'Corsa, bici, palestra e tutto il resto: finiscono nel tuo '
               'storico anche quando ti alleni senza aprire l\'app, e puoi dire '
               'quale scheda hai fatto.',
         ),
@@ -255,14 +284,31 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: Gap.xs),
+
+                /*
+                 * ⚠️ **Questo testo diceva una cosa che dal 07/09 non è più
+                 * vera.** Spiegava i passi come un extra che Health Connect
+                 * pretende per consegnare un allenamento — e finché li
+                 * leggevamo solo dentro le sessioni era esatto.
+                 *
+                 * 🚨 Adesso li leggiamo **tutta la giornata**, e lasciare il
+                 * testo di prima vorrebbe dire far credere a qualcuno di aver
+                 * concesso una cosa più piccola di quella che ha concesso. ⛔ È
+                 * la stessa famiglia della riga che dice «invariato» accanto a
+                 * un numero cambiato.
+                 */
                 const Text(
-                  'Health Connect consegna un allenamento solo se può darci '
-                  'anche la distanza, i passi e le calorie della sessione: '
-                  'senza quei permessi non arriva niente del tutto.\n\n'
-                  'Il conto delle calorie della giornata resta però basato '
-                  'solo su quelle bruciate con l\'attività, mai sul totale '
-                  'che comprende il metabolismo basale — altrimenti ti '
-                  'diremmo che puoi mangiare molto più di quanto è vero.',
+                  'La distanza serve solo agli allenamenti: Health Connect ne '
+                  'consegna uno soltanto se può darci anche quella, e senza '
+                  'quel permesso non arriva niente del tutto.\n\n'
+                  'I passi invece li leggiamo per tutta la giornata, e ti '
+                  'servono a te: sono l\'unico modo che abbiamo di sapere '
+                  'quanto ti sei mosso quando non stavi allenandoti. Da lì '
+                  'stimiamo le calorie del movimento quotidiano.\n\n'
+                  'Il conto delle calorie resta basato solo su quelle bruciate '
+                  'con l\'attività, mai sul totale che comprende il metabolismo '
+                  'basale — altrimenti ti diremmo che puoi mangiare molto più '
+                  'di quanto è vero.',
                 ),
               ],
             ),
@@ -282,11 +328,10 @@ class _Voce extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(icona),
-        title:
-            Text(titolo, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(testo),
-        isThreeLine: true,
-      );
+    contentPadding: EdgeInsets.zero,
+    leading: Icon(icona),
+    title: Text(titolo, style: const TextStyle(fontWeight: FontWeight.w600)),
+    subtitle: Text(testo),
+    isThreeLine: true,
+  );
 }

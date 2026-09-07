@@ -33,6 +33,23 @@ class PonteSalute {
   static const _tipiDaLeggere = <HealthDataType>[
     HealthDataType.HEART_RATE_VARIABILITY_RMSSD,
     HealthDataType.RESTING_HEART_RATE,
+
+    /*
+     * 🆕 **Il battito continuo** — 07/09/2026, per il Training Effect Index.
+     *
+     * ⛔ **Il ramo c'era gia' in `_metricaDi` e non veniva mai percorso**: il
+     * tipo non stava qui, e il permesso non era nel manifest. 🚨 Codice morto
+     * che sembrava vivo — chi leggeva quella riga credeva che il battito medio
+     * arrivasse, e invece la colonna restava vuota.
+     *
+     * 💡 Il TEI si calcola sui **minuti** passati a una certa frequenza rispetto
+     * alla propria riserva: con un campione al giorno non esiste.
+     *
+     * ⚠️ **E' il dato piu' granulare che raccogliamo**, ed e' dichiarato: sta
+     * nel registro dei trattamenti e nell'informativa. Chi lo aggiunge da
+     * qualche altra parte legga prima quelli.
+     */
+    HealthDataType.HEART_RATE,
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.SLEEP_DEEP,
     HealthDataType.SLEEP_REM,
@@ -411,8 +428,8 @@ class PonteSalute {
     final da = giorniIndietro != null
         ? a.subtract(Duration(days: giorniIndietro))
         : ultimo == null
-            ? a.subtract(const Duration(days: 365 * 5))
-            : ultimo.subtract(const Duration(days: 7));
+        ? a.subtract(const Duration(days: 365 * 5))
+        : ultimo.subtract(const Duration(days: 7));
 
     /*
      * ⛔ **Senza il permesso non si prova nemmeno.** `getHealthDataFromTypes`
@@ -613,8 +630,7 @@ class PonteSalute {
   @visibleForTesting
   static List<AllenamentoDaOrologio> allenamentiDa(
     List<HealthDataPoint> punti,
-  ) =>
-      _allenamentiDa(punti);
+  ) => _allenamentiDa(punti);
 
   static List<AllenamentoDaOrologio> _allenamentiDa(
     List<HealthDataPoint> punti,
@@ -776,26 +792,25 @@ class PonteSalute {
       valore is NumericHealthValue ? valore.numericValue.toDouble() : null;
 
   static MetricaSalute? _metricaDi(HealthDataType tipo) => switch (tipo) {
-        HealthDataType.HEART_RATE_VARIABILITY_RMSSD => MetricaSalute.hrv,
-        HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
-        HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
-        HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
-        HealthDataType.STEPS => MetricaSalute.passi,
-        _ => null,
-      };
+    HealthDataType.HEART_RATE_VARIABILITY_RMSSD => MetricaSalute.hrv,
+    HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
+    HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
+    HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
+    HealthDataType.STEPS => MetricaSalute.passi,
+    _ => null,
+  };
 
   /// ⚠️ `SLEEP_ASLEEP` è la fase «dorme ma non sappiamo come»: la si conta come
   /// **leggero**, che è il comportamento del vecchio `SleepStage`. Non come
   /// profondo: sarebbe la lettura più generosa proprio dove serve prudenza.
   static FaseSonno? _faseDi(HealthDataType tipo) => switch (tipo) {
-        HealthDataType.SLEEP_DEEP => FaseSonno.profondo,
-        HealthDataType.SLEEP_REM => FaseSonno.rem,
-        HealthDataType.SLEEP_LIGHT ||
-        HealthDataType.SLEEP_ASLEEP =>
-          FaseSonno.leggero,
-        HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
-        _ => null,
-      };
+    HealthDataType.SLEEP_DEEP => FaseSonno.profondo,
+    HealthDataType.SLEEP_REM => FaseSonno.rem,
+    HealthDataType.SLEEP_LIGHT ||
+    HealthDataType.SLEEP_ASLEEP => FaseSonno.leggero,
+    HealthDataType.SLEEP_AWAKE => FaseSonno.sveglio,
+    _ => null,
+  };
 }
 
 /// Il valore **più recente** di un giorno, e l'ora a cui è arrivato — 3b-W.

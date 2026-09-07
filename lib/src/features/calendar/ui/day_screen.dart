@@ -46,8 +46,11 @@ class DayScreen extends ConsumerWidget {
            */
           final giornoScelto = DateTime.tryParse(date) ?? DateTime.now();
 
-          final giornata = ref.watch(giornataProvider(giornoScelto)).valueOrNull;
-          final voci = giornata?.meals.expand((m) => m.entries).toList() ?? const [];
+          final giornata = ref
+              .watch(giornataProvider(giornoScelto))
+              .valueOrNull;
+          final voci =
+              giornata?.meals.expand((m) => m.entries).toList() ?? const [];
 
           final sessioni = (ref.watch(sessionsProvider).valueOrNull ?? const [])
               .where(
@@ -56,9 +59,11 @@ class DayScreen extends ConsumerWidget {
               )
               .toList();
 
+          // 🆕 07/09/2026 — le stimate comprendono il **cammino**, non solo le
+          // sedute: l'orologio le calorie attive non le scrive.
           final bruciateKcal =
               ref
-                  .watch(bruciateLocaliDelGiornoProvider(giornoScelto))
+                  .watch(bruciateStimateDelGiornoProvider(giornoScelto))
                   .valueOrNull ??
               0;
 

@@ -11,6 +11,21 @@
       né il nostro, né quello di un modello AI. È la decisione D9, ed è anche
       ciò che la policy di Google su Health Connect pretende venga dichiarato.
     -->
+    <!--
+      🆕 IL BATTITO CONTINUO — 07/09/2026, per il Training Effect Index.
+
+      🚨 Fino a oggi si leggeva SOLO il battito a riposo. Il tipo HEART_RATE era
+      mappato in PonteSalute._metricaDi ma non stava in _tipiDaLeggere: un ramo
+      che non veniva mai percorso, e READ_HEART_RATE non era nemmeno dichiarato.
+
+      ⚠️ E' il dato piu' granulare che raccogliamo: un campione ogni pochi minuti
+      per tutta la giornata. Dice quando ti muovi, quando ti agiti, quando dormi
+      male. E' nel registro dei trattamenti (T4-bis) e nell'informativa.
+
+      💡 Serve al TEI, che si calcola sui MINUTI passati a una certa frequenza
+      rispetto alla propria riserva: senza campioni fitti non esiste.
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
     <uses-permission
         android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
     <uses-permission

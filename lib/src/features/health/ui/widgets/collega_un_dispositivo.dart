@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../privacy/consensi_controller.dart';
+import '../../../privacy/ui/widgets/elenco_dei_consensi.dart';
 import '../../health_controller.dart';
 
 /// ⌚ Collegare un dispositivo — 08/09/2026.
@@ -93,43 +94,38 @@ class ColleghiUnDispositivo extends ConsumerWidget {
             const Divider(),
             const SizedBox(height: Gap.sm),
 
-            // ══ 1. Il consenso, che è nostro ═══════════════════════════════
+            /*
+             * ══ 1. I CONSENSI — TUTTI, NON UNO ════════════════════════════
+             *
+             * 📌 Il committente: *«il mio consenso non deve essere uno, devono
+             * essere tutti i miei consensi, parliamo di dati sanitari, quindi
+             * ci devono essere tutti (con sopra il toggle concedi tutto)»*.
+             *
+             * ⛔ **Prima c'era il solo `health`**, perché è l'unico
+             * *tecnicamente* necessario a leggere Health Connect. 🚨 Ma chi
+             * collega un orologio sta decidendo cosa fare dei propri dati
+             * sanitari **in blocco**: una casella sola gli fa credere che
+             * quella sia tutta la decisione, e scopre le altre due dopo, in
+             * un'altra schermata. A quel punto la domanda che si fa è
+             * «cos'altro non mi avete detto?».
+             *
+             * 💡 `ElencoDeiConsensi` è **lo stesso widget** della schermata
+             * Privacy: un testo solo, due posti che lo mostrano.
+             */
             _Passo(
               numero: 1,
-              titolo: 'Il tuo consenso',
+              titolo: 'I tuoi consensi',
               fatto: dato,
-              figlio: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Sonno, battito, variabilità, passi, allenamenti e — se lo '
-                    'concedi uscita per uscita — il percorso. Restano sul tuo '
-                    'telefono: non li vede la palestra, non li vede il trainer '
-                    'e non arrivano ai nostri server.',
-                    style: tema.textTheme.bodySmall,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: dato,
-                    title: const Text('Dati di salute'),
-                    /*
-                     * 🚨 **Si può anche spegnere da qui**, e non è una svista:
-                     * art. 7(3) — revocare deve costare quanto concedere. ⛔ Un
-                     * interruttore che si accende e non si spegne nello stesso
-                     * posto non è un consenso liberamente revocabile.
-                     */
-                    onChanged: consensi.isLoading
-                        ? null
-                        : (acceso) async {
-                            await ref.read(cambiaConsensoProvider)(
-                              'health',
-                              acceso,
-                            );
-
-                            ref.invalidate(consensiProvider);
-                          },
-                  ),
-                ],
+              figlio: consensi.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(Gap.md),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Text(
+                  'Non riesco a leggere i tuoi consensi.\n$e',
+                  style: tema.textTheme.bodySmall,
+                ),
+                data: (c) => ElencoDeiConsensi(dati: c),
               ),
             ),
 

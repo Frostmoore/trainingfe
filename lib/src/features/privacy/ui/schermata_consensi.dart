@@ -95,12 +95,32 @@ class SchermataConsensi extends ConsumerWidget {
                * 💡 Adesso il «di base» è esplicito, e rimanda al consenso che
                * fa l'eccezione invece di negarne l'esistenza.
                */
+              /*
+               * ══ ⚠️ L'ELENCO ERA RIMASTO INDIETRO — 08/09/2026 ═════════════
+               *
+               * ⛔ **Diceva «sonno, battito e variabilità»**, e nel frattempo
+               * questo interruttore era diventato la porta anche per i passi
+               * della giornata, gli allenamenti e — dall'08/09 — il
+               * **percorso** delle uscite.
+               *
+               * 🚨 Un consenso che descrive meno di quello che autorizza non è
+               * un consenso informato, ed è il difetto che passa piu' facilmente
+               * inosservato: la frase è vera parola per parola, e sbagliata in
+               * quello che lascia credere.
+               *
+               * 💡 Regola, per chi aggiunge una lettura domani: **se aggiungi
+               * un `HealthDataType` a `PonteSalute`, questa riga si aggiorna
+               * nello stesso commit.** L'ordine non è alfabetico — il percorso
+               * sta per primo perche' e' quello su cui uno decide.
+               */
               spiegazione:
-                  'Permette all\'app di leggere sonno, battito e variabilità '
-                  'da Health Connect. Restano sul tuo telefono: non li vede la '
-                  'palestra, non li vede il trainer, e non arrivano ai nostri '
-                  'server — l\'unica eccezione è il terzo consenso qui sotto, '
-                  'se lo dai.',
+                  'Permette all\'app di leggere da Health Connect il percorso '
+                  'delle tue uscite, i passi, gli allenamenti, il sonno, il '
+                  'battito e la variabilità. Restano sul tuo telefono: non li '
+                  'vede la palestra, non li vede il trainer, e non arrivano ai '
+                  'nostri server — l\'unica eccezione è il terzo consenso qui '
+                  'sotto, se lo dai. Il percorso non fa eccezione mai: '
+                  'all\'AI non arriva nemmeno con quello acceso.',
               concessoIl: dati.salute,
               chiave: 'health',
             ),
@@ -440,7 +460,6 @@ class _InterruttoreConsiglioState
     );
   }
 }
-
 
 /// ⚖️ La riga della presa d'atto — 3b-J.3.
 ///

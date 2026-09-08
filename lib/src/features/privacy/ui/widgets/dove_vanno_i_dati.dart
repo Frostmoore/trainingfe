@@ -91,6 +91,19 @@ class DoveVannoIDati extends ConsumerWidget {
               'Non partono mai da soli. Se disinstalli l\'app spariscono con '
               'lei: l\'unica copia è quella di sicurezza che fai tu.',
           voci: [
+            /*
+             * 🚨 **Primi della lista, e non per ordine alfabetico** —
+             * 08/09/2026. Il percorso è il dato più sensibile che l'app tenga:
+             * dice dove abiti e a che ora esci di casa (DPIA, R15).
+             *
+             * ⛔ **Mancava da questa card fino all'08/09**, ed era il difetto
+             * peggiore possibile qui dentro: una card che si chiama «dove
+             * vanno i tuoi dati» e **non nomina** quello di cui la persona si
+             * preoccuperebbe di più non è incompleta — è rassicurante a
+             * sproposito.
+             */
+            'Il percorso delle uscite all\'aperto, quando lo concedi',
+            'I passi di ogni giornata',
             'Sonno: ore, fasi e risvegli',
             'Variabilità cardiaca e battito a riposo',
             'Calorie bruciate con l\'attività',

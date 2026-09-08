@@ -56,10 +56,16 @@ class DiagnosticaSalute {
   ///
   /// ══ ⛔ L'UNICA ECCEZIONE, ED È UNA REGOLA DI CASA ════════════════════
   ///
-  /// `WORKOUT_ROUTE` **non si chiede mai**, nemmeno per guardare. 🚨 È la traccia GPS: dice dove abiti e che giro fai la domenica,
-  /// ed è il dato più identificante che il telefono possieda. La regola sta
-  /// scritta in `PonteSalute` dal giorno in cui il ponte è nato, e una
-  /// diagnostica non è un motivo per farle un'eccezione.
+  /// `WORKOUT_ROUTE` **non entra in questo elenco**. 🚨 È la traccia GPS: dice
+  /// dove abiti e che giro fai la domenica, ed è il dato più identificante che
+  /// il telefono possieda.
+  ///
+  /// ⚠️ **La frase qui era «non si chiede mai», e dal 07/09 non è più vera**:
+  /// il percorso l'app lo chiede, uscita per uscita (T23). 💡 Ma la regola di
+  /// questo file non cambia, cambia il motivo: una **diagnostica** guarda cosa
+  /// c'è nel magazzino, e per farlo dovrebbe aprire una finestra di sistema per
+  /// ogni allenamento. ⛔ Chiedere il percorso «per guardare se c'è» è
+  /// esattamente il consenso a strascico che T23 dice di non chiedere.
   static final tuttiITipi = dataTypeKeysAndroid
       .where((t) => t != HealthDataType.WORKOUT_ROUTE)
       .toList(growable: false);

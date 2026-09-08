@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../health/health_controller.dart';
 import '../health/salute_in_piu.dart';
+import '../privacy/consensi_controller.dart';
 
 /// Il percorso salvato di un allenamento, se c'è — 08/09/2026.
 ///
@@ -78,6 +79,20 @@ class ChiediIlPercorso {
      * risincronizzazione, e per gli allenamenti troppo vecchi non arriverà mai.
      */
     if (idSalute == null || idSalute.isEmpty) return false;
+
+    /*
+     * ══ 🚨 E QUI IL CONSENSO CONTA DOPPIO ════════════════════════════════════
+     *
+     * ⛔ **Mancava fino all'08/09.** Il percorso è il dato più sensibile che
+     * l'app legga, ed era l'unica lettura che non passava dal consenso
+     * sanitario — perché il canale nativo non passa da `PonteSalute`.
+     *
+     * ⚠️ **Il consenso di sistema non lo sostituisce**: quello dice che Android
+     * ci lascia leggere quel tracciato, non che la persona ha acconsentito a
+     * che noi trattiamo i suoi dati sanitari. 🚨 Chi ha revocato il consenso
+     * nell'app non deve poter aprire nemmeno la finestra.
+     */
+    if (!await _ref.read(consensoSaluteProvider.future)) return false;
 
     final risposta = await const SaluteInPiu().percorso(idSalute);
 

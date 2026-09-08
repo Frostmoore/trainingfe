@@ -126,9 +126,17 @@ class PonteSalute {
      * non solo la palestra — una corsa e un giro in bici arrivano dallo stesso
      * canale, e chi si allena senza aprire la nostra app li ha solo li'.
      *
-     * ⚠️ E **mai** `WORKOUT_ROUTE`, che e' la traccia GPS: dice dove abiti e che
-     * giro fai la domenica. E' il dato piu' identificante che il telefono
-     * possieda, e non serve a niente di quello che facciamo.
+     * ══ ⚠️ QUI C'ERA SCRITTO «E MAI `WORKOUT_ROUTE`» ═════════════════════
+     *
+     * 🚨 **Ed era falso dal 07/09**: `_tipiInPiuPerGliAllenamenti`, un centinaio
+     * di righe piu' sotto, lo chiede. ⛔ Un commento che rassicura mentre il
+     * codice fa il contrario e' peggio di nessun commento: chi legge questo file
+     * dall'alto si ferma qui convinto, e non arriva alla riga che conta.
+     *
+     * 💡 **Come stanno le cose adesso**: il percorso si chiede, ma **non qui**.
+     * Sta in un elenco a parte perche' Android lo concede **una uscita alla
+     * volta**, con una finestra sua, e solo con l'app in primo piano — vedi
+     * T23 nel registro e §3.3-quater nell'informativa.
      */
     HealthDataType.WORKOUT,
 
@@ -373,8 +381,6 @@ class PonteSalute {
         _tipiDaAutorizzare,
         permissions: _permessi,
       );
-
-
     } on Object catch (errore, stack) {
       // Un telefono senza Health Connect non è un errore da mostrare: è una
       // funzione che quel telefono non ha.
@@ -840,6 +846,12 @@ class PonteSalute {
   /// `ConsentRequired`, **even if** your app has Always allow»*. 🚨 Quindi una
   /// sincronizzazione in sottofondo qui non porta niente — e non è un guasto:
   /// semplicemente i percorsi arrivano alla prima apertura dell'app.
+  ///
+  /// ✅ **Il consenso sanitario è già stato verificato** da chi chiama:
+  /// `HealthController.aggiornaInSilenzio()` e `collega()` lo controllano prima
+  /// di arrivare a `sincronizza()`. ⚠️ Le due letture che **non** passano di qui
+  /// — il dislivello e la richiesta di un singolo percorso — lo controllano da
+  /// sé, e l'08/09 non lo facevano.
   Future<int> _percorsiDegliAllenamenti(DateTime da, DateTime a) async {
     try {
       final punti = await _salute.getHealthDataFromTypes(

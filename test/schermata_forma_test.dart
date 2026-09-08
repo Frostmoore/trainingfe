@@ -184,15 +184,30 @@ void main() {
       ),
     );
 
-    expect(find.text('Calcolata su 3 ingredienti su 4.'), findsOneWidget);
+    /*
+     * ⚠️ **La frase è cambiata l'08/09**, insieme alla card: la Prontezza in
+     * cima adesso è la reattività, e il confronto con le proprie medie è
+     * diventato la parte in fondo — con il suo numero scritto accanto, che
+     * prima era quello grande.
+     */
+    expect(
+      find.textContaining('calcolato su 3 ingredienti su 4'),
+      findsOneWidget,
+    );
     expect(find.textContaining('non disponibile'), findsOneWidget);
   });
 
   testWidgets('il carico non calcolabile spiega perché', (tester) async {
     await apri(tester, forma(carico: null, storiaCarico: 0));
 
-    expect(find.text('—'), findsOneWidget);
-    expect(find.text('non calcolabile'), findsOneWidget);
+    /*
+     * ⚠️ **`findsWidgets` e non `findsOneWidget`** — 08/09/2026: da quando c'è
+     * la card «Effetto», in un test senza battiti i trattini sono due. 💡 Quello
+     * che questo test difende è che la pagina **dica perché**, e lo pinza la
+     * riga qui sotto.
+     */
+    expect(find.text('—'), findsWidgets);
+    expect(find.text('non calcolabile'), findsWidgets);
     expect(find.textContaining('Serve almeno un allenamento'), findsOneWidget);
 
     // 💡 Le righe delle due medie spariscono: senza denominatore non vogliono
@@ -236,9 +251,35 @@ void main() {
      * spiegazione incompleta: è una spiegazione **falsa**, e su un numero che
      * parla di fatica è peggio che non averla.
      */
+    /*
+     * ══ 🚨 IL TERMINE DELLA VEGLIA MANCAVA, E QUESTO TEST NON SE N'ERA
+     *    ACCORTO ═══════════════════════════════════════════════════════════
+     *
+     * ⛔ Il 06/09 `scarica` ha preso un terzo termine — la stanchezza di stare
+     * svegli — e la pagina ha continuato a mostrarne due. 🚨 Questo test
+     * cercava solo l'inizio della riga dell'allenamento, quindi restava verde
+     * su una formula **incompleta**: un test che sorveglia mezza porta.
+     *
+     * 💡 Adesso cerca **tutti e tre** i termini, ognuno per conto suo.
+     */
     expect(
       find.textContaining(
-        'scarica = ${CaricaBatteria.scaricaDellAllenamento} ×',
+        'scarica = ${CaricaBatteria.scaricaDellaVeglia} × (ore sveglio',
+      ),
+      findsOneWidget,
+      reason: 'la stanchezza di stare svegli è nella formula vera',
+    );
+
+    expect(
+      find.textContaining(
+        '${CaricaBatteria.scaricaDellAllenamento} × (kcal allenamento',
+      ),
+      findsOneWidget,
+    );
+
+    expect(
+      find.textContaining(
+        '${CaricaBatteria.scaricaDellAttivita} × (altre kcal',
       ),
       findsOneWidget,
     );
@@ -317,7 +358,13 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('scala da 0 a 100'), findsWidgets);
-    expect(find.textContaining('l\'abbiamo scelto noi'), findsOneWidget);
+    /*
+     * ⚠️ **Da una a due** — 08/09/2026, ed è una buona notizia: adesso lo
+     * dichiarano sia la Carica sia l'**esponente dell'Effetto**, che è l'unico
+     * numero non ricavato di quella formula. 🚨 Se un giorno tornassero a uno,
+     * vuol dire che qualcuno ha smesso di dirlo.
+     */
+    expect(find.textContaining('l\'abbiamo scelto noi'), findsWidgets);
     expect(find.textContaining('Usiamo le calorie attive'), findsOneWidget);
     expect(
       find.textContaining('non vogliono dire la stessa cosa'),

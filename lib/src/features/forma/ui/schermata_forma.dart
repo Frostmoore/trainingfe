@@ -7,6 +7,8 @@ import '../../../core/ui/intestazione_app.dart';
 import '../carica_batteria.dart';
 import '../carica_controller.dart';
 import '../forma_controller.dart';
+import '../indice_di_effetto.dart';
+import '../indice_di_effetto_controller.dart';
 import '../indici_di_forma.dart';
 import 'scheda_forma.dart';
 
@@ -98,9 +100,132 @@ class SchermataForma extends ConsumerWidget {
      * vorrebbe dire non mostrarla quando l'altro fallisce. 💡 Sono due calcoli
      * indipendenti e devono poter fallire separatamente.
      */
+    /*
+     * 🏃 **L'Effetto** — 08/09/2026.
+     *
+     * ⛔ **Era comparso nella card di «Oggi» senza una riga qui**, e questa è la
+     * pagina che promette di spiegare come si calcola tutto. 🚨 Un indice
+     * visibile e non spiegato è peggio di un indice assente: chi lo guarda si
+     * costruisce una teoria sua, e quella non si può correggere.
+     */
+    const SizedBox(height: Gap.lg),
+    const _Effetto(),
+
+    /*
+     * 🔋 **La terza card** — 28/08/2026: *«mettine anche una con i dettagli di
+     * Carica»*.
+     *
+     * ⚠️ Sta **fuori** da `_contenuto(forma)` come widget suo perché la Carica
+     * non viene da `formaProvider`: ha un provider proprio, e legarla a questo
+     * vorrebbe dire non mostrarla quando l'altro fallisce.
+     */
     const SizedBox(height: Gap.lg),
     const _DettaglioCarica(),
   ];
+}
+
+/// Una frazione scritta come la leggerebbe una persona: `0.425` → `42,5%`.
+///
+/// 💡 **Toglie lo zero inutile**: `0.30` diventa `30%` e non `30,0%`. ⚠️ E la
+/// virgola e' quella italiana, come nel resto della pagina.
+String percentuale(double frazione) {
+  final v = frazione * 100;
+  final testo = v == v.roundToDouble()
+      ? v.round().toString()
+      : v.toStringAsFixed(1).replaceAll('.', ',');
+  return '$testo%';
+}
+
+/// 🏃 L'Effetto, spiegato — 08/09/2026.
+class _Effetto extends ConsumerWidget {
+  const _Effetto();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tei = ref.watch(indiceDiEffettoProvider).valueOrNull;
+    final mostrabile = tei != null && tei.affidabile;
+
+    return _Sezione(
+      icona: Icons.directions_run_rounded,
+      titolo: 'Effetto',
+      grande: mostrabile ? tei.punti.round().toString() : '—',
+      sotto: mostrabile ? 'su 100 nella settimana' : 'non calcolabile',
+      nota: mostrabile
+          ? '${tei.minutiUtili} minuti utili negli ultimi '
+                '${ModelloDiEffetto.giorni} giorni'
+          : 'Servono l\'età nel profilo, un battito a riposo misurato e '
+                'l\'orologio al polso con continuità.',
+      figli: [
+        const _Testo(
+          'Quanto dei tuoi ultimi sette giorni è arrivato **al cuore**. Non '
+          'conta i minuti: conta a che intensità li hai passati.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        const _Formula(
+          'riserva = (battito − riposo) ÷ (massima − riposo)\n\n'
+          'punti/min = ${ModelloDiEffetto.coefficiente} × '
+          '(riserva − ${ModelloDiEffetto.soglia})^'
+          '${ModelloDiEffetto.esponente}',
+        ),
+        /*
+         * ⚠️ **`.round()` qui era un errore** — 08/09/2026: mostrava `43%`
+         * mentre il codice usa `42,5%`. 🚨 Su una pagina che esiste apposta
+         * perche' uno possa **rifare il conto**, un numero arrotondato nella
+         * formula non e' una semplificazione: e' una formula diversa da quella
+         * che gira, e chi la rifa' ottiene un risultato che non torna.
+         */
+        _Testo(
+          'Sotto il **${percentuale(ModelloDiEffetto.soglia)}** della '
+          'riserva non si accumula niente: è più o meno la vita normale, e se '
+          'contasse l\'indice lo farebbe anche chi non si allena. La massima si '
+          'stima con Tanaka (208 − 0,7 × età) quando non è misurata. Con un '
+          'riposo di 75 e una massima di 181 fa **120 battiti**.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        _Formula(
+          'mostrato = ${ModelloDiEffetto.tettoAssoluto.round()} × '
+          '(1 − e^(−grezzo ÷ '
+          '${ModelloDiEffetto.costanteDiSaturazione.round()}))',
+        ),
+        _Testo(
+          'I primi punti valgono più degli ultimi: 50 grezzi diventano '
+          '${ModelloDiEffetto.conRendimentiDecrescenti(50).round()}, cento '
+          'diventano cento esatti, e oltre '
+          '${ModelloDiEffetto.tettoAssoluto.round()} non si va. **Cento è il '
+          'traguardo**, e superarlo si può — ma non per sbaglio.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        _Nota(
+          'Massimo ${ModelloDiEffetto.tettoAlGiorno.round()} punti in un '
+          'giorno: un indice che si sfonda in una giornata smette di '
+          'descrivere un\'abitudine.',
+        ),
+
+        const SizedBox(height: Gap.sm),
+
+        /*
+         * ══ 🚨 SI DICE QUALE NUMERO E' MISURATO E QUALE E' SCELTO ══════════
+         *
+         * ⛔ È la cosa più importante di questa card, e la più facile da
+         * omettere: una formula scritta per intero **sembra** tutta derivata.
+         * 🚨 Qui un pezzo non lo è, e chi legge ha diritto di sapere quale.
+         */
+        const _Testo(
+          'Da dove vengono i numeri: l\'ancora è **60 minuti al 70% della '
+          'riserva = 100**, che viene dallo studio HUNT (NTNU) sul PAI. '
+          'L\'**esponente ${ModelloDiEffetto.esponente} l\'abbiamo scelto '
+          'noi**, per dare più peso ai battiti alti: su attività moderata '
+          'questo indice è circa la metà del PAI, ed è voluto.',
+        ),
+      ],
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -276,7 +401,24 @@ class _Prontezza extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final valore = forma.prontezza.valore;
+    /*
+     * ══ 🚨 QUESTA CARD SPIEGAVA UN NUMERO CHE NON SI VEDE PIU' ═══════════════
+     *
+     * ⛔ Fino all'08/09 mostrava `forma.prontezza` — sonno, HRV, battito, cibo
+     * — mentre la card di «Oggi» e l'intestazione mostrano la **reattività**,
+     * che è un altro modello. 🚨 Stesso nome, due numeri, e la pagina che
+     * dovrebbe spiegarli spiegava quello sbagliato.
+     *
+     * ⚠️ **È il caso peggiore fra i tre trovati oggi**: una formula sbagliata si
+     * corregge, ma una spiegazione convincente di un numero diverso insegna una
+     * cosa falsa e la fa ricordare.
+     *
+     * 💡 La prontezza vecchia **non sparisce**: risponde a *«come stai rispetto
+     * al tuo solito»* e alimenta la scheda del sonno. Qui sotto resta, con il
+     * suo nome vero.
+     */
+    final reattivita = forma.reattivita;
+    final valore = reattivita?.valore ?? forma.prontezza.valore;
     final ci = forma.ingredienti.where((i) => i.ceLo).length;
 
     return _Sezione(
@@ -295,22 +437,68 @@ class _Prontezza extends StatelessWidget {
       titolo: 'Prontezza',
       grande: valore == null ? '—' : valore.round().toString(),
       sotto: valore == null ? 'non calcolabile' : 'su 100',
-      indice: forma.prontezza,
+      nota: reattivita == null
+          ? null
+          : 'Cambia durante la giornata: non è una media, è adesso.',
+      indice: reattivita == null ? forma.prontezza : null,
       figli: [
+        const _Testo(
+          'Quanto sei **reattivo adesso**. Non è un confronto con le tue medie: '
+          'è il modello di come cala e risale la lucidità in una giornata, '
+          'spostato dai tuoi dati.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        const _Formula(
+          'prontezza = S (quanto sei sveglio da tempo)\n'
+          '          + C (l\'ora del giorno, onda a 24 h)\n'
+          '          + U (onda a 12 h)\n'
+          '          + W (inerzia del risveglio)\n'
+          '          + pasto + modificatori',
+        ),
+        const _Testo(
+          'È il **modello a tre processi** della regolazione dell\'allerta, lo '
+          'stesso impianto usato nei sistemi di rischio-fatica dell\'aviazione. '
+          'I parametri sono quelli pubblicati (Ingre e altri, 2014), non scelti '
+          'da noi.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
+        const _Testo(
+          'Due pezzi invece sono **nostri**: il **pasto**, perché il diario sa '
+          '*quando* e *quanto* hai mangiato e un pranzo alle 15:30 abbassa la '
+          'reattività alle 16:30; e i **modificatori** — HRV, battito e carico — '
+          'che pesano poco di proposito: il modello descrive l\'essere umano '
+          'medio, i sensori dicono solo se oggi stai sopra o sotto il tuo '
+          'normale.',
+        ),
+
+        const SizedBox(height: Gap.md),
+
         /*
-         * ══ 🚨 SI DICE SU QUANTI INGREDIENTI È FATTA ═════════════════════════
+         * ══ 🚨 LA PRONTEZZA VECCHIA RESTA, E VA DETTO ═══════════════════════
          *
-         * ⚠️ **Era un debito dichiarato** (§52.7): senza rete il cibo manca e il
-         * numero veniva calcolato su tre pezzi su quattro **senza dirlo**. Un
-         * indice che cambia formula in silenzio è peggio di un indice assente,
-         * perché chi guarda due giorni di fila crede di confrontare la stessa
-         * cosa.
-         *
-         * 💡 Qui il debito si chiude: la riga sotto lo dichiara sempre, e la
-         * tabella qui in fondo mostra **quale** pezzo manca.
+         * ⛔ Cancellarla dalla pagina l'avrebbe fatta sparire dagli occhi ma non
+         * dal codice: alimenta ancora la scheda del sonno. 💡 Un indice che
+         * esiste e non è spiegato da nessuna parte è il difetto che questa
+         * pagina esiste per evitare.
          */
-        if (valore != null)
-          _Nota('Calcolata su $ci ingredienti su ${forma.ingredienti.length}.'),
+        const Divider(height: Gap.lg),
+
+        const _Testo(
+          '**E il confronto con il tuo solito**, che è un\'altra domanda: '
+          'quanto stai bene o male rispetto alle tue medie di sonno, '
+          'variabilità cardiaca, battito e cibo. Alimenta la scheda del sonno, '
+          'e qui sotto trovi da cosa è fatto oggi.',
+        ),
+
+        if (forma.prontezza.valore != null)
+          _Nota(
+            'Vale ${forma.prontezza.valore!.round()} su 100, calcolato su $ci '
+            'ingredienti su ${forma.ingredienti.length}.',
+          ),
 
         const SizedBox(height: Gap.sm),
 
@@ -491,7 +679,9 @@ class _CardFormula extends StatelessWidget {
         const Divider(height: Gap.lg),
 
         const _Formula(
-          'scarica = ${CaricaBatteria.scaricaDellAllenamento} × '
+          'scarica = ${CaricaBatteria.scaricaDellaVeglia} × '
+          '(ore sveglio ÷ ${CaricaBatteria.oreSveglioDiRiferimento})\n'
+          '        + ${CaricaBatteria.scaricaDellAllenamento} × '
           '(kcal allenamento ÷ riferimento)\n'
           '        + ${CaricaBatteria.scaricaDellAttivita} × '
           '(altre kcal ÷ riferimento)\n\n'
@@ -499,7 +689,12 @@ class _CardFormula extends StatelessWidget {
           'domani = sera + (100 − sera) × recupero',
         ),
         const _Testo(
-          'La seconda riga è tutto il senso della Carica: la notte recupera una '
+          'La **prima riga** è la stanchezza di stare svegli, e c\'è perché una '
+          'giornata senza allenamento stanca lo stesso: senza, la Carica non '
+          'scendeva mai per chi non si allena.',
+        ),
+        const _Testo(
+          'L\'ultima riga è tutto il senso della Carica: la notte recupera una '
           '**percentuale di quello che manca**, non un tot di punti. Così la '
           'fatica che non recuperi resta, e si somma a quella del giorno dopo.',
         ),
@@ -564,56 +759,56 @@ class _CardComeFunziona extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _CardTesto(
+    return _CardTesto(
       icona: Icons.help_outline_rounded,
       titolo: 'Come funziona il calcolo',
       figli: [
-        _Titoletto('Il carico confronta te con te stesso'),
-        _Testo(
+        const _Titoletto('Il carico confronta te con te stesso'),
+        const _Testo(
           'Non c\'è un valore «giusto» uguale per tutti: si guarda quanto ti sei '
           'allenato nell\'ultima settimana rispetto a quanto ti alleni di solito. '
           'Il 100% vuol dire «come al tuo solito», non «al massimo».',
         ),
 
-        _Titoletto('Il carico è stimato dalle calorie, non dal cuore'),
-        _Testo(
+        const _Titoletto('Il carico è stimato dalle calorie, non dal cuore'),
+        const _Testo(
           'Il metodo di riferimento vorrebbe la frequenza cardiaca durante '
           'l\'allenamento, che non abbiamo. Usiamo le calorie attive, che sono '
           'una buona approssimazione ma restano un\'approssimazione: due '
           'allenamenti con le stesse calorie possono affaticare in modo diverso.',
         ),
 
-        _Titoletto('La scala da 0 a 100 della carica è nostra'),
-        _Testo(
+        const _Titoletto('La scala da 0 a 100 della carica è nostra'),
+        const _Testo(
           'Il confronto con la tua media ha una letteratura dietro; il modo di '
           'trasformarlo in un numero su cento no, l\'abbiamo scelto noi. '
           'L\'ordine è onesto — più alto vuol dire davvero meglio — ma i numeri '
           'in mezzo sono una scelta di presentazione.',
         ),
 
-        _Titoletto('Il cibo pesa poco, e apposta'),
-        _Testo(
+        const _Titoletto('Il cibo pesa poco, e apposta'),
+        const _Testo(
           'Non esiste una formula pubblicata che leghi il mangiare poco al '
           'recupero. Abbiamo scelto che mangiare tanto non alzi la carica, '
           'mentre mangiare molto meno del tuo solito la abbassi un po\'.',
         ),
 
-        _Titoletto('Servono giorni per essere precisi'),
-        _Testo(
+        const _Titoletto('Servono giorni per essere precisi'),
+        const _Testo(
           'Il numero compare da subito, ma finché mancano dati te lo diciamo '
           'sotto. Con poche notti registrate la «tua media» è fatta di poche '
           'notti, e basta una notte storta a spostarla.',
         ),
 
-        _Titoletto('Non si confronta con quella di altri'),
-        _Testo(
+        const _Titoletto('Non si confronta con quella di altri'),
+        const _Testo(
           'Sono numeri costruiti sulle tue medie: il 60 tuo e il 60 di un\'altra '
           'persona non vogliono dire la stessa cosa. E se il numero dice una cosa '
           'e tu ti senti diversamente, hai ragione tu.',
         ),
 
-        _Titoletto('Restano sul tuo telefono'),
-        _Testo(
+        const _Titoletto('Restano sul tuo telefono'),
+        const _Testo(
           'Il calcolo lo fa il telefono, i numeri non li mandiamo a nessuno '
           'e non finiscono nemmeno nel consiglio del giorno. Non li salviamo '
           'da nessuna parte: si rifanno ogni volta che apri questa pagina.',
@@ -628,32 +823,36 @@ class _CardComeFunziona extends StatelessWidget {
          * carico e prontezza escono da dati misurati, la Carica esce da una
          * catena di parametri scelti da noi.
          */
-        _Titoletto('La Carica è una batteria, e si trascina'),
-        _Testo(
+        const _Titoletto('La Carica è una batteria, e si trascina'),
+        const _Testo(
           'Carico e prontezza si rifanno ogni giorno da capo. La Carica no: '
           'parte da quella di ieri, cala con quello che fai e ne recupera una '
           'parte dormendo. Se una notte non recuperi tutto, quello che manca '
           'te lo porti dietro — che è il motivo per cui esiste.',
         ),
 
-        _Titoletto('I numeri di partenza li abbiamo scelti noi'),
+        const _Titoletto('I numeri di partenza li abbiamo scelti noi'),
         _Testo(
-          'Un allenamento «pieno» vale 25 punti, una giornata attiva 10, una '
-          'notte normale recupera il 70% di quello che manca. Non sono costanti '
+          'Un allenamento «pieno» vale '
+          '${CaricaBatteria.scaricaDellAllenamento.round()} punti, una '
+          'giornata attiva ${CaricaBatteria.scaricaDellAttivita.round()}, una '
+          'notte normale recupera il '
+          '${((CaricaBatteria.recuperoMinimo + CaricaBatteria.recuperoDalSonno) * 100).round()}% '
+          'di quello che manca. Non sono costanti '
           'fisiologiche: sono valori scelti perché il calcolo funzioni fin dal '
           'primo giorno, e si affinano man mano che ci sono i tuoi dati.',
         ),
 
-        _Titoletto('Le calorie del wearable non sono una misura precisa'),
-        _Testo(
+        const _Titoletto('Le calorie del wearable non sono una misura precisa'),
+        const _Testo(
           'Sono utili come segnale relativo dentro la stessa persona — se oggi '
           'ne segna il doppio di ieri, probabilmente hai fatto il doppio — ma il '
           'numero assoluto è una stima. Per questo la Carica confronta te con te '
           'stesso e mai con qualcun altro.',
         ),
 
-        _Titoletto('Quello che manca non si inventa'),
-        _Testo(
+        const _Titoletto('Quello che manca non si inventa'),
+        const _Testo(
           'Se un giorno l\'orologio non manda le calorie, la Carica non scende: '
           'non sappiamo cosa hai fatto, e dirti che sei stanco sarebbe '
           'inventarlo. Se manca il sonno, il recupero prende un valore di mezzo '

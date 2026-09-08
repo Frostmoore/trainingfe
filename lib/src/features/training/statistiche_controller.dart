@@ -4,6 +4,7 @@ import '../../core/storage/archivio_salute.dart';
 import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
 import '../health/salute_in_piu.dart';
+import '../privacy/consensi_controller.dart';
 import 'statistiche_allenamento.dart';
 
 /// Le statistiche di un allenamento dell'orologio — 08/09/2026.
@@ -49,15 +50,24 @@ final statisticheAllenamentoProvider = FutureProvider.autoDispose
       final velocita = await _velocita(archivio, da: inizio, a: fine);
 
       /*
-       * ⛔ **Il dislivello passa da un canale nativo, e può non rispondere.**
-       * Su iOS dall'altra parte non c'è niente, e su Android senza il permesso
-       * `READ_ELEVATION_GAINED` la lettura fallisce: in tutti e due i casi torna
-       * `null`, che vuol dire «non lo sappiamo» e non «pianura».
+       * ══ 🚨 IL CONSENSO SANITARIO VIENE PRIMA, ANCHE QUI ═══════════════════
+       *
+       * ⛔ **Fino all'08/09 questa lettura non lo controllava.** Il canale
+       * nativo parla con Health Connect senza passare da `PonteSalute`, e
+       * `PonteSalute` era l'unico posto in cui il consenso veniva verificato.
+       *
+       * 🚨 Il registro dei trattamenti (T17) dice che la base giuridica è il
+       * consenso esplicito *«verificato prima di ogni lettura»*: con questa
+       * riga mancante quell'affermazione era **falsa**, e non per una svista
+       * grande — per una porta nuova aperta accanto a quella sorvegliata.
+       *
+       * ⚠️ Il permesso di Android non basta a sostituirlo: quello dice cosa il
+       * sistema ci lascia leggere, non cosa la persona ha acconsentito che noi
+       * trattiamo.
        */
-      final dislivello = await const SaluteInPiu().dislivelloFra(
-        da: inizio,
-        a: fine,
-      );
+      final dislivello = await ref.watch(consensoSaluteProvider.future)
+          ? await const SaluteInPiu().dislivelloFra(da: inizio, a: fine)
+          : null;
 
       return StatisticheAllenamento(
         tipo: tipo,

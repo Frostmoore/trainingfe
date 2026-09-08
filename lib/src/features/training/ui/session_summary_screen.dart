@@ -14,6 +14,7 @@ import 'widgets/calorie_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_fatti.dart';
 import 'widgets/foto_dell_allenamento.dart';
+import 'widgets/numeri_dell_allenamento.dart';
 import 'widgets/testa_dell_allenamento.dart';
 
 /// Il riepilogo di fine allenamento — G7.
@@ -115,6 +116,21 @@ class _Corpo extends ConsumerWidget {
 
         const SizedBox(height: Gap.lg),
         _CalorieDiQuestaSeduta(sessione: sessione),
+
+        /*
+         * 📐 **I numeri, anche qui** — 08/09/2026.
+         *
+         * 🚨 La regola di 3b-B.20.4 vale in tutte e due i versi: *«la pagina
+         * deve diventare IDENTICA»*. ⛔ Mettere il riquadro solo sulla pagina
+         * dell'orologio avrebbe creato la differenza al contrario — chi si allena
+         * con l'app e ci attacca l'orologio si vedrebbe sparire i numeri che il
+         * suo vicino ha.
+         *
+         * ⚠️ Su una seduta senza orologio non compare: `dalPolso` è vuoto e
+         * `statisticheAllenamentoProvider` torna `null`.
+         */
+        const SizedBox(height: Gap.lg),
+        _NumeriDiQuestaSeduta(sessione: sessione),
 
         const SizedBox(height: Gap.lg),
         FotoDellAllenamento(sedutaId: sessione.id),
@@ -262,6 +278,33 @@ class _CalorieDiQuestaSeduta extends ConsumerWidget {
     if (voce == null) return const SizedBox.shrink();
 
     return CalorieDellAllenamento(voce: voce);
+  }
+}
+
+/// I numeri di **questa** seduta — 08/09/2026.
+///
+/// ⚠️ Stessa forma di [_CalorieDiQuestaSeduta], e per la stessa ragione: serve
+/// il **gruppo**, non la singola seduta. 🚨 Una seduta fermata e ripresa è un
+/// allenamento solo, e la velocità media di metà corsa non è la velocità media
+/// della corsa.
+class _NumeriDiQuestaSeduta extends ConsumerWidget {
+  const _NumeriDiQuestaSeduta({required this.sessione});
+
+  final WorkoutSession sessione;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final voci = ref.watch(storicoUnificatoProvider).valueOrNull;
+
+    if (voci == null) return const SizedBox.shrink();
+
+    final voce = voci
+        .where((v) => v.sedute.any((s) => s.id == sessione.id))
+        .firstOrNull;
+
+    if (voce == null) return const SizedBox.shrink();
+
+    return NumeriDellAllenamento(voce: voce);
   }
 }
 

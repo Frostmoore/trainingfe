@@ -91,6 +91,50 @@
         android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
 
     <!--
+      🗺️ 08/09/2026 — IL PERCORSO DI UN ALLENAMENTO ALL'APERTO.
+
+      📌 Il committente: «se non metto la foto, al posto di quella nella
+      schermata dello storico degli allenamenti ci deve essere la forma del
+      percorso che ho fatto».
+
+      🚨 IL NOME E' AL PLURALE, E NON E' UN DETTAGLIO. Health Connect ne ha
+      due che si somigliano e fanno cose diverse:
+
+        READ_EXERCISE_ROUTE   (singolare) consenso una volta sola per UN
+                              percorso, tramite `ExerciseRouteRequestContract`,
+                              che il pacchetto `health` NON espone.
+        READ_EXERCISE_ROUTES  (plurale)   e' quello che fa comparire
+                              l'interruttore «Consenti sempre» dentro
+                              Health Connect.
+
+      ⛔ L'08/09/2026 qui c'era il SINGOLARE, preso dal README del pacchetto,
+      che documenta solo quello. Risultato: permesso dichiarato e mai concesso,
+      tutti e quindici gli allenamenti che tornavano `ConsentRequired`, e nella
+      schermata di Health Connect NIENTE da concedere. Un permesso che non si
+      puo' dare non somiglia a un permesso negato: somiglia a un'app rotta.
+
+      ⚠️ E non basta comunque: `requestAuthorization` questo permesso non lo
+      chiede e non lo puo' chiedere. Google: «attempts to request the permission
+      by applications will be ignored». Lo concede la persona a mano, in
+      Health Connect → Autorizzazioni app → la nostra app → Percorsi di
+      allenamento → Consenti sempre.
+
+      ⚠️ E si legge SOLO con l'app in primo piano. Google: «when your app runs
+      in the background and tries to read an exercise route created by another
+      app, Health Connect returns ConsentRequired, EVEN IF your app has Always
+      allow». Quindi il percorso si chiede quando la persona apre la pagina
+      dell'allenamento, non durante la sincronizzazione.
+
+      ⛔ ACCESS_FINE_LOCATION NON e' qui, e non e' una dimenticanza: serve a
+      chi il percorso lo REGISTRA, e noi non lo registriamo: lo leggiamo
+      dall'orologio. Aggiungerlo vorrebbe dire chiedere la posizione in tempo
+      reale per una cosa che non facciamo, e comparire nello store come un'app
+      che traccia la posizione.
+    -->
+    <uses-permission
+        android:name="android.permission.health.READ_EXERCISE_ROUTES"/>
+
+    <!--
       ⚖️ 3b-W — il corpo, dalla bilancia.
 
       🚨 Dichiararli qui NON BASTA: l'elenco da chiedere lo costruisce il

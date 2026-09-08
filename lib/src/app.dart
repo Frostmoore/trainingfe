@@ -10,6 +10,7 @@ import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/diary/data/trasloco_del_diario.dart';
+import 'features/health/sonda_dei_percorsi.dart';
 import 'features/health/sonda_delle_attive.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
@@ -115,6 +116,20 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
     if (SondaDelleAttive.accesa) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => SondaDelleAttive(ref).racconta(),
+      );
+    }
+
+    /*
+     * 🗺️ **`--dart-define=DIAGNOSTICA=percorsi`** — 08/09/2026.
+     *
+     * 🚨 Risponde a una domanda sola, e da quella dipende se la richiesta del
+     * committente sulla forma del percorso si possa fare: Health Connect ci dà
+     * i percorsi scritti dall'app dell'orologio, o li tiene dietro un consenso
+     * che si concede solo a mano? Vedi `sonda_dei_percorsi.dart`.
+     */
+    if (SondaDeiPercorsi.accesa) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => const SondaDeiPercorsi().racconta(),
       );
     }
 

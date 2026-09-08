@@ -193,4 +193,106 @@ class TipoAllenamento {
 
     return parole[0].toUpperCase() + parole.substring(1);
   }
+
+  // ═══════════════ 🗺️ CHE COSA HA SENSO CHIEDERE — 08/09/2026 ═══════════════
+  //
+  // 📌 Il committente: *«quando scelgo come esercizio camminata, hiking,
+  // bicicletta… vatti a vedere che esercizi accettiamo»*.
+  //
+  // 🚨 **Sono tre domande diverse, e tenerle separate è il punto.** Un vogatore
+  // ha una distanza ma non un percorso; un tapis roulant ha un passo al km ma
+  // non una velocità che voglia dire qualcosa fuori; una seduta di pesi non ha
+  // niente di tutto questo. ⛔ Una lista sola avrebbe risposto male ad almeno
+  // due delle tre.
+
+  /// Se per questo tipo vale la pena **chiedere** il percorso a Health Connect.
+  ///
+  /// ══ ⚠️ DECIDE QUANDO SI CHIEDE, NON QUANDO SI MOSTRA ══════════════════════
+  ///
+  /// 🚨 Il percorso si **mostra** ogni volta che c'è, qualunque sia il tipo: se
+  /// un orologio strano attacca una traccia a una seduta di pesi, disegnarla è
+  /// giusto lo stesso. ⛔ Questa lista serve a decidere **a chi chiederlo**, e
+  /// la ragione è concreta: Health Connect dà i percorsi solo con l'app in primo
+  /// piano, e chiederli per quindici sedute di pesi vuol dire quindici richieste
+  /// che tornano vuote mentre qualcuno guarda lo schermo.
+  ///
+  /// 💡 `OTHER` c'è di proposito: parecchi orologi ci finiscono dentro quello che
+  /// non sanno classificare, e fra quelle cose ci sono uscite vere.
+  ///
+  /// ⛔ **Fuori i chiusi che somigliano agli aperti**: tapis roulant, cyclette,
+  /// vogatore, ellittica, nuoto in piscina. Un percorso non ce l'hanno mai, e
+  /// somigliano abbastanza ai loro gemelli all'aperto da farsi includere da
+  /// chiunque copi la lista senza leggerla.
+  static const _conPercorso = <String>{
+    'WALKING',
+    'RUNNING',
+    'BIKING',
+    'HAND_CYCLING',
+    'HIKING',
+    'SWIMMING_OPEN_WATER',
+    'ROWING',
+    'SURFING',
+    'CLIMBING',
+    'ROCK_CLIMBING',
+    'DOWNHILL_SKIING',
+    'CROSS_COUNTRY_SKIING',
+    'SKIING',
+    'SNOWBOARDING',
+    'SNOWSHOEING',
+    'ICE_SKATING',
+    'SKATING',
+    'OTHER',
+  };
+
+  /// Se si va **sulle proprie gambe**, un passo per volta.
+  ///
+  /// 💡 Da qui dipendono **passo al km**, **cadenza** e **lunghezza del passo**:
+  /// tre numeri che in bici non vogliono dire niente. ⚠️ Il tapis roulant c'è —
+  /// il percorso no, ma i passi sì, e il passo al km su un tapis roulant è
+  /// esattamente il numero che si guarda.
+  static const _aPiedi = <String>{
+    'WALKING',
+    'WALKING_TREADMILL',
+    'RUNNING',
+    'RUNNING_TREADMILL',
+    'HIKING',
+    'SNOWSHOEING',
+    'STAIR_CLIMBING',
+    'STAIRS',
+  };
+
+  /// Se una **distanza** ha senso, e quindi anche una velocità media.
+  ///
+  /// ⚠️ Non è «ha percorso più zero»: una seduta di pesi può avere una distanza
+  /// scritta dall'orologio — i passi fatti fra un attrezzo e l'altro — e
+  /// mostrarla come «distanza dell'allenamento» direbbe una cosa falsa con un
+  /// numero vero.
+  /// ⚠️ Solo i tipi **in più** rispetto a [_aPiedi] e [_conPercorso]: sono i
+  /// chiusi che una distanza ce l'hanno lo stesso, letta da un rullo o da una
+  /// vasca. 🚨 Elencarli tutti in un insieme solo non si può — Dart rifiuta i
+  /// doppioni in un `Set` costante — e il rifiuto qui è un servizio: è il
+  /// compilatore che impedisce due elenchi che si sovrappongono senza dirlo.
+  static const _conDistanzaInPiu = <String>{
+    'BIKING_STATIONARY',
+    'ROWING_MACHINE',
+    'SWIMMING',
+    'SWIMMING_POOL',
+    'ELLIPTICAL',
+  };
+
+  /// Vale la pena chiedere il percorso per questo tipo? Vedi [_conPercorso].
+  static bool conPercorso(String codice) =>
+      _conPercorso.contains(codice.toUpperCase());
+
+  /// Si va a piedi? Vedi [_aPiedi].
+  static bool aPiedi(String codice) => _aPiedi.contains(codice.toUpperCase());
+
+  /// Una distanza ha senso? Vedi [_conDistanzaInPiu].
+  static bool conDistanza(String codice) {
+    final chiave = codice.toUpperCase();
+
+    return _aPiedi.contains(chiave) ||
+        _conPercorso.contains(chiave) ||
+        _conDistanzaInPiu.contains(chiave);
+  }
 }

@@ -1916,6 +1916,38 @@ class ArchivioSalute extends _$ArchivioSalute {
         .get();
   }
 
+  /// Il battito **dentro la finestra di un allenamento** — 08/09/2026.
+  ///
+  /// ══ 🚨 PERCHE' UN METODO SUO E NON `lettureFraGiorni` ═════════════════════
+  ///
+  /// ⛔ Quella filtra sulla colonna `giorno`, che è la **mezzanotte** della
+  /// giornata: chiedendole «dalle 17:46 alle 18:31» tornerebbero i campioni di
+  /// **tutto il giorno**, e la media di un'ora di corsa uscirebbe diluita in
+  /// ventiquattro. 🚨 Il numero sarebbe plausibile — un battito medio giornaliero
+  /// somiglia molto a un battito medio di allenamento leggero — e nessuno
+  /// andrebbe a controllarlo.
+  ///
+  /// 💡 Qui si filtra su `misurataIl`, che è l'istante vero del campione.
+  ///
+  /// ⚠️ **Estremi: inizio incluso, fine escluso.** Un allenamento che finisce
+  /// alle 18:31:00 e il successivo che comincia allo stesso istante non devono
+  /// dividersi lo stesso campione.
+  Future<List<LetturaSalute>> lettureFraIstanti(
+    MetricaSalute metrica, {
+    required DateTime da,
+    required DateTime a,
+  }) {
+    return (select(lettureSalute)
+          ..where(
+            (t) =>
+                t.metrica.equals(metrica.codice) &
+                t.misurataIl.isBiggerOrEqualValue(da) &
+                t.misurataIl.isSmallerThanValue(a),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.misurataIl)]))
+        .get();
+  }
+
   /// Riscrive i passi di un giorno — 07/09/2026.
   ///
   /// ══ 🚨 SENZA QUESTO, UN GIORNO RESTA COM'ERA PER SEMPRE ═════════════════

@@ -192,6 +192,47 @@ Future<EsitoPagamento> apriIlPagamento(
   }
 }
 
+/// 🔁 Accende o spegne il rinnovo automatico — 08/09/2026.
+///
+/// 📌 Il committente: *«l'abbonamento ovviamente si deve rinnovare
+/// automaticamente SE E SOLO SE l'utente flagga il toggle "Rinnova in
+/// automatico"»*.
+///
+/// ══ 🚨 IL SERVER SCRIVE SU STRIPE, NON SOLO SU DI SÉ ══════════════════════
+///
+/// ⛔ **La verità non è nel nostro database**: chi rinnova è Stripe. Se
+/// cambiassimo solo la nostra riga, l'app direbbe «non si rinnova» e il mese
+/// dopo la carta verrebbe addebitata lo stesso — un difetto che si scopre da un
+/// estratto conto, che è il posto peggiore in cui scoprire qualcosa.
+///
+/// 💡 Per questo chi chiama deve **ributtare via il listino** e rileggerlo:
+/// quello che si mostra dopo viene dal server, non da quello che abbiamo appena
+/// toccato.
+///
+/// ⚠️ **Spegnere non disdice**: `cancel_at_period_end` lascia l'abbonamento
+/// attivo fino alla fine del mese già pagato.
+Future<EsitoPagamento> cambiaIlRinnovo(
+  WidgetRef ref, {
+  required bool attivo,
+}) async {
+  try {
+    await ref
+        .read(apiClientProvider)
+        .patch<Map<String, dynamic>>(
+          '/billing/rinnovo',
+          body: {'rinnova': attivo},
+        );
+
+    return null;
+  } on Object catch (errore) {
+    // 💡 Il `422` ha un significato preciso: questo abbonamento non passa da
+    // Stripe — è quello di una palestra — e da qui non si tocca.
+    return errore.toString().contains('422')
+        ? 'Questo abbonamento lo gestisce la tua palestra.'
+        : 'Non sono riuscito a cambiarlo. Riprova fra poco.';
+  }
+}
+
 /// Apre il **portale di Stripe**: disdetta, carta, ricevute — 3b-H.9.
 ///
 /// ⛔ **Non è il posto dove si disdice: è il posto dove si va a disdire.** Tutto

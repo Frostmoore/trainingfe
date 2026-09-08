@@ -144,6 +144,33 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
     if (widget.dentroUnaModale) Navigator.of(context).pop();
   }
 
+  /// 🔁 Accende o spegne il rinnovo automatico — 08/09/2026.
+  ///
+  /// 📌 *«l'abbonamento ovviamente si deve rinnovare automaticamente SE E SOLO
+  /// SE l'utente flagga il toggle "Rinnova in automatico"»*.
+  ///
+  /// 🚨 **Il listino si ributta via a prescindere dall'esito.** Se la chiamata
+  /// è andata, il valore nuovo viene dal server e non da qui; se è fallita,
+  /// l'interruttore deve **tornare dov'era** invece di restare dove l'ha
+  /// lasciato il dito. ⛔ Un interruttore che mostra uno stato che il server non
+  /// ha è la strada per un addebito che nessuno si aspetta.
+  Future<void> _rinnovo(bool attivo) async {
+    setState(() => _inCorso = 'rinnovo');
+
+    final errore = await cambiaIlRinnovo(ref, attivo: attivo);
+
+    if (!mounted) return;
+
+    setState(() => _inCorso = null);
+    ref.invalidate(listinoProvider);
+
+    if (errore != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errore)));
+    }
+  }
+
   /// Va al portale di Stripe: disdetta, carta, ricevute.
   ///
   /// ⚠️ **Non si chiude la modale.** Chi torna dal browser senza aver toccato
@@ -224,6 +251,42 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
             const SizedBox(height: Gap.md),
           ] else ...[
             _GiaAbbonato(listino: l),
+
+            /*
+             * ══ 🔁 «RINNOVA IN AUTOMATICO» — 08/09/2026 ═══════════════════
+             *
+             * 📌 *«l'abbonamento ovviamente si deve rinnovare automaticamente
+             * SE E SOLO SE l'utente flagga il toggle "Rinnova in automatico"»*.
+             *
+             * ⛔ **Prima si poteva solo dal portale di Stripe**, cioè uscendo
+             * dall'app, in una pagina in inglese, cercando «Cancel plan». 🚨 Una
+             * disdetta che costa più fatica dell'iscrizione non è una scelta
+             * libera: è un ostacolo, e sui pagamenti ricorrenti è esattamente
+             * quello che le autorità chiamano *dark pattern*.
+             *
+             * 💡 Il pulsante del portale resta: lì ci sono le ricevute e la
+             * carta, che qui non ci sono.
+             */
+            if (l.inCorso?.gestibile ?? false) ...[
+              const SizedBox(height: Gap.sm),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  value: l.inCorso!.rinnova,
+                  onChanged: _inCorso == 'rinnovo' ? null : _rinnovo,
+                  title: const Text('Rinnova in automatico'),
+                  subtitle: Text(
+                    l.inCorso!.rinnova
+                        ? 'Si rinnova da solo ogni mese. Se lo spegni, resta '
+                              'attivo fino alla fine del mese che hai già '
+                              'pagato.'
+                        : 'Non si rinnova: alla scadenza finisce, e non '
+                              'addebitiamo niente.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+            ],
 
             // 🔁 Il pulsante compare solo se c'è davvero qualcosa da gestire:
             // l'abbonamento di una palestra non passa da Stripe.

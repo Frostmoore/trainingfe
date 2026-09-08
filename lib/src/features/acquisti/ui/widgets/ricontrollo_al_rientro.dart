@@ -2,36 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/auth_controller.dart';
-import '../../data/gate_dell_abbonamento.dart';
+import '../../data/spia_dell_abbonamento.dart';
+import 'abbonamento_scaduto.dart';
 import 'hai_sbloccato_lai.dart';
 
 /// 🔄 Al rientro nell'app si ricontrolla chi sei — 08/09/2026.
 ///
-/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+/// ══ 📌 LE DUE RICHIESTE ═══════════════════════════════════════════════════
 ///
-/// Il committente: *«quando si finalizza il pagamento di un abbonamento, deve
-/// aggiornare automaticamente lo stato di abbonamento o no»* e *«si deve aprire
-/// una modale…»*.
+/// *«quando si finalizza il pagamento di un abbonamento, deve aggiornare
+/// automaticamente lo stato di abbonamento»* e *«dopo la scadenza
+/// dell'abbonamento deve apparire una modale "Il tuo abbonamento è scaduto"»*.
 ///
-/// ══ 🚨 PERCHÉ NON BASTAVA AGGIORNARE DOPO IL PAGAMENTO ════════════════════
+/// ══ 🚨 PERCHÉ IL RICONTROLLO NON BASTA A FAR COMPARIRE UNA MODALE ═════════
 ///
 /// ⛔ **Il pagamento non finisce dentro l'app.** `apriIlPagamento()` apre il
 /// browser e torna **subito** — non quando la persona ha pagato, ma quando il
-/// browser si è aperto. 🚨 Invalidare lì dentro vuol dire aggiornare lo stato
-/// *prima* che qualcuno abbia inserito la carta: si aggiorna, e si aggiorna
-/// **sbagliato**.
+/// browser si è aperto. 💡 Il momento vero è il **rientro**, ed è quello che
+/// questo osservatore intercetta.
 ///
-/// 💡 Il momento vero è **il rientro**: la persona paga su Stripe, il webhook
-/// arriva al nostro server, e lei torna all'app. Quello è l'unico istante in
-/// cui la domanda «è abbonato?» ha una risposta nuova.
+/// 🚨 **Ma il rientro non è l'unico caso, e il primo tentativo lo dimenticava.**
+/// 📌 *«mi sono tolto l'abbonamento, ho chiuso l'app e l'ho riaperta, poi ho di
+/// nuovo chiuso l'app, mi sono dato l'abbonamento e ho riaperto l'app, e non mi
+/// è apparsa nessuna modale»*.
+///
+/// ⛔ Chiudendo e riaprendo, il valore precedente **muore con il processo**: un
+/// confronto in memoria non può vedere un cambiamento avvenuto fra due
+/// esecuzioni. 💡 Per questo il confronto lo fa `SpiaDellAbbonamento`, che
+/// l'ultimo stato lo **scrive sul telefono**.
 ///
 /// ⚠️ **Costa una `/auth/me` per ogni rientro**, e va bene: è la stessa chiamata
-/// che l'app fa a ogni avvio, e porta anche il branding della palestra e il
-/// piano. ⛔ Non ci si può girare intorno con un timer: un'attesa fissa o è
-/// troppo corta per il webhook o è troppo lunga per chi guarda lo schermo.
+/// che l'app fa a ogni avvio, e porta anche il branding e il piano. ⛔ Non ci si
+/// può girare intorno con un timer: un'attesa fissa o è troppo corta per il
+/// webhook o è troppo lunga per chi guarda lo schermo.
 ///
 /// 🚨 **Se la rete non c'è non succede niente di male**: `_loadMe()` fallisce in
-/// silenzio e lascia lo stato com'era — non butta fuori nessuno.
+/// silenzio e lascia lo stato com'era — non butta fuori nessuno, e la spia non
+/// vede nessun cambiamento perché il valore noto resta quello di prima.
 class RicontrolloAlRientro extends ConsumerStatefulWidget {
   const RicontrolloAlRientro({required this.child, super.key});
 
@@ -44,19 +51,32 @@ class RicontrolloAlRientro extends ConsumerStatefulWidget {
 
 class _RicontrolloAlRientroState extends ConsumerState<RicontrolloAlRientro>
     with WidgetsBindingObserver {
-  /// Se la modale del festeggiamento è già stata mostrata in questa sessione.
+  /// Una modale alla volta, e non due sovrapposte.
   ///
-  /// ⛔ **Senza, si riaprirebbe a ogni rientro** finché l'app resta in memoria:
-  /// il passaggio `false → true` si vede una volta, ma un secondo rientro con
-  /// una `/auth/me` lenta può ricostruire quella transizione. 💡 Una volta per
-  /// sessione è la promessa giusta: chi vuole rivedere il consenso lo trova in
-  /// «Privacy e consensi», che è dove la modale stessa dice di cercarlo.
-  bool _giaFesteggiato = false;
+  /// ⚠️ La spia si aggiorna **al primo confronto**, quindi un secondo giro non
+  /// vedrebbe più niente. 💡 Questo flag serve al caso in cui il valore noto
+  /// oscilli mentre la modale è già aperta — una `/auth/me` che risponde due
+  /// volte, un rientro durante l'animazione.
+  bool _apertaUnaModale = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    /*
+     * 🚨 **Il primo confronto, quello che il `listen` non può fare.**
+     *
+     * ⛔ `WidgetRef.listen` non ha un `fireImmediately`, e il caso che conta di
+     * più — l'app riaperta dopo aver pagato — è proprio quello in cui il valore
+     * **arriva prima** che questo widget si metta in ascolto: senza questa
+     * riga, si perderebbe esattamente il caso riferito dal committente.
+     *
+     * 💡 Dopo il fotogramma, per non leggere provider durante la costruzione.
+     */
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _valuta(ref.read(abbonatoNotoProvider));
+    });
   }
 
   @override
@@ -80,33 +100,53 @@ class _RicontrolloAlRientroState extends ConsumerState<RicontrolloAlRientro>
     ref.read(authControllerProvider.notifier).refresh();
   }
 
+  Future<void> _valuta(bool? noto) async {
+    if (_apertaUnaModale) return;
+
+    final cambio = await ref.read(spiaDellAbbonamentoProvider).confronta(noto);
+
+    if (cambio == CambioDellAbbonamento.nessuno || !mounted) return;
+
+    _apertaUnaModale = true;
+
+    /*
+     * 💡 **Dopo il fotogramma**: aprire un foglio modale dentro un `build` — o
+     * dentro il `listen` che ci sta attaccato — è la strada breve per un
+     * `setState() called during build`.
+     */
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _apertaUnaModale = false;
+
+        return;
+      }
+
+      await switch (cambio) {
+        CambioDellAbbonamento.appenaAbbonato => HaiSbloccatoLAi.mostra(context),
+        CambioDellAbbonamento.appenaScaduto => AbbonamentoScaduto.mostra(
+          context,
+        ),
+        CambioDellAbbonamento.nessuno => Future<void>.value(),
+      };
+
+      _apertaUnaModale = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     /*
-     * ══ 🎉 IL PASSAGGIO DA «NO» A «SÌ» SI VEDE SOLO QUI ═══════════════════
+     * ══ 🚨 SI GUARDA IL VALORE **NOTO**, NON QUELLO CON IL RIPIEGO ════════
      *
-     * 🚨 `ref.listen` e non `ref.watch`: serve il **cambiamento**, non il
-     * valore. ⛔ Con `watch` si saprebbe che è abbonato, non che lo è
-     * *diventato* — e la modale comparirebbe a ogni ricostruzione, cioè a chi
-     * è abbonato da mesi.
+     * ⛔ Il primo tentativo ascoltava `abbonatoProvider`, che vale `true` anche
+     * quando il profilo non è ancora arrivato. 🚨 Così ogni avvio partiva da
+     * `true`, e il passaggio da «non abbonato» ad «abbonato» non poteva
+     * verificarsi mai: la modale non compariva, e il codice si leggeva giusto.
      *
-     * ⚠️ **`prima == false` e non `!= true`.** `abbonatoProvider` non è mai
-     * `null`, ma la condizione va scritta come la si legge: si festeggia chi
-     * **non** era abbonato e adesso lo è. Chi apre l'app già abbonato non passa
-     * di qui, perché non c'è nessun passaggio.
-     *
-     * 💡 E si aspetta la fine del fotogramma: aprire un foglio modale **dentro**
-     * un `build` è la strada breve per un `setState() called during build`.
+     * 💡 `abbonatoNotoProvider` resta `null` finché non si sa, e la spia sul
+     * `null` non decide niente.
      */
-    ref.listen<bool>(abbonatoProvider, (prima, adesso) {
-      if (prima == false && adesso && !_giaFesteggiato) {
-        _giaFesteggiato = true;
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) HaiSbloccatoLAi.mostra(context);
-        });
-      }
-    });
+    ref.listen<bool?>(abbonatoNotoProvider, (_, adesso) => _valuta(adesso));
 
     return widget.child;
   }

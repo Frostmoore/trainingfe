@@ -49,11 +49,13 @@ class PreferenzeNelBackup {
   /// | `trasloco.allenamenti.fatto` | ⛔ **Reliquia**: il trasloco non esiste più (FASE 11.6.3, 23/08/2026) e questa chiave non si scrive più. Resta nell'elenco perché sui telefoni vecchi c'è ancora, e riportarla in giro non serve a niente |
   /// | `gym.branding` | Una cache di rete, si rifà da sola in un secondo |
   /// | `backup_automatico_*` | Quando è stato fatto l'ultimo backup **di questo telefono**: ripristinarlo comprerebbe ventiquattro ore di silenzio a un telefono che non ne ha mai fatto uno |
+  /// | `abbonamento.ultimo_stato` | E' quello che **questo** telefono ha visto l'ultima volta, e serve a far comparire una modale una volta sola. Ripristinarlo da un altro telefono farebbe comparire «il tuo abbonamento e' scaduto» a chi e' abbonato, o tacere con chi ha appena pagato |
   static const restanoQui = {
     'sessione.ultima_persona',
     'sessione.accoglienza_fatta',
     'trasloco.allenamenti.fatto',
     'gym.branding',
+    'abbonamento.ultimo_stato',
   };
 
   /// I prefissi che restano qui, per le famiglie di chiavi.

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
+import '../acquisti/data/gate_dell_abbonamento.dart';
 import '../health/health_controller.dart';
 import 'data/calorie_allenamento.dart';
 import 'data/catalogo_esercizi.dart';
@@ -122,6 +123,21 @@ Future<double> _pesoDiRiferimento(ArchivioSalute archivio) async {
   return CalorieAllenamento.pesoDiRipiego;
 }
 
+/// 🔒 Il limite del giorno è stato raggiunto — 08/09/2026.
+///
+/// 💡 **Un tipo e non un messaggio**: chi lo prende deve poter aprire il
+/// listino, non stampare una frase. ⛔ Riconoscere un limite dal testo
+/// dell'errore è la stessa cosa che il committente ha fatto togliere dal
+/// server il 29/08 (*«è una merda se esce solo un errore, si deve capire che è
+/// perché non ha pagato»*).
+class TroppiAllenamentiOggi implements Exception {
+  const TroppiAllenamentiOggi();
+
+  @override
+  String toString() =>
+      'Senza abbonamento puoi far partire un allenamento al giorno.';
+}
+
 class SessionActions {
   SessionActions(this._ref);
 
@@ -137,7 +153,32 @@ class SessionActions {
   void _rileggi() => _ref.read(revisioneAllenamentiProvider.notifier).state++;
 
   /// Apre una seduta, con o senza scheda.
+  ///
+  /// ══ 🔒 UN ALLENAMENTO AL GIORNO SENZA ABBONAMENTO — 08/09/2026 ═════════
+  ///
+  /// 📌 *«un utente non abbonato può far partire dall'app un solo allenamento
+  /// al giorno»*.
+  ///
+  /// 🚨 **Il controllo sta qui e non nel pulsante.** `plans_screen` ha già un
+  /// controllo al momento di partire per le schede bloccate, e la tentazione
+  /// era di aggiungerne un secondo accanto. ⛔ Ma i punti da cui una seduta può
+  /// nascere sono destinati a diventare più d'uno — dalla scheda, da «Oggi»,
+  /// dalla settimana — e una regola scritta su ogni pulsante è una regola che
+  /// prima o poi manca su un pulsante.
+  ///
+  /// ⚠️ **Lancia invece di tornare `null`**: chi chiama deve *spiegare*, e un
+  /// `null` costringerebbe a indovinare se è un limite o un guasto. 💡 Il tipo
+  /// [TroppiAllenamentiOggi] dice quale delle due cose è, come fa il server con
+  /// i suoi codici invece che con le frasi.
   Future<WorkoutSession> start({int? planId, String? planName}) async {
+    if (!_ref.read(abbonatoProvider)) {
+      final quante = await _archivio.quanteSeduteIl(DateTime.now());
+
+      if (quante >= allenamentiAlGiornoSenzaAbbonamento) {
+        throw const TroppiAllenamentiOggi();
+      }
+    }
+
     final id = await _archivio.apriSeduta(
       schedaServerId: planId,
       nomeScheda: planName,

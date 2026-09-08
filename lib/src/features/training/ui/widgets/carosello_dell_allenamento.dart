@@ -496,6 +496,10 @@ class _NumeriDellAllenamento extends ConsumerWidget {
 
         Expanded(
           child: RiquadroBianco(
+            // 🚨 `Gap.md` e non i 4 px di serie: qui dentro c'è **testo** —
+            // etichette e numeri — e a quattro pixel dal bordo sembrava
+            // incollato al riquadro invece che contenuto da lui.
+            dentro: Gap.md,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

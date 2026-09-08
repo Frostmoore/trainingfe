@@ -11,6 +11,7 @@ import '../../../core/ui/states.dart';
 import '../../achievements/ui/carosello_achievements.dart';
 import '../../acquisti/data/costo_delle_funzioni.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
+import '../../acquisti/ui/widgets/sotto_abbonamento.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
@@ -79,6 +80,22 @@ class DashboardScreen extends ConsumerWidget {
                   CaloriesCard(riepilogo: r),
 
                   /*
+                   * ══ 💳 IL BANNER, E IL POSTO E' LA META' DEL MESSAGGIO ════
+                   *
+                   * 📌 *«sotto alla card delle calorie iniziale, ci va un
+                   * banner che propone di abbonarsi per sbloccare le analisi
+                   * avanzate dei propri dati»*.
+                   *
+                   * 💡 **Sotto e non sopra**: la card delle calorie e' l'unica
+                   * cosa completa che un non abbonato vede, e il banner deve
+                   * arrivare **dopo** che l'app ha gia' dato qualcosa. ⛔ Sopra
+                   * sarebbe un annuncio prima del prodotto.
+                   *
+                   * ⚠️ Sparisce da solo per gli abbonati.
+                   */
+                  const BannerAbbonamento(),
+
+                  /*
                    * 🏅 **Le medaglie, sopra il consiglio** — 3b-A.8.3.
                    *
                    * 📌 Il committente: *«nella pagina oggi deve stare sopra al
@@ -113,17 +130,38 @@ class DashboardScreen extends ConsumerWidget {
                    * di tacere: quello non è qualcosa da aspettare, è qualcosa
                    * da fare.
                    */
+                  /*
+                   * ══ 🔒 DIETRO IL GATE DALL'08/09/2026 ════════════════════
+                   *
+                   * ⚠️ **Il `null` resta `null`.** `StatoConsiglio.spento` vuol
+                   * dire che la persona il consiglio l'ha **disattivato lei**:
+                   * sfumare uno spazio vuoto le direbbe che le manca una cosa
+                   * che ha scelto di non avere. 🚨 Per questo la sfumatura sta
+                   * dentro i rami e non intorno allo `switch`.
+                   */
                   switch (consiglio.valueOrNull?.stato) {
-                    StatoConsiglio.serveConsenso => const _ConsensoAiMancante(),
-                    StatoConsiglio.senzaAi => const _SenzaAi(),
                     StatoConsiglio.spento => null,
-                    StatoConsiglio.inArrivo => const _ConsiglioInArrivo(),
-                    _ => _Consiglio(
-                      testo: consiglio.valueOrNull?.testo ?? '',
-                      generatoIl: consiglio.valueOrNull?.generatoIl,
-                      vecchio:
-                          consiglio.valueOrNull?.stato ==
-                          StatoConsiglio.vecchio,
+                    StatoConsiglio.serveConsenso => const SottoAbbonamento(
+                      motivo: 'Lo spunto di oggi',
+                      child: _ConsensoAiMancante(),
+                    ),
+                    StatoConsiglio.senzaAi => const SottoAbbonamento(
+                      motivo: 'Lo spunto di oggi',
+                      child: _SenzaAi(),
+                    ),
+                    StatoConsiglio.inArrivo => const SottoAbbonamento(
+                      motivo: 'Lo spunto di oggi',
+                      child: _ConsiglioInArrivo(),
+                    ),
+                    _ => SottoAbbonamento(
+                      motivo: 'Lo spunto di oggi',
+                      child: _Consiglio(
+                        testo: consiglio.valueOrNull?.testo ?? '',
+                        generatoIl: consiglio.valueOrNull?.generatoIl,
+                        vecchio:
+                            consiglio.valueOrNull?.stato ==
+                            StatoConsiglio.vecchio,
+                      ),
                     ),
                   },
 
@@ -134,9 +172,15 @@ class DashboardScreen extends ConsumerWidget {
                    * domanda vista da due distanze — come sto stanotte, e come
                    * sto questa settimana.
                    */
-                  const SchedaForma(),
+                  const SottoAbbonamento(
+                    motivo: 'Carico e carica',
+                    child: SchedaForma(),
+                  ),
 
-                  const RecoveryCard(),
+                  const SottoAbbonamento(
+                    motivo: 'Il tuo recupero',
+                    child: RecoveryCard(),
+                  ),
 
                   /*
                    * ⚖️ **Peso e grafico: una scheda sola** — 3b-O.6+8.
@@ -163,9 +207,15 @@ class DashboardScreen extends ConsumerWidget {
                    * la massa grassa se manca, e mostra solo la fotografia
                    * finché non c'è abbastanza storia per una conclusione.
                    */
-                  const SchedaComposizione(),
+                  const SottoAbbonamento(
+                    motivo: 'Com\'è fatto',
+                    child: SchedaComposizione(),
+                  ),
 
-                  const TrainingCard(),
+                  const SottoAbbonamento(
+                    motivo: 'I tuoi allenamenti',
+                    child: TrainingCard(),
+                  ),
                   /*
                    * 🔥 **Il grafico delle calorie, rifatto** — 3b-O.9.
                    *

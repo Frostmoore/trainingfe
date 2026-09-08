@@ -303,9 +303,26 @@ class CardDelCarosello extends StatelessWidget {
 /// devono avere **lo stesso** riquadro, o accostate si vede che sono due cose
 /// disegnate in momenti diversi.
 class RiquadroBianco extends StatelessWidget {
-  const RiquadroBianco({required this.child, super.key});
+  const RiquadroBianco({required this.child, this.dentro = Gap.xs, super.key});
 
   final Widget child;
+
+  /// Quanta aria fra il bordo e il contenuto — 08/09/2026.
+  ///
+  /// ══ 🚨 UN PARAMETRO, E NON UN NUMERO CAMBIATO PER TUTTI ═══════════════
+  ///
+  /// 📌 Il committente: *«la card interna a quella con le informazioni e i
+  /// numeri degli allenamenti con gps deve avere un po' più padding interno,
+  /// così i numeri e le scritte sono sostanzialmente attaccate ai bordi»*.
+  ///
+  /// ⛔ **`Gap.xs` alzato di serie sarebbe stato sbagliato.** Questo riquadro
+  /// sta in **sette** posti, e negli altri sei contiene *grafici* — una stella,
+  /// una figura, un istogramma — che sono disegnati per riempire lo spazio che
+  /// hanno: dargliene meno li rimpicciolisce, e nessuno l'ha chiesto.
+  ///
+  /// 💡 Il testo vuole aria, un disegno vuole spazio: sono due esigenze
+  /// opposte, e un solo numero non poteva rispondere a tutte e due.
+  final double dentro;
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +366,7 @@ class RiquadroBianco extends StatelessWidget {
           color: tema.colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
-      child: Padding(padding: const EdgeInsets.all(Gap.xs), child: child),
+      child: Padding(padding: EdgeInsets.all(dentro), child: child),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../acquisti/data/gate_dell_abbonamento.dart';
 import '../../saldo_calorico.dart';
 import '../../../../core/ui/intestazione_app.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
@@ -44,6 +45,15 @@ class TodayHeader extends ConsumerWidget {
     final giorno = ref.watch(giornoSceltoProvider);
 
     final n = riepilogo.nutrition;
+
+    /*
+     * 🔒 Il cancello dell'abbonamento, letto **una volta** e non sei.
+     * ⚠️ `abbonatoProvider` è la porta unica: sta in
+     * `gate_dell_abbonamento.dart`, e il perché non si ricalcoli qui è scritto
+     * lì — in questo progetto la terza stesura della stessa condizione è già
+     * stata sbagliata una volta.
+     */
+    final abbonato = ref.watch(abbonatoProvider);
 
     /*
      * 🚨 **L'obiettivo comprende le bruciate** — N23.B1, 19/08/2026.
@@ -189,6 +199,25 @@ class TodayHeader extends ConsumerWidget {
                  * `Wrap` va a capo da solo — su due righe, o su tre a carattere
                  * ingrandito, senza che nessun numero debba essere scelto a mano.
                  */
+            /*
+             * ══ 🔒 SEI PILLOLE SPARISCONO, E NON SI SFUMANO — 08/09/2026 ══
+             *
+             * 📌 Il committente: *«Dall'header dei non abbonati devono sparire:
+             * Sonno, HRV, BPM, Carico, Carica, Prontezza»*.
+             *
+             * 🚨 **Sparire e non sfumare, ed è l'opposto di quello che fanno le
+             * card qui sotto.** Non è un'incoerenza: una card sfumata resta un
+             * rettangolo che si tocca e porta al listino, mentre una pillola
+             * sfumata dentro un `Wrap` sarebbe una macchia in mezzo ai numeri
+             * veri — occuperebbe lo spazio di un dato senza esserlo, che è
+             * esattamente il difetto per cui il peso è stato tolto da qui il
+             * 21/08: *«un trattino occupa lo spazio di un numero e non dice
+             * niente»*.
+             *
+             * 💡 A un non abbonato restano **kcal** e **bruciate**: i due numeri
+             * della card che sta sotto, che resta aperta per intero. Il ponte
+             * verso l'abbonamento è il banner, non un buco qui.
+             */
             Wrap(
               spacing: Gap.md,
               runSpacing: Gap.sm,
@@ -262,21 +291,21 @@ class TodayHeader extends ConsumerWidget {
                      * e' la disposizione chiesta in 3b-O.1b.1: a nove valori ne
                      * servivano tre.
                      */
-                if (sonno != null)
+                if (abbonato && sonno != null)
                   _Valore(
                     valore: sonno,
                     etichetta: 'sonno',
                     icona: Icons.bedtime_outlined,
                   ),
 
-                if (hrv != null)
+                if (abbonato && hrv != null)
                   _Valore(
                     valore: _numero(hrv.valore),
                     etichetta: 'hrv',
                     icona: Icons.favorite_outline_rounded,
                   ),
 
-                if (battito != null)
+                if (abbonato && battito != null)
                   _Valore(
                     valore: _numero(battito.valore),
                     etichetta: 'bpm',
@@ -290,7 +319,7 @@ class TodayHeader extends ConsumerWidget {
                  * mi resta, come sto rispetto al solito. Letta in fila si
                  * spiega da sola, senza una parola in più.
                  */
-                if (forma?.stanchezza.valore != null)
+                if (abbonato && forma?.stanchezza.valore != null)
                   _Valore(
                     valore: '${(forma!.stanchezza.valore! * 100).round()}%',
                     etichetta: 'carico',
@@ -312,7 +341,7 @@ class TodayHeader extends ConsumerWidget {
                  * inventato darebbe una scarica inventata»* — e allora la voce
                  * non si disegna. ⛔ Nessuno zero, nessun trattino.
                  */
-                if (carica != null)
+                if (abbonato && carica != null)
                   _Valore(
                     valore: carica.adesso.round().toString(),
                     etichetta: 'carica',
@@ -365,8 +394,9 @@ class TodayHeader extends ConsumerWidget {
                  * un'altra domanda e serve alla scheda del sonno. Ma qui e
                  * nella card si scrive **la stessa cosa**.
                  */
-                if ((forma?.reattivita?.valore ?? forma?.prontezza.valore) !=
-                    null)
+                if (abbonato &&
+                    (forma?.reattivita?.valore ?? forma?.prontezza.valore) !=
+                        null)
                   _Valore(
                     valore:
                         (forma!.reattivita?.valore ?? forma.prontezza.valore!)

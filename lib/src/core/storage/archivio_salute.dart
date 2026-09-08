@@ -974,6 +974,39 @@ class ArchivioSalute extends _$ArchivioSalute {
             ..limit(quante))
           .get();
 
+  /// 🔒 Quante sedute sono state **aperte dall'app** in un giorno — 08/09/2026.
+  ///
+  /// ══ 🚨 SERVE AL GATE, E CONTA UNA COSA SOLA ═══════════════════════════
+  ///
+  /// 📌 *«un utente non abbonato può far partire dall'app un solo allenamento
+  /// al giorno»*.
+  ///
+  /// ⛔ **Conta `SeduteAllenamento` e basta**: quello che arriva dall'orologio
+  /// vive in `AllenamentiDaOrologio` ed è un'altra tabella. 🚨 Non è una
+  /// distinzione tecnica — è la differenza fra limitare una **funzione
+  /// dell'app** e nascondere a una persona un allenamento che ha già fatto.
+  ///
+  /// ⚠️ Il giorno è quello **locale**: da mezzanotte a mezzanotte di chi tiene
+  /// il telefono in mano, non UTC. Un limite giornaliero che si azzera alle due
+  /// del pomeriggio sarebbe incomprensibile.
+  ///
+  /// 💡 **Le sedute cancellate non contano**, perché non ci sono più: chi apre
+  /// per sbaglio e cancella non resta chiuso fuori fino a domani.
+  Future<int> quanteSeduteIl(DateTime giorno) async {
+    final inizio = DateTime(giorno.year, giorno.month, giorno.day);
+    final fine = inizio.add(const Duration(days: 1));
+
+    final righe =
+        await (select(seduteAllenamento)..where(
+              (t) =>
+                  t.iniziataIl.isBiggerOrEqualValue(inizio) &
+                  t.iniziataIl.isSmallerThanValue(fine),
+            ))
+            .get();
+
+    return righe.length;
+  }
+
   /// Importa una seduta che veniva dal server — FASE 11.3.
   ///
   /// 🚨 **Riconosce dall'`idServer`**: una seconda passata del trasloco non

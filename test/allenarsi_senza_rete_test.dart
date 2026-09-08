@@ -8,6 +8,7 @@ import 'package:training_companion/src/core/api/api_client.dart';
 import 'package:training_companion/src/core/config/app_config.dart';
 import 'package:training_companion/src/core/providers.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
+import 'package:training_companion/src/features/acquisti/data/gate_dell_abbonamento.dart';
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/health/health_controller.dart';
 import 'package:training_companion/src/features/training/data/catalogo_esercizi.dart';
@@ -78,6 +79,25 @@ void main() {
           ),
         ),
         archivioSaluteProvider.overrideWithValue(archivio),
+
+        /*
+         * 🔒 **Il cancello dell'abbonamento, dichiarato invece che ereditato**
+         * — 08/09/2026.
+         *
+         * ⛔ Da quando `SessionActions.start()` controlla il limite di un
+         * allenamento al giorno, tira dentro `authControllerProvider` e con lui
+         * `localCacheProvider`, che qui non c'è: due test sono diventati rossi
+         * con un `UnimplementedError` che **non parlava di allenamenti**.
+         *
+         * 💡 Si sovrascrive il cancello e non la catena sotto: questo file
+         * verifica che **le serie si scrivano senza rete**, e mettere in piedi
+         * l'autenticazione per arrivarci vorrebbe dire far dipendere quella
+         * verifica da tre cose che non c'entrano.
+         *
+         * ⚠️ Il limite ha un test suo — `un_allenamento_al_giorno_test.dart` —
+         * ed è quello il posto in cui la regola si guarda.
+         */
+        abbonatoProvider.overrideWithValue(true),
       ],
     );
   });
@@ -103,6 +123,25 @@ void main() {
           ),
         ),
         archivioSaluteProvider.overrideWithValue(archivio),
+
+        /*
+         * 🔒 **Il cancello dell'abbonamento, dichiarato invece che ereditato**
+         * — 08/09/2026.
+         *
+         * ⛔ Da quando `SessionActions.start()` controlla il limite di un
+         * allenamento al giorno, tira dentro `authControllerProvider` e con lui
+         * `localCacheProvider`, che qui non c'è: due test sono diventati rossi
+         * con un `UnimplementedError` che **non parlava di allenamenti**.
+         *
+         * 💡 Si sovrascrive il cancello e non la catena sotto: questo file
+         * verifica che **le serie si scrivano senza rete**, e mettere in piedi
+         * l'autenticazione per arrivarci vorrebbe dire far dipendere quella
+         * verifica da tre cose che non c'entrano.
+         *
+         * ⚠️ Il limite ha un test suo — `un_allenamento_al_giorno_test.dart` —
+         * ed è quello il posto in cui la regola si guarda.
+         */
+        abbonatoProvider.overrideWithValue(true),
         catalogoEserciziProvider.overrideWith((ref) async => catalogo),
       ],
     );

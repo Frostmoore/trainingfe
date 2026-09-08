@@ -1022,6 +1022,48 @@ class _AvviaAllenamento extends ConsumerWidget {
           );
 
       if (context.mounted) await context.push(AppRoutes.player(sessione.id));
+    } on TroppiAllenamentiOggi {
+      /*
+       * ══ 🔒 IL LIMITE NON E' UN ERRORE, E NON VA MOSTRATO COME TALE ══════
+       *
+       * 📌 *«un utente non abbonato può far partire dall'app un solo
+       * allenamento al giorno»*.
+       *
+       * ⛔ **Uno snackbar sarebbe stato sbagliato due volte**: sparisce da solo
+       * prima che uno abbia finito di leggerlo, e non porta da nessuna parte.
+       * 🚨 Chi ha appena premuto «comincia» sta per allenarsi **adesso**: se il
+       * modo di sbloccarlo non è a portata di pollice in quel secondo, non lo
+       * cerca più.
+       *
+       * 💡 La modale dice cosa è successo e apre il listino nello stesso posto.
+       */
+      if (context.mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogo) => AlertDialog(
+            icon: const Icon(Icons.lock_rounded),
+            title: const Text('Uno al giorno'),
+            content: const Text(
+              'Senza abbonamento puoi far partire un allenamento al giorno. '
+              'Quello di oggi c\'è già, e resta tuo: lo trovi nello storico.\n\n'
+              'Con l\'abbonamento non c\'è nessun limite.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogo).pop(),
+                child: const Text('Va bene'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(dialogo).pop();
+                  ModaleAcquisti.mostra(context);
+                },
+                child: const Text('Abbonati'),
+              ),
+            ],
+          ),
+        );
+      }
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

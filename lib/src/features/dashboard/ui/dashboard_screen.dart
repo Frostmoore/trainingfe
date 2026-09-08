@@ -19,6 +19,7 @@ import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
+import 'widgets/aggiungi_qualcosa.dart';
 import 'widgets/grafico_calorie.dart';
 import 'widgets/scheda_composizione.dart';
 import 'widgets/scheda_peso.dart';
@@ -173,6 +174,17 @@ class DashboardScreen extends ConsumerWidget {
     const grafico = GraficoCalorie();
 
     return Scaffold(
+      /*
+       * ➕ **Il tasto che aggiunge tutto** — 08/09/2026.
+       *
+       * 📌 *«Mi serve un tasto floating sulla pagina Oggi (in basso a destra di
+       * colore verde con un + in mezzo)»*.
+       *
+       * ⚠️ Sta sullo `Scaffold` e non dentro la lista: deve restare fermo
+       * mentre si scorre, che è tutto il punto di un tasto flottante.
+       */
+      floatingActionButton: const AggiungiQualcosa(),
+
       // 🚨 Niente AppBar: l'intestazione **è** la scheda della palestra, e una
       // barra sopra di essa aggiungerebbe una seconda riga di titolo che dice
       // la stessa cosa due volte, rubando un quinto dello schermo.

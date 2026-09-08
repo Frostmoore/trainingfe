@@ -28,7 +28,7 @@ void main() {
       ),
   ];
 
-  group('le due ancore, che sono la ragione dei numeri', () {
+  group('l\'ancora, e la scelta dichiarata', () {
     /*
      * ══ ⛔ LE DUE ANCORE DI PRIMA ERANO SBAGLIATE — 08/09/2026 ═══════════════
      *
@@ -51,14 +51,35 @@ void main() {
     });
 
     /*
-     * 📌 La stessa fonte: 100 PAI si ottengono con *«60 min di camminata svelta
-     * + 40 di bici + 50 di nuoto + 30 di aerobica + 20 di corsa»* — cioè
-     * **200 minuti** di attività fra leggera e moderata.
+     * ══ 🚨 QUI SIAMO PIU' SEVERI DEL PAI, E DI PROPOSITO ═══════════════════
+     *
+     * 📌 La stessa fonte dà 100 PAI per *«60 min di camminata svelta + 40 di
+     * bici + 50 di nuoto + 30 di aerobica + 20 di corsa»* — cioè **200 minuti**
+     * di attività fra leggera e moderata.
+     *
+     * ⛔ **Da noi ne fanno circa 47**, e questo test esiste per **difendere**
+     * quella differenza invece di nasconderla.
+     *
+     * 📌 Il committente, l'08/09: *«i battiti alti sono più importanti di quelli
+     * medi, anche per la salute cardiaca»*. 💡 Un indice che dà cento a
+     * duecento minuti blandi dice il contrario.
+     *
+     * ⚠️ **Chi un giorno volesse riallinearsi al PAI** deve rimettere
+     * l'esponente a ~0.93 **e** riabbassare la soglia a 0.40: toccarne uno solo
+     * darebbe una curva che non passa più da nessuna parte.
      */
-    test('🚨 200 minuti al 50% fanno ~100', () {
+    test('⚠️ 200 minuti al 50% fanno ~47, non 100: siamo più severi', () {
       final punti = ModelloDiEffetto.puntiAlMinuto(0.50) * 200;
 
-      expect(punti, closeTo(100, 5));
+      expect(punti, closeTo(47, 5));
+    });
+
+    test('🚨 e mezz\'ora forte vale quanto la settimana intera', () {
+      /*
+       * 💡 30 minuti all'85% della riserva ≈ 96 punti. ⚠️ È la conseguenza
+       * diretta della richiesta: l'intensità compra tempo, e tanto.
+       */
+      expect(ModelloDiEffetto.puntiAlMinuto(0.85) * 30, closeTo(96, 5));
     });
 
     test('⛔ sotto la soglia non si accumula niente', () {
@@ -74,6 +95,15 @@ void main() {
        *
        * 💡 Il 40% cade a 117 bpm. Lì sotto non si allena nessuno.
        */
+      /*
+       * 📌 Il committente: *«117 bpm secondo me sono pochi, facciamo 120»*. 💡 Con
+       * riposo 75 e massima 181, **120 bpm sono il 42,5% della riserva**.
+       *
+       * ⚠️ **Resta una frazione, non un numero di battiti**: 120 bpm su un cuore
+       * che riposa a 50 sono uno sforzo diverso, e l'indice lavora sulla riserva
+       * proprio per questo.
+       */
+      expect(ModelloDiEffetto.puntiAlMinuto(0.425), 0);
       expect(ModelloDiEffetto.puntiAlMinuto(0.40), 0);
       expect(ModelloDiEffetto.puntiAlMinuto(0.35), 0);
       expect(ModelloDiEffetto.puntiAlMinuto(0.10), 0);

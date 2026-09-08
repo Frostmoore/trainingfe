@@ -101,13 +101,25 @@ abstract final class ModelloDiEffetto {
   /// conto ci ha trovato dentro **1.092 minuti in una settimana**: diciotto ore
   /// di «allenamento» che erano una vita normale.
   ///
-  /// 💡 Il 40% cade a **117 bpm** per la stessa persona: lì sotto non si allena
-  /// nessuno. ⚠️ E la differenza non è marginale — è quella fra misurare
-  /// l'attività e misurare l'essere svegli.
+  /// 💡 Il 40% cadeva a **117 bpm** per la stessa persona. 📌 Il committente:
+  /// *«117 bpm secondo me sono pochi, facciamo 120 che è un valore più o meno
+  /// standard»* — e **42,5% è esattamente 120 bpm** con riposo 75 e massima 181.
+  ///
+  /// ══ ⚠️ RESTA UNA FRAZIONE, E NON DIVENTA «120 BPM» ═══════════════════════
+  ///
+  /// ⛔ **Scrivere 120 secco sarebbe stato più semplice e sbagliato.** Per chi ha
+  /// il riposo a 50 e la massima a 195, 120 bpm sono il 48% della riserva — uno
+  /// sforzo diverso dallo stesso numero su un cuore diverso. 🚨 È la ragione per
+  /// cui tutto l'indice lavora sulla **riserva di Karvonen**: rinunciarci sulla
+  /// soglia vorrebbe dire tenerla dove non serve e buttarla dove conta.
+  ///
+  /// 💡 E il 42,5% cade dentro la fascia **moderata** dell'ACSM (40–59% della
+  /// riserva): non è un numero inventato per far tornare il conto, è il
+  /// principio dell'allenamento vero appena sopra il suo confine.
   ///
   /// ⛔ **Non si abbassa «perché così il numero è più incoraggiante»**: sarebbe
   /// tornare esattamente al difetto che questa riga documenta.
-  static const soglia = 0.40;
+  static const soglia = 0.425;
 
   /// L'esponente e il coefficiente della curva, dalle due ancore.
   ///
@@ -126,20 +138,45 @@ abstract final class ModelloDiEffetto {
   /// 💡 Convertita per una persona tipo (riposo 60, massima 180): l'80% della
   /// massima è 144 bpm, cioè il **70% della riserva**. Da lì la prima ancora.
   ///
-  /// | Ancora | Da dove |
+  /// ══ 🚨 UNA E' MISURATA, L'ALTRO E' SCELTO — E VA DETTO QUALE ═════════════
+  ///
+  /// | Numero | Da dove |
   /// |---|---|
-  /// | **60 min al 70% della riserva = 100** | NTNU/CERG, convertita |
-  /// | **200 min al 50% = 100** | *«60 min di camminata svelta + 40 di bici + 50 di nuoto + 30 di aerobica + 20 di corsa»*, che la stessa fonte dà come 100 PAI |
+  /// | **Ancora: 60 min al 70% della riserva = 100** | ✅ NTNU/CERG, convertita dall'80% della massima |
+  /// | **Esponente `1.5`** | ⚠️ **Scelto da noi**, non ricavato |
+  /// | **Coefficiente `11.56`** | ✅ Ricavato: è quello che fa passare la curva per l'ancora |
   ///
-  /// 🚨 **Non si toccano separatamente.** Sono la soluzione di un sistema a due
-  /// equazioni: cambiarne uno solo sposta la curva senza più passare per
-  /// nessuna delle due ancore, e a quel punto i numeri non vengono più da
-  /// nessuna parte.
+  /// ── ⛔ Perché l'esponente non si ricava più da una seconda ancora ─────────
   ///
-  /// 💡 `(0.70 − 0.40) / (0.50 − 0.40) = 3` e `200 / 60 = 3.33`, quindi
-  /// `3^e = 3.33` → `e = 1.096`; e da `60 · k · 0.30^1.096 = 100` → `k = 6.43`.
-  static const esponente = 1.096;
-  static const coefficiente = 6.43;
+  /// Prima veniva da *«200 min al 50% = 100»*, che è l'altra affermazione
+  /// pubblicata. 🚨 **Con la soglia alzata a 0.425 quel sistema dà `e = 0.93`**,
+  /// cioè una curva **concava**: i battiti alti varrebbero *meno* che
+  /// proporzionalmente.
+  ///
+  /// 📌 E il committente ha chiesto l'opposto: *«i battiti alti sono più
+  /// importanti di quelli medi, anche per la salute cardiaca»*. ⛔ Tenere le due
+  /// ancore avrebbe voluto dire un modello che contraddice la richiesta per cui
+  /// è stato rifatto.
+  ///
+  /// 💡 Quindi: **si tiene l'ancora forte** — quella con dietro lo studio HUNT —
+  /// e la ripidità è una **nostra scelta dichiarata**. ⚠️ `1.5` è un numero
+  /// tondo apposta: dice «scelto», mentre un `1.47` fingerebbe di essere il
+  /// risultato di un conto.
+  ///
+  /// ── 📉 Cosa comporta, detto senza addolcirlo ──────────────────────────────
+  ///
+  /// | | Il nostro | Il PAI |
+  /// |---|---|---|
+  /// | 60 min al 70% | **100** | 100 |
+  /// | 30 min all'85% | **~96** | meno |
+  /// | 200 min al 50% | **~47** | 100 |
+  ///
+  /// 🚨 **Sull'attività moderata siamo la metà del PAI**, ed è voluto: è
+  /// esattamente la richiesta *«i battiti alti sono più importanti di quelli
+  /// medi»*. ⛔ Chi un giorno volesse riallinearsi al PAI deve rimettere
+  /// `e ≈ 0.93` **e** riabbassare la soglia — non toccarne uno solo.
+  static const esponente = 1.5;
+  static const coefficiente = 11.56;
 
   /// ══ 📉 I RENDIMENTI DECRESCENTI — 08/09/2026 ═══════════════════════════
   ///

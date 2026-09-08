@@ -349,9 +349,29 @@ class TodayHeader extends ConsumerWidget {
                  * niente, è uno scarto dal proprio solito. Un `%` rimetterebbe
                  * in piedi la stessa bugia con un altro segno.
                  */
-                if (forma?.prontezza.valore != null)
+                /*
+                 * ══ 🚨 LA STESSA PRONTEZZA DELLA CARD, NON L'ALTRA ═════════
+                 *
+                 * ⛔ **Qui c'era `forma.prontezza`, e nella card sotto adesso
+                 * c'è la reattività**: due numeri con la stessa etichetta nella
+                 * stessa schermata — 26 qui e 57 lì, verificato a schermo
+                 * l'08/09.
+                 *
+                 * 🚨 È lo stesso difetto della pillola «bruciate», corretto
+                 * un'ora prima, e me lo sono rifatto da solo cambiando la card
+                 * senza guardare chi altro mostrava quel numero.
+                 *
+                 * 💡 La prontezza **vecchia** non sparisce: risponde a
+                 * un'altra domanda e serve alla scheda del sonno. Ma qui e
+                 * nella card si scrive **la stessa cosa**.
+                 */
+                if ((forma?.reattivita?.valore ?? forma?.prontezza.valore) !=
+                    null)
                   _Valore(
-                    valore: forma!.prontezza.valore!.round().toString(),
+                    valore:
+                        (forma!.reattivita?.valore ?? forma.prontezza.valore!)
+                            .round()
+                            .toString(),
                     etichetta: 'prontezza',
                     icona: Icons.speed_rounded,
                   ),

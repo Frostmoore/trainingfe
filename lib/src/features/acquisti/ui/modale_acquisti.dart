@@ -267,7 +267,7 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
              * 💡 Il pulsante del portale resta: lì ci sono le ricevute e la
              * carta, che qui non ci sono.
              */
-            if (l.inCorso?.gestibile ?? false) ...[
+            if (l.inCorso?.rinnovabile ?? false) ...[
               const SizedBox(height: Gap.sm),
               Card(
                 margin: EdgeInsets.zero,
@@ -276,10 +276,20 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
                   onChanged: _inCorso == 'rinnovo' ? null : _rinnovo,
                   title: const Text('Rinnova in automatico'),
                   subtitle: Text(
+                    /*
+                     * ⚠️ **«pagato» solo a chi ha pagato.** Su un abbonamento
+                     * regalato quella parola sarebbe falsa, e per giunta
+                     * preoccupante: chi legge «il mese che hai già pagato» su
+                     * un regalo va a cercare un addebito che non esiste.
+                     */
                     l.inCorso!.rinnova
-                        ? 'Si rinnova da solo ogni mese. Se lo spegni, resta '
-                              'attivo fino alla fine del mese che hai già '
-                              'pagato.'
+                        ? (l.inCorso!.gestibile
+                              ? 'Si rinnova da solo ogni mese. Se lo spegni, '
+                                    'resta attivo fino alla fine del mese che '
+                                    'hai già pagato.'
+                              : 'Si rinnova da solo ogni mese. Se lo spegni, '
+                                    'resta attivo fino alla fine del mese in '
+                                    'corso.')
                         : 'Non si rinnova: alla scadenza finisce, e non '
                               'addebitiamo niente.',
                     style: Theme.of(context).textTheme.bodySmall,

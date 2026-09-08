@@ -53,6 +53,7 @@ class AbbonamentoInCorso {
     required this.finoAl,
     required this.rinnova,
     required this.gestibile,
+    required this.rinnovabile,
   });
 
   static AbbonamentoInCorso? daJson(Object? j) {
@@ -64,6 +65,13 @@ class AbbonamentoInCorso {
       finoAl: DateTime.tryParse(m['fino_al']?.toString() ?? ''),
       rinnova: m['rinnova'] as bool? ?? false,
       gestibile: m['gestibile'] as bool? ?? false,
+
+      /*
+       * ⚠️ **`false` di ripiego, e non `gestibile`.** Un server vecchio che non
+       * manda questo campo non deve far comparire un interruttore che poi
+       * risponde 404: meglio non mostrarlo che mostrarlo rotto.
+       */
+      rinnovabile: m['rinnovabile'] as bool? ?? false,
     );
   }
 
@@ -77,6 +85,27 @@ class AbbonamentoInCorso {
   /// ⛔ Alle palestre il pulsante non deve comparire: aprirebbe una pagina
   /// vuota, e una pagina vuota si legge come un guasto.
   final bool gestibile;
+
+  /// Se il **rinnovo automatico** si può cambiare da qui — 08/09/2026.
+  ///
+  /// ══ 🚨 NON È [gestibile], E RIUSARLO ERA IL DIFETTO ═══════════════════
+  ///
+  /// 📌 Il committente: *«deve funzionare anche con gli abbonamenti che
+  /// regalo»*.
+  ///
+  /// | | Cosa dice |
+  /// |---|---|
+  /// | [gestibile] | esiste il **portale di Stripe** — ricevute, carta, disdetta |
+  /// | [rinnovabile] | il **rinnovo** si può accendere e spegnere |
+  ///
+  /// ⛔ Un abbonamento regalato il portale non ce l'ha, ma il rinnovo sì: a
+  /// rinnovarlo è un comando che gira ogni notte sul nostro server. 🚨 Usare
+  /// `gestibile` per tutti e due nascondeva il toggle proprio a chi
+  /// l'abbonamento l'aveva ricevuto in regalo.
+  ///
+  /// ⚠️ **Le palestre restano fuori da tutti e due**: il loro abbonamento non è
+  /// di chi lo usa, e un iscritto non deve poterlo spegnere per tutti.
+  final bool rinnovabile;
 }
 
 /// Cosa si può comprare, e cosa si ha già.

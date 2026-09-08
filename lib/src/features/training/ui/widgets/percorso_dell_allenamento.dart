@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../health/salute_in_piu.dart';
 import '../../../health/tipo_allenamento.dart';
 import '../../data/storico_unificato.dart';
 import '../../percorso_controller.dart';
@@ -13,21 +14,30 @@ import 'forma_del_percorso.dart';
 ///
 /// Il committente: *«ci deve essere la forma del percorso che ho fatto»*.
 ///
-/// ══ 🚨 PERCHE' C'E' UN PULSANTE, E NON ARRIVA E BASTA ═════════════════════
+/// ══ ✅ IL PERCORSO ARRIVA DA SOLO, E QUESTA CARD LO DISEGNA E BASTA ══════
 ///
-/// ⛔ Health Connect non ci dà i percorsi scritti da un'altra app — cioè
-/// sempre, visto che a scriverli è l'app dell'orologio. Torna
-/// `ConsentRequired`, e il consenso si concede **una uscita alla volta**, in una
-/// finestra di sistema che mostra la mappa e chiede se condividerla.
+/// 📌 Il committente, l'08/09: *«non glielo devo chiedere ogni volta, sarebbe
+/// ridicolo»*. **Ed è giusto.**
 ///
-/// ⚠️ **L'interruttore «consenti sempre» esiste ma qui non c'è.** Misurato
-/// l'08/09 con un dump della schermata: la sezione «Accesso aggiuntivo» di
-/// Health Connect, per la nostra app, è vuota. 💡 Questa strada invece funziona.
+/// ⛔ **La prima versione aveva un pulsante «Mostra il percorso» sempre**, e
+/// apriva una finestra di sistema **per ogni singola uscita**. Funzionava, ed
+/// era insopportabile.
 ///
-/// 🚨 **Quindi il pulsante non è una comodità: è l'unico modo.** E parte da un
-/// dito perché una finestra di sistema che si apre da sola, mentre scorri lo
-/// storico, sarebbe insopportabile — e comunque Health Connect il percorso lo
-/// dà **solo con l'app in primo piano**.
+/// 💡 Con il permesso «tutti i percorsi» i tracciati entrano dalla
+/// **sincronizzazione**, come il sonno e il battito: vedi
+/// `PonteSalute._percorsiDegliAllenamenti`. ✅ Misurato: **1.604 punti** sulla
+/// camminata delle 10:49, senza che nessuno premesse niente.
+///
+/// ══ ⚠️ IL PULSANTE RESTA, MA E' L'ECCEZIONE ══════════════════════════════
+///
+/// ⛔ Quel permesso **non si può chiedere da codice** — Google: *«attempts to
+/// request the permission by applications will be ignored»* — e su Android 16
+/// la voce non compare nemmeno nella schermata di Health Connect (verificato
+/// l'08/09 con un dump della UI).
+///
+/// 🚨 Quindi c'è un caso in cui il tracciato non arriverà mai da solo, e per
+/// quello resta la strada per singola uscita. ⚠️ Ma compare **solo quando il
+/// percorso manca**: chi ce l'ha non vede nessun pulsante.
 class PercorsoDellAllenamento extends ConsumerStatefulWidget {
   const PercorsoDellAllenamento({required this.voce, super.key});
 
@@ -106,6 +116,11 @@ class _PercorsoDellAllenamentoState
             const SizedBox(height: Gap.md),
 
             if (punti != null && punti.length >= 2) ...[
+              /*
+               * ✅ **Il caso normale, ed è muto**: nessun pulsante, nessuna
+               * spiegazione, nessun permesso da chiedere. Il tracciato è
+               * arrivato con la sincronizzazione e si guarda.
+               */
               SizedBox(
                 height: 200,
                 width: double.infinity,
@@ -125,11 +140,18 @@ class _PercorsoDellAllenamentoState
                 ),
               ),
             ] else ...[
+              /*
+               * ⚠️ **Si arriva qui solo se il tracciato non è arrivato da solo**,
+               * cioè quasi sempre perché manca il permesso «tutti i percorsi».
+               * 🚨 E quel permesso non possiamo chiederlo: possiamo solo
+               * accompagnarci la persona.
+               */
               Text(
                 rifiutato
-                    ? 'Non hai condiviso questo percorso. Puoi ancora farlo.'
-                    : 'Il percorso ce l\'ha l\'orologio. Per vederlo qui serve '
-                          'il tuo permesso, una volta per uscita.',
+                    ? 'Non hai condiviso questo percorso.'
+                    : 'Il tuo orologio il percorso ce l\'ha, ma Android non ce '
+                          'lo passa finché non attivi «Percorsi di allenamento» '
+                          'in Health Connect.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: Gap.sm),
@@ -150,7 +172,40 @@ class _PercorsoDellAllenamentoState
               ),
               const SizedBox(height: Gap.md),
 
-              if (_idSalute == null)
+              Wrap(
+                spacing: Gap.sm,
+                runSpacing: Gap.sm,
+                children: [
+                  /*
+                   * 💡 **Questo è il pulsante che risolve per sempre**: apre
+                   * Health Connect, dove si concede una volta sola e poi i
+                   * percorsi arrivano da soli con la sincronizzazione.
+                   */
+                  FilledButton.tonalIcon(
+                    onPressed: () => const SaluteInPiu().apriIPermessi(),
+                    icon: const Icon(Icons.settings_outlined),
+                    label: const Text('Attiva i percorsi'),
+                  ),
+
+                  /*
+                   * ⚠️ **E questo è il ripiego, per una uscita sola.** Sta in
+                   * secondo piano di proposito: apre una finestra di sistema, e
+                   * chi lo usa dovrà rifarlo per ogni allenamento. ⛔ Sarebbe
+                   * ridicolo come strada principale — 📌 lo ha detto il
+                   * committente, e aveva ragione.
+                   */
+                  if (_idSalute != null)
+                    TextButton(
+                      onPressed: _inCorso ? null : _chiedi,
+                      child: Text(
+                        _inCorso ? 'Attendi…' : 'Solo questo, una volta',
+                      ),
+                    ),
+                ],
+              ),
+
+              if (_idSalute == null) ...[
+                const SizedBox(height: Gap.sm),
                 /*
                  * ⛔ **Senza l'id di Health Connect non si può nemmeno chiedere**,
                  * e va detto invece di offrire un pulsante che non fa niente:
@@ -163,21 +218,8 @@ class _PercorsoDellAllenamentoState
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                )
-              else
-                FilledButton.tonalIcon(
-                  onPressed: _inCorso ? null : _chiedi,
-                  icon: _inCorso
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.map_outlined),
-                  label: Text(
-                    rifiutato ? 'Chiedi di nuovo' : 'Mostra il percorso',
-                  ),
                 ),
+              ],
             ],
           ],
         ),

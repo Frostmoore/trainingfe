@@ -126,17 +126,52 @@ void main() {
     });
   });
 
-  /// 🚨 La traccia GPS: dove abiti e che giro fai la domenica. E' il dato piu'
-  /// identificante che il telefono possieda, e non serve a niente di quello che
-  /// facciamo.
-  test('la traccia GPS non si chiede e non si legge', () {
+  /// 🗺️ La traccia GPS — **la decisione è cambiata l'08/09/2026**.
+  ///
+  /// ══ ⛔ COSA DICEVA QUESTO TEST, E PERCHE' NON VALE PIU' ═══════════════════
+  ///
+  /// Si chiamava *«la traccia GPS non si chiede e non si legge»*, e la ragione
+  /// era: *«dove abiti e che giro fai la domenica. È il dato più identificante
+  /// che il telefono possieda, **e non serve a niente di quello che
+  /// facciamo**»*.
+  ///
+  /// 🚨 **L'ultima mezza frase è quella che è caduta**, e non per un ripensamento
+  /// tecnico: 📌 il committente ha chiesto *«se non metto la foto, al posto di
+  /// quella nella schermata dello storico ci deve essere la forma del percorso
+  /// che ho fatto»*. Adesso serve.
+  ///
+  /// ⚠️ **Tutto il resto di quella frase resta vero**, ed è per questo che il
+  /// percorso ha il trattamento più severo di tutta l'app: registro **T23**,
+  /// DPIA **R15**, informativa **§3.3-quater**, e un consenso che raccoglie
+  /// **Android** mostrando il tracciato vero.
+  ///
+  /// 💡 Questo test non è stato cancellato: è stato **girato**. Difende
+  /// l'invariante nuova, che non è «niente GPS» ma «il GPS non passa dal giro
+  /// dei record grezzi».
+  test('la traccia GPS si chiede, ma non entra fra i record grezzi', () {
+    /*
+     * ✅ **Si CHIEDE**: senza, non comparirebbe mai nel foglio del consenso, e
+     * la persona non potrebbe concederlo nemmeno volendo.
+     */
     expect(
       PonteSalute.tipiDaAutorizzare,
-      isNot(contains(HealthDataType.WORKOUT_ROUTE)),
+      contains(HealthDataType.WORKOUT_ROUTE),
+      reason: 'senza, non compare nel foglio del consenso',
     );
+
+    /*
+     * ⛔ **Ma NON si legge da lì**, e non è la solita difesa: quel ciclo
+     * costruisce `LetturaSalute`, cioè un numero con un istante. 🚨 Un tracciato
+     * di milleseicento punti non è un numero, e infilarcelo dentro vorrebbe dire
+     * milleseicento righe senza senso in `letture_salute`.
+     *
+     * 💡 Lo legge `PonteSalute._percorsiDegliAllenamenti`, che lo salva nella
+     * sua tabella.
+     */
     expect(
       PonteSalute.tipiDaLeggere,
       isNot(contains(HealthDataType.WORKOUT_ROUTE)),
+      reason: 'un tracciato non è una LetturaSalute',
     );
   });
 

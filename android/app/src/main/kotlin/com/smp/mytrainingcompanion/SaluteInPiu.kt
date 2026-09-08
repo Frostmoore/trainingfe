@@ -1,9 +1,12 @@
 package com.smp.mytrainingcompanion
 
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -59,6 +62,10 @@ class SaluteInPiu(private val activity: ComponentActivity) {
 
     private var richiestaPercorso: ActivityResultLauncher<String>? = null
 
+    private var richiestaDislivello: ActivityResultLauncher<Set<String>>? = null
+
+    private var inAttesaDiPermesso: MethodChannel.Result? = null
+
     private val ambito = CoroutineScope(Dispatchers.Main)
 
     /**
@@ -97,13 +104,92 @@ class SaluteInPiu(private val activity: ComponentActivity) {
                 },
             )
         }
+
+        /*
+         * ⛰️ **Il permesso del dislivello, e si registra qui per la stessa
+         * ragione**: il registro dei risultati dev'essere ricostruibile dopo che
+         * il sistema ha ucciso il processo mentre la finestra era aperta.
+         */
+        richiestaDislivello = activity.registerForActivityResult(
+            PermissionController.createRequestPermissionResultContract(),
+        ) { concessi ->
+            val risposta = inAttesaDiPermesso
+            inAttesaDiPermesso = null
+
+            risposta?.success(concessi.contains(PERMESSO_DISLIVELLO))
+        }
     }
 
     fun gestisci(chiamata: MethodCall, risposta: MethodChannel.Result) {
         when (chiamata.method) {
             "percorso" -> chiediIlPercorso(chiamata, risposta)
             "dislivello" -> leggiIlDislivello(chiamata, risposta)
+            "apriIPermessi" -> apriIPermessi(risposta)
+            "chiediIlDislivello" -> chiediIlDislivello(risposta)
             else -> risposta.notImplemented()
+        }
+    }
+
+    /**
+     * Chiede il permesso di leggere il dislivello.
+     *
+     * ⛔ **Il pacchetto `health` non puo' chiederlo**, e non per una svista:
+     * `ElevationGainedRecord` non e' fra i tipi che conosce, quindi non compare
+     * nel foglio del consenso e resta `granted=false` per sempre.
+     *
+     * 🚨 Verificato l'08/09/2026 sul telefono: il dato in Health Connect c'era
+     * — 27 m sulla camminata delle 10:49 — il permesso no, e la card non
+     * mostrava niente. ⚠️ **Un dato assente per un permesso mai chiesto somiglia
+     * a un dato che non esiste**, ed e' il difetto piu' insidioso di tutta questa
+     * storia: e' successo tre volte in due giorni.
+     *
+     * 💡 A differenza dei percorsi, questo permesso **si puo' chiedere**:
+     * compare la solita finestra di sistema.
+     */
+    private fun chiediIlDislivello(risposta: MethodChannel.Result) {
+        val lanciatore = richiestaDislivello
+
+        if (lanciatore == null || inAttesaDiPermesso != null) {
+            risposta.success(false)
+            return
+        }
+
+        ambito.launch {
+            try {
+                if (HealthConnectClient.getSdkStatus(activity) !=
+                    HealthConnectClient.SDK_AVAILABLE
+                ) {
+                    risposta.success(false)
+                    return@launch
+                }
+
+                /*
+                 * ⛔ **Prima si guarda se c'e' gia', e non e' un'ottimizzazione.**
+                 * 🚨 Chi ha concesso i permessi mesi fa non ripassa mai dalla
+                 * schermata del consenso: se questa aprisse una finestra a ogni
+                 * avvio sarebbe insopportabile, e se non la aprisse mai il
+                 * dislivello non arriverebbe a nessuno di loro.
+                 *
+                 * 💡 Con il controllo, chiamarla e' innocuo: risponde e basta.
+                 */
+                val gia = withContext(Dispatchers.IO) {
+                    HealthConnectClient.getOrCreate(activity)
+                        .permissionController
+                        .getGrantedPermissions()
+                }
+
+                if (gia.contains(PERMESSO_DISLIVELLO)) {
+                    risposta.success(true)
+                    return@launch
+                }
+
+                inAttesaDiPermesso = risposta
+
+                lanciatore.launch(setOf(PERMESSO_DISLIVELLO))
+            } catch (errore: Throwable) {
+                inAttesaDiPermesso = null
+                risposta.success(false)
+            }
         }
     }
 
@@ -232,8 +318,50 @@ class SaluteInPiu(private val activity: ComponentActivity) {
         }
     }
 
+    /**
+     * Apre la schermata di Health Connect con i permessi della nostra app.
+     *
+     * ⛔ **Serve perche' un permesso non si puo' chiedere da codice.** Google, su
+     * `READ_EXERCISE_ROUTES`: *«attempts to request the permission by
+     * applications will be ignored»*. 🚨 L'unica cosa che possiamo fare e'
+     * portarci la persona.
+     *
+     * ⚠️ **E potrebbe non trovarci niente**: su Android 16 quella schermata, per
+     * la nostra app, non mostra la voce «Percorsi di allenamento» — verificato
+     * l'08/09/2026 con un dump della UI. 💡 Per questo il pulsante che la apre
+     * non e' l'unica strada, e accanto resta la richiesta per singola uscita.
+     */
+    private fun apriIPermessi(risposta: MethodChannel.Result) {
+        try {
+            activity.startActivity(
+                Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+                    .putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName),
+            )
+
+            risposta.success(true)
+        } catch (errore: Throwable) {
+            /*
+             * ⚠️ Su un telefono senza Health Connect quell'azione non la gestisce
+             * nessuno. ⛔ `false` e non un errore: chi chiama deve poter dire
+             * «non si apre» senza far comparire un riquadro rosso.
+             */
+            risposta.success(false)
+        }
+    }
+
     companion object {
         /** 🚨 Deve combaciare con `SaluteInPiu._canale` lato Dart. */
         const val CANALE = "mytrainingcompanion/salute_in_piu"
+
+        /**
+         * ⚠️ **Si ricava dalla classe, non si scrive a mano.**
+         *
+         * ⛔ La stringa sarebbe `android.permission.health.READ_ELEVATION_GAINED`,
+         * e scriverla a mano vorrebbe dire che un refuso non fallisce: chiede un
+         * permesso che non esiste, il sistema non concede niente, e il sintomo e'
+         * un dato che manca.
+         */
+        private val PERMESSO_DISLIVELLO =
+            HealthPermission.getReadPermission(ElevationGainedRecord::class)
     }
 }

@@ -146,6 +146,45 @@ class SaluteInPiu {
     }
   }
 
+  /// Apre la schermata di Health Connect con i permessi della nostra app.
+  ///
+  /// ⛔ **Serve perché quel permesso non si può chiedere da codice.** Google, su
+  /// `READ_EXERCISE_ROUTES`: *«attempts to request the permission by
+  /// applications will be ignored»*. 🚨 L'unica cosa che possiamo fare è
+  /// portarci la persona.
+  ///
+  /// ⚠️ Torna `false` se non si apre — telefono senza Health Connect, o iOS.
+  Future<bool> apriIPermessi() async {
+    try {
+      return await _canale.invokeMethod<bool>('apriIPermessi') ?? false;
+    } on Object catch (errore) {
+      debugPrint('permessi salute: non si aprono — $errore');
+
+      return false;
+    }
+  }
+
+  /// Chiede il permesso di leggere il dislivello.
+  ///
+  /// ⛔ **Il pacchetto `health` non può chiederlo**: `ElevationGainedRecord` non
+  /// è fra i tipi che conosce, quindi non compare nel foglio del consenso e
+  /// resta negato per sempre. 🚨 Verificato l'08/09: il dato c'era, il permesso
+  /// no, e la card non mostrava niente — **un dato assente per un permesso mai
+  /// chiesto somiglia a un dato che non esiste**.
+  ///
+  /// ⚠️ **Si chiama insieme agli altri permessi**, non alla prima lettura: una
+  /// finestra di sistema che compare aprendo la pagina di un allenamento sarebbe
+  /// una sorpresa.
+  Future<bool> chiediIlDislivello() async {
+    try {
+      return await _canale.invokeMethod<bool>('chiediIlDislivello') ?? false;
+    } on Object catch (errore) {
+      debugPrint('dislivello: permesso non chiedibile — $errore');
+
+      return false;
+    }
+  }
+
   /// I metri saliti fra due istanti, sommati.
   ///
   /// ⚠️ **Health Connect scrive tanti record brevi**, non un totale: qui si

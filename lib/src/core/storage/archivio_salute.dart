@@ -2049,6 +2049,41 @@ class ArchivioSalute extends _$ArchivioSalute {
     );
   }
 
+  /// Salva un percorso arrivato dalla **sincronizzazione**, cercando la riga
+  /// dall'id di Health Connect — 08/09/2026.
+  ///
+  /// ══ 🚨 QUESTA NON SEGNA MAI UN RIFIUTO ════════════════════════════════════
+  ///
+  /// ⛔ Scrive **solo** se i punti ci sono. Una sincronizzazione che non trova
+  /// un percorso non ha ricevuto un «no» dalla persona: ha ricevuto un
+  /// `ConsentRequired`, che è un'altra cosa. 🚨 Segnarlo come rifiuto
+  /// spegnerebbe da solo il pulsante di chi non ha mai deciso niente.
+  ///
+  /// 💡 **E un percorso vero sovrascrive un rifiuto**: se la persona aveva detto
+  /// di no e poi ha concesso l'accesso a tutti i percorsi, il dato vince.
+  ///
+  /// ⚠️ Torna `false` se non c'è nessun allenamento con quell'id: succede per i
+  /// percorsi di sessioni che abbiamo scartato — un tipo che non è un
+  /// allenamento, o una durata nulla.
+  Future<bool> scriviIlPercorsoDiSalute({
+    required String idSalute,
+    required List<PuntoDelPercorso> punti,
+  }) async {
+    if (punti.isEmpty) return false;
+
+    final riga =
+        await (select(allenamentiDaOrologio)
+              ..where((t) => t.idSalute.equals(idSalute))
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (riga == null) return false;
+
+    await scriviIlPercorso(allenamentoId: riga.id, punti: punti);
+
+    return true;
+  }
+
   /// Gli allenamenti che **hanno** un percorso salvato.
   ///
   /// 💡 Serve allo storico, che deve sapere quali miniature disegnare senza

@@ -3,6 +3,7 @@ import 'package:health/health.dart';
 
 import '../../core/storage/archivio_salute.dart';
 import 'dati_salute.dart';
+import 'salute_in_piu.dart';
 import 'sessioni_di_sonno.dart';
 import 'tipo_allenamento.dart';
 
@@ -251,6 +252,23 @@ class PonteSalute {
     HealthDataType.DISTANCE_DELTA,
     HealthDataType.STEPS,
     HealthDataType.TOTAL_CALORIES_BURNED,
+
+    /*
+     * 🗺️ **Il percorso** — 08/09/2026.
+     *
+     * ⚠️ **Sta qui e non in `_tipiDaLeggere`**, e non è la solita difesa: i
+     * percorsi non passano dal ciclo dei record grezzi — quello costruisce
+     * `LetturaSalute`, e un tracciato non è un numero. Li legge
+     * [_percorsiDegliAllenamenti], a parte.
+     *
+     * 🚨 **Chiederlo qui serve lo stesso**, perché `requestAuthorization`
+     * costruisce l'elenco dai tipi: senza, non comparirebbe mai nel foglio del
+     * consenso. ⛔ E non basta: il permesso «tutti i percorsi»
+     * (`READ_EXERCISE_ROUTES`) Google **non lo concede su richiesta** — *«attempts
+     * to request the permission by applications will be ignored»*. Lo dà la
+     * persona a mano.
+     */
+    HealthDataType.WORKOUT_ROUTE,
   ];
 
   /// Quello che compare nella schermata del consenso.
@@ -336,12 +354,27 @@ class PonteSalute {
         permissions: _permessi,
       );
 
+      /*
+       * ⛰️ **Il dislivello si chiede SEMPRE, anche a chi ha già concesso** —
+       * 08/09/2026.
+       *
+       * ⛔ **Stava dopo il `return` qui sotto, ed era inutile per quasi tutti**:
+       * chi aveva già i permessi usciva prima, e il dislivello non lo avrebbe
+       * ricevuto mai — cioè proprio chi usa l'app da settimane.
+       *
+       * 💡 Chiamarla è innocuo: il lato nativo controlla prima se il permesso
+       * c'è già, e in quel caso risponde e basta senza aprire niente.
+       */
+      await const SaluteInPiu().chiediIlDislivello();
+
       if (gia ?? false) return true;
 
       return await _salute.requestAuthorization(
         _tipiDaAutorizzare,
         permissions: _permessi,
       );
+
+
     } on Object catch (errore, stack) {
       // Un telefono senza Health Connect non è un errore da mostrare: è una
       // funzione che quel telefono non ha.
@@ -767,7 +800,97 @@ class PonteSalute {
     final a3 = await _archivio.scriviAllenamenti(allenamenti);
     final a4 = await _riscriviIPassiAggregati(giorniIndietro);
 
-    return a1 + a2 + a3 + a4;
+    /*
+     * 🗺️ **I percorsi, DOPO gli allenamenti** — 08/09/2026.
+     *
+     * 🚨 L'ordine non è estetico: un percorso si aggancia alla riga
+     * dell'allenamento tramite `idSalute`, e quella riga deve esistere. ⛔
+     * Leggerli prima vorrebbe dire buttarli tutti, senza nemmeno un errore.
+     */
+    final a5 = await _percorsiDegliAllenamenti(da, a);
+
+    return a1 + a2 + a3 + a4 + a5;
+  }
+
+  /// I tracciati delle uscite all'aperto, salvati **senza chiedere niente**.
+  ///
+  /// ══ 📌 PERCHE' QUI E NON DIETRO UN PULSANTE ═══════════════════════════════
+  ///
+  /// Il committente, l'08/09: *«se non c'è una foto deve mostrarmi il percorso
+  /// nella card dell'allenamento al posto della foto, **non glielo devo chiedere
+  /// ogni volta, sarebbe ridicolo**»*.
+  ///
+  /// ✅ **E con il permesso «tutti i percorsi» arrivano davvero**: misurato lo
+  /// stesso giorno sulla camminata delle 10:49 — **1.604 punti, tutti con la
+  /// quota**. Nessuna finestra, nessun gesto.
+  ///
+  /// ══ 🚨 IL PERMESSO NON SI PUO' CHIEDERE, E VA SAPUTO ══════════════════════
+  ///
+  /// ⛔ `READ_EXERCISE_ROUTES` Google **non lo concede su richiesta**: *«attempts
+  /// to request the permission by applications will be ignored»*. Lo dà la
+  /// persona a mano in Health Connect.
+  ///
+  /// ⚠️ **E su questo telefono quella voce non compare** — verificato con un
+  /// dump della schermata. 💡 Per questo resta la strada per singola uscita
+  /// (`SaluteInPiu.percorso`): è il ripiego, non la regola.
+  ///
+  /// ══ ⚠️ E SOLO IN PRIMO PIANO ══════════════════════════════════════════════
+  ///
+  /// Google: *«when your app runs in the background … Health Connect returns
+  /// `ConsentRequired`, **even if** your app has Always allow»*. 🚨 Quindi una
+  /// sincronizzazione in sottofondo qui non porta niente — e non è un guasto:
+  /// semplicemente i percorsi arrivano alla prima apertura dell'app.
+  Future<int> _percorsiDegliAllenamenti(DateTime da, DateTime a) async {
+    try {
+      final punti = await _salute.getHealthDataFromTypes(
+        types: const [HealthDataType.WORKOUT_ROUTE],
+        startTime: da,
+        endTime: a,
+      );
+
+      var salvati = 0;
+
+      for (final p in punti) {
+        final valore = p.value;
+
+        if (valore is! WorkoutRouteHealthValue) continue;
+
+        /*
+         * ⛔ **Le liste vuote si saltano in silenzio.** Sono i
+         * `ConsentRequired`: Health Connect risponde così per ogni sessione
+         * quando il permesso manca, comprese quelle che un percorso non ce
+         * l'hanno mai avuto. 🚨 Scriverle vorrebbe dire segnare come «rifiutato»
+         * qualcosa che la persona non ha mai visto.
+         */
+        if (valore.locations.isEmpty) continue;
+
+        final salvato = await _archivio.scriviIlPercorsoDiSalute(
+          idSalute: p.uuid,
+          punti: [
+            for (final l in valore.locations)
+              PuntoDelPercorso(
+                latitudine: l.latitude,
+                longitudine: l.longitude,
+                quotaMetri: l.altitude,
+                istante: l.timestamp,
+              ),
+          ],
+        );
+
+        if (salvato) salvati++;
+      }
+
+      return salvati;
+    } on Object catch (errore) {
+      /*
+       * ⚠️ **Un percorso mancante non deve far fallire la sincronizzazione.**
+       * Senza il permesso questa chiamata può lanciare, e sonno, battito e passi
+       * non c'entrano niente.
+       */
+      debugPrint('percorsi: non leggibili — $errore');
+
+      return 0;
+    }
   }
 
   /// Gli allenamenti, ripuliti — FASE 1.8.

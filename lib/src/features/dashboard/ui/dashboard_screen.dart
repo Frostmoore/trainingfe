@@ -87,19 +87,19 @@ class DashboardScreen extends ConsumerWidget {
     final spunto = switch (consiglio.valueOrNull?.stato) {
       StatoConsiglio.spento => null,
       StatoConsiglio.serveConsenso => const SottoAbbonamento(
-        motivo: 'lo spunto di oggi',
+        motivo: 'Spunto di oggi',
         child: _ConsensoAiMancante(),
       ),
       StatoConsiglio.senzaAi => const SottoAbbonamento(
-        motivo: 'lo spunto di oggi',
+        motivo: 'Spunto di oggi',
         child: _SenzaAi(),
       ),
       StatoConsiglio.inArrivo => const SottoAbbonamento(
-        motivo: 'lo spunto di oggi',
+        motivo: 'Spunto di oggi',
         child: _ConsiglioInArrivo(),
       ),
       _ => SottoAbbonamento(
-        motivo: 'lo spunto di oggi',
+        motivo: 'Spunto di oggi',
         child: _Consiglio(
           testo: consiglio.valueOrNull?.testo ?? '',
           generatoIl: consiglio.valueOrNull?.generatoIl,
@@ -115,12 +115,12 @@ class DashboardScreen extends ConsumerWidget {
      * distanze — come sto stanotte, e come sto questa settimana.
      */
     const forma = SottoAbbonamento(
-      motivo: 'carico e carica',
+      motivo: 'Carico e carica',
       child: SchedaForma(),
     );
 
     const recupero = SottoAbbonamento(
-      motivo: 'il tuo recupero',
+      motivo: 'Recupero',
       child: RecoveryCard(),
     );
 
@@ -154,12 +154,12 @@ class DashboardScreen extends ConsumerWidget {
      * riordino: il peso resta visibile, questa scende in fondo con le sfumate.
      */
     const composizione = SottoAbbonamento(
-      motivo: 'com\'è fatto',
+      motivo: 'Com\'è fatto',
       child: SchedaComposizione(),
     );
 
     const allenamento = SottoAbbonamento(
-      motivo: 'i tuoi allenamenti',
+      motivo: 'Allenamento',
       child: TrainingCard(),
     );
 

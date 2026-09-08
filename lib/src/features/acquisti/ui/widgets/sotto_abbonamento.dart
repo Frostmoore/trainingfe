@@ -32,20 +32,32 @@ class SottoAbbonamento extends ConsumerWidget {
 
   final Widget child;
 
-  /// Cosa si sblocca, per **chi non vede lo schermo**.
+  /// Il nome della card, come si legge sulla card stessa.
   ///
-  /// ══ ⚠️ NON È PIÙ IL TESTO DEL PULSANTE — 08/09/2026, secondo giro ══════
+  /// ══ 🔄 È STATO TOLTO E RIMESSO, E IL PERCHÉ VALE PIÙ DEL RISULTATO ═════
   ///
-  /// 📌 Il committente, guardandolo a schermo: *«Non mi piace quel "tasto" col
-  /// nome della card. Scrivici "Sblocca" che è più carino e più intuitivo»*.
+  /// | Quando | Pulsante | Perché |
+  /// |---|---|---|
+  /// | 1° giro | `Carico e carica` | Il nome, e basta |
+  /// | 2° giro | `Sblocca` | 📌 *«Non mi piace quel "tasto" col nome della card»* |
+  /// | 3° giro | `Sblocca Carico e carica` | 📌 *«adesso che la card è ben sfumata, nel tasto è giusto che ci sia il nome»* |
   ///
-  /// ⛔ **Aveva ragione, e il motivo è più profondo di come suona.** Il nome
-  /// della card era scritto **due volte a tre centimetri di distanza** — sulla
-  /// card, sfumato, e sul pulsante, nitido. 🚨 Un pulsante deve dire cosa
-  /// **fa**, non ripetere accanto a cosa sta.
+  /// 🚨 **Non è un ripensamento: è che nel frattempo è cambiata la card
+  /// sotto.** Al secondo giro la sfumatura era debole e il titolo si leggeva
+  /// ancora: il nome sul pulsante era la **stessa parola due volte a tre
+  /// centimetri**, una sfumata e una nitida. ⛔ Al terzo giro la sfumatura
+  /// copre davvero, e quel titolo non si legge più — quindi il nome sul
+  /// pulsante non ripete niente: è **l'unica cosa** che dice di cosa si sta
+  /// parlando.
   ///
-  /// 💡 Il nome resta qui, e serve ancora: è quello che lo screen reader legge,
-  /// perché lì la card sfumata sopra non c'è.
+  /// 💡 La lezione, per la prossima volta: **un'etichetta è giusta o sbagliata
+  /// rispetto a cosa le sta intorno**, non da sola. La stessa parola nello
+  /// stesso posto è stata prima un doppione e poi l'informazione principale,
+  /// senza cambiare di una virgola.
+  ///
+  /// ⚠️ **Va scritto come il titolo della card**, non riformulato: chi guarda
+  /// una macchia sfumata e legge «Sblocca Recupero» deve poter tornare qui
+  /// dopo essersi abbonato e ritrovare *quella* parola in cima alla card.
   final String? motivo;
 
   @override
@@ -117,40 +129,54 @@ class SottoAbbonamento extends ConsumerWidget {
          * cercare da qualche altra parte cosa è successo. 💡 Qui il tocco porta
          * dove si risolve.
          */
-        Semantics(
-          button: true,
-          label: motivo == null
-              ? 'Sblocca con l\'abbonamento'
-              : 'Sblocca $motivo con l\'abbonamento',
-          child: Material(
-            color: tema.colorScheme.surface,
-            shape: const StadiumBorder(),
-            elevation: 2,
-            child: InkWell(
-              customBorder: const StadiumBorder(),
-              onTap: () => ModaleAcquisti.mostra(context),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Gap.md,
-                  vertical: Gap.sm,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.lock_open_rounded,
-                      size: 18,
-                      color: tema.colorScheme.primary,
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Text(
-                      'Sblocca',
-                      style: tema.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+        /*
+         * ⚠️ **Il margine laterale non è estetica: è quello che tiene il
+         * pulsante dentro la card.** Con un nome lungo — «Sblocca Com'è fatto»
+         * a carattere ingrandito — un `Row` a larghezza libera dentro uno
+         * `Stack` esce dai bordi senza nessun errore, e si vede solo su un
+         * telefono stretto. 🚨 Qui lo spazio è **vincolato**, e il testo che non
+         * ci sta va a capo invece di sfondare.
+         */
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+          child: Semantics(
+            button: true,
+            label: motivo == null
+                ? 'Sblocca con l\'abbonamento'
+                : 'Sblocca $motivo con l\'abbonamento',
+            child: Material(
+              color: tema.colorScheme.surface,
+              shape: const StadiumBorder(),
+              elevation: 2,
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: () => ModaleAcquisti.mostra(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Gap.md,
+                    vertical: Gap.sm,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lock_open_rounded,
+                        size: 18,
                         color: tema.colorScheme.primary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: Gap.sm),
+                      Flexible(
+                        child: Text(
+                          motivo == null ? 'Sblocca' : 'Sblocca $motivo',
+                          textAlign: TextAlign.center,
+                          style: tema.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: tema.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

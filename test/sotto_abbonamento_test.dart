@@ -29,7 +29,7 @@ void main() {
     child: const MaterialApp(
       home: Scaffold(
         body: SottoAbbonamento(
-          motivo: 'il tuo recupero',
+          motivo: 'Recupero',
           child: Card(child: Text('72')),
         ),
       ),
@@ -47,7 +47,7 @@ void main() {
     await tester.pumpWidget(conGate(abbonato: true));
 
     expect(find.text('72'), findsOneWidget);
-    expect(find.text('Sblocca'), findsNothing);
+    expect(find.text('Sblocca Recupero'), findsNothing);
     expect(find.byType(ImageFiltered), findsNothing);
   });
 
@@ -57,7 +57,10 @@ void main() {
     await tester.pumpWidget(conGate(abbonato: false));
 
     expect(find.byType(ImageFiltered), findsOneWidget);
-    expect(find.text('Sblocca'), findsOneWidget);
+    /* Terzo giro: il nome della card e' tornato sul pulsante, perche' adesso
+     * la sfumatura copre davvero e quel titolo non si legge piu' da nessuna
+     * altra parte. */
+    expect(find.text('Sblocca Recupero'), findsOneWidget);
 
     /*
      * 🚨 **`ExcludeSemantics` è la parte che non si vede.** Una sfumatura ferma

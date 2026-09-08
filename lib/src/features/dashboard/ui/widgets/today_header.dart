@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../acquisti/data/gate_dell_abbonamento.dart';
-import '../../saldo_calorico.dart';
 import '../../../../core/ui/intestazione_app.dart';
+import '../../../acquisti/data/gate_dell_abbonamento.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
 import '../../../forma/carica_controller.dart';
@@ -18,6 +17,7 @@ import '../../../profile/target_locale_controller.dart';
 import '../../../training/bruciate_locali.dart';
 import '../../data/dashboard_models.dart';
 import '../../giorno_scelto.dart';
+import '../../saldo_calorico.dart';
 
 /// L'intestazione di «Oggi»: la palestra e i numeri della giornata.
 ///

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/acquisti/ui/widgets/ricontrollo_al_rientro.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
@@ -204,9 +205,21 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
       builder: (context, figlio) {
         final daAggiornare = ref.watch(aggiornamentoProvider).serve;
 
+        /*
+         * ══ 🔄 IL RICONTROLLO DELL'ABBONAMENTO STA QUI ═══════════════════
+         *
+         * 🚨 **Sopra il router, come il cancello della versione**: il pagamento
+         * si conclude **fuori dall'app**, e chi torna può ritrovarsi su una
+         * schermata qualunque — o su un foglio modale. Un osservatore
+         * agganciato a una sola pagina si perderebbe proprio i casi che
+         * contano.
+         *
+         * ⛔ **Sotto la schermata di aggiornamento obbligatorio**, non sopra: a
+         * chi deve aggiornare l'app non si chiede niente al server.
+         */
         return daAggiornare
             ? const SchermataAggiorna()
-            : (figlio ?? const SizedBox.shrink());
+            : RicontrolloAlRientro(child: figlio ?? const SizedBox.shrink());
       },
     );
   }

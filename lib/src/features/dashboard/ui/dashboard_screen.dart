@@ -10,8 +10,10 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/states.dart';
 import '../../achievements/ui/carosello_achievements.dart';
 import '../../acquisti/data/costo_delle_funzioni.dart';
+import '../../acquisti/data/gate_dell_abbonamento.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
 import '../../acquisti/ui/widgets/sotto_abbonamento.dart';
+import '../../auth/auth_controller.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
@@ -35,6 +37,140 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final riepilogo = ref.watch(dashboardProvider);
     final consiglio = ref.watch(consiglioDaMostrareProvider);
+    final abbonato = ref.watch(abbonatoProvider);
+
+    /*
+     * ══ 📦 LE CARD SONO VARIABILI, E NON RIGHE DENTRO UNA LISTA ═══════════
+     *
+     * 🚨 **Perché gli ordini sono due**, e scrivere due elenchi con dentro le
+     * stesse otto costruzioni vorrebbe dire che il giorno in cui una card
+     * cambia parametro bisogna ricordarsi di cambiarla **in due posti**. ⛔ In
+     * questo file è già successo con `WeightCard` e `_GraficoPeso`.
+     *
+     * 💡 Definite qui, ordinate sotto: l'ordine diventa una lista di nomi, che
+     * si legge in tre secondi e si riordina senza toccare nient'altro.
+     */
+
+    /*
+     * 🏅 **Le medaglie, sopra il consiglio** — 3b-A.8.3.
+     *
+     * 📌 *«nella pagina oggi deve stare sopra al consiglio del giorno (deve
+     * mostrare TUTTI gli achievements)»*.
+     *
+     * ⚠️ `ambito: null` vuol dire **tutte**, ed è l'unica delle tre schermate
+     * che le vuole così: qui si guarda la giornata intera, non una sezione.
+     *
+     * ⏳ Finché FASE 12 non esiste non disegna niente — e `_Blocchi` scarta i
+     * `null`, ma questo non è `null`: è un widget che decide da sé di sparire.
+     */
+    const achievements = CaroselloAchievements(ambito: null);
+
+    /*
+     * 🚨 **La card del consiglio non sparisce mai** — 20/08/2026.
+     *
+     * 📌 *«la card del consiglio del giorno si deve sempre vedere (a meno che
+     * io non l'abbia disabilitato), al limite si mostra il consiglio del giorno
+     * precedente, se ancora non è pronto quello nuovo»*.
+     *
+     * ⚠️ Prima spariva in **quattro** modi e tre erano difetti: mentre
+     * caricava, se l'AI non rispondeva, e — il più frequente — mentre il server
+     * la rigenerava perché il contesto era cambiato. Cioè spariva proprio a chi
+     * aveva appena segnato un pasto: puniva l'uso dell'app.
+     *
+     * ══ 🔒 E DALL'08/09/2026 STA DIETRO IL GATE ═══════════════════════════
+     *
+     * ⚠️ **Il `null` resta `null`.** `StatoConsiglio.spento` vuol dire che la
+     * persona il consiglio l'ha **disattivato lei**: sfumare uno spazio vuoto
+     * le direbbe che le manca una cosa che ha scelto di non avere. 🚨 Per
+     * questo la sfumatura sta dentro i rami e non intorno allo `switch`.
+     */
+    final spunto = switch (consiglio.valueOrNull?.stato) {
+      StatoConsiglio.spento => null,
+      StatoConsiglio.serveConsenso => const SottoAbbonamento(
+        motivo: 'lo spunto di oggi',
+        child: _ConsensoAiMancante(),
+      ),
+      StatoConsiglio.senzaAi => const SottoAbbonamento(
+        motivo: 'lo spunto di oggi',
+        child: _SenzaAi(),
+      ),
+      StatoConsiglio.inArrivo => const SottoAbbonamento(
+        motivo: 'lo spunto di oggi',
+        child: _ConsiglioInArrivo(),
+      ),
+      _ => SottoAbbonamento(
+        motivo: 'lo spunto di oggi',
+        child: _Consiglio(
+          testo: consiglio.valueOrNull?.testo ?? '',
+          generatoIl: consiglio.valueOrNull?.generatoIl,
+          vecchio: consiglio.valueOrNull?.stato == StatoConsiglio.vecchio,
+        ),
+      ),
+    };
+
+    /*
+     * 🆕 FASE 2-sexies — carico e carica.
+     *
+     * 💡 Accanto al recupero e non altrove: sono la stessa domanda vista da due
+     * distanze — come sto stanotte, e come sto questa settimana.
+     */
+    const forma = SottoAbbonamento(
+      motivo: 'carico e carica',
+      child: SchedaForma(),
+    );
+
+    const recupero = SottoAbbonamento(
+      motivo: 'il tuo recupero',
+      child: RecoveryCard(),
+    );
+
+    /*
+     * ⚖️ **Peso e grafico: una scheda sola** — 3b-O.6+8.
+     *
+     * ⛔ `WeightCard` e `_GraficoPeso` **non esistono più**: erano due schede
+     * lontane fra loro che rispondevano alla stessa domanda, e chi le leggeva
+     * doveva tenersi il numero a mente mentre scorreva fino al grafico.
+     *
+     * ⚠️ **Il peso obiettivo si legge da `riepilogo` e non dalla `r` del ramo
+     * `data`**: è lo stesso identico valore — dentro `data` la `r` *è* quel
+     * riepilogo — e leggerlo qui evita di spezzare la lambda in un blocco solo
+     * per portarsi dietro un `double?`.
+     */
+    final peso = SchedaPeso(
+      pesoObiettivo: riepilogo.valueOrNull?.body.targetWeightKg,
+    );
+
+    /*
+     * ⚖️ **Cosa dice la composizione** — 3b-Y, 30/08/2026.
+     *
+     * 📌 *«mettiamo su oggi un'altra card con le conclusioni che si possono
+     * ricavare dai dati che abbiamo aggiunto oggi»*.
+     *
+     * 💡 **Subito sotto il peso per chi è abbonato**: è la stessa domanda
+     * guardata più a fondo — non «quanto peso», ma **cosa** ho perso. ⛔ Due
+     * chili di grasso e due di muscolo sulla bilancia sono lo stesso numero.
+     *
+     * ⚠️ Per chi non è abbonato quell'accostamento si perde, ed è il prezzo del
+     * riordino: il peso resta visibile, questa scende in fondo con le sfumate.
+     */
+    const composizione = SottoAbbonamento(
+      motivo: 'com\'è fatto',
+      child: SchedaComposizione(),
+    );
+
+    const allenamento = SottoAbbonamento(
+      motivo: 'i tuoi allenamenti',
+      child: TrainingCard(),
+    );
+
+    /*
+     * 🔥 **Il grafico delle calorie, rifatto** — 3b-O.9.
+     *
+     * ⛔ `_GraficoCalorie` **non esiste più**: affiancava due grandezze che non
+     * erano la stessa cosa — un totale e uno scostamento — e il confronto che
+     * invitava a fare non significava niente.
+     */
+    const grafico = GraficoCalorie();
 
     return Scaffold(
       // 🚨 Niente AppBar: l'intestazione **è** la scheda della palestra, e una
@@ -53,6 +189,24 @@ class DashboardScreen extends ConsumerWidget {
          * numero arriva quando arriva. Vedi `aggiornaTutto`.
          */
         onRefresh: () => aggiornaTutto(context, ref, () {
+          /*
+           * ══ 🔄 SI RICONTROLLA ANCHE CHI SEI — 08/09/2026 ═════════════════
+           *
+           * 📌 Il committente: *«se aggiorno i dati deve ricontrollare se sono
+           * abbonato»*.
+           *
+           * 🚨 **E prima non succedeva**: l'utente arriva da `/auth/me`, che si
+           * chiamava all'avvio e basta. Chi si abbonava dal browser e tornava
+           * qui poteva strisciare in giù quanto voleva — le card restavano
+           * sfumate finché non riavviava l'app, e sembrava che il pagamento non
+           * fosse andato a buon fine.
+           *
+           * ⚠️ Non si aspetta (`unawaited` implicito nel `..`): la rotellina
+           * gira sulla dashboard, e lo stato dell'abbonamento arriva quando
+           * arriva — come le calorie di Health.
+           */
+          ref.read(authControllerProvider.notifier).refresh();
+
           ref
             ..invalidate(dashboardProvider)
             ..invalidate(weightSeriesProvider)
@@ -75,156 +229,67 @@ class DashboardScreen extends ConsumerWidget {
             children: [
               TodayHeader(riepilogo: r),
 
+              /*
+               * ══ 🔒 L'ORDINE CAMBIA PER CHI NON È ABBONATO — 08/09/2026 ══
+               *
+               * 📌 Il committente: *«per gli utenti non abbonati, ovviamente le
+               * cards vanno riarrangiate in modo che quelle visibili siano le
+               * prime»*.
+               *
+               * 🚨 **Ed è la differenza fra una vetrina e un muro.** Con
+               * l'ordine di sempre, un non abbonato scorreva **tre card
+               * sfumate di fila** prima di incontrare qualcosa di suo: l'app
+               * si presentava come una cosa che non può usare.
+               *
+               * 💡 Adesso quello che è suo viene prima, e le sfumate stanno in
+               * fondo — dove chi ha voglia di sapere cosa manca le trova
+               * tutte insieme.
+               *
+               * ⛔ **Per gli abbonati l'ordine è quello di sempre**, e non è
+               * pigrizia: «Com'è fatto» sta *«subito sotto il peso, e non
+               * altrove»* perché è la stessa domanda guardata più a fondo, e
+               * quell'accostamento si perde solo dove il gate lo spezza per
+               * forza.
+               */
               _Blocchi(
                 children: [
                   CaloriesCard(riepilogo: r),
 
                   /*
-                   * ══ 💳 IL BANNER, E IL POSTO E' LA META' DEL MESSAGGIO ════
+                   * ══ 💳 IL BANNER, E IL POSTO È LA METÀ DEL MESSAGGIO ═════
                    *
                    * 📌 *«sotto alla card delle calorie iniziale, ci va un
                    * banner che propone di abbonarsi per sbloccare le analisi
                    * avanzate dei propri dati»*.
                    *
-                   * 💡 **Sotto e non sopra**: la card delle calorie e' l'unica
+                   * 💡 **Sotto e non sopra**: la card delle calorie è l'unica
                    * cosa completa che un non abbonato vede, e il banner deve
-                   * arrivare **dopo** che l'app ha gia' dato qualcosa. ⛔ Sopra
+                   * arrivare **dopo** che l'app ha già dato qualcosa. ⛔ Sopra
                    * sarebbe un annuncio prima del prodotto.
                    *
                    * ⚠️ Sparisce da solo per gli abbonati.
                    */
                   const BannerAbbonamento(),
 
-                  /*
-                   * 🏅 **Le medaglie, sopra il consiglio** — 3b-A.8.3.
-                   *
-                   * 📌 Il committente: *«nella pagina oggi deve stare sopra al
-                   * consiglio del giorno (deve mostrare TUTTI gli
-                   * achievements)»*.
-                   *
-                   * ⚠️ `ambito: null` vuol dire **tutte**, ed è l'unica delle
-                   * tre schermate che le vuole così: qui si guarda la giornata
-                   * intera, non una sezione.
-                   *
-                   * ⏳ Finché FASE 12 non esiste non disegna niente — e
-                   * `_Blocchi` scarta i `null`, ma questo non è `null`: è un
-                   * widget che decide da sé di sparire (`SizedBox.shrink`).
-                   */
-                  const CaroselloAchievements(ambito: null),
-
-                  /*
-                   * 🚨 **La card non sparisce mai** — 20/08/2026.
-                   *
-                   * 📌 *«la card del consiglio del giorno si deve sempre vedere
-                   * (a meno che io non l'abbia disabilitato), al limite si
-                   * mostra il consiglio del giorno precedente, se ancora non è
-                   * pronto quello nuovo»*.
-                   *
-                   * ⚠️ Prima spariva in **quattro** modi e tre erano difetti:
-                   * mentre caricava, se l'AI non rispondeva, e — il più
-                   * frequente — mentre il server la rigenerava perché il
-                   * contesto era cambiato. Cioè spariva proprio a chi aveva
-                   * appena segnato un pasto: puniva l'uso dell'app.
-                   *
-                   * 💡 Se manca il consenso all'AI si **porta a darlo** invece
-                   * di tacere: quello non è qualcosa da aspettare, è qualcosa
-                   * da fare.
-                   */
-                  /*
-                   * ══ 🔒 DIETRO IL GATE DALL'08/09/2026 ════════════════════
-                   *
-                   * ⚠️ **Il `null` resta `null`.** `StatoConsiglio.spento` vuol
-                   * dire che la persona il consiglio l'ha **disattivato lei**:
-                   * sfumare uno spazio vuoto le direbbe che le manca una cosa
-                   * che ha scelto di non avere. 🚨 Per questo la sfumatura sta
-                   * dentro i rami e non intorno allo `switch`.
-                   */
-                  switch (consiglio.valueOrNull?.stato) {
-                    StatoConsiglio.spento => null,
-                    StatoConsiglio.serveConsenso => const SottoAbbonamento(
-                      motivo: 'Lo spunto di oggi',
-                      child: _ConsensoAiMancante(),
-                    ),
-                    StatoConsiglio.senzaAi => const SottoAbbonamento(
-                      motivo: 'Lo spunto di oggi',
-                      child: _SenzaAi(),
-                    ),
-                    StatoConsiglio.inArrivo => const SottoAbbonamento(
-                      motivo: 'Lo spunto di oggi',
-                      child: _ConsiglioInArrivo(),
-                    ),
-                    _ => SottoAbbonamento(
-                      motivo: 'Lo spunto di oggi',
-                      child: _Consiglio(
-                        testo: consiglio.valueOrNull?.testo ?? '',
-                        generatoIl: consiglio.valueOrNull?.generatoIl,
-                        vecchio:
-                            consiglio.valueOrNull?.stato ==
-                            StatoConsiglio.vecchio,
-                      ),
-                    ),
-                  },
-
-                  /*
-                   * 🆕 FASE 2-sexies — carico e carica.
-                   *
-                   * 💡 Accanto al recupero e non altrove: sono la stessa
-                   * domanda vista da due distanze — come sto stanotte, e come
-                   * sto questa settimana.
-                   */
-                  const SottoAbbonamento(
-                    motivo: 'Carico e carica',
-                    child: SchedaForma(),
-                  ),
-
-                  const SottoAbbonamento(
-                    motivo: 'Il tuo recupero',
-                    child: RecoveryCard(),
-                  ),
-
-                  /*
-                   * ⚖️ **Peso e grafico: una scheda sola** — 3b-O.6+8.
-                   *
-                   * ⛔ `WeightCard` e `_GraficoPeso` **non esistono più**: erano
-                   * due schede lontane fra loro che rispondevano alla stessa
-                   * domanda, e chi le leggeva doveva tenersi il numero a mente
-                   * mentre scorreva fino al grafico.
-                   */
-                  SchedaPeso(pesoObiettivo: r.body.targetWeightKg),
-
-                  /*
-                   * ⚖️ **Cosa dice la composizione** — 3b-Y, 30/08/2026.
-                   *
-                   * 📌 *«mettiamo su oggi un'altra card con le conclusioni che
-                   * si possono ricavare dai dati che abbiamo aggiunto oggi»*.
-                   *
-                   * 💡 **Subito sotto il peso, e non altrove**: è la stessa
-                   * domanda guardata più a fondo — non «quanto peso», ma
-                   * **cosa** ho perso. ⛔ Due chili di grasso e due di muscolo
-                   * sulla bilancia sono lo stesso numero.
-                   *
-                   * ⚠️ Decide da sé se esistere: sparisce senza peso, chiede
-                   * la massa grassa se manca, e mostra solo la fotografia
-                   * finché non c'è abbastanza storia per una conclusione.
-                   */
-                  const SottoAbbonamento(
-                    motivo: 'Com\'è fatto',
-                    child: SchedaComposizione(),
-                  ),
-
-                  const SottoAbbonamento(
-                    motivo: 'I tuoi allenamenti',
-                    child: TrainingCard(),
-                  ),
-                  /*
-                   * 🔥 **Il grafico delle calorie, rifatto** — 3b-O.9.
-                   *
-                   * ⛔ `_GraficoCalorie` **non esiste più**: affiancava due
-                   * grandezze che non erano la stessa cosa — un totale e uno
-                   * scostamento — e il confronto che invitava a fare non
-                   * significava niente.
-                   */
-                  const GraficoCalorie(),
+                  if (abbonato) ...[
+                    achievements,
+                    spunto,
+                    forma,
+                    recupero,
+                    peso,
+                    composizione,
+                    allenamento,
+                    grafico,
+                  ] else ...[
+                    achievements,
+                    peso,
+                    grafico,
+                    spunto,
+                    forma,
+                    recupero,
+                    composizione,
+                    allenamento,
+                  ],
                 ],
               ),
 

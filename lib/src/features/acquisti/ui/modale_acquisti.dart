@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
+import '../../auth/auth_controller.dart';
 import '../../dashboard/gettoni_controller.dart';
 import '../data/listino.dart';
 
@@ -123,6 +124,23 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
       ..invalidate(gettoniProvider)
       ..invalidate(listinoProvider);
 
+    /*
+     * ══ 🔄 E ANCHE CHI SEI — 08/09/2026 ═══════════════════════════════════
+     *
+     * 📌 *«quando si finalizza il pagamento di un abbonamento, deve aggiornare
+     * automaticamente lo stato di abbonamento o no»*.
+     *
+     * ⚠️ **Qui è un tentativo, non la garanzia.** Questa riga gira quando il
+     * browser si è **aperto**, non quando la persona ha pagato: il webhook
+     * quasi sempre non è ancora arrivato.
+     *
+     * 🚨 Quello che garantisce davvero è `RicontrolloAlRientro`, che rifà la
+     * domanda **al rientro nell'app** — cioè dopo. 💡 Questa resta perché costa
+     * niente e copre il caso in cui il pagamento fosse già stato completato
+     * (una seconda apertura, un abbonamento della palestra).
+     */
+    ref.read(authControllerProvider.notifier).refresh();
+
     if (widget.dentroUnaModale) Navigator.of(context).pop();
   }
 
@@ -152,6 +170,10 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
     // va richiesto, o l'app continuerebbe a dire «si rinnova» a chi ha appena
     // disdetto.
     ref.invalidate(listinoProvider);
+
+    // ⚠️ E l'utente con lui: una disdetta cambia `abbonato`, cioè fa tornare
+    // sfumate cinque card. 🚨 Il momento vero resta il rientro nell'app.
+    ref.read(authControllerProvider.notifier).refresh();
   }
 
   @override

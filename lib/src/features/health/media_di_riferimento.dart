@@ -69,6 +69,20 @@ class LetturaConMedia {
        * vestiti.
        */
       MetricaSalute.passi => false,
+
+      /*
+       * ⚡ **E nemmeno la velocità** — 08/09/2026.
+       *
+       * 🚨 Qui lo switch esaustivo ha fatto di nuovo il suo mestiere: aggiungere
+       * la metrica ha reso rosso questo file e costretto a decidere, invece di
+       * lasciare che un `default` decidesse per me.
+       *
+       * ⛔ E la decisione è «no» per una ragione più forte delle altre: questa
+       * media mescolerebbe una camminata con una pedalata. 💡 «Oggi sei andato
+       * il 40% più lento del solito» detto a chi ieri era in bici e oggi a piedi
+       * non è un'anomalia — è un mezzo di trasporto diverso.
+       */
+      MetricaSalute.velocita => false,
     };
   }
 }

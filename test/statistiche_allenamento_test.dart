@@ -21,6 +21,8 @@ void main() {
     int? kcal,
     int? battitoMedio,
     int? battitoMassimo,
+    double? velocitaMisurataMs,
+    double? dislivelloMetri,
   }) => StatisticheAllenamento(
     tipo: tipo,
     durata: durata,
@@ -29,6 +31,8 @@ void main() {
     kcal: kcal,
     battitoMedio: battitoMedio,
     battitoMassimo: battitoMassimo,
+    velocitaMisurataMs: velocitaMisurataMs,
+    dislivelloMetri: dislivelloMetri,
   );
 
   group('🚶 una camminata', () {
@@ -225,6 +229,85 @@ void main() {
       expect(TipoAllenamento.conPercorso('STRENGTH_TRAINING'), isFalse);
       expect(TipoAllenamento.aPiedi('STRENGTH_TRAINING'), isFalse);
       expect(TipoAllenamento.conDistanza('STRENGTH_TRAINING'), isFalse);
+    });
+  });
+
+  group('⌚ la velocità la dice l’orologio', () {
+    /*
+     * ══ 🚨 LA CAMMINATA VERA DELL'08/09 ═══════════════════════════════════
+     *
+     * 📌 Il committente: *«dovremo usare i dati dell'orologio, perché
+     * presumibilmente tiene da conto il fatto che mi sono fermato 10 minuti al
+     * bar e la discrepanza arriva da quello»*.
+     *
+     * I numeri sono quelli misurati: 27 minuti, 1.270 m di GPS, 3.523 passi, e
+     * l'orologio che dichiara 3,792 km/h — cioè 1,053 m/s.
+     */
+    final camminata = con(
+      tipo: 'WALKING',
+      durata: const Duration(minutes: 27),
+      metri: 1270,
+      passi: 3523,
+      velocitaMisurataMs: 1.053,
+      dislivelloMetri: 27,
+    );
+
+    test('✅ vince quella misurata, non quella calcolata', () {
+      // 💡 Il calcolo darebbe 2,82 km/h: il 34% più bassa.
+      expect(camminata.velocitaKmH, closeTo(3.79, 0.02));
+      expect(camminata.velocitaDallOrologio, isTrue);
+    });
+
+    test('⚠️ e il passo viene dalla STESSA fonte', () {
+      /*
+       * 🚨 Questo è il difetto che il test esiste per fermare: velocità
+       * dall'orologio e passo dal calcolo darebbero «3,79 km/h» accanto a
+       * «21:15 /km», che è il passo di 2,8 km/h. Due numeri che si smentiscono
+       * a vicenda nella stessa card.
+       */
+      expect(camminata.passoAlKm!.inSeconds, closeTo(950, 10));
+    });
+
+    test('⛔ senza orologio si ricade sul calcolo, e si dichiara', () {
+      final stimata = con(
+        tipo: 'WALKING',
+        durata: const Duration(minutes: 27),
+        metri: 1270,
+      );
+
+      expect(stimata.velocitaKmH, closeTo(2.82, 0.02));
+      expect(stimata.velocitaDallOrologio, isFalse);
+    });
+
+    test('🚨 e la falcata da 36 cm NON si mostra', () {
+      /*
+       * ⛔ 1.270 m contro 3.523 passi fanno 36 cm. Non è un passo corto: è la
+       * prova che GPS e contapassi non sono d'accordo. 🚨 La banda era `0.3` e
+       * questo numero ci passava: è stata alzata a mezzo metro **dopo** averlo
+       * visto.
+       */
+      expect(camminata.lunghezzaDelPasso, isNull);
+    });
+
+    test('⛰️ il dislivello arriva, e non dipende dal percorso', () {
+      expect(camminata.dislivelloMetri, 27);
+    });
+  });
+
+  group('⛰️ il dislivello da solo', () {
+    test('✅ basta a far comparire la card', () {
+      /*
+       * 💡 Una salita in palestra non esiste, ma un'escursione senza distanza
+       * registrata sì — e 300 metri di dislivello sono la cosa più importante
+       * che le è successa.
+       */
+      expect(con(tipo: 'HIKING', dislivelloMetri: 300).qualcosaDaDire, isTrue);
+    });
+
+    test('⛔ e zero metri non è «non lo sappiamo»', () {
+      // 🚨 Zero è una pianura, ed è un dato. `null` è l'assenza.
+      expect(con(tipo: 'WALKING', dislivelloMetri: 0).dislivelloMetri, 0);
+      expect(con(tipo: 'WALKING').dislivelloMetri, isNull);
     });
   });
 

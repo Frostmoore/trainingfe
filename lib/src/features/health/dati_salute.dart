@@ -54,7 +54,32 @@ enum MetricaSalute {
   ///
   /// ⚠️ Il tetto è per **singolo campione**, non per la giornata: Health Connect
   /// scrive tanti record brevi, non un numero al giorno.
-  passi('steps', 'Passi', 'passi', 0.0, 100000.0);
+  passi('steps', 'Passi', 'passi', 0.0, 100000.0),
+
+  /// La velocità, in **metri al secondo** — 08/09/2026.
+  ///
+  /// ══ 🚨 ESISTE PERCHE' LA NOSTRA E QUELLA DELL'OROLOGIO NON COINCIDONO ═════
+  ///
+  /// 📌 Il committente, l'08/09: *«dovremo usare i dati dell'orologio, perché
+  /// presumibilmente tiene da conto il fatto che mi sono fermato 10 minuti al
+  /// bar e la discrepanza arriva da quello»*.
+  ///
+  /// ⛔ Sulla camminata delle 10:49: 1,27 km in 27 minuti fanno **2,8 km/h** se
+  /// si divide; l'orologio dice **3,79 km/h**. 🚨 Il 34% di scarto, e due numeri
+  /// per la stessa cosa nella stessa pagina è il difetto che questo progetto
+  /// insegue da settimane.
+  ///
+  /// 💡 La spiegazione è la sosta: la nostra media spalma su tutta la durata,
+  /// la sua sul tempo in movimento.
+  ///
+  /// ⚠️ **In m/s e non in km/h**, perché così la scrive Health Connect: la
+  /// conversione si fa a schermo, una volta sola. 🚨 Salvare già convertito
+  /// vorrebbe dire un archivio in cui l'unità dipende da quando è stata scritta
+  /// la riga.
+  ///
+  /// ⛔ Il tetto è **20 m/s**, cioè 72 km/h: sopra non è più uno sforzo umano ma
+  /// una discesa o un errore del GPS, e in una media pesa quanto tutto il resto.
+  velocita('speed', 'Velocità', 'm/s', 0.0, 20.0);
 
   const MetricaSalute(
     this.codice,
@@ -106,11 +131,11 @@ enum FaseSonno {
   bool get dorme => this != FaseSonno.sveglio;
 
   static FaseSonno daCodice(int codice) => switch (codice) {
-        2 => FaseSonno.leggero,
-        3 => FaseSonno.profondo,
-        4 => FaseSonno.rem,
-        _ => FaseSonno.sveglio,
-      };
+    2 => FaseSonno.leggero,
+    3 => FaseSonno.profondo,
+    4 => FaseSonno.rem,
+    _ => FaseSonno.sveglio,
+  };
 
   /// La traduzione dalla scala di Health Connect alla nostra.
   ///
@@ -119,11 +144,11 @@ enum FaseSonno {
   /// fase che non si sa interpretare gonfia i minuti dormiti, che è l'errore
   /// che rende il giudizio troppo generoso proprio a chi ha dormito male.
   static FaseSonno daHealthConnect(int codice) => switch (codice) {
-        4 || 2 => FaseSonno.leggero,
-        5 => FaseSonno.profondo,
-        6 => FaseSonno.rem,
-        _ => FaseSonno.sveglio,
-      };
+    4 || 2 => FaseSonno.leggero,
+    5 => FaseSonno.profondo,
+    6 => FaseSonno.rem,
+    _ => FaseSonno.sveglio,
+  };
 }
 
 /// Un punto del grafico: la media di una metrica in un giorno.
@@ -211,14 +236,14 @@ enum Giudizio {
   bad;
 
   static Giudizio daNome(String nome) => switch (nome) {
-        'ok' => Giudizio.ok,
-        'warn' => Giudizio.warn,
-        _ => Giudizio.bad,
-      };
+    'ok' => Giudizio.ok,
+    'warn' => Giudizio.warn,
+    _ => Giudizio.bad,
+  };
 
   String get nome => switch (this) {
-        Giudizio.ok => 'ok',
-        Giudizio.warn => 'warn',
-        Giudizio.bad => 'bad',
-      };
+    Giudizio.ok => 'ok',
+    Giudizio.warn => 'warn',
+    Giudizio.bad => 'bad',
+  };
 }

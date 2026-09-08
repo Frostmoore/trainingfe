@@ -1,5 +1,6 @@
 package com.smp.mytrainingcompanion
 
+import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -28,6 +29,28 @@ import io.flutter.plugin.common.MethodChannel
  * documentazione di `local_auth` chiede di usare.
  */
 class MainActivity : FlutterFragmentActivity() {
+
+    /**
+     * 🩺 Il percorso e il dislivello — 08/09/2026. Vedi [SaluteInPiu].
+     */
+    private val saluteInPiu by lazy { SaluteInPiu(this) }
+
+    /**
+     * 🚨 **Il ritorno della finestra di consenso si registra QUI, non dopo.**
+     *
+     * ⛔ `registerForActivityResult` chiamata piu' tardi lancia *«LifecycleOwners
+     * must call register before they are STARTED»*: il registro dei risultati
+     * dev'essere ricostruibile **dopo che il sistema ha ucciso il processo**
+     * mentre la finestra era aperta.
+     *
+     * ⚠️ E qui non e' un caso di scuola: quella finestra e' un'altra app, e
+     * mentre sta a schermo la nostra puo' essere buttata via per fare posto.
+     */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        saluteInPiu.registraIlRitorno()
+    }
 
     /**
      * 🚨 `FLAG_SECURE` per le schermate usa e getta — N16.7.
@@ -97,6 +120,20 @@ class MainActivity : FlutterFragmentActivity() {
 
                 else -> risposta.notImplemented()
             }
+        }
+
+        /*
+         * 🩺 Il percorso di un allenamento e il dislivello — 08/09/2026.
+         *
+         * ⚠️ **Terzo canale, e non un metodo in piu' sugli altri due**: stessa
+         * regola gia' scritta sopra — un canale che fa due mestieri e' un canale
+         * che qualcuno un giorno spegne per il mestiere sbagliato.
+         */
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            SaluteInPiu.CANALE,
+        ).setMethodCallHandler { chiamata, risposta ->
+            saluteInPiu.gestisci(chiamata, risposta)
         }
     }
 

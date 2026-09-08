@@ -73,7 +73,12 @@ class SondaDeiPercorsi {
      * una dipendenza che si vede è una dipendenza che si può rompere ad occhi
      * aperti.
      */
-    const tipi = [HealthDataType.WORKOUT, HealthDataType.WORKOUT_ROUTE];
+    const tipi = [
+      HealthDataType.WORKOUT,
+      HealthDataType.WORKOUT_ROUTE,
+      HealthDataType.SPEED,
+      HealthDataType.DISTANCE_DELTA,
+    ];
 
     final concessi = await salute.hasPermissions(tipi) ?? false;
 
@@ -167,7 +172,7 @@ class SondaDeiPercorsi {
 
       if (quanti == 0) {
         // ⚠️ Zero punti con un valore presente = la richiesta di consenso.
-        _riga('  ${_data(p.dateFrom)} SERVE IL CONSENSO (0 punti)');
+        _riga('  ${_data(p.dateFrom)} SERVE IL CONSENSO · id ${p.uuid}');
 
         continue;
       }

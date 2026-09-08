@@ -94,6 +94,28 @@ dependencies {
      * di stare dietro a Flutter.
      */
     implementation("com.android.installreferrer:installreferrer:2.2")
+
+    /*
+     * 🩺 Health Connect, per le due cose che il pacchetto `health` non sa
+     * fare — 08/09/2026. Vedi `SaluteInPiu.kt`.
+     *
+     * ⚠️ **La libreria e' gia' in casa**: la tira dentro il pacchetto `health`.
+     * Qui si dichiara solo per poterci compilare contro, e con la STESSA
+     * versione — due versioni diverse dello stesso artefatto si risolvono in
+     * una sola, e a perdere sarebbe chi ha chiesto la piu' vecchia.
+     */
+    implementation("androidx.health.connect:connect-client:1.2.0-alpha02")
+
+    /*
+     * ⛔ Le coroutine servono a COMPILARE, non a girare: `connect-client` le
+     * dichiara con scope `runtime`, quindi ci sono a esecuzione ma non sul
+     * classpath di compilazione. 🚨 Senza questa riga il Kotlin non compila con
+     * un errore che parla di `suspend`, non di dipendenze mancanti.
+     *
+     * ⚠️ Versione allineata a quella che `connect-client` gia' porta: una
+     * diversa vincerebbe per tutti.
+     */
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
 
 kotlin {

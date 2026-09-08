@@ -9,29 +9,30 @@ import '../health/tipo_allenamento.dart';
 /// tutti i dati dell'allenamento, quindi tempo velocità media inclinazione passo
 /// medio per minuto e tutte queste cose qui»*.
 ///
-/// ══ 🚨 COSA C'E' E COSA NO, MISURATO E NON SUPPOSTO ══════════════════════
-///
-/// L'08/09/2026 una sonda ha guardato Health Connect sul telefono del
-/// committente, novanta giorni:
+/// ══ 🚨 COSA C'E' DAVVERO, MISURATO SUL TELEFONO ══════════════════════════
 ///
 /// | Dato | Esito |
 /// |---|---|
 /// | `WORKOUT` (durata, distanza, passi, kcal) | ✅ c'è |
 /// | `HEART_RATE` | ✅ un campione **al minuto** |
-/// | `DISTANCE_DELTA` | ✅ 235 campioni |
-/// | `SPEED` | ⛔ **nessun campione** |
-/// | `FLIGHTS_CLIMBED` | ⛔ **nessun campione** |
-/// | `ELEVATION_GAINED` | ⛔ il pacchetto `health` **non lo espone affatto** |
+/// | `DISTANCE_DELTA` | ✅ 236 campioni |
+/// | `SPEED` | ✅ c'è — **3,792 km/h** sulla camminata delle 10:49 |
+/// | `ELEVATION_GAINED` | ✅ c'è — **27 m**, da un canale nativo nostro |
+/// | `FLIGHTS_CLIMBED` | ⛔ nessun campione, e non serve: il dislivello lo dice l'altro |
 ///
-/// 💡 Quindi la velocità **si calcola**, non si legge: distanza diviso tempo. E
-/// va bene così — la media è esattamente quello che si vuole in un riassunto.
+/// ══ ⛔ E DUE COSE CHE L'08/09 AVEVO SCRITTO QUI, SBAGLIATE ════════════════
 ///
-/// ⛔ **L'inclinazione invece qui non c'è, e non è un rinvio pigro.** L'unica
-/// fonte possibile sono le **quote dei punti del percorso**, e il percorso
-/// Health Connect lo tiene dietro un consenso che si concede a mano. Finché non
-/// arriva, questa classe non ha un campo `dislivello` — perché un campo che
-/// vale sempre `null` si legge come «l'orologio non lo manda», che è una
-/// diagnosi sbagliata di un problema diverso.
+/// 🚨 Qui c'era scritto *«`SPEED` nessun campione»* e *«la velocità si calcola,
+/// non si legge»*. **Falso**: la velocità l'orologio la scrive, e quello zero
+/// misurava **una porta chiusa da noi** — `READ_SPEED` non era nel manifest.
+/// ⚠️ È lo stesso errore dei 23.471 passi: uno zero letto come una risposta di
+/// chi sta dall'altra parte.
+///
+/// 🚨 E c'era scritto che l'inclinazione poteva venire **solo dalle quote del
+/// percorso**. Anche questo è falso: `ElevationGainedRecord` esiste ed è pieno.
+/// ⛔ Non lo espone il pacchetto `health`, ed era quello il problema — non il
+/// dato. Adesso lo legge `SaluteInPiu`, e **non dipende dal consenso del
+/// percorso**.
 class StatisticheAllenamento {
   const StatisticheAllenamento({
     required this.tipo,
@@ -41,6 +42,8 @@ class StatisticheAllenamento {
     this.kcal,
     this.battitoMedio,
     this.battitoMassimo,
+    this.velocitaMisurataMs,
+    this.dislivelloMetri,
   });
 
   /// Il codice originale: `RUNNING`, `BIKING`, `STRENGTH_TRAINING`.
@@ -61,6 +64,30 @@ class StatisticheAllenamento {
   final int? battitoMedio;
   final int? battitoMassimo;
 
+  /// La velocità media **come la dice l'orologio**, in metri al secondo.
+  ///
+  /// ══ 🚨 PERCHE' NON BASTA DIVIDERE DISTANZA PER TEMPO ══════════════════════
+  ///
+  /// 📌 Il committente, l'08/09: *«dovremo usare i dati dell'orologio, perché
+  /// presumibilmente tiene da conto il fatto che mi sono fermato 10 minuti al
+  /// bar e la discrepanza arriva da quello»*.
+  ///
+  /// ⛔ Sulla camminata delle 10:49: 1,27 km in 27 minuti danno **2,8 km/h**;
+  /// l'orologio dice **3,79 km/h**. 🚨 Il 34% di scarto, e due numeri per la
+  /// stessa cosa nella stessa pagina.
+  ///
+  /// 💡 La sua media è sul **tempo in movimento**, la nostra su tutta la durata.
+  /// La sua è quella che risponde alla domanda «a che andatura ho camminato».
+  final double? velocitaMisurataMs;
+
+  /// I metri saliti, da `ElevationGainedRecord`.
+  ///
+  /// ⛔ **Non si legge col pacchetto `health`**, che quel tipo non lo conosce
+  /// affatto: arriva da un canale nativo nostro. Vedi `SaluteInPiu`.
+  ///
+  /// 🚨 **`null` e non `0`**: zero è una pianura, l'assenza è «non lo sappiamo».
+  final double? dislivelloMetri;
+
   /// La distanza in km, se ha senso per questo tipo.
   ///
   /// ⛔ **`null` quando il tipo non la prevede, anche se il numero c'è.** Un
@@ -76,12 +103,23 @@ class StatisticheAllenamento {
     return m / 1000;
   }
 
-  /// La velocità media in km/h.
+  /// Se la velocità che mostriamo l'ha misurata l'orologio.
   ///
-  /// 💡 Si **calcola**: `SPEED` non arriva (vedi la nota in testa). ⚠️ È la media
-  /// sull'intera durata, **soste comprese**: è quello che vuol dire «velocità
-  /// media di un'uscita», e chiamarla così non inganna nessuno.
+  /// 🚨 **Serve a schermo, non qui**: una media sul tempo in movimento e una
+  /// sulla durata totale sono due grandezze diverse, e chi legge deve poter
+  /// sapere quale sta guardando. ⛔ Mostrarle con la stessa etichetta è il modo
+  /// di far sembrare sbagliato il numero giusto.
+  bool get velocitaDallOrologio => velocitaMisurataMs != null;
+
+  /// La velocità media in km/h — **quella dell'orologio, quando c'è**.
+  ///
+  /// ⚠️ Il calcolo resta come **ripiego**, e comprende le soste: è quello che
+  /// vuol dire «media sull'uscita», ed è un numero più basso.
   double? get velocitaKmH {
+    final misurata = velocitaMisurataMs;
+
+    if (misurata != null && misurata > 0) return misurata * 3.6;
+
     final d = km;
 
     if (d == null || durata.inSeconds <= 0) return null;
@@ -96,12 +134,19 @@ class StatisticheAllenamento {
   /// vorrebbe dire due righe che dicono la stessa cosa, e chi legge cerca la
   /// differenza.
   Duration? get passoAlKm {
-    final d = km;
-
-    if (d == null || d <= 0) return null;
     if (!TipoAllenamento.aPiedi(tipo)) return null;
 
-    return Duration(seconds: (durata.inSeconds / d).round());
+    /*
+     * ⚠️ **Dalla stessa fonte della velocità, sempre.** Il passo è la velocità
+     * girata: prenderlo dal calcolo mentre la velocità viene dall'orologio
+     * darebbe due numeri che si contraddicono a vicenda nella stessa card —
+     * «3,79 km/h» accanto a «21:15 /km», che è il passo di 2,8 km/h.
+     */
+    final v = velocitaKmH;
+
+    if (v == null || v <= 0) return null;
+
+    return Duration(seconds: (3600 / v).round());
   }
 
   /// I passi al minuto — la cadenza.
@@ -135,13 +180,24 @@ class StatisticheAllenamento {
     final lunghezza = m / p;
 
     /*
-     * ⛔ Fuori da questa banda non è un passo: è una distanza che l'orologio ha
-     * attribuito a una sessione in cui i passi contati sono altra cosa — tipico
-     * di una pedalata registrata con il telefono in tasca. 🚨 Un «passo da 3,4
-     * metri» è un numero che nessuno controlla e che rende sospetto tutto il
-     * resto della pagina.
+     * ══ 🚨 LA BANDA E' STATA ALZATA DOPO UNA MISURA VERA ═══════════════════
+     *
+     * ⛔ Era `0.3`, e la camminata dell'08/09 l'ha attraversata indisturbata:
+     * 1.270 m di GPS contro 3.523 passi fanno **36 cm a falcata**. 🚨 Non è un
+     * passo corto: è la prova che le due fonti **non sono d'accordo fra loro**
+     * — un adulto che cammina sta fra 65 e 85 cm.
+     *
+     * 💡 Il pavimento a **mezzo metro** non nasconde una misura scomoda: toglie
+     * un numero che non descrive nessuno. ⚠️ Chi cammina davvero con falcate da
+     * 40 cm è una persona molto bassa o molto lenta — e in quel caso il
+     * rapporto sarebbe *stabile*, mentre qui è l'effetto di un GPS che ha perso
+     * strada.
+     *
+     * 🚨 **E il tetto resta a 2,5 m**: quello serve al caso opposto, la
+     * pedalata registrata col telefono in tasca, dove i «passi» sono
+     * l'oscillazione del polso.
      */
-    if (lunghezza < 0.3 || lunghezza > 2.5) return null;
+    if (lunghezza < 0.5 || lunghezza > 2.5) return null;
 
     return lunghezza;
   }
@@ -164,5 +220,8 @@ class StatisticheAllenamento {
   /// di pesi senza calorie: un titolo, una cornice e niente dentro si legge come
   /// un guasto, non come «di questo non sappiamo niente».
   bool get qualcosaDaDire =>
-      km != null || cadenzaAlMinuto != null || battitoMedio != null;
+      km != null ||
+      cadenzaAlMinuto != null ||
+      battitoMedio != null ||
+      dislivelloMetri != null;
 }

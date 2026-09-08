@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/health/dati_salute.dart';
+import '../../features/health/salute_in_piu.dart';
 import '../../features/health/sessioni_di_sonno.dart';
 import '../../features/training/data/progressione.dart';
 import '../../features/training/data/storia_della_scheda.dart';
@@ -51,6 +52,7 @@ part 'archivio_salute.g.dart';
     PreferitiCibo,
     ConsigliDelGiorno,
     DocumentiImportati,
+    PercorsiDegliAllenamenti,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -77,7 +79,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 31;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -672,6 +674,25 @@ class ArchivioSalute extends _$ArchivioSalute {
           );
         }
       }
+
+      /*
+       * v30 -> v31 (08/09/2026): l'id di Health Connect e i percorsi.
+       *
+       * 🚨 **La colonna serve a poter CHIEDERE il percorso**: la finestra di
+       * consenso vuole l'id della sessione, e non accetta nient'altro.
+       *
+       * ⚠️ Sulle righe già presenti resta `null`, e non si può fare di meglio:
+       * quell'id non si ricostruisce da niente che abbiamo salvato. 💡 Si
+       * riempie da solo alla prima risincronizzazione, per gli allenamenti
+       * ancora dentro la finestra che il ponte rilegge.
+       */
+      if (da < 31) {
+        await m.addColumn(
+          allenamentiDaOrologio,
+          allenamentiDaOrologio.idSalute,
+        );
+        await m.createTable(percorsiDegliAllenamenti);
+      }
     },
   );
 
@@ -838,6 +859,15 @@ class ArchivioSalute extends _$ArchivioSalute {
                 kcal: Value(a.kcal),
                 distanzaMetri: Value(a.distanzaMetri),
                 passi: Value(a.passi),
+
+                /*
+                 * ⚠️ **Anche in aggiornamento**, non solo in inserimento: le
+                 * righe scritte prima della v31 l'id non ce l'hanno, e questa e'
+                 * l'unica occasione in cui possono riceverlo. 🚨 Lasciarlo fuori
+                 * di qui vorrebbe dire che chi ha gia' l'app installata non
+                 * potrebbe mai chiedere il percorso dei propri allenamenti.
+                 */
+                idSalute: Value(a.idSalute),
               ),
             );
       }
@@ -1809,6 +1839,7 @@ class ArchivioSalute extends _$ArchivioSalute {
     kcal: Value(a.kcal),
     distanzaMetri: Value(a.distanzaMetri),
     passi: Value(a.passi),
+    idSalute: Value(a.idSalute),
   );
 
   // ─────────────────────────── lettura ───────────────────────────
@@ -1946,6 +1977,88 @@ class ArchivioSalute extends _$ArchivioSalute {
           )
           ..orderBy([(t) => OrderingTerm.asc(t.misurataIl)]))
         .get();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 🗺️ I percorsi degli allenamenti — 08/09/2026
+  // ══════════════════════════════════════════════════════════════════════
+
+  /// Il percorso di un allenamento, se l'abbiamo.
+  ///
+  /// 🚨 **`null` non distingue «mai chiesto» da «rifiutato»**: per quello c'è
+  /// [percorsoRifiutato]. ⛔ Confonderli vorrebbe dire richiedere il consenso a
+  /// ogni apertura della pagina a chi ha già detto di no — cioè trasformare un
+  /// rifiuto in un assillo.
+  Future<List<PuntoDelPercorso>?> percorsoDi(int allenamentoId) async {
+    final riga =
+        await (select(percorsiDegliAllenamenti)
+              ..where((t) => t.allenamentoId.equals(allenamentoId))
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (riga == null || riga.rifiutato) return null;
+
+    try {
+      final dato = jsonDecode(riga.punti);
+
+      if (dato is! List) return null;
+
+      return dato
+          .map(PuntoDelPercorso.dalDato)
+          .whereType<PuntoDelPercorso>()
+          .toList();
+    } on Object catch (errore) {
+      /*
+       * ⚠️ **Un JSON rotto non deve far esplodere una pagina.** Può succedere
+       * ripristinando un backup scritto da una versione futura con un formato
+       * diverso: meglio nessun percorso che una schermata bianca.
+       */
+      debugPrint('percorso $allenamentoId illeggibile — $errore');
+
+      return null;
+    }
+  }
+
+  /// Se la persona ha già detto di no per questo allenamento.
+  Future<bool> percorsoRifiutato(int allenamentoId) async {
+    final riga =
+        await (select(percorsiDegliAllenamenti)
+              ..where((t) => t.allenamentoId.equals(allenamentoId))
+              ..limit(1))
+            .getSingleOrNull();
+
+    return riga?.rifiutato ?? false;
+  }
+
+  /// Salva un percorso ottenuto, o segna che è stato rifiutato.
+  ///
+  /// ⚠️ **`punti` vuoto = rifiutato**: la finestra di consenso chiusa senza
+  /// concedere non torna un percorso vuoto, torna niente. 💡 Segnarlo è quello
+  /// che impedisce di richiederlo da solo la volta dopo.
+  Future<void> scriviIlPercorso({
+    required int allenamentoId,
+    required List<PuntoDelPercorso> punti,
+  }) async {
+    await into(percorsiDegliAllenamenti).insertOnConflictUpdate(
+      PercorsiDegliAllenamentiCompanion.insert(
+        allenamentoId: Value(allenamentoId),
+        punti: jsonEncode(punti.map((p) => p.versoIlDato()).toList()),
+        salvatoIl: DateTime.now(),
+        rifiutato: Value(punti.isEmpty),
+      ),
+    );
+  }
+
+  /// Gli allenamenti che **hanno** un percorso salvato.
+  ///
+  /// 💡 Serve allo storico, che deve sapere quali miniature disegnare senza
+  /// leggere ogni tracciato: una sola interrogazione invece di una per card.
+  Future<Set<int>> allenamentiConPercorso() async {
+    final righe = await (select(
+      percorsiDegliAllenamenti,
+    )..where((t) => t.rifiutato.equals(false))).get();
+
+    return righe.map((r) => r.allenamentoId).toSet();
   }
 
   /// Riscrive i passi di un giorno — 07/09/2026.
@@ -4254,6 +4367,26 @@ class AllenamentiDaOrologio extends Table {
   BoolColumn get contaComeExtra =>
       boolean().withDefault(const Constant(false))();
 
+  /// L'identificativo che **Health Connect** dà a questa sessione — 08/09/2026.
+  ///
+  /// ══ 🚨 SENZA QUESTO IL PERCORSO NON SI PUO' NEMMENO CHIEDERE ═════════════
+  ///
+  /// La finestra di consenso di Health Connect vuole l'id **della sessione**, e
+  /// non c'è nessun altro modo di indicargliela: non l'ora, non la durata, non
+  /// la sorgente. ⛔ Senza questa colonna la richiesta del percorso non ha
+  /// proprio un argomento da passare.
+  ///
+  /// ⚠️ **`null` sulle righe scritte prima della v31**, ed è irreparabile per
+  /// loro: l'id non si ricostruisce da niente che abbiamo salvato. 💡 Alla prima
+  /// risincronizzazione le righe si riscrivono e l'id arriva — ma solo per gli
+  /// allenamenti ancora dentro la finestra che il ponte rilegge.
+  ///
+  /// 🚨 **Non è la chiave unica**, e non deve diventarlo: la chiave resta
+  /// `fonte + iniziatoIl`. Un allenamento può arrivare anche da una sorgente che
+  /// un id di Health Connect non ce l'ha, e una chiave su una colonna nullable
+  /// è una chiave che un giorno non c'è.
+  TextColumn get idSalute => text().nullable()();
+
   /// 🚨 `fonte` + `iniziatoIl`: la stessa chiave del sonno, per la stessa
   /// ragione. Si rileggono sempre gli ultimi sette giorni, e senza questa
   /// coppia ogni avvio dell'app aggiungerebbe di nuovo tutto.
@@ -4261,6 +4394,85 @@ class AllenamentiDaOrologio extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
     {fonte, iniziatoIl},
   ];
+}
+
+/// 🗺️ Il tracciato di un allenamento all'aperto — 08/09/2026.
+///
+/// ══ 📌 LA RICHIESTA ═══════════════════════════════════════════════════════
+///
+/// Il committente: *«se non metto la foto, al posto di quella nella schermata
+/// dello storico degli allenamenti ci deve essere la forma del percorso che ho
+/// fatto»*.
+///
+/// ══ 🚨 PERCHE' UNA TABELLA SUA E NON UNA COLONNA SULL'ALLENAMENTO ═════════
+///
+/// ⛔ Una colonna `TEXT` sulla riga dell'allenamento sarebbe stata più semplice
+/// da scrivere e **molto** più cara da leggere: Drift legge la riga intera, e lo
+/// storico legge tutte le righe. 🚨 Aprire l'elenco degli allenamenti avrebbe
+/// voluto dire caricare in memoria ogni tracciato di ogni uscita — migliaia di
+/// coordinate — per disegnare una lista di titoli.
+///
+/// 💡 Qui invece il percorso si legge **solo quando serve**: la miniatura di una
+/// card, la pagina di un allenamento.
+///
+/// ══ 💾 E FINISCE NEL BACKUP DA SOLA ═══════════════════════════════════════
+///
+/// `esportaPerBackup()` enumera `allTables`: una tabella aggiunta oggi ci entra
+/// **per costruzione**, senza che nessuno la aggiunga a un elenco. ⚠️ Ed è
+/// necessario che ci entri: il percorso lo si ottiene con un consenso che la
+/// persona dà **una volta per uscita**, e perderlo vorrebbe dire richiederlo per
+/// ogni allenamento di sempre.
+class PercorsiDegliAllenamenti extends Table {
+  @override
+  String get tableName => 'percorsi_degli_allenamenti';
+
+  /// La riga di `allenamenti_da_orologio` a cui appartiene, **ed è la chiave**.
+  ///
+  /// ══ 🚨 NIENTE `id` AUTOINCREMENT, E L'HA DECISO UN TEST ═══════════════════
+  ///
+  /// ⛔ La prima versione aveva un `id` suo e l'unicità dichiarata con
+  /// `uniqueKeys`. 🚨 `insertOnConflictUpdate` però guarda la **chiave
+  /// primaria**: con un `id` autoincrement il secondo salvataggio dello stesso
+  /// allenamento non aggiornava — sbatteva contro il vincolo unico e **faceva
+  /// esplodere la richiesta**.
+  ///
+  /// ⚠️ Il difetto si vedeva solo *richiedendo un percorso già rifiutato*, cioè
+  /// premendo «chiedi di nuovo»: il caso meno provato e più probabile, perché la
+  /// prima volta si dice di no per prudenza.
+  ///
+  /// 💡 Un percorso sta a un allenamento **uno a uno**: un id in più non
+  /// aggiungeva niente e toglieva la garanzia.
+  IntColumn get allenamentoId => integer()();
+
+  /// I punti, in JSON: `[{"lat":..,"lon":..,"quota":..,"istante":..}, …]`.
+  ///
+  /// ⚠️ **JSON e non una tabella di punti**, ed è una scelta contro la forma
+  /// normale: un percorso si legge **sempre tutto insieme** e non si interroga
+  /// mai per pezzi. 🚨 Una riga per punto vorrebbe dire qualche migliaio di righe
+  /// per uscita, un indice da mantenere, e un `JOIN` per disegnare una linea.
+  ///
+  /// 💡 La quota può mancare punto per punto: `null` dove il GPS non l'aveva.
+  TextColumn get punti => text()();
+
+  /// Quando l'abbiamo chiesto e ottenuto.
+  ///
+  /// 💡 Serve a distinguere «non l'abbiamo mai chiesto» da «l'abbiamo chiesto e
+  /// la persona ha detto di no»: vedi [rifiutato].
+  DateTimeColumn get salvatoIl => dateTime()();
+
+  /// ⛔ **La persona ha detto di no.**
+  ///
+  /// 🚨 Senza questo, l'app richiederebbe il consenso a ogni apertura della
+  /// pagina — cioè trasformerebbe un rifiuto in un assillo. ⚠️ E il rifiuto è
+  /// una risposta legittima: il percorso è la cosa più sensibile che leggiamo.
+  ///
+  /// 💡 Resta comunque un pulsante per chiederlo di nuovo, ma lo preme la
+  /// persona.
+  BoolColumn get rifiutato => boolean().withDefault(const Constant(false))();
+
+  /// 🚨 Un percorso per allenamento: richiederlo due volte **sostituisce**.
+  @override
+  Set<Column<Object>> get primaryKey => {allenamentoId};
 }
 
 /// Una seduta di allenamento registrata **con l'app** — FASE 11.1, 21/08/2026.

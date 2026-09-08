@@ -36,7 +36,19 @@ void main() {
 
   group('le letture', () {
     test('si scrivono e si rileggono dalla più recente', () async {
-      final oggi = DateTime(2026, 8, 11, 7);
+      /*
+       * ══ 🚨 LE DATE SONO RELATIVE A ADESSO, E LO SONO DIVENTATE DOPO ═══════
+       *
+       * ⛔ Qui c'era `DateTime(2026, 8, 11, 7)`, una data fissa. 🚨 Ma
+       * `lettureRecenti` conta i giorni **da `DateTime.now()`**: l'08/09/2026
+       * quella lettura è uscita dalla finestra dei trenta giorni, e il test è
+       * diventato rosso **da solo**, senza che nessuno toccasse niente.
+       *
+       * ⚠️ Era un test che misurava il calendario invece del comportamento. 💡 E
+       * il difetto peggiore è quello che avrebbe fatto **prima**: per un mese ha
+       * dato verde a una regola che non stava provando più.
+       */
+      final oggi = DateTime.now();
 
       await archivio.scriviLetture([
         lettura(MetricaSalute.hrv, 48, oggi.subtract(const Duration(days: 2))),

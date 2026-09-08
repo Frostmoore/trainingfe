@@ -15,6 +15,7 @@ import '../../achievements/ui/carosello_achievements.dart';
 import '../../health/tipo_allenamento.dart';
 import '../../progress/progress_controller.dart';
 import '../data/storico_unificato.dart';
+import '../percorso_controller.dart';
 import '../session_controller.dart';
 import '../settimana_scelta.dart';
 import '../storico_unificato_controller.dart';
@@ -22,6 +23,7 @@ import '../training_controller.dart';
 import 'widgets/barra_settimana.dart';
 import 'widgets/calendario_del_mese.dart';
 import 'widgets/carosello_del_mese.dart';
+import 'widgets/forma_del_percorso.dart';
 
 /// Lo storico degli allenamenti — C10.
 ///
@@ -654,7 +656,73 @@ class _Miniatura extends ConsumerWidget {
 
     if (prima != null) return FotoLocale(file: prima.file);
 
+    /*
+     * ══ 🗺️ SENZA FOTO, LA FORMA DEL PERCORSO — 08/09/2026 ═════════════════
+     *
+     * 📌 Il committente: *«se non metto la foto, al posto di quella nella
+     * schermata dello storico degli allenamenti ci deve essere la forma del
+     * percorso che ho fatto»*.
+     *
+     * 🚨 **L'ordine è quello che ha chiesto lui, e conta**: la foto vince. Chi
+     * ne ha messa una ha scelto come ricordarsi quell'uscita, e sostituirgliela
+     * con un disegno sarebbe rispondere a una domanda che non ha fatto.
+     *
+     * ⚠️ **Si guarda un insieme, non un tracciato per card.** Lo storico disegna
+     * otto miniature per schermata: leggere otto percorsi interi per sapere
+     * *se* disegnarli farebbe scattare lo scorrimento. 💡 Il tracciato vero lo
+     * legge solo la card che lo mostra davvero.
+     */
+    final conPercorso = ref.watch(allenamentiConPercorsoProvider).valueOrNull;
+    final idPolso = voce.dalPolso.firstOrNull?.id;
+
+    if (idPolso != null && (conPercorso?.contains(idPolso) ?? false)) {
+      return _FormaInMiniatura(allenamentoId: idPolso);
+    }
+
     return _SenzaFoto(voce: voce);
+  }
+}
+
+/// La forma del percorso dentro una cella dello storico.
+///
+/// 💡 Sul fondo tinto di [_SenzaFoto], che resta anche mentre il tracciato si
+/// carica: senza, la cella lampeggerebbe da grigia a disegnata mentre si scorre.
+class _FormaInMiniatura extends ConsumerWidget {
+  const _FormaInMiniatura({required this.allenamentoId});
+
+  final int allenamentoId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final punti = ref
+        .watch(percorsoDellAllenamentoProvider(allenamentoId))
+        .valueOrNull;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tema.colorScheme.secondaryContainer,
+            tema.colorScheme.surfaceContainerHighest,
+          ],
+        ),
+      ),
+      child: punti == null || punti.length < 2
+          ? const SizedBox.expand()
+          : Padding(
+              padding: const EdgeInsets.all(Gap.sm),
+              child: FormaDelPercorso(
+                punti: punti,
+                // ⚠️ Più spesso che nella pagina: a 150 px un tratto da 2,5
+                // sparisce, e la cella sembrerebbe vuota.
+                spessore: 3,
+                colore: tema.colorScheme.onSecondaryContainer,
+              ),
+            ),
+    );
   }
 }
 

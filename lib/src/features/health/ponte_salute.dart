@@ -57,6 +57,19 @@ class PonteSalute {
     HealthDataType.SLEEP_AWAKE,
 
     /*
+     * ⚡ **La velocità** — 08/09/2026.
+     *
+     * ⛔ **Il 08/09 una sonda ha detto «SPEED nessun campione» e l'ho letto come
+     * "l'orologio non la scrive".** 🚨 Falso: Health Connect ne mostra
+     * 3,792 km/h per la camminata delle 10:49, scritti da Zepp. A mancare era
+     * `READ_SPEED` nel manifest, che non c'era e non veniva chiesto.
+     *
+     * ⚠️ E' lo stesso errore dei 23.471 passi: uno zero misurato su una porta
+     * chiusa da noi, e attribuito a chi sta dall'altra parte.
+     */
+    HealthDataType.SPEED,
+
+    /*
      * 🆕 FASE 1 — le calorie bruciate con l'attivita'.
      *
      * 🚨 **`ACTIVE_ENERGY_BURNED`, mai `TOTAL_CALORIES_BURNED`**: il totale
@@ -836,6 +849,15 @@ class PonteSalute {
          */
           staccato: false,
           contaComeExtra: false,
+
+          /*
+           * 🗺️ **L'identificativo di Health Connect** — 08/09/2026.
+           *
+           * 🚨 Senza, il percorso non si puo' nemmeno CHIEDERE: la finestra di
+           * consenso vuole l'id della sessione e non accetta nient'altro — non
+           * l'ora, non la durata, non la sorgente.
+           */
+          idSalute: punto.uuid,
         ),
       );
     }
@@ -940,6 +962,7 @@ class PonteSalute {
     HealthDataType.RESTING_HEART_RATE => MetricaSalute.battitoARiposo,
     HealthDataType.HEART_RATE => MetricaSalute.battitoMedio,
     HealthDataType.ACTIVE_ENERGY_BURNED => MetricaSalute.calorieAttive,
+    HealthDataType.SPEED => MetricaSalute.velocita,
     /*
      * ⛔ **`STEPS` non passa piu' di qui** — 07/09/2026. I passi si scrivono un
      * giorno alla volta con l'aggregato, non campione per campione: vedi

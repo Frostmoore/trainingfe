@@ -25,10 +25,10 @@ import '../../statistiche_controller.dart';
 /// dimenticato. Vedi `StatisticheAllenamento`, dove la decisione è presa una
 /// volta sola e per iscritto.
 ///
-/// ⚠️ **L'inclinazione non c'è**, e non è una dimenticanza: serve la quota dei
-/// punti del percorso, e il percorso Health Connect lo tiene dietro un consenso
-/// che si concede a mano. Misurato l'08/09 — vedi il manifest, alla voce
-/// `READ_EXERCISE_ROUTES`.
+/// ✅ **E il dislivello c'è**, dall'08/09: lo legge un canale nativo nostro,
+/// perché il pacchetto `health` il tipo `ElevationGainedRecord` non lo conosce.
+/// ⚠️ **Non dipende dal consenso del percorso** — è un dato a sé, e su una
+/// camminata vera ha dato **27 m**. Vedi `SaluteInPiu`.
 class NumeriDellAllenamento extends ConsumerWidget {
   const NumeriDellAllenamento({required this.voce, super.key});
 
@@ -55,7 +55,25 @@ class NumeriDellAllenamento extends ConsumerWidget {
         (Icons.straighten_rounded, 'Distanza', '${_conLaVirgola(km, 2)} km'),
 
       if (stat.velocitaKmH case final v?)
-        (Icons.speed_rounded, 'Velocità media', '${_conLaVirgola(v, 1)} km/h'),
+        (
+          Icons.speed_rounded,
+          /*
+           * 🚨 **L'etichetta dice da dove viene, e non è un dettaglio.**
+           *
+           * ⛔ Sulla camminata dell'08/09 le due strade danno 3,79 km/h
+           * (l'orologio) e 2,8 km/h (distanza ÷ durata): il 34% di scarto. La
+           * differenza è la sosta al bar — 📌 *«tiene da conto il fatto che mi
+           * sono fermato 10 minuti»*.
+           *
+           * ⚠️ Chiamarle tutte e due «velocità media» farebbe sembrare rotta
+           * l'app a chi confronta con l'orologio. 💡 Dire «stimata» dice
+           * **quale domanda** quel numero sta rispondendo.
+           */
+          stat.velocitaDallOrologio
+              ? 'Velocità media'
+              : 'Velocità media stimata',
+          '${_conLaVirgola(v, 1)} km/h',
+        ),
 
       if (stat.passoAlKm case final p?)
         (Icons.timeline_rounded, 'Passo', '${_minutiESecondi(p)} /km'),
@@ -78,6 +96,9 @@ class NumeriDellAllenamento extends ConsumerWidget {
 
       if (stat.battitoMassimo case final b?)
         (Icons.favorite_border_rounded, 'Battito massimo', '$b bpm'),
+
+      if (stat.dislivelloMetri case final d?)
+        (Icons.terrain_rounded, 'Dislivello', '${d.round()} m'),
 
       if (stat.kcalAlMinuto case final k?)
         (

@@ -229,6 +229,44 @@ class CosaLeggiamoDaSalute extends ConsumerWidget {
               'storico anche quando ti alleni senza aprire l\'app, e puoi dire '
               'quale scheda hai fatto.',
         ),
+
+        /*
+         * ⚖️ **Tre voci nuove — 08/09/2026**, e non sono decorazione: sono
+         * altrettanti permessi in più nel manifest. 🚨 La regola scritta in
+         * testa a questa schermata vale per loro come per le altre — Google
+         * rifiuta un'app che chiede un permesso senza spiegare qui perché.
+         */
+        const _Voce(
+          icona: Icons.speed_outlined,
+          titolo: 'Velocità e dislivello',
+          testo:
+              'Quanto sei andato veloce e quanti metri hai salito, come li '
+              'misura il tuo orologio. Servono al riassunto di un allenamento: '
+              'la sua velocità tiene conto delle soste, la nostra no.',
+        ),
+
+        /*
+         * 🚨 **Il percorso ha una voce SUA, e la più lunga.**
+         *
+         * ⛔ Metterlo insieme a velocità e dislivello sarebbe stato comodo e
+         * sbagliato: quelli sono numeri, questo dice **dove sei stato e a che
+         * ora**. E' la cosa più sensibile che l'app legga, e la sola per cui
+         * esiste un consenso separato.
+         *
+         * ⚠️ Le due frasi finali sono una promessa, non una descrizione: se un
+         * domani il percorso dovesse uscire dal telefono, si cambiano **prima**
+         * del codice che le rende false.
+         */
+        const _Voce(
+          icona: Icons.route_outlined,
+          titolo: 'Il percorso di un\'uscita',
+          testo:
+              'Solo se glielo chiedi tu, uscita per uscita: Android ti mostra '
+              'il tracciato e ti domanda se condividerlo. Serve a disegnarne la '
+              'forma nello storico, al posto della foto.\n\n'
+              'Resta sul telefono e nel tuo backup. Non lo mandiamo a nessuno, '
+              'e non lo vede né la tua palestra né l\'AI.',
+        ),
         const SizedBox(height: Gap.md),
         Card(
           color: theme.colorScheme.surfaceContainerHighest,

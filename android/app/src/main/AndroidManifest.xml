@@ -91,6 +91,36 @@
         android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
 
     <!--
+      ⚡ 08/09/2026 — LA VELOCITA'.
+
+      ⛔ L'08/09 una sonda ha riportato «SPEED nessun campione» e io l'ho letto
+      come «l'orologio non la scrive». 🚨 Falso: Health Connect mostra
+      3,792 km/h per la camminata delle 10:49, scritti da Zepp. A mancare era
+      QUESTO PERMESSO, che non c'era e non veniva chiesto.
+
+      ⚠️ E' lo stesso errore dei 23.471 passi: uno zero misurato su una porta
+      chiusa da noi, attribuito a chi sta dall'altra parte.
+    -->
+    <uses-permission
+        android:name="android.permission.health.READ_SPEED"/>
+
+    <!--
+      ⛰️ 08/09/2026 — IL DISLIVELLO.
+
+      📌 Il committente lo chiede come «inclinazione» fra i dati di un
+      allenamento.
+
+      🚨 Il dato C'E': Health Connect mostra 27 m per la camminata delle
+      10:49, scritti da Zepp. ⛔ Ma il pacchetto `health` il tipo
+      `ElevationGainedRecord` non lo conosce affatto — non e' un permesso
+      mancante, e' proprio un tipo che non c'e' nel suo elenco.
+
+      💡 Per questo lo legge un canale nostro: vedi `SaluteInPiu.kt`.
+    -->
+    <uses-permission
+        android:name="android.permission.health.READ_ELEVATION_GAINED"/>
+
+    <!--
       🗺️ 08/09/2026 — IL PERCORSO DI UN ALLENAMENTO ALL'APERTO.
 
       📌 Il committente: «se non metto la foto, al posto di quella nella

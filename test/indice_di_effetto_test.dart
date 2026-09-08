@@ -30,31 +30,77 @@ void main() {
 
   group('le due ancore, che sono la ragione dei numeri', () {
     /*
-     * 📌 *«only 40 minutes of high-intensity PA (~85% of the heart rate reserve)
-     * is needed to obtain 100 PAI»* — l'affermazione principale pubblicata.
+     * ══ ⛔ LE DUE ANCORE DI PRIMA ERANO SBAGLIATE — 08/09/2026 ═══════════════
+     *
+     * Erano *«40 min all'85% della **riserva** = 100»* e *«150 min al 50%»*, e
+     * la prima l'avevo attribuita al PAI.
+     *
+     * 🚨 **Il PAI non dice quello.** NTNU/CERG, che il PAI l'ha inventato:
+     * *«two sessions totalling one hour of exercise to reach 100 PAI if the
+     * intensity is at least 80% of your MAXIMUM heart rate»*.
+     *
+     * ⚠️ Percentuale della **massima**, non della riserva: due grandezze
+     * diverse, e scambiarle sposta l'ancora di venti punti percentuali. 💡 Per
+     * una persona tipo (riposo 60, massima 180) l'80% della massima è 144 bpm,
+     * cioè il **70% della riserva**.
      */
-    test('🚨 40 minuti all\'85% della riserva fanno ~100', () {
-      final punti = ModelloDiEffetto.puntiAlMinuto(0.85) * 40;
+    test('🚨 60 minuti al 70% della riserva fanno ~100', () {
+      final punti = ModelloDiEffetto.puntiAlMinuto(0.70) * 60;
 
       expect(punti, closeTo(100, 5));
     });
 
     /*
-     * 📌 La raccomandazione OMS: 150 minuti a settimana di attività moderata.
-     * Il PAI è dichiaratamente allineato a quella soglia.
+     * 📌 La stessa fonte: 100 PAI si ottengono con *«60 min di camminata svelta
+     * + 40 di bici + 50 di nuoto + 30 di aerobica + 20 di corsa»* — cioè
+     * **200 minuti** di attività fra leggera e moderata.
      */
-    test('🚨 150 minuti al 50% fanno ~100', () {
-      final punti = ModelloDiEffetto.puntiAlMinuto(0.50) * 150;
+    test('🚨 200 minuti al 50% fanno ~100', () {
+      final punti = ModelloDiEffetto.puntiAlMinuto(0.50) * 200;
 
       expect(punti, closeTo(100, 5));
     });
 
     test('⛔ sotto la soglia non si accumula niente', () {
-      expect(ModelloDiEffetto.puntiAlMinuto(0.30), 0);
+      /*
+       * ══ 🚨 LA SOGLIA ERA 0.30, E QUEL NUMERO HA PRODOTTO UN 175 ═══════════
+       *
+       * 📌 Il committente: *«è impossibile che io stia a 175/100, mi sono
+       * allenato relativamente poco»*.
+       *
+       * ⛔ Con riposo 75 e massima 181, il 30% della riserva cade a **107 bpm**:
+       * salire le scale, portare la spesa, avere fretta. Il conto ci ha trovato
+       * dentro **1.092 minuti in una settimana**.
+       *
+       * 💡 Il 40% cade a 117 bpm. Lì sotto non si allena nessuno.
+       */
+      expect(ModelloDiEffetto.puntiAlMinuto(0.40), 0);
+      expect(ModelloDiEffetto.puntiAlMinuto(0.35), 0);
       expect(ModelloDiEffetto.puntiAlMinuto(0.10), 0);
 
-      // 💡 Se contasse, il TEI lo farebbe anche chi cammina fino al bar.
-      expect(ModelloDiEffetto.puntiAlMinuto(0.29), 0);
+      // 🚨 Il valore che prima contava, e che era il difetto.
+      expect(
+        ModelloDiEffetto.puntiAlMinuto(0.30),
+        0,
+        reason: 'il 30% della riserva è vita normale, non allenamento',
+      );
+    });
+
+    test('📉 e i rendimenti decrescenti fanno di 100 il traguardo vero', () {
+      /*
+       * 📌 *«deve essere una rotazione settimanale in cui 100 è la perfezione»*.
+       *
+       * 🚨 **Cento grezzi devono fare cento esatti**, o la saturazione starebbe
+       * riscalando il traguardo invece di comprimere l'eccesso.
+       */
+      expect(ModelloDiEffetto.conRendimentiDecrescenti(100), closeTo(100, 0.5));
+
+      // 💡 «È più facile arrivare ai primi 50 che ai secondi 50» — NTNU/CERG.
+      expect(ModelloDiEffetto.conRendimentiDecrescenti(50), greaterThan(60));
+
+      // ⛔ E un 175 da una settimana di vita normale non esce più.
+      expect(ModelloDiEffetto.conRendimentiDecrescenti(200), lessThan(140));
+      expect(ModelloDiEffetto.conRendimentiDecrescenti(10000), lessThan(151));
     });
 
     test('💡 la curva cresce più che proporzionalmente', () {
@@ -135,10 +181,27 @@ void main() {
         adesso: alle(7, 23),
       );
 
-      expect(gara.punti, closeTo(ModelloDiEffetto.tettoAlGiorno, 0.01));
+      /*
+       * ⚠️ **Il tetto si controlla sul GREZZO, non sul punteggio mostrato** —
+       * 08/09/2026. 🚨 Da quando c'è la saturazione i due numeri non coincidono
+       * più: 75 grezzi diventano 84 a schermo, ed è giusto così.
+       *
+       * ⛔ Cercare 75 in `punti` sarebbe provare la saturazione credendo di
+       * provare il tetto — un test verde per la ragione sbagliata.
+       */
       expect(
         gara.perGiorno.last,
         closeTo(ModelloDiEffetto.tettoAlGiorno, 0.01),
+      );
+
+      expect(
+        gara.punti,
+        closeTo(
+          ModelloDiEffetto.conRendimentiDecrescenti(
+            ModelloDiEffetto.tettoAlGiorno,
+          ),
+          0.01,
+        ),
       );
     });
 

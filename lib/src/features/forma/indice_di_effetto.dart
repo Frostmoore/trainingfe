@@ -89,25 +89,127 @@ abstract final class ModelloDiEffetto {
 
   /// Sotto questa frazione della riserva non si accumula niente.
   ///
-  /// 💡 Il 30% è più o meno stare in piedi a fare le cose: se contasse, il TEI
-  /// lo farebbe anche chi dorme dodici ore e cammina fino al bar.
-  static const soglia = 0.30;
+  /// ══ 🚨 ERA 0.30, E QUEL NUMERO HA PRODOTTO UN 175 ═════════════════════════
+  ///
+  /// 📌 Il committente, l'08/09: *«è impossibile che io stia a 175/100, mi sono
+  /// allenato relativamente poco in questi giorni»*. ⛔ **Aveva ragione, e la
+  /// colpa era tutta qui.**
+  ///
+  /// 🚨 **Il 30% della riserva non è una soglia di esercizio: è una soglia di
+  /// vita.** Con un battito a riposo di 75 e una massima di 181, il 30% cade a
+  /// **107 bpm** — cioè salire le scale, portare la spesa, avere fretta. Il
+  /// conto ci ha trovato dentro **1.092 minuti in una settimana**: diciotto ore
+  /// di «allenamento» che erano una vita normale.
+  ///
+  /// 💡 Il 40% cade a **117 bpm** per la stessa persona: lì sotto non si allena
+  /// nessuno. ⚠️ E la differenza non è marginale — è quella fra misurare
+  /// l'attività e misurare l'essere svegli.
+  ///
+  /// ⛔ **Non si abbassa «perché così il numero è più incoraggiante»**: sarebbe
+  /// tornare esattamente al difetto che questa riga documenta.
+  static const soglia = 0.40;
 
   /// L'esponente e il coefficiente della curva, dalle due ancore.
+  ///
+  /// ══ 🚨 LE ANCORE SONO CAMBIATE, E LE VECCHIE ERANO SBAGLIATE ══════════════
+  ///
+  /// ⛔ Prima erano *«40 min all'85% della **riserva** = 100»* e *«150 min al
+  /// 50% = 100»*, e la prima l'avevo attribuita al PAI. 🚨 **Il PAI non dice
+  /// quello.** La fonte (NTNU/CERG, che il PAI l'ha inventato) dice:
+  ///
+  /// > *«two sessions totalling one hour of exercise to reach 100 PAI if the
+  /// > intensity is at least 80% of your **maximum heart rate**»*
+  ///
+  /// ⚠️ **Percentuale della massima, non della riserva**: sono due grandezze
+  /// diverse, e scambiarle sposta l'ancora di venti punti percentuali.
+  ///
+  /// 💡 Convertita per una persona tipo (riposo 60, massima 180): l'80% della
+  /// massima è 144 bpm, cioè il **70% della riserva**. Da lì la prima ancora.
+  ///
+  /// | Ancora | Da dove |
+  /// |---|---|
+  /// | **60 min al 70% della riserva = 100** | NTNU/CERG, convertita |
+  /// | **200 min al 50% = 100** | *«60 min di camminata svelta + 40 di bici + 50 di nuoto + 30 di aerobica + 20 di corsa»*, che la stessa fonte dà come 100 PAI |
   ///
   /// 🚨 **Non si toccano separatamente.** Sono la soluzione di un sistema a due
   /// equazioni: cambiarne uno solo sposta la curva senza più passare per
   /// nessuna delle due ancore, e a quel punto i numeri non vengono più da
   /// nessuna parte.
-  static const esponente = 1.31;
-  static const coefficiente = 5.56;
+  ///
+  /// 💡 `(0.70 − 0.40) / (0.50 − 0.40) = 3` e `200 / 60 = 3.33`, quindi
+  /// `3^e = 3.33` → `e = 1.096`; e da `60 · k · 0.30^1.096 = 100` → `k = 6.43`.
+  static const esponente = 1.096;
+  static const coefficiente = 6.43;
+
+  /// ══ 📉 I RENDIMENTI DECRESCENTI — 08/09/2026 ═══════════════════════════
+  ///
+  /// 📌 Il committente: *«deve essere una rotazione settimanale in cui 100 è la
+  /// perfezione»*.
+  ///
+  /// ⛔ **Prima non c'erano affatto**, e il PAI invece li ha: la sua fonte dice
+  /// *«è più facile arrivare ai primi 50 che ai secondi 50»* e *«se ripeti lo
+  /// stesso allenamento il giorno dopo, il secondo ne vale meno»*.
+  ///
+  /// 💡 Qui la saturazione è **sul totale della settimana**, ed è la nostra —
+  /// la formula del PAI non è pubblica:
+  ///
+  ///     punti = tetto × (1 − e^(−grezzo / costante))
+  ///
+  /// 🚨 **La costante non è scelta a occhio**: è quella per cui **100 grezzi
+  /// fanno esattamente 100**, cioè `100 / ln 3` con il tetto a 150. Così
+  /// «cento» resta il traguardo vero e non un numero riscalato.
+  ///
+  /// | Grezzo | Mostrato |
+  /// |---|---|
+  /// | 50 | **63** — i primi punti valgono di più |
+  /// | 100 | **100** — il traguardo |
+  /// | 200 | **133** |
+  /// | ∞ | **150**, e non oltre |
+  ///
+  /// ⚠️ **Superare 100 resta possibile**, ed è giusto: chi si allena molto più
+  /// del minimo deve vederlo. ⛔ Ma un 175 non può più uscire da una settimana
+  /// di vita normale, e un 300 non può uscire affatto.
+  static const tettoAssoluto = 150.0;
+
+  /// 🚨 Ricavata, non scelta: `obiettivo / ln(tetto / (tetto − obiettivo))`.
+  static const costanteDiSaturazione = 91.02;
+
+  /// Il punteggio mostrato, a partire da quello grezzo.
+  static double conRendimentiDecrescenti(double grezzo) =>
+      tettoAssoluto * (1 - math.exp(-grezzo / costanteDiSaturazione));
 
   /// Ogni quanti minuti, al massimo, deve arrivare un campione perché la
   /// misura valga.
   ///
-  /// ⚠️ **Dieci minuti**: un campione ogni mezz'ora non dice cosa è successo in
-  /// mezzo, e attribuirgli trenta minuti della sua intensità inventerebbe
-  /// mezz'ora di corsa da un battito preso mentre si saliva una rampa di scale.
+  /// ══ 🚨 UNA COSTANTE PER DUE DOMANDE, ED ERA UN DIFETTO ═══════════════════
+  ///
+  /// ⛔ Fino all'08/09 `minutiFraCampioni` rispondeva a **due domande diverse**
+  /// con lo stesso numero:
+  ///
+  /// 1. *quanti minuti può valere un campione?* — l'attribuzione;
+  /// 2. *quanto radi possono essere i campioni prima che la misura non valga?* —
+  ///    l'affidabilità.
+  ///
+  /// 🚨 **Abbassandolo a 3 per la prima, la seconda diventava severissima**: un
+  /// orologio che campiona ogni cinque minuti sarebbe stato dichiarato
+  /// inaffidabile, pur misurando benissimo. L'ha scoperto un test, che è
+  /// diventato rosso per il motivo giusto.
+  ///
+  /// 💡 Adesso sono due.
+  ///
+  /// ── Quanto vale un campione ──────────────────────────────────────────────
+  ///
+  /// ⚠️ **Tre minuti.** L'orologio del committente campiona una volta al
+  /// minuto: un buco di tre è una disattenzione del sensore, uno di dieci è
+  /// l'orologio sul comodino. ⛔ Attribuire dieci minuti al battito *prima* del
+  /// buco ha pesato sul 175 dell'08/09.
+  static const minutiAttribuiti = 3;
+
+  /// ── Quanto radi possono essere i campioni ────────────────────────────────
+  ///
+  /// ⚠️ **Dieci minuti**, e resta com'era: è la domanda *«questo orologio sta
+  /// misurando?»*, non *«cosa è successo in quel buco?»*. 💡 Un campione ogni
+  /// cinque minuti descrive una corsa; uno ogni mezz'ora no.
   static const minutiFraCampioni = 10;
 
   /// La frequenza massima stimata dall'età — **Tanaka**, non `220 − età`.
@@ -194,10 +296,7 @@ abstract final class ModelloDiEffetto {
 
       final durata = prossimo == null
           ? 1
-          : math.min(
-              prossimo.difference(c.quando).inMinutes,
-              minutiFraCampioni,
-            );
+          : math.min(prossimo.difference(c.quando).inMinutes, minutiAttribuiti);
 
       if (durata <= 0) continue;
 
@@ -230,8 +329,20 @@ abstract final class ModelloDiEffetto {
       perGiorno[i] = math.min(perGiorno[i], tettoAlGiorno);
     }
 
+    /*
+     * 📉 **I rendimenti decrescenti si applicano al TOTALE, non ai giorni.**
+     *
+     * 🚨 Applicarli giorno per giorno vorrebbe dire che sette giorni da 20
+     * grezzi fanno più di un giorno da 140 — cioè premiare la costanza due
+     * volte, visto che il tetto giornaliero già la premia una.
+     *
+     * 💡 `perGiorno` resta **grezzo**: serve al grafico, e un grafico di valori
+     * saturati non si sommerebbe più a quello che c'è scritto sopra.
+     */
+    final grezzo = perGiorno.fold<double>(0, (a, b) => a + b);
+
     return IndiceDiEffetto(
-      punti: perGiorno.fold<double>(0, (a, b) => a + b),
+      punti: conRendimentiDecrescenti(grezzo),
       perGiorno: perGiorno,
       minutiUtili: minutiUtili,
       affidabile: _abbastanzaFitti(dentro),

@@ -9,6 +9,7 @@ import '../carica_controller.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
 import '../indice_di_effetto.dart';
+import '../reattivita.dart';
 import '../indice_di_effetto_controller.dart';
 import 'barra_carico.dart';
 import 'tachimetro_prontezza.dart';
@@ -362,6 +363,40 @@ class _SezioneEffetto extends ConsumerWidget {
   }
 }
 
+/// Perché sei così adesso, detto in una riga.
+///
+/// 🚨 **Ogni motivo è una causa diversa**, e serve a togliere l'aria di
+/// oracolo al numero: *«sei sveglio da poco»* si capisce e si perdona, un 28
+/// senza spiegazione no.
+String _frase(Reattivita? r, double? valore) {
+  if (r == null) {
+    return valore == null
+        ? 'non calcolabile'
+        : 'Servono il sonno di stanotte e qualche dato dall\'orologio.';
+  }
+
+  return switch (r.motivo) {
+    MotivoDellaReattivita.appenaSvegliato =>
+      'Ti sei alzato da poco: l\'inerzia del risveglio passa in un\'ora.',
+    MotivoDellaReattivita.dopoIlPasto =>
+      'È la digestione: dopo un pasto pieno si scende, e risale da sé.',
+    MotivoDellaReattivita.notteCorta =>
+      'Hai dormito poco: oggi parti più in basso e cali prima.',
+    MotivoDellaReattivita.troppeOreInPiedi =>
+      'Sei sveglio da parecchie ore, e si sente.',
+    MotivoDellaReattivita.cadutaCircadiana =>
+      'È l\'ora in cui l\'orologio interno scende: capita a tutti.',
+    MotivoDellaReattivita.caricoAllenamento =>
+      'L\'allenamento di questi giorni si fa sentire.',
+
+    /*
+     * 💡 Nessun motivo che spicca **non è un errore**: vuol dire che stai dove
+     * il modello si aspetta, ed è la maggior parte del tempo.
+     */
+    null => 'Quanto sei reattivo adesso: cambia durante la giornata.',
+  };
+}
+
 /// La Prontezza: un tachimetro col 50 all'apice — 3b-K.
 ///
 /// ══ ⛔ SI CHIAMAVA «CARICA», ED ERA UNA BATTERIA ══════════════════════════
@@ -380,7 +415,29 @@ class _SezioneProntezza extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final v = forma.prontezza.valore;
+
+    /*
+     * ══ 🚨 ADESSO E' LA REATTIVITA', E PRIMA NON LO ERA ═══════════════════════
+     *
+     * 📌 Il committente, il 07/09: *«la prontezza deve essere proprio un'altra
+     * misura rispetto alla carica… deve essere un valore che cambia durante la
+     * giornata, in base proprio a quanto sono reattivi gli esseri umani di
+     * media»*, e *«non è una batteria, è più un tachimetro»*.
+     *
+     * ⛔ **Il modello è stato scritto quel giorno — `ModelloDellaReattivita`,
+     * sedici test — e collegato a `forma_controller`. Ma non era mostrato da
+     * nessuna parte.** 🚨 Per due giorni questa riga ha continuato a disegnare
+     * il valore vecchio, e il committente ha dovuto chiedere se era stato fatto.
+     *
+     * ⚠️ **È il difetto peggiore di tutta la settimana**: non un numero
+     * sbagliato, ma un lavoro finito che sembrava fatto e non arrivava a
+     * schermo. Codice vivo che nessuno guarda.
+     *
+     * 💡 La prontezza **vecchia** non sparisce: risponde a un'altra domanda —
+     * *«come stai rispetto al tuo solito»* — e serve alla scheda del sonno.
+     */
+    final reattivita = forma.reattivita;
+    final v = reattivita?.valore ?? forma.prontezza.valore;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -403,13 +460,14 @@ class _SezioneProntezza extends StatelessWidget {
                * ⚠️ E dice **50 e non «il centro»**: chi guarda ha in mano un
                * numero, non una posizione.
                */
-              Text(
-                v == null
-                    ? 'non calcolabile'
-                    : '50 è il tuo normale: sopra stai meglio del solito, '
-                          'sotto peggio',
-                style: tema.textTheme.bodySmall,
-              ),
+              /*
+               * 🚨 **La frase è cambiata insieme al numero**, e doveva: «50 è il
+               * tuo normale» descriveva lo scostamento dalle proprie medie, che
+               * è quello che questo numero **non è più**. ⛔ Lasciarla sarebbe
+               * stato il difetto peggiore dei due — una didascalia giusta sotto
+               * un numero diverso.
+               */
+              Text(_frase(reattivita, v), style: tema.textTheme.bodySmall),
 
               const SizedBox(height: Gap.xs),
 

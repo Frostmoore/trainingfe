@@ -38,7 +38,6 @@ import 'widgets/calorie_dell_allenamento.dart';
 import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_dalla_scheda.dart';
 import 'widgets/foto_dell_allenamento.dart';
-import 'widgets/numeri_dell_allenamento.dart';
 import 'widgets/testa_dell_allenamento.dart';
 
 class AllenamentoOrologioScreen extends ConsumerWidget {
@@ -158,30 +157,18 @@ class _Dettaglio extends ConsumerWidget {
         const SizedBox(height: Gap.md),
 
         /*
-         * 📐 **I numeri dell'allenamento** — 08/09/2026.
+         * 📐 **I numeri non sono piu' qui** — 08/09/2026.
          *
-         * 📌 *«nella pagina di riassunto dell'esercizio ci devono essere tutti
-         * i dati dell'allenamento, quindi tempo velocità media inclinazione passo
-         * medio per minuto e tutte queste cose qui»*.
-         *
-         * ⚠️ **Sotto le calorie e non sopra**: le calorie si possono correggere
-         * a mano, questi si calcolano e basta. 💡 Chi apre la pagina per
-         * sistemare un numero lo trova subito; chi la apre per guardare l'uscita
-         * scorre di un dito.
-         *
-         * ⛔ Su una seduta di pesi senza battito questo riquadro **non
-         * compare**: vedi `qualcosaDaDire`.
+         * 📌 *«la card "I Numeri" deve essere spostata nella card
+         * "L'allenamento in numeri"»*. 💡 Adesso vivono dentro il carosello,
+         * in cima alla pagina, insieme al percorso.
          */
-        NumeriDellAllenamento(voce: voce),
-
-        const SizedBox(height: Gap.md),
-
         /*
          * 🗺️ **Il percorso non e' piu' qui** — 08/09/2026.
          *
          * 📌 *«la forma del percorso non la voglio sotto, la voglio nella stessa
          * card con i numeri dell'allenamento»*. 💡 Adesso vive dentro
-         * [NumeriDellAllenamento], qui sopra.
+         * `CaroselloDellAllenamento`, in cima alla pagina.
          */
         FotoDellAllenamento(allenamentoOrologioId: voce.dalPolso.first.id),
 

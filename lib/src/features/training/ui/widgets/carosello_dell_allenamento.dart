@@ -38,9 +38,13 @@ import '../../data/catalogo_esercizi.dart';
 import '../../data/storico_unificato.dart';
 import '../../data/tipo_scelto.dart';
 import '../../muscoli_allenati.dart';
+import '../../../health/tipo_allenamento.dart';
+import '../../statistiche_allenamento.dart';
+import '../../statistiche_controller.dart';
 import '../../training_controller.dart';
 import 'carosello_del_mese.dart';
 import 'figura_del_corpo.dart';
+import 'percorso_dell_allenamento.dart';
 
 class CaroselloDellAllenamento extends ConsumerStatefulWidget {
   const CaroselloDellAllenamento({required this.voce, super.key});
@@ -125,6 +129,29 @@ class _CaroselloDellAllenamentoState
         sottotitolo: quando,
         child: _NumeriDellAllenamento(voce: voce),
       ),
+
+      /*
+       * ══ 🗺️ IL PERCORSO E' UNA PAGINA DI QUESTA CARD — 08/09/2026 ═════
+       *
+       * 📌 Il committente: *«nel caso di allenamenti che hanno il percorso, ha
+       * più senso che la prima card (il "carosello") abbia percorso e tutti i
+       * numeri dentro»*.
+       *
+       * ⛔ **Prima era una card a sé, sotto**, e prima ancora una card ancora
+       * più sotto. 💡 Qui è al posto giusto: è un modo di raccontare *questo*
+       * allenamento, come la figura dei muscoli e i numeri — e si sfoglia
+       * insieme a loro invece di farsi cercare scorrendo.
+       *
+       * ⚠️ **Solo per i tipi che un percorso possono averlo.** Su una seduta di
+       * pesi sarebbe una pagina vuota in mezzo alle altre, e i puntini sotto
+       * direbbero che c'è qualcosa da vedere dove non c'è niente.
+       */
+      if (TipoAllenamento.conPercorso(voce.dalPolso.firstOrNull?.tipo ?? ''))
+        CardDelCarosello(
+          titolo: 'Il percorso',
+          sottotitolo: quando,
+          child: PercorsoDellAllenamento(voce: voce),
+        ),
     ];
 
     return Column(
@@ -300,6 +327,15 @@ class _NumeriDellAllenamento extends ConsumerWidget {
     final minuti = voce.durata.inMinutes;
 
     /*
+     * ⚠️ **Una lettura sola per tutti i numeri nuovi.** Ognuno di loro
+     * chiedendoselo da sé vorrebbe dire sette letture dell'archivio per una
+     * card — e sette occasioni perché due di loro non siano d'accordo.
+     */
+    final StatisticheAllenamento? stat = voce.dalPolso.isEmpty
+        ? null
+        : ref.watch(statisticheAllenamentoProvider(voce.dalPolso)).valueOrNull;
+
+    /*
      * ══ 🚨 «LE COSE CHE HANNO RILEVANZA» ═══════════════════════════════════
      *
      * ⛔ Ogni numero compare **solo se c'è**. Un «0 km» su una seduta di pesi o
@@ -318,9 +354,58 @@ class _NumeriDellAllenamento extends ConsumerWidget {
       if (esercizi > 0) ('$esercizi', esercizi == 1 ? 'esercizio' : 'esercizi'),
       if (serie > 0) ('$serie', serie == 1 ? 'serie' : 'serie'),
       if (metri != null && metri > 0) (_distanza(metri), 'percorsi'),
+      /*
+       * ══ 🚨 IL PASSO VIENE DALLA STESSA FONTE DELLA CARD, O SONO DUE ══════
+       *
+       * ⛔ **Qui c'era `_ritmo(metri, minuti)` e basta**, cioè distanza diviso
+       * durata. 🚨 Sulla camminata dell'08/09 dava **21:16 /km** mentre la card
+       * «I numeri», due dita più giù, diceva **15:43** — perché quella usa la
+       * velocità dell'orologio, che tiene conto delle soste.
+       *
+       * ⚠️ **Due passi diversi nella stessa schermata**, tutti e due plausibili:
+       * è esattamente il difetto che questo progetto insegue da settimane, e
+       * l'ho introdotto io sistemando solo una delle due.
+       *
+       * 💡 Adesso il numero è **uno**: quello di `StatisticheAllenamento`, che
+       * sa quale fonte preferire. ⛔ Il calcolo locale resta solo per gli
+       * allenamenti che una riga dell'orologio non ce l'hanno.
+       */
       if (metri != null && metri >= 1000 && minuti > 0)
-        (_ritmo(metri, minuti), 'al chilometro'),
+        (
+          _passoDelloStesso(ref, voce) ?? _ritmo(metri, minuti),
+          'al chilometro',
+        ),
       if (_passi > 0) ('$_passi', 'passi'),
+
+      /*
+       * ══ 📌 E QUI ARRIVANO GLI ALTRI — 08/09/2026 ════════════════════
+       *
+       * Il committente: *«la card "I Numeri" deve essere spostata nella card
+       * "L'allenamento in numeri"»*.
+       *
+       * ⛔ **Erano in una card separata più sotto**, ed era una divisione senza
+       * senso: velocità e battito sono «l'allenamento in numeri» quanto i minuti
+       * e le calorie. 💡 Chi voleva il quadro completo doveva scorrere e tenerne
+       * metà a memoria.
+       *
+       * ⚠️ **Vengono tutti da `StatisticheAllenamento`**, che sa già quali hanno
+       * senso per questo tipo e quale fonte preferire: qui non si decide niente,
+       * si scrive.
+       */
+      if (stat?.velocitaKmH case final v?)
+        (
+          _conLaVirgola(v, 1),
+          stat!.velocitaDallOrologio ? 'km/h' : 'km/h stimati',
+        ),
+      if (stat?.cadenzaAlMinuto case final c?)
+        ('${c.round()}', 'passi al minuto'),
+      if (stat?.lunghezzaDelPasso case final l?)
+        (_conLaVirgola(l, 2), 'metri a falcata'),
+      if (stat?.battitoMedio case final b?) ('$b', 'battito medio'),
+      if (stat?.battitoMassimo case final b?) ('$b', 'battito massimo'),
+      if (stat?.dislivelloMetri case final d?) ('${d.round()}', 'metri saliti'),
+      if (stat?.kcalAlMinuto case final k?)
+        (_conLaVirgola(k, 1), 'kcal al minuto'),
     ];
 
     /*
@@ -508,6 +593,28 @@ class _NumeriDellAllenamento extends ConsumerWidget {
   static String _distanza(int metri) => metri < 1000
       ? '$metri m'
       : '${(metri / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
+
+  /// 💡 La virgola, non il punto: `7,4`. Qui si scrive in italiano.
+  static String _conLaVirgola(double n, int decimali) =>
+      n.toStringAsFixed(decimali).replaceAll('.', ',');
+
+  /// Il passo **come lo dice `StatisticheAllenamento`**, se c'è.
+  ///
+  /// 🚨 Torna `null` quando non c'è una riga dell'orologio o quando il tipo un
+  /// passo non ce l'ha: in quel caso chi chiama ricade su [_ritmo], che è la
+  /// vecchia divisione — giusta, quando non c'è di meglio.
+  static String? _passoDelloStesso(WidgetRef ref, VoceStorico voce) {
+    if (voce.dalPolso.isEmpty) return null;
+
+    final passo = ref
+        .watch(statisticheAllenamentoProvider(voce.dalPolso))
+        .valueOrNull
+        ?.passoAlKm;
+
+    if (passo == null) return null;
+
+    return StatisticheAllenamento.passoScritto(passo);
+  }
 
   /// Minuti e secondi per chilometro.
   static String _ritmo(int metri, int minuti) {

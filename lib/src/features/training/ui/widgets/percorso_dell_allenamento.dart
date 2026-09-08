@@ -107,8 +107,8 @@ class _PercorsoDellAllenamentoState
      * mettere insieme cose che si guardano insieme.
      *
      * ⚠️ **Quindi qui non c'è più una `Card`**: la disegna chi ospita, cioè
-     * [NumeriDellAllenamento]. Rimetterla vorrebbe dire una cornice dentro una
-     * cornice.
+     * `CaroselloDellAllenamento`, che ne fa una delle sue pagine. Rimetterla
+     * vorrebbe dire una cornice dentro una cornice.
      */
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

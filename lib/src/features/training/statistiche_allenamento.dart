@@ -202,6 +202,18 @@ class StatisticheAllenamento {
     return lunghezza;
   }
 
+  /// Il passo scritto come si legge: `5:42`.
+  ///
+  /// ⚠️ **Sta qui e non nel widget che lo mostra**, ed è la lezione di
+  /// stamattina: quando il passo veniva calcolato in due posti, la pagina ne
+  /// mostrava due diversi — 21:16 nel carosello e 15:43 nella card. 🚨 Un
+  /// numero solo vuol dire anche **un posto solo** in cui diventa testo.
+  ///
+  /// 💡 I secondi hanno sempre due cifre: `6:5` si legge come sei minuti e
+  /// cinque decimi.
+  static String passoScritto(Duration passo) =>
+      '${passo.inMinutes}:${(passo.inSeconds % 60).toString().padLeft(2, '0')}';
+
   /// Le calorie per minuto: quanto è stato intenso, a parità di durata.
   ///
   /// 💡 Serve a confrontare due allenamenti di lunghezza diversa, che è la cosa

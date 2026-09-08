@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/health/tipo_allenamento.dart';
 import 'package:training_companion/src/features/training/statistiche_allenamento.dart';
-import 'package:training_companion/src/features/training/ui/widgets/numeri_dell_allenamento.dart';
 
 /// I numeri di un allenamento — 08/09/2026.
 ///
@@ -312,24 +311,22 @@ void main() {
   });
 
   group('✍️ come si scrivono', () {
-    test('⛔ mai «0h 47m»', () {
-      /*
-       * 💡 Uno zero davanti a un'unità che non serve fa contare due volte per
-       * capire un numero che si doveva leggere di colpo.
-       */
-      expect(NumeriDellAllenamento.durata(const Duration(minutes: 47)), '47m');
-    });
-
-    test('✅ ma «1h 24m» quando l\'ora c\'è', () {
-      expect(
-        NumeriDellAllenamento.durata(const Duration(minutes: 84)),
-        '1h 24m',
-      );
-    });
-
+    /*
+     * ⛔ **I due test sulla durata sono spariti con il formattatore.**
+     *
+     * Scriveva `47m` e `1h 24m`, e viveva in `NumeriDellAllenamento` — la card
+     * che l'08/09 è stata assorbita dal carosello. 🚨 Lì la durata si scrive
+     * come numero e basta («27» sopra «minuti»), quindi quel formattatore non
+     * lo chiamava più nessuno.
+     *
+     * ⚠️ **Un test su codice morto è peggio di nessun test**: resta verde per
+     * sempre e fa credere che qualcosa sia protetto. 💡 La regola che difendeva
+     * — mai «0h 47m» — vale ancora, e tornerà scritta il giorno che una durata
+     * tornerà a essere formattata.
+     */
     test('⏱️ il passo si scrive «5:42», non «5,7»', () {
       expect(
-        NumeriDellAllenamento.minutiESecondi(
+        StatisticheAllenamento.passoScritto(
           const Duration(minutes: 5, seconds: 42),
         ),
         '5:42',
@@ -339,11 +336,38 @@ void main() {
     test('⚠️ e i secondi hanno sempre due cifre', () {
       // 🚨 `6:5` si legge come sei minuti e cinque decimi.
       expect(
-        NumeriDellAllenamento.minutiESecondi(
+        StatisticheAllenamento.passoScritto(
           const Duration(minutes: 6, seconds: 5),
         ),
         '6:05',
       );
     });
+
+    test(
+      '🚨 e il passo scritto viene dalla stessa fonte del passo calcolato',
+      () {
+        /*
+       * ⛔ **Questo test nasce da un difetto vero, visto a schermo l'08/09**:
+       * il carosello diceva «21:16 al chilometro» e la card «15:43», nella
+       * stessa pagina. Il primo divideva distanza per durata, il secondo usava
+       * la velocità dell'orologio.
+       *
+       * 💡 Adesso il numero lo produce `StatisticheAllenamento` e lo scrive
+       * `StatisticheAllenamento`: un posto solo.
+       */
+        final camminata = con(
+          tipo: 'WALKING',
+          durata: const Duration(minutes: 27),
+          metri: 1270,
+          velocitaMisurataMs: 1.053,
+        );
+
+        expect(
+          StatisticheAllenamento.passoScritto(camminata.passoAlKm!),
+          // 💡 3,79 km/h → 15 minuti e 50 secondi per chilometro.
+          '15:50',
+        );
+      },
+    );
   });
 }

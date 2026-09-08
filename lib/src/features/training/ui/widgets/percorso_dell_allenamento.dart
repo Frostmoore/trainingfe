@@ -134,7 +134,12 @@ class _PercorsoDellAllenamentoState
                * arrivato con la sincronizzazione e si guarda.
                */
           SizedBox(
-            height: 200,
+            /*
+             * ⚠️ **150 e non 200** — 08/09/2026: dentro la card dei numeri il
+             * tracciato deve lasciare spazio alla griglia. 💡 Una forma si
+             * riconosce anche piccola; una cifra nascosta non si legge affatto.
+             */
+            height: 150,
             width: double.infinity,
             child: FormaDelPercorso(punti: punti, spessore: 3),
           ),

@@ -56,6 +56,20 @@ class CaroselloDellAllenamento extends ConsumerStatefulWidget {
       _CaroselloDellAllenamentoState();
 }
 
+/// Quanto e' alta questa card.
+///
+/// ══ 🚨 PIU' DEL CAROSELLO DEL MESE, E C'E' UNA RAGIONE ══════════════
+///
+/// ⛔ Con `altezzaCarosello` (420) la pagina dei numeri mostrava **il percorso
+/// e quattro cifre**, e le altre dieci restavano dietro uno scorrimento
+/// **dentro** la card — quello che nessuno indovina, perche' la pagina intera
+/// gia' scorre.
+///
+/// 💡 560 fa entrare il tracciato e tutta la griglia. ⚠️ Il carosello del mese
+/// resta a 420: li' dentro c'e' un grafico solo, e allungarlo non aggiungerebbe
+/// niente.
+const double _altezza = 560;
+
 class _CaroselloDellAllenamentoState
     extends ConsumerState<CaroselloDellAllenamento> {
   /// ⛔ Fuori da `build`, come nel carosello del mese: crearlo dentro lo
@@ -131,33 +145,19 @@ class _CaroselloDellAllenamentoState
       ),
 
       /*
-       * ══ 🗺️ IL PERCORSO E' UNA PAGINA DI QUESTA CARD — 08/09/2026 ═════
+       * ⛔ **Il percorso NON è una pagina a sé** — 08/09/2026, secondo giro.
        *
-       * 📌 Il committente: *«nel caso di allenamenti che hanno il percorso, ha
-       * più senso che la prima card (il "carosello") abbia percorso e tutti i
-       * numeri dentro»*.
-       *
-       * ⛔ **Prima era una card a sé, sotto**, e prima ancora una card ancora
-       * più sotto. 💡 Qui è al posto giusto: è un modo di raccontare *questo*
-       * allenamento, come la figura dei muscoli e i numeri — e si sfoglia
-       * insieme a loro invece di farsi cercare scorrendo.
-       *
-       * ⚠️ **Solo per i tipi che un percorso possono averlo.** Su una seduta di
-       * pesi sarebbe una pagina vuota in mezzo alle altre, e i puntini sotto
-       * direbbero che c'è qualcosa da vedere dove non c'è niente.
+       * 📌 *«Il percorso però deve stare nella stessa card dei numeri»*. 💡 Sta
+       * dentro [_NumeriDellAllenamento], sopra la griglia: sfogliare per
+       * mettere insieme il tracciato e la velocità era la stessa fatica di
+       * prima, solo in orizzontale.
        */
-      if (TipoAllenamento.conPercorso(voce.dalPolso.firstOrNull?.tipo ?? ''))
-        CardDelCarosello(
-          titolo: 'Il percorso',
-          sottotitolo: quando,
-          child: PercorsoDellAllenamento(voce: voce),
-        ),
     ];
 
     return Column(
       children: [
         SizedBox(
-          height: altezzaCarosello,
+          height: _altezza,
 
           // 🚨 `PageView` e non `ListView`: le card sono larghe tutta la pagina
           // e devono **scattare** una per una, o si resta a cavallo di due.
@@ -346,14 +346,39 @@ class _NumeriDellAllenamento extends ConsumerWidget {
      * 💡 Il ritmo si calcola solo quando ci sono dei metri: «5:30 /km» su un
      * allenamento di pesi sarebbe una divisione per zero travestita da dato.
      */
-    final numeri = <(String, String)>[
-      ('$minuti', 'minuti'),
+    /*
+     * ══ 📌 CON L'ICONA E L'ETICHETTA, COME NELLA CARD DI PRIMA ═════════════
+     *
+     * Il committente: *«i numeri mi piacevano ordinati com'erano nella card
+     * sotto»*.
+     *
+     * ⛔ **Qui c'era un numero grande al centro e gli altri sparsi in un
+     * `Wrap`** — la disposizione chiesta il 25/08. 🚨 Reggeva con sette numeri;
+     * con quindici era diventata un mucchio, e trovare il battito medio voleva
+     * dire leggerli tutti.
+     *
+     * 💡 Due colonne con l'icona a sinistra si **scorrono**: l'occhio segue una
+     * riga sola e le icone fanno da segnalibro.
+     */
+    final numeri = <(IconData, String, String)>[
+      (Icons.timer_outlined, 'Tempo', '$minuti min'),
       if (kcal != null && kcal > 0)
-        ('$kcal', kcalStimate ? 'kcal stimate' : 'kcal'),
-      if (volume != null) (_kg(volume), 'kg sollevati'),
-      if (esercizi > 0) ('$esercizi', esercizi == 1 ? 'esercizio' : 'esercizi'),
-      if (serie > 0) ('$serie', serie == 1 ? 'serie' : 'serie'),
-      if (metri != null && metri > 0) (_distanza(metri), 'percorsi'),
+        (
+          Icons.local_fire_department_rounded,
+          kcalStimate ? 'Calorie stimate' : 'Calorie',
+          '$kcal kcal',
+        ),
+      if (volume != null)
+        (Icons.fitness_center_rounded, 'Sollevati', '${_kg(volume)} kg'),
+      if (esercizi > 0)
+        (
+          Icons.list_alt_rounded,
+          esercizi == 1 ? 'Esercizio' : 'Esercizi',
+          '$esercizi',
+        ),
+      if (serie > 0) (Icons.repeat_rounded, 'Serie', '$serie'),
+      if (metri != null && metri > 0)
+        (Icons.straighten_rounded, 'Distanza', _distanza(metri)),
       /*
        * ══ 🚨 IL PASSO VIENE DALLA STESSA FONTE DELLA CARD, O SONO DUE ══════
        *
@@ -372,10 +397,12 @@ class _NumeriDellAllenamento extends ConsumerWidget {
        */
       if (metri != null && metri >= 1000 && minuti > 0)
         (
-          _passoDelloStesso(ref, voce) ?? _ritmo(metri, minuti),
-          'al chilometro',
+          Icons.timeline_rounded,
+          'Passo',
+          '${_passoDelloStesso(ref, voce) ?? _ritmo(metri, minuti)} /km',
         ),
-      if (_passi > 0) ('$_passi', 'passi'),
+      if (_passi > 0)
+        (Icons.follow_the_signs_rounded, 'Passi', _conIPunti(_passi)),
 
       /*
        * ══ 📌 E QUI ARRIVANO GLI ALTRI — 08/09/2026 ════════════════════
@@ -394,38 +421,31 @@ class _NumeriDellAllenamento extends ConsumerWidget {
        */
       if (stat?.velocitaKmH case final v?)
         (
-          _conLaVirgola(v, 1),
-          stat!.velocitaDallOrologio ? 'km/h' : 'km/h stimati',
+          Icons.speed_rounded,
+          /*
+           * 🚨 **L'etichetta dice da dove viene, e non è un dettaglio.** Sulla
+           * camminata dell'08/09 le due strade danno 3,79 km/h (l'orologio) e
+           * 2,8 (distanza ÷ durata): il 34% di scarto, che è la sosta al bar.
+           * ⚠️ Chiamarle uguali farebbe sembrare rotta l'app a chi confronta.
+           */
+          stat!.velocitaDallOrologio
+              ? 'Velocità media'
+              : 'Velocità media stimata',
+          '${_conLaVirgola(v, 1)} km/h',
         ),
       if (stat?.cadenzaAlMinuto case final c?)
-        ('${c.round()}', 'passi al minuto'),
+        (Icons.directions_walk_rounded, 'Cadenza', '${c.round()} passi/min'),
       if (stat?.lunghezzaDelPasso case final l?)
-        (_conLaVirgola(l, 2), 'metri a falcata'),
-      if (stat?.battitoMedio case final b?) ('$b', 'battito medio'),
-      if (stat?.battitoMassimo case final b?) ('$b', 'battito massimo'),
-      if (stat?.dislivelloMetri case final d?) ('${d.round()}', 'metri saliti'),
+        (Icons.height_rounded, 'Falcata', '${_conLaVirgola(l, 2)} m'),
+      if (stat?.battitoMedio case final b?)
+        (Icons.favorite_rounded, 'Battito medio', '$b bpm'),
+      if (stat?.battitoMassimo case final b?)
+        (Icons.favorite_border_rounded, 'Battito massimo', '$b bpm'),
+      if (stat?.dislivelloMetri case final d?)
+        (Icons.terrain_rounded, 'Dislivello', '${d.round()} m'),
       if (stat?.kcalAlMinuto case final k?)
-        (_conLaVirgola(k, 1), 'kcal al minuto'),
+        (Icons.bolt_rounded, 'Intensità', '${_conLaVirgola(k, 1)} kcal/min'),
     ];
-
-    /*
-     * ══ 🔢 UNO GRANDE, GLI ALTRI PICCOLI — 25/08/2026 ═══════════════════════
-     *
-     * 📌 *«La card "L'Allenamento in numeri" dovrebbe avere (in base al tipo di
-     * esercizio) un numero al centro più grande degli altri (molto più grande
-     * degli altri)»*.
-     *
-     * 🚨 **«In base al tipo» è la parte che conta.** Sette numeri della stessa
-     * dimensione non dicono niente: chi guarda deve decidere da solo quale
-     * conta, e la risposta cambia con lo sport. Di una corsa si vogliono i
-     * **chilometri**; di una seduta di pesi i **chili sollevati**.
-     *
-     * ⚠️ E il protagonista **esce dall'elenco sotto**: ripeterlo grande e poi
-     * piccolo sarebbe lo stesso numero due volte nella stessa card — il difetto
-     * della fiammella di B.19, appena corretto.
-     */
-    final protagonista = _protagonista(numeri);
-    final resto = numeri.where((n) => n != protagonista).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -460,65 +480,69 @@ class _NumeriDellAllenamento extends ConsumerWidget {
 
         Expanded(
           child: RiquadroBianco(
-            child: Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    /*
-                     * 🚨 Il protagonista: **molto** più grande, non un po'.
-                     * 💡 `FittedBox` perché «12,4 km» e «1.480» non sono larghi
-                     * uguale, e un numero che sfora è peggio di uno piccolo.
-                     */
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        protagonista.$1,
-                        style: tema.textTheme.displayLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: tema.colorScheme.primary,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      protagonista.$2,
-                      style: tema.textTheme.titleMedium?.copyWith(
-                        color: tema.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /*
+                   * ══ 🗺️ IL PERCORSO STA QUI, SOPRA I NUMERI ════════════════
+                   *
+                   * 📌 Il committente: *«il percorso deve stare nella stessa
+                   * card dei numeri»*.
+                   *
+                   * ⛔ **È il terzo posto in cui finisce in un giorno**: prima
+                   * una card sotto, poi una pagina sua del carosello, adesso
+                   * qui. 💡 E qui ha senso: la forma dell'uscita e i suoi numeri
+                   * si guardano insieme, non si sfogliano.
+                   *
+                   * ⚠️ Compare **solo per i tipi che un percorso possono
+                   * averlo**: su una seduta di pesi non lascia nemmeno lo
+                   * spazio vuoto.
+                   */
+                  if (TipoAllenamento.conPercorso(
+                    voce.dalPolso.firstOrNull?.tipo ?? '',
+                  )) ...[
+                    PercorsoDellAllenamento(voce: voce),
+                    const SizedBox(height: Gap.md),
+                    Divider(height: 1, color: tema.colorScheme.outlineVariant),
+                    const SizedBox(height: Gap.md),
+                  ],
 
-                    if (resto.isNotEmpty) ...[
-                      const SizedBox(height: Gap.md),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        runAlignment: WrapAlignment.center,
-                        spacing: Gap.lg,
-                        runSpacing: Gap.sm,
+                  /*
+                   * ══ 📌 DUE COLONNE, COME NELLA CARD DI PRIMA ══════════════
+                   *
+                   * *«i numeri mi piacevano ordinati com'erano nella card
+                   * sotto»*.
+                   *
+                   * ⚠️ `Wrap` e non `GridView`: siamo dentro uno scorrevole, e
+                   * una griglia con altezza propria lì dentro è la strada più
+                   * breve per un `RenderBox was not laid out`.
+                   */
+                  LayoutBuilder(
+                    builder: (context, vincoli) {
+                      // ⚠️ `- 1` e non `/ 2` netto: a metà esatta un pixel di
+                      // arrotondamento manda la seconda colonna a capo.
+                      final larghezza = (vincoli.maxWidth - Gap.md) / 2 - 1;
+
+                      return Wrap(
+                        spacing: Gap.md,
+                        runSpacing: Gap.md,
                         children: [
-                          for (final (valore, etichetta) in resto)
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  valore,
-                                  style: tema.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  etichetta,
-                                  style: tema.textTheme.bodySmall?.copyWith(
-                                    color: tema.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
+                          for (final (icona, etichetta, valore) in numeri)
+                            SizedBox(
+                              width: larghezza,
+                              child: _Numero(
+                                icona: icona,
+                                etichetta: etichetta,
+                                valore: valore,
+                              ),
                             ),
                         ],
-                      ),
-                    ],
-                  ],
-                ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),
@@ -527,64 +551,35 @@ class _NumeriDellAllenamento extends ConsumerWidget {
     );
   }
 
-  /// Quale dei numeri merita di stare grande, **in base al tipo**.
-  ///
-  /// | Sport | Protagonista |
-  /// |---|---|
-  /// | corsa, camminata, bici, escursione, scale, nuoto, vogatore | i **chilometri** |
-  /// | pesi, corpo libero | i **chili sollevati** |
-  /// | tutto il resto | le **calorie**, se ci sono |
-  ///
-  /// ⚠️ **Con un ripiego a scalare, e non è pigrizia**: una corsa senza GPS i
-  /// chilometri non ce li ha, e una seduta a corpo libero non ha chili. 🚨 Una
-  /// card che mostra grande un trattino sarebbe peggio di una che sceglie un
-  /// numero meno interessante ma vero.
-  ///
-  /// 💡 L'ultima spiaggia sono i **minuti**, che ci sono sempre: un allenamento
-  /// senza durata non esiste.
-  (String, String) _protagonista(List<(String, String)> numeri) {
-    (String, String)? cerca(String etichetta) {
-      for (final n in numeri) {
-        if (n.$2 == etichetta) return n;
-      }
+  /// 💡 `10.482` e non `10482`: a colpo d'occhio le migliaia si contano da sole.
+  static String _conIPunti(int n) {
+    final testo = n.toString();
+    final fuori = StringBuffer();
 
-      return null;
+    for (var i = 0; i < testo.length; i++) {
+      if (i > 0 && (testo.length - i) % 3 == 0) fuori.write('.');
+
+      fuori.write(testo[i]);
     }
 
-    const diDistanza = {
-      'RUNNING',
-      'WALKING',
-      'HIKING',
-      'BIKING',
-      'STAIR_CLIMBING',
-      'ROWING',
-      'SWIMMING',
-    };
-
-    const diCarico = {'STRENGTH_TRAINING', 'CALISTHENICS'};
-
-    final tipo = voce.tipo;
-
-    final ordine = <String>[
-      if (tipo != null && diDistanza.contains(tipo)) 'percorsi',
-      if (tipo != null && diCarico.contains(tipo)) 'kg sollevati',
-      // 💡 Senza tipo — una seduta nata nell'app — i chili sollevati sono la
-      // cosa che dice se oggi è stato più duro dell'altra volta.
-      if (tipo == null) 'kg sollevati',
-      'kcal',
-      'kcal stimate',
-      'percorsi',
-      'kg sollevati',
-      'minuti',
-    ];
-
-    for (final etichetta in ordine) {
-      final trovato = cerca(etichetta);
-      if (trovato != null) return trovato;
-    }
-
-    return numeri.first;
+    return fuori.toString();
   }
+
+  /*
+   * ⛔ **`_protagonista` non c'è più** — 08/09/2026.
+   *
+   * 📌 Sceglieva quale numero mostrare grande al centro, ed era la richiesta
+   * del 25/08: *«un numero al centro più grande degli altri»*.
+   *
+   * 🚨 **Quella disposizione è stata sostituita**, non tolta per svista: con
+   * quindici numeri il mucchio sotto il protagonista era illeggibile, e il
+   * committente ha chiesto la griglia della card «I numeri» — *«mi piacevano
+   * ordinati com'erano nella card sotto»*.
+   *
+   * ⚠️ Se un giorno il numero grande dovesse tornare, la regola che sceglieva
+   * quale sta nella storia di questo file: dipendeva dal **tipo**, perché di una
+   * corsa si vogliono i chilometri e di una seduta di pesi i chili.
+   */
 
   static String _kg(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
@@ -623,5 +618,56 @@ class _NumeriDellAllenamento extends ConsumerWidget {
     final sec = (secondiPerKm % 60).round();
 
     return '$m:${sec.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Un numero con la sua icona e la sua etichetta.
+///
+/// 📌 Recuperato dalla card «I numeri» quando è stata assorbita qui:
+/// *«i numeri mi piacevano ordinati com'erano nella card sotto»*.
+///
+/// 💡 L'icona a sinistra fa da segnalibro: con quindici voci, ritrovare il
+/// battito medio senza leggerle tutte dipende da quella.
+class _Numero extends StatelessWidget {
+  const _Numero({
+    required this.icona,
+    required this.etichetta,
+    required this.valore,
+  });
+
+  final IconData icona;
+  final String etichetta;
+  final String valore;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icona, size: 18, color: tema.colorScheme.primary),
+        const SizedBox(width: Gap.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                valore,
+                style: tema.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                etichetta,
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -97,8 +97,15 @@ void main() {
 
       expect(find.text('Corsa'), findsOneWidget);
       expect(find.text('10,0 km'), findsOneWidget);
-      // 60 minuti per 10 km = 6:00 al chilometro.
-      expect(find.text('6:00'), findsOneWidget);
+      /*
+       * 60 minuti per 10 km = 6:00 al chilometro.
+       *
+       * ⚠️ **L'unità sta nel valore, non nell'etichetta** — 08/09/2026: la
+       * card è diventata una griglia con l'etichetta a sinistra («Passo») e il
+       * numero completo a destra. 💡 Prima erano due righe, «6:00» sopra «al
+       * chilometro».
+       */
+      expect(find.text('6:00 /km'), findsOneWidget);
       /*
        * ⚠️ **`findsWidgets` e non `findsOneWidget`** — 25/08. Da 3b-C.4 la
        * pagina ha anche il riquadro delle calorie con il **campo di

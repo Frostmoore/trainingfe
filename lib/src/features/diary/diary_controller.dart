@@ -75,12 +75,14 @@ final vociInUscitaProvider = StateProvider<Set<int>>((ref) => const {});
 /// di un giorno che non è quello selezionato nel diario. ⛔ Prima quel dettaglio
 /// se lo faceva dare da `GET /calendar/{data}`, che adesso il cibo non ce l'ha
 /// più.
-final giornataProvider = FutureProvider.autoDispose
-    .family<DiaryDay, DateTime>((ref, giorno) {
-      ref.watch(revisioneDiarioProvider);
+final giornataProvider = FutureProvider.autoDispose.family<DiaryDay, DateTime>((
+  ref,
+  giorno,
+) {
+  ref.watch(revisioneDiarioProvider);
 
-      return ref.watch(diarioLocaleProvider).giornata(giorno);
-    });
+  return ref.watch(diarioLocaleProvider).giornata(giorno);
+});
 
 /// La giornata alimentare — A4.1.
 final diaryProvider = FutureProvider.autoDispose<DiaryDay>(

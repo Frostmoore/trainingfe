@@ -337,9 +337,7 @@ class _Variante extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Gap.xs),
-                Expanded(
-                  child: Text(nome, style: theme.textTheme.labelLarge),
-                ),
+                Expanded(child: Text(nome, style: theme.textTheme.labelLarge)),
                 if (variante.kcal > 0)
                   Text(
                     '${variante.kcal.round()} kcal',
@@ -416,8 +414,9 @@ class _Alimento extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Text('oppure', style: theme.textTheme.labelSmall),
               title: Text(alt.descrizione, style: theme.textTheme.bodySmall),
-              subtitle:
-                  alt.kcal == null ? null : Text('${alt.kcal!.round()} kcal'),
+              subtitle: alt.kcal == null
+                  ? null
+                  : Text('${alt.kcal!.round()} kcal'),
               trailing: IconButton(
                 onPressed: () => onScelti([alt]),
                 icon: const Icon(Icons.add_circle_outline, size: 20),

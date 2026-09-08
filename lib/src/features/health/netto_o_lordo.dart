@@ -128,7 +128,8 @@ VerdettoCalorie giudicaLaSorgente({
     if (f.kcal < basale * _margine) {
       return VerdettoCalorie(
         lettura: LetturaCalorie.netta,
-        motivo: '${f.kcal} kcal in ${f.durata.inMinutes} minuti, dove il solo '
+        motivo:
+            '${f.kcal} kcal in ${f.durata.inMinutes} minuti, dove il solo '
             'basale ne farebbe ${basale.round()}: un lordo non può starci '
             'sotto',
       );
@@ -148,7 +149,8 @@ VerdettoCalorie giudicaLaSorgente({
     if (rapporto > 1 - _tolleranzaBasale && rapporto < 1 + _tolleranzaBasale) {
       return VerdettoCalorie(
         lettura: LetturaCalorie.lorda,
-        motivo: '${f.durata.inMinutes} minuti di notte valgono ${f.kcal} kcal, '
+        motivo:
+            '${f.durata.inMinutes} minuti di notte valgono ${f.kcal} kcal, '
             'cioè il basale di quei minuti: dormendo il netto sarebbe ~0',
       );
     }

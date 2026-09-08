@@ -33,8 +33,10 @@ class GraficoMetrica extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final serie = ref.watch(serieSaluteProvider(metrica)).valueOrNull;
-    final conMedia =
-        ref.watch(recuperoProvider).valueOrNull?.parametri[metrica];
+    final conMedia = ref
+        .watch(recuperoProvider)
+        .valueOrNull
+        ?.parametri[metrica];
 
     if (serie == null) {
       return const SizedBox(
@@ -64,7 +66,7 @@ class GraficoMetrica extends ConsumerWidget {
             Text(
               serie.length == 1
                   ? 'Un solo giorno di dati: l\'andamento comincia a dire '
-                      'qualcosa dopo una settimana.'
+                        'qualcosa dopo una settimana.'
                   : '${serie.length} giorni con dati negli ultimi 30.',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.outline,

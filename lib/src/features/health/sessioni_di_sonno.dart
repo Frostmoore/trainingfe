@@ -134,7 +134,8 @@ class SessioniDiSonno {
   static SessioneSonno _classifica(DateTime inizio, DateTime fine) {
     final durata = fine.difference(inizio);
 
-    final eNotte = durata >= durataDaNotte ||
+    final eNotte =
+        durata >= durataDaNotte ||
         (durata >= durataMinimaNotte &&
             _dentroIlCuoreDellaNotte(inizio, fine) >= dentroIlCuore);
 

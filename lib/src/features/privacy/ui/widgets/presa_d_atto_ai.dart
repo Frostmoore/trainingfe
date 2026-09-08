@@ -130,9 +130,7 @@ class _FinestraState extends State<_Finestra> {
            * poi avvisa»: un pulsante che si può toccare invita a toccarlo, e
            * chi lo tocca ha già smesso di leggere.
            */
-          onPressed: _spuntata
-              ? () => Navigator.of(context).pop(true)
-              : null,
+          onPressed: _spuntata ? () => Navigator.of(context).pop(true) : null,
           child: const Text('Attiva l\'AI'),
         ),
       ],

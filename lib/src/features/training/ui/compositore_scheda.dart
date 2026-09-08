@@ -36,12 +36,7 @@ import 'widgets/scelta_muscoli.dart';
 /// stesso, e il server distingue da solo. Due rotte per la stessa cosa
 /// divergerebbero alla prima modifica.
 class CompositoreScheda extends ConsumerStatefulWidget {
-  const CompositoreScheda({
-    this.schedaId,
-    this.bozza,
-    this.origine,
-    super.key,
-  });
+  const CompositoreScheda({this.schedaId, this.bozza, this.origine, super.key});
 
   /// `null` = scheda nuova. È la strada del trainer: si carica dal server.
   final int? schedaId;
@@ -138,8 +133,8 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
         titolo: origine != null
             ? 'Controlla la scheda'
             : scheda.nuova
-                ? 'Nuova scheda'
-                : scheda.nome,
+            ? 'Nuova scheda'
+            : scheda.nome,
         azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
@@ -167,8 +162,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
        * ⛔ Fissa e non dentro l'elenco: il confronto si fa riga per riga, e un
        * pulsante che scorre via fa smettere di confrontare dopo la quinta.
        */
-      bottomNavigationBar:
-          origine == null ? null : BarraDelDocumento(origine: origine),
+      bottomNavigationBar: origine == null
+          ? null
+          : BarraDelDocumento(origine: origine),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
@@ -200,11 +196,11 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
               onCambio: () => setState(() {}),
               onEliminaGiorno: scheda.giorni.length > 1
                   ? () => setState(() {
-                        scheda.giorni.removeAt(
-                          _giornoCorrente.clamp(0, scheda.giorni.length - 1),
-                        );
-                        _giornoCorrente = 0;
-                      })
+                      scheda.giorni.removeAt(
+                        _giornoCorrente.clamp(0, scheda.giorni.length - 1),
+                      );
+                      _giornoCorrente = 0;
+                    })
                   : null,
             ),
           const SizedBox(height: Gap.xl),
@@ -287,9 +283,9 @@ class _CompositoreSchedaState extends ConsumerState<CompositoreScheda> {
 
       setState(() => _salvando = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ApiClient.unwrapError(e).message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ApiClient.unwrapError(e).message)));
     }
   }
 

@@ -82,9 +82,8 @@ final storiaDellaSchedaProvider = FutureProvider.autoDispose
 /// Le versioni della scheda, dalla più vecchia — 3b-I.E.
 final versioniDellaSchedaProvider = FutureProvider.autoDispose
     .family<List<VersioneDellaScheda>, int>(
-      (ref, schedaLocale) => ref
-          .watch(archivioSaluteProvider)
-          .versioniDellaScheda(schedaLocale),
+      (ref, schedaLocale) =>
+          ref.watch(archivioSaluteProvider).versioniDellaScheda(schedaLocale),
     );
 
 /// L'analisi già scritta, se c'è.
@@ -217,15 +216,11 @@ Future<EsitoAnalisi> chiediLAnalisi(
     return EsitoAnalisi.serveAbbonamento;
   }
 
-  final storia = await ref.read(
-    storiaDellaSchedaProvider(schedaLocale).future,
-  );
+  final storia = await ref.read(storiaDellaSchedaProvider(schedaLocale).future);
 
   if (!valeLaPenaAnalizzare(storia)) return EsitoAnalisi.troppoPocoStorico;
 
-  final gia = await ref.read(
-    analisiDellaSchedaProvider(schedaLocale).future,
-  );
+  final gia = await ref.read(analisiDellaSchedaProvider(schedaLocale).future);
 
   /*
    * ══ 🚨 IL LIMITE VALE SOLO PER L'AUTOMATICO ═══════════════════════════

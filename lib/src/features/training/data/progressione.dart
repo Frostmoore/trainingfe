@@ -251,7 +251,6 @@ int _verso(double? da, double? a) {
   return 0;
 }
 
-
 /// Quello che le ultime otto sedute **non possono dire** — 3b-I.F, 27/08/2026.
 ///
 /// ══ 🚨 PERCHÉ NON BASTAVA LA FINESTRA ═════════════════════════════════════

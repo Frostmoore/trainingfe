@@ -124,8 +124,9 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
   );
 
   return Recupero(
-    notte:
-        ultima == null ? null : await AnalizzatoreSonno.notte(archivio, ultima),
+    notte: ultima == null
+        ? null
+        : await AnalizzatoreSonno.notte(archivio, ultima),
     // ⚠️ `0` diventa `null`: «non lo so» e «non ti sei mosso» sono due frasi
     // diverse, e mostrare uno zero che vuol dire «manca il dato» è il modo di
     // far credere a qualcuno di essere stato fermo.
@@ -155,25 +156,26 @@ final recuperoProvider = FutureProvider.autoDispose<Recupero>((ref) async {
 /// traffico per niente.
 final recuperoPerIlConsiglioProvider =
     FutureProvider.autoDispose<Map<String, Object>>((ref) async {
-  final r = await ref.watch(recuperoProvider.future);
-  final notte = r.notte;
+      final r = await ref.watch(recuperoProvider.future);
+      final notte = r.notte;
 
-  if (notte == null) return const {};
+      if (notte == null) return const {};
 
-  final hrv = r.parametri[MetricaSalute.hrv];
-  final battito = r.parametri[MetricaSalute.battitoARiposo];
+      final hrv = r.parametri[MetricaSalute.hrv];
+      final battito = r.parametri[MetricaSalute.battitoARiposo];
 
-  return {
-    // ⚠️ Ore, non minuti: è l'unità che il prompt nomina.
-    'hours': (notte.minutiDormiti / 60).toStringAsFixed(1),
-    'wakings': notte.minutiSvegli,
-    'deep_min': notte.minutiProfondo,
-    'rem_min': notte.minutiRem,
+      return {
+        // ⚠️ Ore, non minuti: è l'unità che il prompt nomina.
+        'hours': (notte.minutiDormiti / 60).toStringAsFixed(1),
+        'wakings': notte.minutiSvegli,
+        'deep_min': notte.minutiProfondo,
+        'rem_min': notte.minutiRem,
 
-    if (hrv != null) 'hrv_ms': hrv.valore.round(),
-    if (hrv?.media != null) 'hrv_baseline_ms': hrv!.media!.round(),
+        if (hrv != null) 'hrv_ms': hrv.valore.round(),
+        if (hrv?.media != null) 'hrv_baseline_ms': hrv!.media!.round(),
 
-    if (battito != null) 'resting_hr': battito.valore.round(),
-    if (battito?.media != null) 'resting_hr_baseline': battito!.media!.round(),
-  };
-});
+        if (battito != null) 'resting_hr': battito.valore.round(),
+        if (battito?.media != null)
+          'resting_hr_baseline': battito!.media!.round(),
+      };
+    });

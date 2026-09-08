@@ -48,14 +48,16 @@ class ModaleAcquisti {
   /// ⚠️ Resta `false` di serie: dalla pillola dei gettoni nell'header, o da una
   /// funzione negata **per mancanza di abbonamento**, l'offerta giusta è ancora
   /// quella grande.
-  static Future<void> mostra(BuildContext context, {bool soloGettoni = false}) =>
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        useSafeArea: true,
-        builder: (_) => CorpoAcquisti(soloGettoni: soloGettoni),
-      );
+  static Future<void> mostra(
+    BuildContext context, {
+    bool soloGettoni = false,
+  }) => showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    useSafeArea: true,
+    builder: (_) => CorpoAcquisti(soloGettoni: soloGettoni),
+  );
 }
 
 /// Il contenuto, **pubblico di proposito**: lo mostrano sia la modale sia la

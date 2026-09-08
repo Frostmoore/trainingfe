@@ -58,8 +58,19 @@ const fattoriDelleUnita = <String, double>{
 /// alfabetico mette «bicchiere» prima di «g», e l'unità più usata finisce in
 /// mezzo.
 const ordineDelleUnita = <String>[
-  'g', 'kg', 'ml', 'l', 'cucchiaio', 'cucchiaino', 'bicchiere', 'tazza',
-  'scoop', 'hg', 'dl', 'cl', 'mg',
+  'g',
+  'kg',
+  'ml',
+  'l',
+  'cucchiaio',
+  'cucchiaino',
+  'bicchiere',
+  'tazza',
+  'scoop',
+  'hg',
+  'dl',
+  'cl',
+  'mg',
 ];
 
 /// Sinonimi e abbreviazioni, come arrivano dall'inserimento libero e dall'AI.

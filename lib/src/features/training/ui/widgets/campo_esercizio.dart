@@ -115,8 +115,12 @@ class _CampoEsercizioState extends ConsumerState<CampoEsercizio> {
      * chi scrive l'inizio di un nome sta pensando a quel nome.
      */
     trovati.sort((a, b) {
-      final ai = CatalogoEsercizi.normalizza(a.nome).startsWith(scritto) ? 0 : 1;
-      final bi = CatalogoEsercizi.normalizza(b.nome).startsWith(scritto) ? 0 : 1;
+      final ai = CatalogoEsercizi.normalizza(a.nome).startsWith(scritto)
+          ? 0
+          : 1;
+      final bi = CatalogoEsercizi.normalizza(b.nome).startsWith(scritto)
+          ? 0
+          : 1;
 
       return ai != bi ? ai - bi : a.nome.length.compareTo(b.nome.length);
     });
@@ -155,7 +159,8 @@ class _CampoEsercizioState extends ConsumerState<CampoEsercizio> {
           },
         ),
 
-        if (suggeriti.isNotEmpty) _Suggerimenti(righe: suggeriti, onScelto: _scegli),
+        if (suggeriti.isNotEmpty)
+          _Suggerimenti(righe: suggeriti, onScelto: _scegli),
       ],
     );
   }

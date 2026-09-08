@@ -242,9 +242,8 @@ class FotoDellEsercizio extends StatelessWidget {
   /// diventerebbe un elemento di marca. ⚠️ E in tema scuro lo stesso token
   /// diventa chiaro da solo, che è precisamente il motivo per cui si tinge
   /// invece di produrre due file.
-  Color? _tinta(BuildContext context) => credito == null
-      ? null
-      : Theme.of(context).colorScheme.onSurfaceVariant;
+  Color? _tinta(BuildContext context) =>
+      credito == null ? null : Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   Widget build(BuildContext context) {
@@ -273,11 +272,11 @@ class FotoDellEsercizio extends StatelessWidget {
            */
           if (file == null) {
             return Miniatura(
-        url: url,
-        etichetta: etichetta,
-        lato: lato,
-        tinta: _tinta(context),
-      );
+              url: url,
+              etichetta: etichetta,
+              lato: lato,
+              tinta: _tinta(context),
+            );
           }
 
           return FotoLocale(file: file, width: lato, height: lato);

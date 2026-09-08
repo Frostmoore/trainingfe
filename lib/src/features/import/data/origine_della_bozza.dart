@@ -103,7 +103,7 @@ class OrigineDellaBozza {
   /// obbligatoria comunque, e un avviso che compare sempre si smette di leggere.
   String? get avvertenza => daFotografia
       ? 'Questa bozza viene da una fotografia, e l\'analisi delle immagini è '
-          'generalmente meno accurata di quella dei PDF. Controlla ogni riga '
-          'con l\'originale.'
+            'generalmente meno accurata di quella dei PDF. Controlla ogni riga '
+            'con l\'originale.'
       : null;
 }

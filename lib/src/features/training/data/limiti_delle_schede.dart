@@ -112,7 +112,6 @@ bool puoScegliereIlColore({
   required bool? abbonato,
 }) => !haPalestra && soloSeAbbonato(abbonato);
 
-
 /// Quali schede sono bloccate, e perché.
 ///
 /// ══ 🚨 DUE CONDIZIONI DIVERSE, E NON VANNO CONFUSE ════════════════════════

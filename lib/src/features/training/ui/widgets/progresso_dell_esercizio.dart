@@ -193,7 +193,6 @@ class _Corpo extends StatelessWidget {
   }
 }
 
-
 IconData _icona(Andamento a) => switch (a) {
   Andamento.inSalita => Icons.trending_up_rounded,
   Andamento.fermo => Icons.trending_flat_rounded,

@@ -137,8 +137,8 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
         titolo: origine != null
             ? 'Controlla il piano'
             : piano.nuovo
-                ? 'Nuovo piano'
-                : piano.nome,
+            ? 'Nuovo piano'
+            : piano.nome,
         azioni: [
           TextButton(
             onPressed: _salvando ? null : _salva,
@@ -166,8 +166,9 @@ class _CompositorePianoState extends ConsumerState<CompositorePiano> {
        * ⛔ Fissa e non dentro l'elenco: il confronto si fa riga per riga, e un
        * pulsante che scorre via fa smettere di confrontare dopo la quinta.
        */
-      bottomNavigationBar:
-          origine == null ? null : BarraDelDocumento(origine: origine),
+      bottomNavigationBar: origine == null
+          ? null
+          : BarraDelDocumento(origine: origine),
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
@@ -521,8 +522,9 @@ class _Pasto extends ConsumerWidget {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue:
-                        _tipi.containsKey(pasto.pasto) ? pasto.pasto : 'lunch',
+                    initialValue: _tipi.containsKey(pasto.pasto)
+                        ? pasto.pasto
+                        : 'lunch',
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Pasto',

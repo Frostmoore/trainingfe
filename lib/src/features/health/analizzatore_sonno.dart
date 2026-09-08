@@ -213,8 +213,9 @@ class AnalizzatoreSonno {
     // sonno: sono esattamente ciò che rende una notte lunga poco riposante.
     final dormito = leggero + profondo + rem;
 
-    final profondoPct =
-        dormito > 0 ? _arrotonda(profondo / dormito * 100, 1) : 0.0;
+    final profondoPct = dormito > 0
+        ? _arrotonda(profondo / dormito * 100, 1)
+        : 0.0;
     final remPct = dormito > 0 ? _arrotonda(rem / dormito * 100, 1) : 0.0;
 
     final valutazioni = <String, Giudizio>{

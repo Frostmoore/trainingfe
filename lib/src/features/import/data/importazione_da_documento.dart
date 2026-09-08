@@ -166,7 +166,8 @@ class ImportazioneDaDocumento {
   String get nome {
     final b = bozza ?? const <String, dynamic>{};
 
-    final letto = (genere == GenereImportato.piano ? b['nome'] : b['name'])
+    final letto =
+        (genere == GenereImportato.piano ? b['nome'] : b['name'])
             ?.toString()
             .trim() ??
         '';
@@ -197,11 +198,11 @@ enum StatoImportazione {
   fallita;
 
   static StatoImportazione da(String? valore) => switch (valore) {
-        'in_lavorazione' => StatoImportazione.inLavorazione,
-        'pronta' => StatoImportazione.pronta,
-        'fallita' => StatoImportazione.fallita,
-        _ => StatoImportazione.inCoda,
-      };
+    'in_lavorazione' => StatoImportazione.inLavorazione,
+    'pronta' => StatoImportazione.pronta,
+    'fallita' => StatoImportazione.fallita,
+    _ => StatoImportazione.inCoda,
+  };
 }
 
 /// Le chiamate al server per importare un documento.

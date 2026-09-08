@@ -141,8 +141,9 @@ VoceNormalizzata normalizzaLaVoce({
   if (grammi != null && grammi > 0 && unitaDiMassa) {
     final dettoDallaCoppia = inGrammi(quantita, unita);
 
-    final scostamento =
-        dettoDallaCoppia == null ? null : (dettoDallaCoppia - grammi).abs();
+    final scostamento = dettoDallaCoppia == null
+        ? null
+        : (dettoDallaCoppia - grammi).abs();
 
     // ⚠️ Una tolleranza c'è comunque: gli arrotondamenti a due decimali di
     // `inGrammi` non devono far riscrivere una voce che è già giusta.
@@ -201,8 +202,9 @@ VoceNormalizzata normalizzaLaVoce({
 
     kcal = _due(kcal100 * fattore);
     proteine ??= proteine100 == null ? null : _due(proteine100 * fattore);
-    carboidrati ??=
-        carboidrati100 == null ? null : _due(carboidrati100 * fattore);
+    carboidrati ??= carboidrati100 == null
+        ? null
+        : _due(carboidrati100 * fattore);
     grassi ??= grassi100 == null ? null : _due(grassi100 * fattore);
   }
 

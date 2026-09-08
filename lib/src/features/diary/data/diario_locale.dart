@@ -98,7 +98,8 @@ class DiarioLocale {
           meal: voce.key,
           label: voce.value,
           entries: [
-            for (final r in perPasto[voce.key] ?? const []) _versoLaSchermata(r),
+            for (final r in perPasto[voce.key] ?? const [])
+              _versoLaSchermata(r),
           ],
           kcal: _somma(perPasto[voce.key] ?? const [], (r) => r.kcal),
         ),
@@ -197,7 +198,12 @@ class DiarioLocale {
   /// 🚨 **Una lettura sola per tutto l'intervallo.** Un ciclo che chiama
   /// [totaliDel] una volta al giorno sarebbe trenta viaggi nel database per
   /// disegnare un mese.
-  Future<Map<String, ({double kcal, double proteine, double carboidrati, double grassi})>>
+  Future<
+    Map<
+      String,
+      ({double kcal, double proteine, double carboidrati, double grassi})
+    >
+  >
   totaliFra(DateTime da, DateTime a) async {
     final righe = await _archivio.vociFra(da, a);
 
@@ -549,9 +555,9 @@ class DiarioLocale {
     required String pasto,
     required String descrizione,
   }) async {
-    final righe = (await _archivio.vociDelGiorno(giorno))
-        .where((r) => r.pasto == pasto)
-        .toList();
+    final righe = (await _archivio.vociDelGiorno(
+      giorno,
+    )).where((r) => r.pasto == pasto).toList();
 
     if (righe.isEmpty) throw const PastoVuotoException();
 
@@ -723,7 +729,8 @@ double? grammiPerLaQuantita({
   required double? quantitaPrima,
   required String? unitaPrima,
 }) {
-  final perUnita = (grammiPrima != null && quantitaPrima != null && quantitaPrima > 0)
+  final perUnita =
+      (grammiPrima != null && quantitaPrima != null && quantitaPrima > 0)
       ? grammiPrima / quantitaPrima
       : null;
 

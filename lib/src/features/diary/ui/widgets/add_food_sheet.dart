@@ -39,7 +39,8 @@ class AddFoodSheet extends ConsumerStatefulWidget {
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => AddFoodSheet(meal: meal ?? pastoDallOra(DateTime.now())),
+        builder: (_) =>
+            AddFoodSheet(meal: meal ?? pastoDallOra(DateTime.now())),
       );
 
   @override
@@ -227,7 +228,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
         // martellare l'utente contro un muro.
         _gettoniFiniti = tradotto is GettoniEsauritiException;
 
-      _errore = switch (error) {
+        _errore = switch (error) {
           /*
            * 🆕 **I due esiti della coda** — FASE 9.
            *
@@ -256,10 +257,11 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
              * inserire a mano**. È l'unica cosa che rende questo errore
              * sopportabile, e vale in tutti e due i casi.
              */
-            final GettoniEsauritiException e => e.mancano != null
-                ? '${e.message}\nTe ne mancano ${e.mancano}. '
-                      'Puoi comunque inserire a mano.'
-                : '${e.message}\nPuoi comunque inserire a mano.',
+            final GettoniEsauritiException e =>
+              e.mancano != null
+                  ? '${e.message}\nTe ne mancano ${e.mancano}. '
+                        'Puoi comunque inserire a mano.'
+                  : '${e.message}\nPuoi comunque inserire a mano.',
 
             RateLimitedException() =>
               'Il servizio è occupato. Riprova fra poco.',
@@ -347,7 +349,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
       setState(() {
         _gettoniFiniti = tradotto is GettoniEsauritiException;
 
-      _errore = switch (tradotto) {
+        _errore = switch (tradotto) {
           AiQuotaExceededException() =>
             '${tradotto.message}\nPuoi comunque inserire a mano.',
           RateLimitedException() => 'Il servizio è occupato. Riprova fra poco.',
@@ -592,7 +594,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                   Text(
                     _errore!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
 
                   /*
@@ -610,7 +614,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                   if (_gettoniFiniti) ...[
                     const SizedBox(height: Gap.sm),
                     FilledButton.tonalIcon(
-                      onPressed: () => ModaleAcquisti.mostra(context, soloGettoni: true),
+                      onPressed: () =>
+                          ModaleAcquisti.mostra(context, soloGettoni: true),
                       icon: const Icon(Icons.toll_outlined),
                       label: const Text('Ricarica i gettoni'),
                     ),

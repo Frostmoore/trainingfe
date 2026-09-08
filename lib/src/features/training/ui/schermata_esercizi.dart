@@ -75,9 +75,8 @@ class _SchermataEserciziState extends ConsumerState<SchermataEsercizi> {
       ),
       body: catalogo.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _Errore(
-          onRiprova: () => ref.invalidate(catalogoEserciziProvider),
-        ),
+        error: (e, _) =>
+            _Errore(onRiprova: () => ref.invalidate(catalogoEserciziProvider)),
         data: (c) => _elenco(c.tutti),
       ),
     );
@@ -180,10 +179,7 @@ class _SchermataEserciziState extends ConsumerState<SchermataEsercizi> {
      * dice che quando una domanda non serve si smette di leggerla anche quando
      * serve.
      */
-    final gia = ref
-        .read(catalogoEserciziProvider)
-        .valueOrNull
-        ?.perNome(nome);
+    final gia = ref.read(catalogoEserciziProvider).valueOrNull?.perNome(nome);
 
     if (gia != null) {
       _dillo('«${gia.nome}» c\'è già.');
@@ -253,9 +249,7 @@ class _SchermataEserciziState extends ConsumerState<SchermataEsercizi> {
   }
 
   void _dillo(String cosa) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(cosa)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(cosa)));
   }
 }
 
@@ -296,84 +290,82 @@ class _Riga extends StatelessWidget {
   }
 }
 
-Future<void> _apriIlDettaglio(
-  BuildContext context,
-  EsercizioDelCatalogo e,
-) => showModalBottomSheet<void>(
-  context: context,
-  showDragHandle: true,
-  builder: (context) {
-    final tema = Theme.of(context);
+Future<void> _apriIlDettaglio(BuildContext context, EsercizioDelCatalogo e) =>
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final tema = Theme.of(context);
 
-    final muscoli = descriviMuscoli((
-      primario: e.primario,
-      secondari: e.secondari,
-    ));
+        final muscoli = descriviMuscoli((
+          primario: e.primario,
+          secondari: e.secondari,
+        ));
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Miniatura(
-                url: e.immagine,
-                etichetta: e.nome,
-                lato: 160,
-                tinta: e.credito == null
-                    ? null
-                    : tema.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: Gap.md),
-
-            Text(
-              e.nome,
-              style: tema.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-
-            if (muscoli.isNotEmpty) ...[
-              const SizedBox(height: Gap.xs),
-              Text(
-                muscoli,
-                style: tema.textTheme.bodyMedium?.copyWith(
-                  color: tema.colorScheme.onSurfaceVariant,
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Miniatura(
+                    url: e.immagine,
+                    etichetta: e.nome,
+                    lato: 160,
+                    tinta: e.credito == null
+                        ? null
+                        : tema.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: Gap.md),
 
-            const SizedBox(height: Gap.sm),
-            Text(
-              e.origine.spiegazione,
-              style: tema.textTheme.bodySmall?.copyWith(
-                color: tema.colorScheme.onSurfaceVariant,
-              ),
-            ),
+                Text(
+                  e.nome,
+                  style: tema.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
 
-            /*
+                if (muscoli.isNotEmpty) ...[
+                  const SizedBox(height: Gap.xs),
+                  Text(
+                    muscoli,
+                    style: tema.textTheme.bodyMedium?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: Gap.sm),
+                Text(
+                  e.origine.spiegazione,
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+
+                /*
              * ⚖️ Il credito, quando è dovuto — stessa regola della pagina della
              * scheda: le illustrazioni sono CC BY-SA 4.0, e l'attribuzione è
              * una condizione della licenza.
              */
-            if (e.credito case final credito?) ...[
-              const SizedBox(height: Gap.sm),
-              Text(
-                'Illustrazione: $credito',
-                style: tema.textTheme.labelSmall?.copyWith(
-                  color: tema.colorScheme.outline,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+                if (e.credito case final credito?) ...[
+                  const SizedBox(height: Gap.sm),
+                  Text(
+                    'Illustrazione: $credito',
+                    style: tema.textTheme.labelSmall?.copyWith(
+                      color: tema.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
-  },
-);
 
 // ══════════════════════════════════════════════════════════════════════════
 // Gli stati che non sono un elenco
@@ -442,7 +434,10 @@ class _Errore extends StatelessWidget {
         children: [
           const Text('Gli esercizi non sono arrivati.'),
           const SizedBox(height: Gap.sm),
-          FilledButton.tonal(onPressed: onRiprova, child: const Text('Riprova')),
+          FilledButton.tonal(
+            onPressed: onRiprova,
+            child: const Text('Riprova'),
+          ),
         ],
       ),
     ),

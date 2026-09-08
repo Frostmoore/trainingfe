@@ -134,8 +134,7 @@ class TimelineSonno {
      */
     final confini = <DateTime>{
       for (final c in validi) ...[c.da, c.a],
-    }.toList()
-      ..sort();
+    }.toList()..sort();
 
     final segmenti = <SegmentoSonno>[];
 

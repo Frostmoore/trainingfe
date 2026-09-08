@@ -98,7 +98,8 @@ class Trasloco {
   /// 💡 Se non tornano si riprova al prossimo avvio: le righe già scritte non
   /// si duplicano — ci pensa `insertOrIgnore` su `idSulServer`.
   Future<EsitoTrasloco> porta() async {
-    final fatta = int.tryParse(_cache.getString(chiaveTraslocoFatto) ?? '') ?? 0;
+    final fatta =
+        int.tryParse(_cache.getString(chiaveTraslocoFatto) ?? '') ?? 0;
 
     if (fatta >= versioneDelTrasloco) {
       return EsitoTrasloco.giaFatto;
@@ -151,39 +152,40 @@ class Trasloco {
   /// è una voce con una data ignota, è una riga che non si può mettere in
   /// nessun giorno. 💡 Meglio far fallire il trasloco — che si riprova — che
   /// scriverla sotto una data inventata.
-  VociDiarioCompanion _voce(Map<String, dynamic> v) => VociDiarioCompanion.insert(
-    mangiatoIl: DateTime.parse(v['eaten_at'].toString()).toLocal(),
-    pasto: v['meal']?.toString() ?? 'lunch',
-    descrizione: v['description']?.toString() ?? '—',
-    idSulServer: Value((v['id'] as num?)?.toInt()),
-    grammi: Value(_numero(v['grams'])),
-    quantita: Value(_numero(v['qty'])),
-    unita: Value(v['unit']?.toString()),
-    kcal: Value(_numero(v['kcal'])),
-    proteine: Value(_numero(v['protein'])),
-    carboidrati: Value(_numero(v['carbs'])),
-    grassi: Value(_numero(v['fat'])),
-    kcal100: Value(_numero(v['kcal_100'])),
-    proteine100: Value(_numero(v['protein_100'])),
-    carboidrati100: Value(_numero(v['carbs_100'])),
-    grassi100: Value(_numero(v['fat_100'])),
-    fonte: Value(v['source']?.toString() ?? 'manual'),
-    aiGrezzo: Value(v['ai_raw']?.toString()),
-    pianoId: Value((v['nutrition_plan_id'] as num?)?.toInt()),
-    alimentoId: Value((v['food_id'] as num?)?.toInt()),
+  VociDiarioCompanion _voce(Map<String, dynamic> v) =>
+      VociDiarioCompanion.insert(
+        mangiatoIl: DateTime.parse(v['eaten_at'].toString()).toLocal(),
+        pasto: v['meal']?.toString() ?? 'lunch',
+        descrizione: v['description']?.toString() ?? '—',
+        idSulServer: Value((v['id'] as num?)?.toInt()),
+        grammi: Value(_numero(v['grams'])),
+        quantita: Value(_numero(v['qty'])),
+        unita: Value(v['unit']?.toString()),
+        kcal: Value(_numero(v['kcal'])),
+        proteine: Value(_numero(v['protein'])),
+        carboidrati: Value(_numero(v['carbs'])),
+        grassi: Value(_numero(v['fat'])),
+        kcal100: Value(_numero(v['kcal_100'])),
+        proteine100: Value(_numero(v['protein_100'])),
+        carboidrati100: Value(_numero(v['carbs_100'])),
+        grassi100: Value(_numero(v['fat_100'])),
+        fonte: Value(v['source']?.toString() ?? 'manual'),
+        aiGrezzo: Value(v['ai_raw']?.toString()),
+        pianoId: Value((v['nutrition_plan_id'] as num?)?.toInt()),
+        alimentoId: Value((v['food_id'] as num?)?.toInt()),
 
-    /*
+        /*
      * 💡 `created_at` diventa `scrittaIl`: è il campo che distingue una cena
      * **programmata** alle 10 del mattino da una mangiata alle 21, e senza di
      * lui il consiglio del giorno tornerebbe a sbagliare come prima di 3b-AC.
      *
      * ⚠️ Il ripiego su `eaten_at` serve alle righe più vecchie del campo.
      */
-    scrittaIl: Value(
-      DateTime.tryParse(v['created_at']?.toString() ?? '')?.toLocal() ??
-          DateTime.parse(v['eaten_at'].toString()).toLocal(),
-    ),
-  );
+        scrittaIl: Value(
+          DateTime.tryParse(v['created_at']?.toString() ?? '')?.toLocal() ??
+              DateTime.parse(v['eaten_at'].toString()).toLocal(),
+        ),
+      );
 
   PreferitiCiboCompanion _preferito(Map<String, dynamic> p) =>
       PreferitiCiboCompanion.insert(
@@ -203,7 +205,8 @@ class Trasloco {
         carboidrati100: Value(_numero(p['carbs_100'])),
         grassi100: Value(_numero(p['fat_100'])),
         salvatoIl: Value(
-          DateTime.tryParse(p['created_at']?.toString() ?? '') ?? DateTime.now(),
+          DateTime.tryParse(p['created_at']?.toString() ?? '') ??
+              DateTime.now(),
         ),
 
         // 🚨 Metà dell'ordinamento: senza, i preferiti ci sono tutti e sono

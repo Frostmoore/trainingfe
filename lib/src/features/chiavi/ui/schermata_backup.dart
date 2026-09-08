@@ -121,7 +121,8 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
           ref
               .watch(vociSulTelefonoProvider)
               .when(
-                loading: () => const Text('· Il diario alimentare: sto contando…'),
+                loading: () =>
+                    const Text('· Il diario alimentare: sto contando…'),
                 error: (_, _) => const Text('· Il diario alimentare.'),
                 data: (quante) => Text(
                   quante == 0

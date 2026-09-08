@@ -697,9 +697,8 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
      * ricostruirebbe l'autenticazione — cioè butterebbe la sessione di chi ha
      * appena finito di entrare in palestra.
      */
-    (branding) => ref
-        .read(brandingControllerProvider.notifier)
-        .adottaDalServer(branding),
+    (branding) =>
+        ref.read(brandingControllerProvider.notifier).adottaDalServer(branding),
   ),
 );
 

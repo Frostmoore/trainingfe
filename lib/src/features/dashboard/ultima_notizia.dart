@@ -43,7 +43,9 @@ import '../training/storico_unificato_controller.dart';
 ///
 /// ⚠️ **`null` non è «adesso» e non è «mai»**: è *«non lo so»*, e chi lo riceve
 /// deve decidere cosa farne. Sul server, `null` vuol dire «non generare».
-final ultimaNotiziaProvider = FutureProvider.autoDispose<DateTime?>((ref) async {
+final ultimaNotiziaProvider = FutureProvider.autoDispose<DateTime?>((
+  ref,
+) async {
   final quando = <DateTime>[];
 
   /*

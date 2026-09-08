@@ -121,11 +121,21 @@ class _RicontrolloAlRientroState extends ConsumerState<RicontrolloAlRientro>
         return;
       }
 
+      /*
+       * == SENZA `context`, E NON E' UNA SVISTA ==
+       *
+       * Questo widget sta nel `builder` di `MaterialApp`, cioe' SOPRA il
+       * `Navigator`: passando il proprio `context` le due modali non trovavano
+       * nessun navigatore su cui aprirsi, e morivano dentro questo
+       * `addPostFrameCallback` senza che si vedesse niente.
+       *
+       * E' il difetto riferito due volte dal committente. Le due `mostra()`
+       * senza argomento usano `chiaveDelNavigatore`, che il navigatore vero lo
+       * conosce.
+       */
       await switch (cambio) {
-        CambioDellAbbonamento.appenaAbbonato => HaiSbloccatoLAi.mostra(context),
-        CambioDellAbbonamento.appenaScaduto => AbbonamentoScaduto.mostra(
-          context,
-        ),
+        CambioDellAbbonamento.appenaAbbonato => HaiSbloccatoLAi.mostra(),
+        CambioDellAbbonamento.appenaScaduto => AbbonamentoScaduto.mostra(),
         CambioDellAbbonamento.nessuno => Future<void>.value(),
       };
 

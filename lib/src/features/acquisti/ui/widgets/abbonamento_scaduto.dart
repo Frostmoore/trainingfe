@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../modale_acquisti.dart';
 
@@ -26,8 +27,19 @@ import '../modale_acquisti.dart';
 class AbbonamentoScaduto extends ConsumerWidget {
   const AbbonamentoScaduto({super.key});
 
-  static Future<void> mostra(BuildContext context) => showModalBottomSheet(
-    context: context,
+  /// Il `context` e' facoltativo: senza, si usa il navigatore dell'app.
+  ///
+  /// == PERCHE' IL RIPIEGO E' LA CHIAVE GLOBALE ==
+  ///
+  /// Chi la chiama dal `builder` di `MaterialApp` -- il ricontrollo
+  /// dell'abbonamento -- NON ha un `Navigator` sopra di se', e passando il
+  /// proprio `context` otteneva "a context that does not include a Navigator".
+  ///
+  /// E l'eccezione partiva dentro un `addPostFrameCallback`: nessuna schermata
+  /// rossa, nessun blocco, solo una riga in un log che nessuno guardava. La
+  /// finestra semplicemente non usciva, e il codice si leggeva giusto.
+  static Future<void> mostra([BuildContext? context]) => showModalBottomSheet(
+    context: context ?? chiaveDelNavigatore.currentContext!,
     isScrollControlled: true,
     showDragHandle: true,
     useSafeArea: true,

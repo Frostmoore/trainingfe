@@ -68,6 +68,21 @@ import '../../features/training/ui/widgets/scelta_tipo_scheda.dart';
 ///  5. **nessuna palestra scelta** → codice d'invito;
 ///  6. **non autenticato** → accesso;
 ///  7. **autenticato su una schermata di accesso** → dentro.
+/// La chiave del navigatore dell'app, raggiungibile da fuori dall'albero.
+///
+/// == ATTENZIONE: serve a chi sta SOPRA il router, non a chi ci sta dentro ==
+///
+/// Una schermata usa il proprio `context` e fa benissimo. Questa chiave esiste
+/// per i widget montati nel `builder` di `MaterialApp` -- il ricontrollo
+/// dell'abbonamento -- che sono ANTENATI del `Navigator` e da li' non lo
+/// vedono.
+///
+/// NON e' una scorciatoia da usare a caso: un `context` globale aggira il
+/// controllo che Flutter fa per te ("questo widget e' ancora montato?"), e usato
+/// dove non serve produce finestre che si aprono su schermate che non ci sono
+/// piu'.
+final chiaveDelNavigatore = GlobalKey<NavigatorState>();
+
 class AppRoutes {
   const AppRoutes._();
 
@@ -372,6 +387,28 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.home,
     refreshListenable: refresh,
+
+    /*
+     * ══ 🚨 LA CHIAVE ESISTE PER UN DIFETTO PRECISO — 09/09/2026 ═══════════
+     *
+     * 📌 Il committente, due volte: *«se disdico l'abbonamento dal pannello GOD
+     * mi deve apparire la modale! E se lo riabilito, mi deve apparire la modale
+     * che ho accesso all'AI!»*.
+     *
+     * ⛔ **Non comparivano, e la causa non era nella logica.**
+     * `RicontrolloAlRientro` vive nel `builder` di `MaterialApp`, che è un
+     * **antenato** del `Navigator`: `showModalBottomSheet` da lì trovava
+     * *«a context that does not include a Navigator»* e moriva.
+     *
+     * 🚨 **E moriva in silenzio.** L'eccezione partiva da dentro un
+     * `addPostFrameCallback`: nessuna schermata rossa, nessun blocco, solo una
+     * riga in un log che nessuno stava guardando. Il codice si leggeva giusto,
+     * la spia riconosceva il cambiamento, e non succedeva niente.
+     *
+     * 💡 Con la chiave la finestra si apre **sul navigatore vero**, da
+     * qualunque punto dell'albero — anche da sopra.
+     */
+    navigatorKey: chiaveDelNavigatore,
     redirect: (context, state) => destinazione(
       stato: ref.read(authControllerProvider).status,
       sceltaFatta: ref.read(brandingControllerProvider).sceltaFatta,

@@ -8,6 +8,8 @@ import '../carica_batteria.dart';
 import '../carica_controller.dart';
 import '../forma_controller.dart';
 import '../indici_di_forma.dart';
+import '../indice_di_effetto.dart';
+import '../indice_di_effetto_controller.dart';
 import 'barra_carico.dart';
 import 'tachimetro_prontezza.dart';
 
@@ -94,6 +96,27 @@ class SchedaForma extends ConsumerWidget {
                */
               const SizedBox(height: Gap.md),
               _SezioneCarico(forma: forma),
+
+              /*
+               * ══ 🏃 IL TEI, ACCANTO AL CARICO — 08/09/2026 ═════════════════
+               *
+               * 📌 Il committente, il 07/09: *«ho scoperto una nuova misura che
+               * si chiama PAI, va implementata nella stessa card del carico e
+               * scarico»*.
+               *
+               * 💡 **Sta qui e non altrove perché risponde alla stessa
+               * domanda**, dall'altro lato: il carico dice *quanto stai
+               * facendo rispetto al tuo solito*, il TEI *quanto ne è arrivato
+               * al cuore*. ⚠️ Un carico al 140% fatto di camminate lente e uno
+               * fatto di intervalli sono lo stesso numero e due settimane
+               * diverse.
+               *
+               * 🚨 **Non è il PAI**: quella formula non è pubblica — brevetto
+               * NTNU, marchio di PAI Health. Le due ancore da cui esce la nostra
+               * sono dichiarate in `ModelloDiEffetto`.
+               */
+              const SizedBox(height: Gap.md),
+              const _SezioneEffetto(),
 
               const Divider(height: Gap.lg),
 
@@ -232,6 +255,110 @@ class _SezioneCarico extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// 🏃 Il Training Effect Index — 08/09/2026.
+///
+/// ══ 🚨 QUANDO NON C'E', SI DICE COSA MANCA ════════════════════════════════
+///
+/// ⛔ **Tre cose lo rendono impossibile, e sono diverse fra loro**: l'età
+/// (senza, non c'è la frequenza massima), il battito a riposo (senza, non c'è
+/// la riserva) e i battiti della settimana (senza, non c'è niente da contare).
+///
+/// 🚨 Un «—» solo per tutti e tre direbbe *«non funziona»* a chi deve solo
+/// scrivere la propria età nel profilo. 💡 Quindi la riga sotto dice **quale**
+/// dei tre manca — ed è la stessa regola della nota del carico: *«dice quanti
+/// giorni mancano, non "dati insufficienti"»*.
+class _SezioneEffetto extends ConsumerWidget {
+  const _SezioneEffetto();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tema = Theme.of(context);
+    final tei = ref.watch(indiceDiEffettoProvider).valueOrNull;
+
+    /*
+     * ⛔ **`affidabile == false` non si mostra come un numero basso.** 🚨 Un TEI
+     * a 12 perché ti sei mosso poco e un TEI a 12 perché l'orologio era nel
+     * cassetto sono la stessa cifra e due cose opposte: la prima è un
+     * suggerimento, la seconda una bugia.
+     */
+    final mostrabile = tei != null && tei.affidabile;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text('Effetto', style: tema.textTheme.labelMedium),
+            const SizedBox(width: Gap.sm),
+            Text(
+              mostrabile ? '${tei.punti.round()}' : '—',
+              style: tema.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: mostrabile
+                    ? tema.colorScheme.primary
+                    : tema.colorScheme.outline,
+              ),
+            ),
+            const SizedBox(width: 4),
+            /*
+             * 💡 **«su 100» sta scritto, e non è pignoleria**: senza, «112» non
+             * si sa se è tanto o poco. ⚠️ Il 100 non è un tetto — si può
+             * superare, ed è una buona notizia.
+             */
+            Text('/ 100', style: tema.textTheme.bodySmall),
+          ],
+        ),
+
+        const SizedBox(height: Gap.xs),
+
+        /*
+         * ⚠️ La stessa barra del carico non andava bene: quella è un rapporto
+         * con una zona verde in mezzo, questa è un obiettivo da raggiungere.
+         * 💡 Una barra che si riempie dice «arrivaci», e supera il pieno senza
+         * sembrare un errore.
+         */
+        LinearProgressIndicator(
+          value: mostrabile ? (tei.punti / 100).clamp(0.0, 1.0) : 0,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
+          backgroundColor: tema.colorScheme.surfaceContainerHighest,
+        ),
+
+        const SizedBox(height: Gap.xs),
+
+        Text(_spiegazione(tei), style: tema.textTheme.bodySmall),
+      ],
+    );
+  }
+
+  /// Cosa c'è scritto sotto la barra.
+  ///
+  /// 🚨 **Ogni ramo è una causa diversa e un rimedio diverso**, e per questo non
+  /// si accorpano: chi deve scrivere l'età in un campo e chi deve mettersi
+  /// l'orologio non stanno facendo lo stesso errore.
+  static String _spiegazione(IndiceDiEffetto? tei) {
+    if (tei == null) {
+      return 'Serve la tua età nel profilo, un battito a riposo misurato e '
+          'qualche giorno di orologio al polso.';
+    }
+
+    if (!tei.affidabile) {
+      return 'L\'orologio ha registrato troppo poco per dirlo: il battito '
+          'serve fitto, non una volta ogni tanto.';
+    }
+
+    if (tei.punti >= 100) {
+      return 'Sei sopra l\'obiettivo settimanale. '
+          '${tei.minutiUtili} minuti che hanno alzato il battito.';
+    }
+
+    return 'Ti mancano ${(100 - tei.punti).round()} punti per la settimana. '
+        '${tei.minutiUtili} minuti utili finora.';
   }
 }
 

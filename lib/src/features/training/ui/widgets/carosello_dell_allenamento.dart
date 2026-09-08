@@ -56,19 +56,35 @@ class CaroselloDellAllenamento extends ConsumerStatefulWidget {
       _CaroselloDellAllenamentoState();
 }
 
-/// Quanto e' alta questa card.
+/// Quanto è alta questa card, **secondo cosa c'è dentro**.
 ///
-/// ══ 🚨 PIU' DEL CAROSELLO DEL MESE, E C'E' UNA RAGIONE ══════════════
+/// ══ 📌 DUE ALTEZZE, NON UNA ═══════════════════════════════════════════════
 ///
-/// ⛔ Con `altezzaCarosello` (420) la pagina dei numeri mostrava **il percorso
-/// e quattro cifre**, e le altre dieci restavano dietro uno scorrimento
-/// **dentro** la card — quello che nessuno indovina, perche' la pagina intera
-/// gia' scorre.
+/// Il committente: *«l'altezza delle card del carosello deve essere diversa tra
+/// gli allenamenti di pesi e quelli con il gps: sul gps ci sono molti dati in
+/// più quindi ovviamente la card sarà più lunga, mentre sulla card di pesi c'è
+/// proprio il carosello e le cose vanno in tre card diverse»*.
 ///
-/// 💡 560 fa entrare il tracciato e tutta la griglia. ⚠️ Il carosello del mese
-/// resta a 420: li' dentro c'e' un grafico solo, e allungarlo non aggiungerebbe
-/// niente.
-const double _altezza = 560;
+/// ⛔ **Un'altezza sola sbagliava tutti e due i casi**: a 420 l'uscita col GPS
+/// nascondeva dieci cifre dietro uno scorrimento interno; a 560 la seduta di
+/// pesi mostrava mezzo riquadro vuoto sotto otto numeri.
+///
+/// | Allenamento | Cosa c'è dentro | Altezza |
+/// |---|---|---|
+/// | Con percorso | tracciato + **undici** numeri | **560** |
+/// | Di pesi | otto numeri, e i muscoli su due pagine loro | **420** |
+///
+/// 🚨 **La condizione è la stessa che decide se il percorso si disegna**, e non
+/// è una coincidenza: è quel blocco a occupare lo spazio in più. ⚠️ Se un giorno
+/// le due si separassero, la card resterebbe alta per allenamenti che non hanno
+/// niente da metterci.
+///
+/// 💡 Il carosello del **mese** resta a `altezzaCarosello` e non c'entra: lì
+/// dentro c'è un grafico solo.
+double _altezza(VoceStorico voce) =>
+    TipoAllenamento.conPercorso(voce.dalPolso.firstOrNull?.tipo ?? '')
+    ? 560
+    : altezzaCarosello;
 
 class _CaroselloDellAllenamentoState
     extends ConsumerState<CaroselloDellAllenamento> {
@@ -157,7 +173,7 @@ class _CaroselloDellAllenamentoState
     return Column(
       children: [
         SizedBox(
-          height: _altezza,
+          height: _altezza(voce),
 
           // 🚨 `PageView` e non `ListView`: le card sono larghe tutta la pagina
           // e devono **scattare** una per una, o si resta a cavallo di due.

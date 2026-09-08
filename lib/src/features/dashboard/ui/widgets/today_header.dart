@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../saldo_calorico.dart';
 import '../../../../core/ui/intestazione_app.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
@@ -101,6 +102,26 @@ class TodayHeader extends ConsumerWidget {
      * numero che arriva mezzo secondo dopo è meglio di un'intestazione che
      * lampeggia, e la regola «se manca sparisce» lo gestisce da sola.
      */
+    /*
+     * ⚠️ **La stessa formula della card, non una parallela.** `consumoDelGiorno`
+     * mappa il TDEE sull'ora del giorno, ed è quella che disegna la barra qui
+     * sotto: ricalcolarla in un altro modo vorrebbe dire due numeri che
+     * divergono appena qualcuno tocca uno dei due.
+     *
+     * 💡 Senza un TDEE locale resta **zero**, e la pillola mostra le sole
+     * attive: è il caso di chi non ha ancora un profilo completo, e mostrare
+     * un totale senza basale sarebbe comunque meglio di un trattino.
+     */
+    final stimaLocale = ref.watch(targetLocaleProvider).valueOrNull?.target;
+
+    final quotidiano = stimaLocale == null
+        ? 0.0
+        : consumoDelGiorno(
+            tdee: stimaLocale.tdee,
+            giorno: giorno,
+            adesso: DateTime.now(),
+          );
+
     final recupero = ref.watch(recuperoProvider).valueOrNull;
     final forma = ref.watch(formaProvider).valueOrNull;
 
@@ -184,8 +205,26 @@ class TodayHeader extends ConsumerWidget {
                   icona: Icons.restaurant_rounded,
                 ),
 
+                /*
+                 * ══ 🚨 LO STESSO NUMERO DELLA CARD, NON UN ALTRO ═══════════
+                 *
+                 * ⛔ **Qui c'era `bruciate.kcal`, cioè le sole attive**, mentre
+                 * la card «Bruciate» due dita più giù mostra il totale col
+                 * basale. 🚨 Il 08/09 alle 00:38 la pillola diceva **0** e la
+                 * card **63**, nella stessa schermata.
+                 *
+                 * ⚠️ **È il difetto 3b-B.19 sopravvissuto fra due widget.**
+                 * Quello del 25/08 fu risolto *dentro* una card — *«due numeri
+                 * con la stessa etichetta «bruciate», uno venti volte
+                 * l'altro»* — e la stessa coppia era rimasta qui sopra.
+                 *
+                 * 💡 Adesso è **una sola grandezza**: quanto hai bruciato
+                 * finora oggi, basale compreso. La ripartizione fra vita
+                 * quotidiana e allenamento la dice la legenda della card, dove
+                 * i colori la spiegano.
+                 */
                 _Valore(
-                  valore: bruciate.kcal.toString(),
+                  valore: (quotidiano + bruciate.kcal).round().toString(),
                   etichetta: 'bruciate',
                   icona: Icons.local_fire_department_rounded,
                 ),

@@ -10,8 +10,6 @@ import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/diary/data/trasloco_del_diario.dart';
-import 'features/health/sonda_dei_percorsi.dart';
-import 'features/health/sonda_delle_attive.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
@@ -104,35 +102,25 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
   @override
   Widget build(BuildContext context) {
     /*
-     * 🔬 **Solo con `--dart-define=DIAGNOSTICA=attive`** — 07/09/2026.
+     * ══ 🧹 LE DUE SONDE NON CI SONO PIÙ — 08/09/2026 ═══════════════════════
      *
-     * Guarda cosa scrive davvero l'orologio nelle calorie attive e nei passi,
-     * campione per campione, e non tocca niente. ⛔ Nelle build normali
-     * `accesa` è `false` e il compilatore toglie tutto.
+     * ⛔ Erano due diagnostiche accese da `--dart-define`, e hanno fatto il
+     * loro mestiere: hanno risposto a cinque domande che **nessuno poteva
+     * risolvere leggendo il codice**.
      *
-     * ⚠️ **Va tolta quando la domanda ha risposta**: una diagnostica dimenticata
-     * è codice che nessuno rilegge. Vedi `sonda_delle_attive.dart`.
+     * | Domanda | Risposta |
+     * |---|---|
+     * | L'orologio scrive le calorie attive? | ⛔ **No, mai** — zero campioni in due giorni |
+     * | Quanto è fitto il battito? | ✅ **Uno al minuto** — e da lì è nato il TEI |
+     * | I passi grezzi vanno sommati? | ⛔ No: l'aggregato smentiva la somma |
+     * | I percorsi arrivano? | ✅ **1.604 punti** sulla camminata delle 10:49 |
+     * | La velocità c'è? | ✅ Sì — mancava `READ_SPEED` nel manifest, non il dato |
+     *
+     * 🚨 **Una diagnostica dimenticata è codice che nessuno rilegge**, e questa
+     * regola era già scritta qui: *«va tolta quando la domanda ha risposta»*.
+     * 💡 I file restano in `features/health/sonda_*.dart` — si riattaccano in
+     * due righe il giorno che servisse chiedere qualcos'altro.
      */
-    if (SondaDelleAttive.accesa) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => SondaDelleAttive(ref).racconta(),
-      );
-    }
-
-    /*
-     * 🗺️ **`--dart-define=DIAGNOSTICA=percorsi`** — 08/09/2026.
-     *
-     * 🚨 Risponde a una domanda sola, e da quella dipende se la richiesta del
-     * committente sulla forma del percorso si possa fare: Health Connect ci dà
-     * i percorsi scritti dall'app dell'orologio, o li tiene dietro un consenso
-     * che si concede solo a mano? Vedi `sonda_dei_percorsi.dart`.
-     */
-    if (SondaDeiPercorsi.accesa) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => const SondaDeiPercorsi().racconta(),
-      );
-    }
-
     final palestra = ref.watch(brandingControllerProvider).branding;
 
     /*

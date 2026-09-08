@@ -39,7 +39,6 @@ import 'widgets/carosello_dell_allenamento.dart';
 import 'widgets/esercizi_dalla_scheda.dart';
 import 'widgets/foto_dell_allenamento.dart';
 import 'widgets/numeri_dell_allenamento.dart';
-import 'widgets/percorso_dell_allenamento.dart';
 import 'widgets/testa_dell_allenamento.dart';
 
 class AllenamentoOrologioScreen extends ConsumerWidget {
@@ -178,18 +177,12 @@ class _Dettaglio extends ConsumerWidget {
         const SizedBox(height: Gap.md),
 
         /*
-         * 🗺️ **Il percorso** — 08/09/2026.
+         * 🗺️ **Il percorso non e' piu' qui** — 08/09/2026.
          *
-         * ⚠️ **Sopra la foto e non sotto**, e c'e' una ragione: per un'uscita
-         * all'aperto la foto e' un di piu', il tracciato e' quello che
-         * l'allenamento **e' stato**. 💡 Su una seduta di pesi questa card non
-         * compare affatto, quindi non sposta niente per chi si allena in
-         * palestra.
+         * 📌 *«la forma del percorso non la voglio sotto, la voglio nella stessa
+         * card con i numeri dell'allenamento»*. 💡 Adesso vive dentro
+         * [NumeriDellAllenamento], qui sopra.
          */
-        PercorsoDellAllenamento(voce: voce),
-
-        const SizedBox(height: Gap.md),
-
         FotoDellAllenamento(allenamentoOrologioId: voce.dalPolso.first.id),
 
         const SizedBox(height: Gap.md),

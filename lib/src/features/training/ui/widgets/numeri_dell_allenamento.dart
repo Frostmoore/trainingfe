@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../health/tipo_allenamento.dart';
 import '../../data/storico_unificato.dart';
+import '../../percorso_controller.dart';
 import '../../statistiche_controller.dart';
+import 'percorso_dell_allenamento.dart';
 
 /// I numeri di un allenamento: tempo, andatura, cuore — 08/09/2026.
 ///
@@ -41,10 +44,35 @@ class NumeriDellAllenamento extends ConsumerWidget {
         .valueOrNull;
 
     /*
+     * 🗺️ **Il percorso sta QUI dentro, non in una card sua** — 08/09/2026.
+     *
+     * 📌 Il committente: *«la forma del percorso non la voglio sotto, la voglio
+     * nella stessa card con i numeri dell'allenamento»*.
+     *
+     * 💡 Velocità, passo e tracciato rispondono alla stessa domanda: *com'è
+     * andata questa uscita*. ⛔ Due riquadri separati facevano scorrere per
+     * mettere insieme cose che si guardano insieme.
+     */
+    final percorso = ref
+        .watch(
+          percorsoDellAllenamentoProvider(voce.dalPolso.firstOrNull?.id ?? -1),
+        )
+        .valueOrNull;
+
+    /*
      * ⛔ **Niente riquadro vuoto.** Un titolo, una cornice e niente dentro si
      * legge come un guasto — non come «di questo non sappiamo niente».
+     *
+     * ⚠️ **Ma un percorso da solo basta**, e non è un caso di scuola: un'uscita
+     * con il GPS e senza distanza registrata ha poco da dire in numeri e
+     * moltissimo da mostrare in forma. 🚨 Se la card si nascondesse per via dei
+     * numeri, sparirebbe anche il tracciato.
      */
-    if (stat == null || !stat.qualcosaDaDire) return const SizedBox.shrink();
+    final haPercorso = percorso != null && percorso.length >= 2;
+
+    if (stat == null || (!stat.qualcosaDaDire && !haPercorso)) {
+      return const SizedBox.shrink();
+    }
 
     final theme = Theme.of(context);
 
@@ -149,6 +177,20 @@ class NumeriDellAllenamento extends ConsumerWidget {
                 );
               },
             ),
+
+            /*
+             * ⚠️ **Una linea prima**, e non solo per estetica: sopra ci sono
+             * numeri, sotto un disegno. 💡 Senza, il tracciato sembra il seguito
+             * della griglia invece di un'altra cosa nella stessa storia.
+             */
+            if (TipoAllenamento.conPercorso(
+              voce.dalPolso.firstOrNull?.tipo ?? '',
+            )) ...[
+              const SizedBox(height: Gap.md),
+              Divider(height: 1, color: theme.colorScheme.outlineVariant),
+              const SizedBox(height: Gap.md),
+              PercorsoDellAllenamento(voce: voce),
+            ],
           ],
         ),
       ),

@@ -95,135 +95,143 @@ class _PercorsoDellAllenamentoState
     final rifiutato =
         ref.watch(percorsoRifiutatoProvider(id)).valueOrNull ?? false;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    /*
+     * ══ 📌 DENTRO LA CARD DEI NUMERI, NON SOTTO ═════════════════════
+     *
+     * Il committente, l'08/09: *«la forma del percorso non la voglio sotto, la
+     * voglio nella stessa card con i numeri dell'allenamento»*.
+     *
+     * 💡 **Ed è la lettura giusta**: velocità, passo e tracciato rispondono
+     * tutti alla stessa domanda — *com'è andata questa uscita*. ⛔ Due riquadri
+     * separati suggerivano due argomenti diversi, e facevano scorrere per
+     * mettere insieme cose che si guardano insieme.
+     *
+     * ⚠️ **Quindi qui non c'è più una `Card`**: la disegna chi ospita, cioè
+     * [NumeriDellAllenamento]. Rimetterla vorrebbe dire una cornice dentro una
+     * cornice.
+     */
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.route_rounded,
-                  size: 18,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: Gap.sm),
-                Text('Il percorso', style: theme.textTheme.titleMedium),
-              ],
+            Icon(
+              Icons.route_rounded,
+              size: 16,
+              color: theme.colorScheme.primary,
             ),
+            const SizedBox(width: Gap.xs),
+            Text('Il percorso', style: theme.textTheme.labelLarge),
+          ],
+        ),
 
-            const SizedBox(height: Gap.md),
+        const SizedBox(height: Gap.sm),
 
-            if (punti != null && punti.length >= 2) ...[
-              /*
+        if (punti != null && punti.length >= 2) ...[
+          /*
                * ✅ **Il caso normale, ed è muto**: nessun pulsante, nessuna
                * spiegazione, nessun permesso da chiedere. Il tracciato è
                * arrivato con la sincronizzazione e si guarda.
                */
-              SizedBox(
-                height: 200,
-                width: double.infinity,
-                child: FormaDelPercorso(punti: punti, spessore: 3),
-              ),
-              const SizedBox(height: Gap.sm),
-              Text(
-                /*
+          SizedBox(
+            height: 200,
+            width: double.infinity,
+            child: FormaDelPercorso(punti: punti, spessore: 3),
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(
+            /*
                  * 💡 Dire quanti punti non è vanità tecnica: un tracciato con
                  * dodici punti e uno con milleduecento si disegnano uguali e non
                  * sono la stessa cosa. ⚠️ Chi vede una forma squadrata deve poter
                  * capire che è il GPS, non la strada.
                  */
-                '${punti.length} punti · resta sul telefono',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ] else ...[
-              /*
+            '${punti.length} punti · resta sul telefono',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ] else ...[
+          /*
                * ⚠️ **Si arriva qui solo se il tracciato non è arrivato da solo**,
                * cioè quasi sempre perché manca il permesso «tutti i percorsi».
                * 🚨 E quel permesso non possiamo chiederlo: possiamo solo
                * accompagnarci la persona.
                */
-              Text(
-                rifiutato
-                    ? 'Non hai condiviso questo percorso.'
-                    : 'Il tuo orologio il percorso ce l\'ha, ma Android non ce '
-                          'lo passa finché non attivi «Percorsi di allenamento» '
-                          'in Health Connect.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: Gap.sm),
+          Text(
+            rifiutato
+                ? 'Non hai condiviso questo percorso.'
+                : 'Il tuo orologio il percorso ce l\'ha, ma Android non ce '
+                      'lo passa finché non attivi «Percorsi di allenamento» '
+                      'in Health Connect.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: Gap.sm),
 
-              /*
+          /*
                * ⚠️ **La promessa va detta prima del pulsante, non dopo.** Il
                * percorso è la cosa più sensibile che l'app legge: dice dove sei
                * stato e a che ora. 🚨 Chi preme deve sapere che resta qui — e se
                * un domani non fosse più vero, questa riga va cambiata **insieme**
                * al codice che la rende falsa.
                */
-              Text(
-                'Resta sul telefono e nel tuo backup. Non lo mandiamo a '
-                'nessuno, e non lo vede né la palestra né l\'AI.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: Gap.md),
+          Text(
+            'Resta sul telefono e nel tuo backup. Non lo mandiamo a '
+            'nessuno, e non lo vede né la palestra né l\'AI.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: Gap.md),
 
-              Wrap(
-                spacing: Gap.sm,
-                runSpacing: Gap.sm,
-                children: [
-                  /*
+          Wrap(
+            spacing: Gap.sm,
+            runSpacing: Gap.sm,
+            children: [
+              /*
                    * 💡 **Questo è il pulsante che risolve per sempre**: apre
                    * Health Connect, dove si concede una volta sola e poi i
                    * percorsi arrivano da soli con la sincronizzazione.
                    */
-                  FilledButton.tonalIcon(
-                    onPressed: () => const SaluteInPiu().apriIPermessi(),
-                    icon: const Icon(Icons.settings_outlined),
-                    label: const Text('Attiva i percorsi'),
-                  ),
+              FilledButton.tonalIcon(
+                onPressed: () => const SaluteInPiu().apriIPermessi(),
+                icon: const Icon(Icons.settings_outlined),
+                label: const Text('Attiva i percorsi'),
+              ),
 
-                  /*
+              /*
                    * ⚠️ **E questo è il ripiego, per una uscita sola.** Sta in
                    * secondo piano di proposito: apre una finestra di sistema, e
                    * chi lo usa dovrà rifarlo per ogni allenamento. ⛔ Sarebbe
                    * ridicolo come strada principale — 📌 lo ha detto il
                    * committente, e aveva ragione.
                    */
-                  if (_idSalute != null)
-                    TextButton(
-                      onPressed: _inCorso ? null : _chiedi,
-                      child: Text(
-                        _inCorso ? 'Attendi…' : 'Solo questo, una volta',
-                      ),
-                    ),
-                ],
-              ),
+              if (_idSalute != null)
+                TextButton(
+                  onPressed: _inCorso ? null : _chiedi,
+                  child: Text(_inCorso ? 'Attendi…' : 'Solo questo, una volta'),
+                ),
+            ],
+          ),
 
-              if (_idSalute == null) ...[
-                const SizedBox(height: Gap.sm),
-                /*
+          if (_idSalute == null) ...[
+            const SizedBox(height: Gap.sm),
+            /*
                  * ⛔ **Senza l'id di Health Connect non si può nemmeno chiedere**,
                  * e va detto invece di offrire un pulsante che non fa niente:
                  * succede sugli allenamenti letti prima dell'08/09.
                  */
-                Text(
-                  'Questo allenamento è arrivato prima che l\'app sapesse '
-                  'chiedere i percorsi. Si sistema da sé alla prossima '
-                  'sincronizzazione, se l\'orologio ce l\'ha ancora.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
+            Text(
+              'Questo allenamento è arrivato prima che l\'app sapesse '
+              'chiedere i percorsi. Si sistema da sé alla prossima '
+              'sincronizzazione, se l\'orologio ce l\'ha ancora.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
-        ),
-      ),
+        ],
+      ],
     );
   }
 }

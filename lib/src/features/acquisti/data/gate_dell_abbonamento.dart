@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../training/data/limiti_delle_schede.dart';
+import 'chi_paga.dart';
 
 /// 🔒 Se questa persona è dentro il gate dell'abbonamento — 08/09/2026.
 ///
@@ -40,3 +41,24 @@ final abbonatoProvider = Provider<bool>(
 /// 💡 E non blocca chi **riprende** una seduta rimasta aperta: quella è partita
 /// ieri, e riprenderla non è farne una nuova.
 const allenamentiAlGiornoSenzaAbbonamento = 1;
+
+/// 💳 **Chi paga per questa persona** — 3b-AH.4, 12/09/2026.
+///
+/// ══ ⚠️ PERCHE' UN PROVIDER SUO, E NON `authControllerProvider` DIRETTO ════
+///
+/// 🚨 La modale «il tuo abbonamento è scaduto» dipende da **una domanda sola**:
+/// *chi pagava?*. ⛔ Farle leggere l'intero controller di autenticazione
+/// significherebbe che ogni test che la monta debba costruire un utente
+/// autenticato completo — e quel test, non riuscendoci, morirebbe con un
+/// `UnimplementedError` dentro un `build`, cioè nel modo più difficile da
+/// leggere.
+///
+/// 💡 Questo è il punto di innesto giusto: si sovrascrive una riga, e la finestra
+/// si prova per quello che dice.
+///
+/// ⛔ **Il ripiego è [ChiPaga.io]** e la direzione è voluta: a chi paga davvero
+/// si mostra un pulsante in più, mentre il contrario direbbe a qualcuno di
+/// parlare con una palestra che non ha.
+final chiPagaProvider = Provider<ChiPaga>(
+  (ref) => ref.watch(authControllerProvider).user?.chiPagava ?? ChiPaga.io,
+);

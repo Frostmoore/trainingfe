@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/chi_paga.dart';
+import '../../data/gate_dell_abbonamento.dart';
 import '../modale_acquisti.dart';
 
 /// 🛑 «Il tuo abbonamento è scaduto» — 08/09/2026.
@@ -50,6 +52,26 @@ class AbbonamentoScaduto extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = Theme.of(context);
 
+    /*
+     * 🆕 **Chi pagava** — 3b-AH.4, 12/09/2026.
+     *
+     * 📌 Il committente: *«la modale per lui deve dire che non è più
+     * abbonato perché non è più abbonato il suo trainer o la sua palestra»*.
+     *
+     * ⛔ Fino all'11/09 questa finestra diceva a tutti *«il rinnovo automatico
+     * era spento, quindi non abbiamo addebitato niente»*. 🚨 A un iscritto di
+     * palestra è **falso due volte**: non ha spento niente e non ha mai pagato
+     * niente. Gli faceva cercare un'impostazione che non ha, e gli nascondeva
+     * l'unica cosa utile — parlarne con la palestra.
+     *
+     * ⚠️ Si legge dal **profilo** e non dal listino: questa finestra la apre il
+     * ricontrollo al rientro, e chiedere una seconda risposta in quel momento
+     * vorrebbe dire una richiesta di rete prima di poter scrivere una frase.
+     * Con la rete lenta, la frase sbagliata comparirebbe per prima.
+     */
+    final chiPagava = ref.watch(chiPagaProvider);
+    final altri = chiPagava.lopagaQualcunAltro;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.lg),
       child: SingleChildScrollView(
@@ -77,8 +99,12 @@ class AbbonamentoScaduto extends ConsumerWidget {
             const SizedBox(height: Gap.md),
 
             Text(
-              'Il rinnovo automatico era spento, quindi non abbiamo addebitato '
-              'niente.',
+              altri
+                  ? '${chiPagava.nome[0].toUpperCase()}${chiPagava.nome.substring(1)} '
+                        'non ha rinnovato l\'abbonamento. Non dipendeva da te, e '
+                        'non ti è stato addebitato niente.'
+                  : 'Il rinnovo automatico era spento, quindi non abbiamo '
+                        'addebitato niente.',
               style: tema.textTheme.bodyMedium,
             ),
             const SizedBox(height: Gap.md),
@@ -124,6 +150,16 @@ class AbbonamentoScaduto extends ConsumerWidget {
               'allenamenti — e puoi far partire un allenamento al giorno.',
               style: tema.textTheme.bodySmall,
             ),
+
+            if (altri) ...[
+              const SizedBox(height: Gap.md),
+              Text(
+                'Per tornare abbonato parlane con ${chiPagava.nome}: '
+                'l\'abbonamento è suo, e da qui non c\'è niente da riattivare.',
+                style: tema.textTheme.bodyMedium,
+              ),
+            ],
+
             const SizedBox(height: Gap.lg),
 
             Row(
@@ -139,13 +175,27 @@ class AbbonamentoScaduto extends ConsumerWidget {
                   child: const Text('Va bene'),
                 ),
                 const Spacer(),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    ModaleAcquisti.mostra(context);
-                  },
-                  child: const Text('Riattiva'),
-                ),
+
+                /*
+                 * ⛔ **Nessun «Riattiva» a chi non paga** — 3b-AH.4.
+                 *
+                 * 🚨 Gli farebbe comprare un abbonamento **personale**,
+                 * cioè pagare due volte lo stesso servizio: appena la sua
+                 * palestra rinnova, quello che ha comprato da solo diventa
+                 * un doppione che continua a scalare ogni mese.
+                 *
+                 * 💡 E al suo posto non c'è un altro pulsante: non c'è
+                 * niente che possa fare da qui. La cosa utile — parlarne
+                 * con chi paga — sta scritta nel testo.
+                 */
+                if (!altri)
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ModaleAcquisti.mostra(context);
+                    },
+                    child: const Text('Riattiva'),
+                  ),
               ],
             ),
           ],

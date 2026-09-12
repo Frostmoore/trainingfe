@@ -1,3 +1,5 @@
+import '../../acquisti/data/chi_paga.dart';
+
 /// L'utente autenticato, come lo restituisce `GET /api/v1/auth/me`.
 ///
 /// Volutamente povero: l'app degli iscritti ha bisogno di sapere **chi è** e
@@ -19,6 +21,7 @@ class AppUser {
     this.aiAbilitata = true,
     this.abbonato = false,
     this.tier = 'free',
+    this.chiPagava = ChiPaga.io,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -75,6 +78,7 @@ class AppUser {
      */
     abbonato: json['abbonato'] as bool? ?? false,
     tier: json['tier']?.toString() ?? 'free',
+    chiPagava: ChiPaga.daStringa(json['chi_pagava']?.toString()),
     social: ((json['social'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList(growable: false),
@@ -122,6 +126,20 @@ class AppUser {
   /// impianto paga il **tenant**: chi è iscritto a una palestra abbonata è
   /// coperto da quella.
   final bool abbonato;
+
+  /// 🆕 **Chi paga l'abbonamento di questa persona** — 3b-AH.4.
+  ///
+  /// 📌 Il committente: *«la modale per lui deve dire che non è più abbonato
+  /// perché non è più abbonato il suo trainer o la sua palestra»*.
+  ///
+  /// ⛔ **Non si deduce qui.** L'app il tipo di spazio ce l'ha e potrebbe
+  /// dedurlo, ma sarebbe la stessa informazione dedotta due volte e le due
+  /// deduzioni divergono. 🚨 Lo dice il server, con `PianoAttivo::chiPaga()`.
+  ///
+  /// ⚠️ Il valore di ripiego è [ChiPaga.io], e la direzione è voluta: a chi
+  /// paga davvero si mostra un pulsante in più, mentre il contrario direbbe a
+  /// qualcuno di parlare con una palestra che non ha.
+  final ChiPaga chiPagava;
 
   /// Il livello del piano: `free`, `plus`, `gym`, `trainer_pro`…
   ///

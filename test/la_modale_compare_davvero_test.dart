@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:training_companion/src/core/router/app_router.dart';
 import 'package:training_companion/src/core/providers.dart';
 import 'package:training_companion/src/core/storage/local_cache.dart';
+import 'package:training_companion/src/features/acquisti/data/chi_paga.dart';
+import 'package:training_companion/src/features/acquisti/data/gate_dell_abbonamento.dart';
 import 'package:training_companion/src/features/acquisti/data/spia_dell_abbonamento.dart';
 import 'package:training_companion/src/features/acquisti/ui/widgets/ricontrollo_al_rientro.dart';
 import 'package:training_companion/src/features/privacy/consensi_controller.dart';
@@ -61,6 +63,8 @@ void main() {
     required bool prima,
     required bool dopo,
     required String testoAtteso,
+    ChiPaga chiPaga = ChiPaga.io,
+    String? testoAssente,
   }) async {
     final cache = await LocalCache.open();
     await cache.setBool(SpiaDellAbbonamento.chiave, value: prima);
@@ -74,6 +78,16 @@ void main() {
 
         // 💡 La modale dell'AI legge i consensi: senza questo andrebbe in rete.
         consensiProvider.overrideWith((ref) async => const Consensi()),
+
+        /*
+         * 🆕 **Chi pagava** — 3b-AH.4, 12/09/2026.
+         *
+         * ⚠️ Senza questa riga la finestra leggeva `authControllerProvider`
+         * e moriva con un `UnimplementedError` **dentro un `build`**: il test
+         * diceva solo «la modale non è comparsa», che è la stessa frase del
+         * difetto vero che questo file esiste per sorvegliare.
+         */
+        chiPagaProvider.overrideWithValue(chiPaga),
       ],
     );
 
@@ -94,6 +108,10 @@ void main() {
       findsOneWidget,
       reason: 'la modale non è comparsa: è esattamente il difetto riferito',
     );
+
+    if (testoAssente != null) {
+      expect(find.textContaining(testoAssente), findsNothing);
+    }
   }
 
   testWidgets('🎉 mi riabilito l\'abbonamento → «Hai sbloccato»', (
@@ -113,6 +131,47 @@ void main() {
       prima: true,
       dopo: false,
       testoAtteso: 'Il tuo abbonamento è scaduto',
+    );
+  });
+
+  /*
+   * 🆕 **AH.4 — a chi non paga si dice un'altra cosa**, 12/09/2026.
+   *
+   * 📌 *«la modale per lui deve dire che non è più abbonato perché non è più
+   * abbonato il suo trainer o la sua palestra»*.
+   *
+   * ⛔ Prima diceva a tutti *«il rinnovo automatico era spento»*: a un iscritto
+   * di palestra è falso due volte, e lo manda a cercare un'impostazione che non
+   * ha.
+   */
+  testWidgets('🏋️ a chi lo pagava la palestra si dice la verità', (
+    tester,
+  ) async {
+    await provaIlPassaggio(
+      tester,
+      prima: true,
+      dopo: false,
+      chiPaga: ChiPaga.palestra,
+      testoAtteso: 'La tua palestra non ha rinnovato',
+
+      /*
+       * 🚨 **E il pulsante non c'è.** Gli farebbe comprare un abbonamento
+       * personale, cioè pagare due volte lo stesso servizio: appena la palestra
+       * rinnova, quello comprato da solo diventa un doppione che continua a
+       * scalare ogni mese.
+       */
+      testoAssente: 'Riattiva',
+    );
+  });
+
+  testWidgets('🏃 e a chi lo pagava il trainer idem', (tester) async {
+    await provaIlPassaggio(
+      tester,
+      prima: true,
+      dopo: false,
+      chiPaga: ChiPaga.trainer,
+      testoAtteso: 'Il tuo trainer non ha rinnovato',
+      testoAssente: 'Riattiva',
     );
   });
 }

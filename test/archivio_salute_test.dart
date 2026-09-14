@@ -71,7 +71,10 @@ void main() {
     /// presenti. E non sarebbe un fastidio estetico — la media di riferimento è
     /// una media, e contare tre volte lo stesso valore la sposta.
     test('la stessa lettura scritta due volte non si duplica', () async {
-      final quando = DateTime(2026, 8, 11, 7);
+      // ⚠️ Relativa a adesso, per la ragione scritta nel test qui sopra: una
+      // data fissa esce dalla finestra dei trenta giorni e fa diventare rosso
+      // questo test da solo. È successo l'11/09/2026.
+      final quando = DateTime.now().subtract(const Duration(days: 1));
 
       await archivio.scriviLetture([lettura(MetricaSalute.hrv, 48, quando)]);
       await archivio.scriviLetture([lettura(MetricaSalute.hrv, 48, quando)]);
@@ -90,7 +93,8 @@ void main() {
     /// dalla media, un solo valore assurdo non sbaglia un numero: rende inutile
     /// la funzione.
     test('un valore implausibile viene scartato, non salvato', () async {
-      final quando = DateTime(2026, 8, 11, 7);
+      // ⚠️ Relativa a adesso — vedi il primo test del gruppo.
+      final quando = DateTime.now().subtract(const Duration(days: 1));
 
       final scritte = await archivio.scriviLetture([
         lettura(MetricaSalute.hrv, 4000, quando),
@@ -107,7 +111,8 @@ void main() {
     });
 
     test('le metriche non si mescolano fra loro', () async {
-      final quando = DateTime(2026, 8, 11, 7);
+      // ⚠️ Relativa a adesso — vedi il primo test del gruppo.
+      final quando = DateTime.now().subtract(const Duration(days: 1));
 
       await archivio.scriviLetture([
         lettura(MetricaSalute.hrv, 48, quando),

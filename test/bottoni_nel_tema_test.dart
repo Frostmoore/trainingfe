@@ -98,4 +98,54 @@ void main() {
 
     expect(larghezza, tester.getSize(find.byType(Scaffold)).width);
   });
+
+  // ─────────────────── i colori che nessuno ha scelto ───────────────────
+
+  /// ⛔ **`tertiary: accento` non basta**, ed è costato un riquadro rosa.
+  ///
+  /// `ColorScheme.fromSeed` ricava `tertiaryContainer` dalla tavolozza del
+  /// **seme**, non dal parametro `tertiary`: con un primario verde acqua e un
+  /// accento ambra, il contenitore usciva rosa. 🚨 Nessun errore, e un colore
+  /// che nell'app non esiste — per una palestra, un colore diverso da quello
+  /// scritto nel suo pannello.
+  ///
+  /// 💡 Si misura la **distanza di tinta** dall'accento, non il valore esatto:
+  /// Material schiarisce e desatura per farne un contenitore, ed è giusto che
+  /// lo faccia. Quello che non deve fare è cambiare famiglia.
+  test('il contenitore terziario resta della famiglia dell accento', () {
+    const accento = Color(0xFFF59E0B); // l'ambra del branding neutro
+
+    final tema = AppTheme.light(GymBranding.neutral);
+    final contenitore = tema.colorScheme.tertiaryContainer;
+
+    double tinta(Color c) => HSLColor.fromColor(c).hue;
+
+    // ⚠️ In gradi, e sul cerchio: 350° e 10° distano 20, non 340.
+    final diff = (tinta(contenitore) - tinta(accento)).abs();
+    final distanza = diff > 180 ? 360 - diff : diff;
+
+    expect(
+      distanza,
+      lessThan(40),
+      reason:
+          'tertiaryContainer è ${tinta(contenitore).round()}°, '
+          'l\'accento ${tinta(accento).round()}°: non è più un ambra.',
+    );
+  });
+
+  /// 🚨 **Le finestre non si tingono da sole.** In Material 3 l'elevazione
+  /// **tinge la superficie** con il primario: un `AlertDialog` sta a 6, quindi
+  /// ne prendeva parecchia, e il colore cambiava da palestra a palestra senza
+  /// che nessuno l'avesse deciso. ⛔ È lo stesso difetto già chiuso per le
+  /// `Card`, che era stato chiuso **solo** per le card.
+  test('le finestre non prendono la sfumatura del primario', () {
+    final tema = AppTheme.light(GymBranding.neutral);
+
+    expect(tema.dialogTheme.surfaceTintColor, Colors.transparent);
+    expect(tema.datePickerTheme.surfaceTintColor, Colors.transparent);
+    expect(tema.bottomSheetTheme.surfaceTintColor, Colors.transparent);
+
+    // 💡 E la superficie è quella dell'app, non quella che M3 sceglierebbe.
+    expect(tema.dialogTheme.backgroundColor, tema.colorScheme.surface);
+  });
 }

@@ -36,6 +36,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../branding_controller.dart';
+import 'widgets/marchio_in_cima.dart';
 
 class SchermataBenvenuto extends ConsumerStatefulWidget {
   const SchermataBenvenuto({super.key});
@@ -73,6 +74,7 @@ class _SchermataBenvenutoState extends ConsumerState<SchermataBenvenuto> {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final branding = ref.watch(brandingControllerProvider).branding;
 
     return Scaffold(
       body: SafeArea(
@@ -84,20 +86,23 @@ class _SchermataBenvenutoState extends ConsumerState<SchermataBenvenuto> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.fitness_center_rounded,
-                    size: 64,
-                    color: tema.colorScheme.primary,
-                  ),
-                  const SizedBox(height: Gap.lg),
-
-                  Text(
-                    'Benvenuto',
-                    textAlign: TextAlign.center,
-                    style: tema.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  /*
+                   * ══ 🆕 LO STESSO MARCHIO DELLE ALTRE DUE — 14/09/2026 ════
+                   *
+                   * ⛔ **Qui c'era un manubrio nudo, e a due tocchi di
+                   * distanza — `/accedi`, `/registrati` — ce n'era un altro:
+                   * un cerchio verde con una «T».** Tre schermate consecutive,
+                   * due marchi diversi.
+                   *
+                   * 🚨 **E il nome dell'applicazione non compariva**, proprio
+                   * nell'unica schermata che si vede **prima** di avere un
+                   * account: chi la apre è esattamente chi può ancora
+                   * chiedersi cosa ha installato.
+                   *
+                   * 💡 `MarchioInCima` lo disegna una volta sola per tutte e
+                   * tre, e sceglie da sé fra la palestra e l'applicazione.
+                   */
+                  MarchioInCima(branding: branding),
                   const SizedBox(height: Gap.sm),
                   Text(
                     'Tieni traccia dei tuoi allenamenti e di quello che mangi.',
@@ -109,30 +114,47 @@ class _SchermataBenvenutoState extends ConsumerState<SchermataBenvenuto> {
                   const SizedBox(height: Gap.xl),
 
                   /*
-                   * 💡 **«Accedi» pieno e primo.** ⛔ Non è una gerarchia
-                   * commerciale: è che questa schermata si rivede a ogni
-                   * reinstallazione e a ogni cambio di telefono, e chi ha già un
-                   * account è il caso più frequente di tutti. 🚨 È la stessa
-                   * ragione per cui il 19/08 «continua senza palestra» era stato
-                   * spostato sull'accesso invece che sulla registrazione.
+                   * ══ 🆕 «REGISTRATI» PIENO E PRIMO — 14/09/2026 ═══════════
+                   *
+                   * 📌 Il committente, dopo il giro sull'emulatore: *«mi pare
+                   * evidente che se ci si arriva solo se non si ha un account,
+                   * la scelta principale deve essere Registrati»*.
+                   *
+                   * ⛔ **Qui c'era scritto il contrario**, e l'argomento non era
+                   * sbagliato: questa schermata si rivede a ogni
+                   * reinstallazione e a ogni cambio di telefono, e in quei casi
+                   * un account c'è già. 🚨 Ci si arriva ogni volta che **non
+                   * c'è una sessione sul telefono**, che non è la stessa cosa
+                   * di «non c'è un account».
+                   *
+                   * 💡 **Ma i due errori non costano uguale**, ed è questo che
+                   * decide:
+                   *
+                   * | Chi sbaglia porta | Cosa trova |
+                   * |---|---|
+                   * | Chi rientra e tocca «Registrati» | un modulo, e capisce subito |
+                   * | ⛔ Chi è nuovo e tocca «Accedi» | un rifiuto, e **non sa perché** |
+                   *
+                   * ⚠️ E per un'app che non è ancora pubblicata, le prime
+                   * installazioni sono quasi tutte prime volte.
                    */
                   FilledButton(
-                    onPressed: _inCorso ? null : () => _vai(AppRoutes.login),
+                    onPressed: _inCorso ? null : () => _vai(AppRoutes.register),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    child: const Text('Accedi'),
+                    child: const Text('Registrati'),
                   ),
                   const SizedBox(height: Gap.md),
 
                   OutlinedButton(
-                    onPressed: _inCorso ? null : () => _vai(AppRoutes.register),
+                    onPressed: _inCorso ? null : () => _vai(AppRoutes.login),
                     style: OutlinedButton.styleFrom(
                       // 💡 Stessa altezza: sono due porte, non una porta e una
                       // nota a piè di pagina.
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    child: const Text('Registrati'),
+                    child: const Text('Accedi'),
                   ),
 
                   const SizedBox(height: Gap.lg),

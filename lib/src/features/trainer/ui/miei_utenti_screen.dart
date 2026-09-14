@@ -237,10 +237,23 @@ class _Riga extends ConsumerWidget {
           tooltip: utente.attivo
               ? 'Chiudi la conversazione'
               : 'Riapri la conversazione',
+          /*
+           * ══ 🆕 UN'ICONA CHE PARLA DI MESSAGGI — 15/09/2026 ════════════════
+           *
+           * ⛔ **C'era «pausa» e «riproduci».** Quei due simboli dicono
+           * «sospendi» e «riprendi» di *qualcosa che sta andando* — un audio,
+           * un timer — e qui invece si apre e si chiude **il canale dei
+           * messaggi** con una persona. ⚠️ Visto sull'emulatore il 15/09: due
+           * righe con un ⏸ a destra, e nessun modo di sapere cosa facesse
+           * senza tenerci il dito sopra per leggere il suggerimento.
+           *
+           * 💡 Il fumetto barrato lo dice da solo, e sta nella stessa famiglia
+           * dell'icona dei Messaggi in fondo allo schermo.
+           */
           icon: Icon(
             utente.attivo
-                ? Icons.pause_circle_outline
-                : Icons.play_circle_outline,
+                ? Icons.speaker_notes_off_outlined
+                : Icons.chat_bubble_outline_rounded,
           ),
           onPressed: () => _cambia(context, ref),
         ),

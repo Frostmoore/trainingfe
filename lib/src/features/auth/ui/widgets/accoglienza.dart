@@ -10,7 +10,6 @@ import '../../../../core/crypto/servizio_chiavi.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../chiavi/ui/schermata_ripresa_dati.dart';
-import '../../../health/health_controller.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../auth_controller.dart';
 
@@ -22,8 +21,11 @@ import '../../auth_controller.dart';
 /// |---|---|---|
 /// | 1 | **L'impronta** | È l'unico che riguarda l'accesso stesso, e non tocca dati |
 /// | 2 | **Il ripristino dal backup** | Va **prima che l'app scriva qualunque cosa** |
-/// | 3 | Health Connect | Dopo aver spiegato a cosa serve |
-/// | 4 | I consensi | Ultimi: sono la decisione più lunga, e non bloccano niente |
+/// | 3 | I consensi | Ultimi: sono la decisione più lunga, e non bloccano niente |
+///
+/// 🆕 ⛔ **Health Connect era il passo 3 e non c'è più**: si propone da «Oggi»
+/// con `BannerSalute`, dove il numero che cambia si vede. Vedi la nota in
+/// `_avvia()`.
 ///
 /// 🚨 **L'ordine è quello chiesto dal committente il 19/08**, dopo aver provato
 /// la versione precedente: *«quando accedo mi fa un botto di richieste tutte
@@ -120,9 +122,24 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     await _forseRipristina();
     if (!mounted) return;
 
-    await _forseHealth();
-    if (!mounted) return;
-
+    /*
+     * ══ 🆕 3. HEALTH CONNECT NON SI CHIEDE PIÙ QUI — 14/09/2026 ═════════════
+     *
+     * 📌 *«per Collega google health c'è il tasto + quindi in realtà quella la
+     * possiamo anche togliere, magari mettiamo un bannerino in oggi»* — il
+     * committente, dopo aver visto la sequenza su un account nuovo.
+     *
+     * ⛔ **Era il terzo dialogo di fila**, e arrivava a qualcuno che non aveva
+     * ancora visto una sola schermata dell'app: nessun dato suo, nessuna card,
+     * nessun motivo per capire a cosa serva. 🚨 Un permesso chiesto lì si nega
+     * per riflesso, e su Android un rifiuto ripetuto lo rende **non più
+     * riproponibile**.
+     *
+     * 💡 Adesso la proposta vive in «Oggi» — `BannerSalute` — accanto al numero
+     * che il collegamento cambia, e si legge quando la domanda ce l'ha chi
+     * guarda. ⚠️ La sequenza resta di tre passi: impronta, ripristino,
+     * consensi.
+     */
     await _forseConsensi();
     if (!mounted) return;
 
@@ -327,51 +344,6 @@ class _AccoglienzaState extends ConsumerState<Accoglienza> {
     } on Object {
       // Vedi il dartdoc: si tace di proposito.
     }
-  }
-
-  /// 3. Health Connect, e la schermata di consenso di Google.
-  Future<void> _forseHealth() async {
-    final ponte = ref.read(ponteSaluteProvider);
-
-    // 💡 Già collegato — o telefono senza Health Connect: non si chiede niente.
-    if (await ponte.permessiGiaConcessi()) return;
-    if (!mounted) return;
-
-    final vuole = await showDialog<bool>(
-      context: context,
-      builder: (dialogo) => AlertDialog(
-        icon: const Icon(Icons.favorite_outline, size: 32),
-        title: const Text('Colleghi Google Health?'),
-        content: const Text(
-          'Se lo colleghi, l\'app legge il sonno, il battito e le calorie che '
-          'bruci con l\'attività — e le somma al tuo obiettivo calorico del '
-          'giorno.\n\n'
-          'Restano sul telefono: non le mandiamo a nessun server.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogo).pop(false),
-            child: const Text('Non adesso'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogo).pop(true),
-            child: const Text('Collega'),
-          ),
-        ],
-      ),
-    );
-
-    if (vuole != true) return;
-
-    /*
-     * 🚨 **Si chiede DOPO aver spiegato, e mai all'avvio** — la regola di
-     * `PonteSalute.chiediPermessi()`.
-     *
-     * ⚠️ Su Android un permesso negato ripetutamente diventa **non più
-     * riproponibile**: chiederlo prima che qualcuno abbia capito a cosa serve è
-     * il modo più rapido per bruciare la funzione per sempre.
-     */
-    await ponte.chiediPermessi();
   }
 
   @override

@@ -13,6 +13,7 @@ import '../../features/calendar/ui/day_screen.dart';
 import '../../features/chat/ui/conversations_screen.dart';
 import '../../features/chiavi/ui/porta_delle_chiavi.dart';
 import '../../features/chiavi/ui/schermata_backup.dart';
+import '../../features/chiavi/ui/schermata_password_di_recupero.dart';
 import '../../features/dashboard/ui/dashboard_screen.dart';
 import '../../features/diary/ui/diary_screen.dart';
 import '../../features/forma/ui/schermata_forma.dart';
@@ -518,6 +519,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.importaPiano,
         builder: (_, _) => const PortaDelleChiavi(
+          // 🆕 Chi arriva qui voleva caricare un PDF, non scrivere a nessuno.
+          perche: PercheLaChiave.documenti,
           child: ImportaDocumentoScreen(genere: GenereImportato.piano),
         ),
       ),
@@ -532,12 +535,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.importaScheda,
         builder: (_, _) => const PortaDelleChiavi(
+          perche: PercheLaChiave.documenti,
           child: ImportaDocumentoScreen(genere: GenereImportato.scheda),
         ),
       ),
       GoRoute(
         path: AppRoutes.compositorePiano,
-        builder: (_, _) => const PortaDelleChiavi(child: CompositoreConsigli()),
+        builder: (_, _) => const PortaDelleChiavi(
+          perche: PercheLaChiave.schede,
+          child: CompositoreConsigli(),
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.mieiPiani}/:id',
@@ -560,11 +567,17 @@ final routerProvider = Provider<GoRouter>((ref) {
        */
       GoRoute(
         path: AppRoutes.mieSchede,
-        builder: (_, _) => const PortaDelleChiavi(child: MieSchedeScreen()),
+        builder: (_, _) => const PortaDelleChiavi(
+          perche: PercheLaChiave.schede,
+          child: MieSchedeScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.compositoreScheda,
-        builder: (_, _) => const PortaDelleChiavi(child: CompositoreScheda()),
+        builder: (_, _) => const PortaDelleChiavi(
+          perche: PercheLaChiave.schede,
+          child: CompositoreScheda(),
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.mieSchede}/:id',

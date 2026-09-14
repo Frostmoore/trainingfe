@@ -7,8 +7,8 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
+import '../../onboarding/ui/widgets/marchio_in_cima.dart';
 import '../auth_controller.dart';
-import 'widgets/gym_header.dart';
 import 'widgets/social_buttons.dart';
 
 /// L'accesso — A2.3.
@@ -36,6 +36,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _password.dispose();
     super.dispose();
   }
+
+  /// Questo 422 dice «non ti riconosco», o dice qualcos'altro?
+  ///
+  /// 🚨 **Si guarda il messaggio del server, e non è bello ma è l'unica cosa
+  /// che c'è**: `POST /auth/login` non manda un codice per distinguere i suoi
+  /// rifiuti, manda solo la frase. ⚠️ Chi aggiunge un codice lato server tolga
+  /// questo controllo, che è un ripiego.
+  ///
+  /// 💡 Il confronto è **sul testo del rifiuto per credenziali**, non su quello
+  /// dell'account disattivato: se un giorno il server aggiungesse un terzo
+  /// motivo, il ripiego lo mostrerebbe per esteso invece di mascherarlo da
+  /// password sbagliata — che è la direzione giusta in cui sbagliare.
+  bool _eSoloCredenziali(ValidationException errore) =>
+      errore.message.toLowerCase().contains('credenziali');
 
   Future<void> _accedi() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -67,13 +81,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // schermo di un errore nostro è peggio di nessun messaggio, perché
         // porta a cercare nel posto sbagliato — e chi lo cerca è l'utente.
         //
-        // Il messaggio unico per credenziali sbagliate, utente inesistente e
-        // account disattivato resta: distinguerli direbbe a chi prova indirizzi
-        // quali sono registrati in questa palestra, e il backend risponde già
-        // allo stesso modo apposta.
+        /*
+         * ══ 🆕 L'ACCOUNT DISATTIVATO NON È UNA PASSWORD SBAGLIATA ════════════
+         *
+         * ⛔ **Qui c'era scritto che il messaggio unico vale anche per
+         * l'account disattivato, «perché il backend risponde già allo stesso
+         * modo apposta». Il backend non lo fa**: risponde *«Questo account non
+         * è attivo.»*, e l'app la sostituiva con «email o password non
+         * corretti» — cioè dava la colpa a chi aveva digitato tutto giusto.
+         *
+         * 🚨 Visto sull'emulatore il 15/09 disattivando l'account di prova.
+         *
+         * ⚖️ **E non è un buco**: quel ramo del server scatta **dopo**
+         * `Hash::check`, quindi ci arriva solo chi la password ce l'ha giusta —
+         * e chi ha la password sa già che l'account esiste. L'unicità del
+         * messaggio serve contro chi **prova** indirizzi, e per quelli la
+         * risposta resta la stessa di sempre.
+         *
+         * 💡 La regola diventa: credenziali sbagliate → messaggio unico; tutto
+         * il resto → quello che dice il server, che è più preciso di quello che
+         * l'app può inventarsi.
+         */
         _errore = switch (tradotto) {
-          ValidationException() =>
+          ValidationException() when _eSoloCredenziali(tradotto) =>
             'Email, nome utente o password non corretti.',
+          ValidationException() => tradotto.message,
           NetworkException() => tradotto.message,
           GymInactiveException() => tradotto.message,
           RateLimitedException() => 'Troppi tentativi. Aspetta un minuto.',
@@ -104,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GymHeader(branding: branding),
+                    MarchioInCima(branding: branding),
                     const SizedBox(height: Gap.xl),
 
                     TextFormField(

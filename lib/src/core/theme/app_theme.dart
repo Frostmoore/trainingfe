@@ -23,6 +23,30 @@ class AppTheme {
       _build(branding, Brightness.dark);
 
   static ThemeData _build(GymBranding branding, Brightness brightness) {
+    /*
+     * ══ 🆕 L'ACCENTO ARRIVA ANCHE AI CONTENITORI — 14/09/2026 ════════════════
+     *
+     * ⛔ **`tertiary: branding.accent` sostituisce UNA tinta, non la famiglia.**
+     * `ColorScheme.fromSeed` genera `tertiaryContainer` e
+     * `onTertiaryContainer` dalla **tavolozza del seme**, e i parametri
+     * espliciti rimpiazzano solo lo slot che nominano.
+     *
+     * 🚨 Il risultato si vedeva su `/diario/importa-piano`: l'accento neutro è
+     * ambra (`#F59E0B`), e il riquadro del suggerimento era **rosa**. Nessuno
+     * aveva scelto quel rosa: è la terziaria che Material genera da sola
+     * partendo dal verde acqua del primario. ⚠️ Nessun errore, nessun avviso,
+     * un colore che nell'app non esiste — e che per una palestra sarebbe stato
+     * diverso dal colore scritto nel suo pannello.
+     *
+     * 💡 Si semina una **seconda** tavolozza dall'accento e se ne prendono i
+     * tre slot che servono: così «accento» vuol dire accento anche dentro un
+     * contenitore, che è quello che il pannello promette.
+     */
+    final dallAccento = ColorScheme.fromSeed(
+      seedColor: branding.accent,
+      brightness: brightness,
+    );
+
     final scheme = ColorScheme.fromSeed(
       seedColor: branding.primary,
       brightness: brightness,
@@ -31,6 +55,9 @@ class AppTheme {
       // chi ha compilato il pannello — un avviso che non sembra un avviso non
       // è un avviso.
       tertiary: branding.accent,
+      onTertiary: dallAccento.onPrimary,
+      tertiaryContainer: dallAccento.primaryContainer,
+      onTertiaryContainer: dallAccento.onPrimaryContainer,
     );
 
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
@@ -78,6 +105,52 @@ class AppTheme {
         shadowColor: scheme.shadow.withValues(alpha: 0.28),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: EdgeInsets.zero,
+      ),
+
+      /*
+       * ══ 🆕 LE FINESTRE PRENDONO I COLORI DELL'APP — 14/09/2026 ════════════
+       *
+       * 📌 Dal giro sull'emulatore: *«Quattro colori d'accento in un minuto»*.
+       * Le due finestre del primo avvio, e il calendario che sceglie la
+       * settimana, erano **lavanda**: un colore che nell'app non esiste.
+       *
+       * 🚨 **È lo stesso difetto già chiuso per le `Card`, un piano più su.**
+       * In Material 3 l'elevazione non fa un'ombra: **tinge la superficie** con
+       * il primario. Una finestra sta a 6 di elevazione, quindi prende una
+       * bella dose di tinta — e siccome il primario cambia con la palestra, il
+       * colore delle finestre cambierebbe da cliente a cliente senza che
+       * nessuno l'abbia scelto.
+       *
+       * ⛔ Il commento di `cardTheme` diceva già *«si cambia QUI e non scheda
+       * per scheda»*: valeva anche per le finestre, e le finestre erano state
+       * dimenticate.
+       *
+       * 💡 Superficie dichiarata e tinta spenta: `AlertDialog`, i fogli, il
+       * calendario e l'orologio escono tutti dello stesso colore del resto.
+       */
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        // ⚠️ L'intestazione ha una superficie sua: senza questa riga resta
+        // lavanda mentre il resto della finestra è già a posto.
+        headerBackgroundColor: scheme.surface,
+        headerForegroundColor: scheme.onSurface,
+      ),
+
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: scheme.surface,
+        // 💡 `TimePickerThemeData` non ha `surfaceTintColor`: la sfumatura
+        // gliela toglie lo sfondo dichiarato qui sopra.
+      ),
+
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
       ),
 
       /*

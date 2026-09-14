@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +42,9 @@ class SchermataModelloCalorie extends ConsumerStatefulWidget {
 
 class _SchermataModelloCalorieState
     extends ConsumerState<SchermataModelloCalorie> {
+  /// La sezione dei livelli, per poterla portare a schermo quando nasce.
+  final _iLivelli = GlobalKey();
+
   ModelloCalorie? _modello;
   String? _livello;
   bool _inizializzato = false;
@@ -59,6 +64,42 @@ class _SchermataModelloCalorieState
     _inizializzato = true;
     _modello = modello;
     _livello = livelloInUso;
+  }
+
+  /// Porta a schermo i livelli appena si sceglie il modello — 14/09/2026.
+  ///
+  /// ══ ⛔ IL DIFETTO: SCEGLIERE NON MUOVEVA NIENTE ═══════════════════════════
+  ///
+  /// 🚨 Le due carte dei modelli riempiono lo schermo: i cinque livelli che
+  /// compaiono dopo la scelta nascono **sotto la piega**. A toccare «Stimalo tu
+  /// dal mio stile di vita» non succedeva niente di visibile, e bisognava
+  /// indovinare di dover scorrere. ⚠️ Visto sull'emulatore il 14/09.
+  ///
+  /// 💡 `ensureVisible` sulla chiave della sezione, e non uno `scrollTo` a una
+  /// quota fissa: l'altezza delle due carte cambia con il carattere di sistema
+  /// e con la larghezza, quindi un numero scritto qui sarebbe giusto su un
+  /// telefono solo.
+  ///
+  /// ⚠️ **Dopo il fotogramma**, con `addPostFrameCallback`: nell'istante del
+  /// tocco quella sezione non esiste ancora — la crea il `setState` che sta
+  /// per girare — e cercarne la chiave adesso non troverebbe niente.
+  void _portaAiLivelli() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final contesto = _iLivelli.currentContext;
+
+      if (contesto == null) return;
+
+      unawaited(
+        Scrollable.ensureVisible(
+          contesto,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+          // 💡 Un pelo di aria sopra: incollata al bordo la sezione sembra
+          // tagliata, e non si capisce che sopra c'è ancora la scelta fatta.
+          alignment: 0.05,
+        ),
+      );
+    });
   }
 
   Future<void> _salva() async {
@@ -100,14 +141,18 @@ class _SchermataModelloCalorieState
             _CartaModello(
               modello: m,
               scelto: _modello == m,
-              onScelto: () => setState(() {
-                _modello = m;
+              onScelto: () {
+                setState(() {
+                  _modello = m;
 
-                // ⛔ Il livello di prima non sopravvive al cambio di modello:
-                // apparterrebbe all'altra tabella, e resterebbe selezionato
-                // qualcosa che nell'elenco sotto non c'è più.
-                _livello = m.livello(_livello)?.chiave;
-              }),
+                  // ⛔ Il livello di prima non sopravvive al cambio di modello:
+                  // apparterrebbe all'altra tabella, e resterebbe selezionato
+                  // qualcosa che nell'elenco sotto non c'è più.
+                  _livello = m.livello(_livello)?.chiave;
+                });
+
+                _portaAiLivelli();
+              },
             ),
             const SizedBox(height: Gap.md),
           ],
@@ -117,7 +162,11 @@ class _SchermataModelloCalorieState
             const Divider(),
             const SizedBox(height: Gap.md),
 
-            Text('Quanto ti muovi', style: tema.textTheme.titleMedium),
+            Text(
+              'Quanto ti muovi',
+              key: _iLivelli,
+              style: tema.textTheme.titleMedium,
+            ),
             const SizedBox(height: Gap.xs),
             Text(
               modello == ModelloCalorie.misurata

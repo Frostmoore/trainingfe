@@ -26,9 +26,22 @@ import 'schermata_ripristino.dart';
 /// punto questa porta va spostata più a monte — prima della schermata
 /// principale, non davanti a una sezione.
 class PortaDelleChiavi extends ConsumerWidget {
-  const PortaDelleChiavi({required this.child, super.key});
+  const PortaDelleChiavi({
+    required this.child,
+    this.perche = PercheLaChiave.messaggi,
+    super.key,
+  });
 
   final Widget child;
+
+  /// 🆕 **Perché la chiave serve, detto da chi apre la porta** — 14/09/2026.
+  ///
+  /// ⛔ La schermata della password diceva sempre «I tuoi messaggi sono
+  /// cifrati», anche davanti a `/schede/importa` e `/diario/importa-piano`: chi
+  /// voleva caricare un PDF si trovava una pagina che parlava di messaggi e di
+  /// trainer. 💡 Ogni rotta adesso dichiara il proprio motivo; il valore di
+  /// serie resta la chat, che è la porta più frequentata.
+  final PercheLaChiave perche;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +56,7 @@ class PortaDelleChiavi extends ConsumerWidget {
           ),
           data: (stato) => switch (stato) {
             StatoChiavi.pronto => child,
-            StatoChiavi.daCreare => const SchermataPasswordDiRecupero(),
+            StatoChiavi.daCreare => SchermataPasswordDiRecupero(perche: perche),
             StatoChiavi.daRipristinare => const SchermataRipristino(),
           },
         );

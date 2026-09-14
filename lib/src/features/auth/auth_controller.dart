@@ -270,7 +270,30 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> sbloccaConImpronta() async {
     if (_blocco == null) return false;
 
-    final aperto = await _blocco.sblocca(motivo: 'Sblocca Training Companion');
+    /*
+     * ══ 🆕 LA DESCRIZIONE DICE COSA SUCCEDE ALL'IMPRONTA — 15/09/2026 ════════
+     *
+     * ⛔ **Diceva «Sblocca Training Companion»**, cioè ripeteva il titolo della
+     * finestra con altre parole e non aggiungeva niente. 📌 Il committente:
+     * *«mettici una breve descrizione di come funzionano i dati dell'impronta
+     * digitale»*.
+     *
+     * 🚨 **Ed è il punto in cui serve davvero dirlo.** Chiedere un dito è la
+     * richiesta che più somiglia a «dammi un dato del tuo corpo», e chi la
+     * riceve non ha nessun modo di sapere che quel dato **non arriva a noi**:
+     * resta nel chip sicuro del telefono, Android confronta lì dentro, e a
+     * questa app torna un sì o un no. Vedi il dartdoc di `BloccoBiometrico`.
+     *
+     * ⚠️ Corta per forza: è la terza riga di una finestra di sistema, non una
+     * pagina. Le tre cose che ci stanno sono **dove resta**, **chi la
+     * confronta**, e **cosa riceviamo noi**.
+     */
+    final aperto = await _blocco.sblocca(
+      motivo:
+          "L'impronta resta nel telefono, in una zona protetta che non "
+          'possiamo leggere. La confronta Android: a noi arriva solo un sì o '
+          'un no.',
+    );
 
     if (!aperto) return false;
 

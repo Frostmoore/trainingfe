@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../api/api_client.dart';
 import '../errors/api_exception.dart';
 import '../theme/app_theme.dart';
 
@@ -78,7 +79,27 @@ class ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tradotto = error is ApiException ? error as ApiException : null;
+    /*
+     * ══ 🆕 LA TRADUZIONE SI FA QUI, NON NEL CHIAMANTE — 14/09/2026 ═══════════
+     *
+     * ⛔ **Era `error is ApiException ? … : null`**, e quel controllo dice di no
+     * a un `DioException` — cioè a quello che arriva quando nessuno ha chiamato
+     * `ApiClient.unwrapError()` prima. 🚨 Il ripiego è la frase generica, quindi
+     * **dimenticarsi la traduzione non si vede da nessuna parte**: la schermata
+     * non è rotta, dice solo una cosa più povera di quella che sapeva.
+     *
+     * ⚠️ Trovato aprendo una conversazione dal catalogo: il server rispondeva
+     * *«Questa persona non ha ancora una chiave»* — una frase che spiega tutto —
+     * e a schermo si leggeva «Qualcosa è andato storto», con un «Riprova» che
+     * non poteva funzionare. `conversations_screen.dart` passava `e` grezzo,
+     * mentre altrove si passa `ApiClient.unwrapError(e)`.
+     *
+     * 💡 `unwrapError` è idempotente — un `ApiException` lo restituisce
+     * com'è — quindi farlo qui non toglie niente a chi lo faceva già, e mette
+     * al riparo chi se lo dimentica. ⚖️ La stessa scelta del tema: si cambia
+     * nel posto unico, non in venti schermate.
+     */
+    final tradotto = ApiClient.unwrapError(error);
 
     return Center(
       child: Padding(
@@ -92,7 +113,11 @@ class ErrorState extends StatelessWidget {
               // Il messaggio arriva già in italiano dal client API: qui non si
               // riscrive niente, altrimenti si finisce ad avere due frasi
               // diverse per lo stesso errore.
-              tradotto?.message ?? 'Qualcosa è andato storto.',
+              //
+              // 💡 Niente più ripiego: `unwrapError` risponde sempre, e per
+              // quello che non sa dire c'è `ServerException`, che una frase ce
+              // l'ha.
+              tradotto.message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
@@ -108,7 +133,7 @@ class ErrorState extends StatelessWidget {
     );
   }
 
-  IconData _icona(ApiException? e) => switch (e) {
+  IconData _icona(ApiException e) => switch (e) {
     NetworkException() => Icons.wifi_off_rounded,
     AiQuotaExceededException() => Icons.auto_awesome_outlined,
     // 🎟️ Un gettone, non una stella: si ricarica, non si aspetta.

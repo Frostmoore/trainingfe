@@ -176,8 +176,35 @@ class _LaSettimana extends ConsumerWidget {
               ),
             ),
 
+            /*
+             * ══ 🆕 IL VUOTO PRENDE TUTTO LO SPAZIO CHE AVANZA — 14/09/2026 ══
+             *
+             * 📌 Dopo il giro sull'emulatore: *«nessun allenamento mettilo al
+             * centro del container»*.
+             *
+             * ⛔ Con uno `SliverToBoxAdapter` il vuoto è alto quanto il suo
+             * testo e si incolla **sotto il calendario**: su un account nuovo,
+             * dove sopra non c'è ancora niente da disegnare, restavano mille
+             * pixel di bianco e l'unica azione era il pulsante flottante in
+             * basso a destra.
+             *
+             * 💡 `SliverFillRemaining(hasScrollBody: false)` gli dà l'altezza
+             * che avanza nella finestra: il `Center` di `EmptyState` lo mette
+             * in mezzo da solo. ⚠️ E se il contenuto è più alto dello spazio
+             * — schermo corto, testo grande — cresce e si scorre, invece di
+             * andare in overflow.
+             */
             if (delle.isEmpty)
-              SliverToBoxAdapter(child: _SettimanaVuota(tutte: tutte))
+              SliverFillRemaining(
+                hasScrollBody: false,
+                // ⚠️ L'aria per il pulsante flottante sta **dentro**: qui sotto
+                // non c'è più nessuno sliver che possa tenerla, e senza, il
+                // «Vai all'ultimo allenamento» finirebbe sotto «Inizia».
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 88),
+                  child: _SettimanaVuota(tutte: tutte),
+                ),
+              )
             else
               SliverPadding(
                 padding: const EdgeInsets.all(Gap.md),
@@ -203,7 +230,13 @@ class _LaSettimana extends ConsumerWidget {
 
             // ⚠️ Un po' d'aria in fondo: sotto c'è il pulsante flottante
             // «Inizia allenamento», e l'ultima card ci finirebbe sotto.
-            const SliverToBoxAdapter(child: SizedBox(height: 88)),
+            //
+            // 🆕 **Solo quando ci sono card.** Uno sliver dopo un
+            // `SliverFillRemaining` renderebbe scorrevole di 88 px una pagina
+            // che non ha niente da scorrere: lo spazio del pulsante, nel caso
+            // vuoto, sta già dentro il riempimento.
+            if (delle.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: 88)),
           ],
         );
       },
@@ -233,14 +266,18 @@ class _SettimanaVuota extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (tutte.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Gap.xl),
-        child: EmptyState(
-          icon: Icons.fitness_center_rounded,
-          title: 'Nessun allenamento',
-          message:
-              'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
-        ),
+      /*
+       * 🆕 ⚠️ **Niente margine verticale, da 14/09.** Questo vuoto adesso vive
+       * dentro uno `SliverFillRemaining`, che gli dà tutta l'altezza che
+       * avanza, e il `Center` di `EmptyState` lo mette in mezzo. ⛔ Un margine
+       * in cima lo spingerebbe **sotto** il centro: sarebbe la stessa metà
+       * schermo vuota di prima, spostata di qualche pixel.
+       */
+      return const EmptyState(
+        icon: Icons.fitness_center_rounded,
+        title: 'Nessun allenamento',
+        message:
+            'Quando ne registri uno lo ritrovi qui, settimana per settimana.',
       );
     }
 
@@ -253,11 +290,15 @@ class _SettimanaVuota extends ConsumerWidget {
 
     // ⚠️ Una `Column` e non una `ListView`: adesso vive dentro un
     // `CustomScrollView`, che lo scorrimento ce l'ha già.
+    //
+    // 🆕 `MainAxisAlignment.center`: la colonna riceve tutta l'altezza che
+    // avanza dallo `SliverFillRemaining`, e senza allineamento starebbe
+    // incollata in cima come prima.
     return Padding(
       padding: const EdgeInsets.all(Gap.md),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: Gap.xl),
           EmptyState(
             icon: Icons.event_busy_rounded,
             title: 'Niente in questa settimana',

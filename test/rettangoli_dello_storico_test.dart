@@ -205,4 +205,34 @@ void main() {
     expect(find.text('Nessun allenamento'), findsOneWidget);
     expect(find.text('Vai all\'ultimo allenamento'), findsNothing);
   });
+
+  /// ══ 🆕 IL VUOTO STA IN MEZZO, E SI MISURA — 14/09/2026 ═══════════════════
+  ///
+  /// 📌 *«nessun allenamento mettilo al centro del container»*.
+  ///
+  /// ⛔ **Un test che cerca il testo non sarebbe bastato**: il testo c'era
+  /// anche prima, incollato in cima, con sotto mille pixel di bianco. 🚨 La
+  /// cosa che è cambiata è una **posizione**, quindi si misura la posizione —
+  /// esattamente come per le due card per riga qui sopra.
+  ///
+  /// 💡 Il confronto è con il centro dell'area che scorre, non con il centro
+  /// dello schermo: sopra ci sono il carosello e il calendario, e il vuoto
+  /// deve stare in mezzo a **quello che avanza**.
+  testWidgets('e sta in mezzo a quel che avanza, non in cima', (tester) async {
+    await disegna(tester, const []);
+
+    final vuoto = tester.getRect(find.text('Nessun allenamento'));
+    final pagina = tester.getRect(find.byType(CustomScrollView));
+
+    // ⚠️ Un quarto d'altezza di tolleranza: il centro esatto dipende
+    // dall'ingombro di ciò che sta sopra, che cambia legittimamente.
+    expect(
+      (vuoto.center.dy - pagina.center.dy).abs(),
+      lessThan(pagina.height / 4),
+      reason: 'il vuoto dovrebbe stare intorno al centro della pagina',
+    );
+
+    // ⛔ E soprattutto **non** nel primo quinto, che è dov'era prima.
+    expect(vuoto.center.dy, greaterThan(pagina.top + pagina.height / 5));
+  });
 }

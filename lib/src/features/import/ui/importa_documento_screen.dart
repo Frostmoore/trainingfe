@@ -173,7 +173,12 @@ class _ImportaDocumentoScreenState
 
           // ⚠️ Solo per i piani: su una scheda non c'entra niente, e
           // un'avvertenza fuori posto insegna a saltarle tutte.
-          if (!_eScheda) const AvvertenzaNutrizionale(),
+          //
+          // 🆕 `perIlPiano` — 14/09/2026. ⛔ Il testo di serie comincia con
+          // «Questo numero è una stima», e qui **non c'è nessun numero**: c'è
+          // un PDF da caricare. Lo stesso ragionamento del commento qui sopra,
+          // applicato alle parole invece che al posto.
+          if (!_eScheda) const AvvertenzaNutrizionale(perIlPiano: true),
         ],
       ),
     );

@@ -1,16 +1,19 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
+import '../../onboarding/ui/widgets/marchio_in_cima.dart';
 import '../auth_controller.dart';
 import '../data/password_strength.dart';
-import 'widgets/gym_header.dart';
 import 'widgets/password_meter.dart';
 import 'widgets/social_buttons.dart';
 
@@ -196,6 +199,53 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  /*
+   * ══ 🆕 I DUE DOCUMENTI SI APRONO DAVVERO — 14/09/2026 ════════════════════
+   *
+   * 📌 Il committente, dopo il giro sull'emulatore: *«Mettici il link»*.
+   *
+   * ⛔ **Prima la casella nominava due documenti e non ne apriva nessuno.**
+   * Chiedere di accettare un testo che non si può leggere non è un consenso:
+   * è una formalità, e per giunta una che non regge se qualcuno la contesta.
+   *
+   * 💡 **Si aprono nel browser, non dentro l'app.** Il sito li serve già
+   * (`/privacy` e `/condizioni`, `routes/web.php`), sono impaginati, e
+   * cambiano senza dover pubblicare una versione nuova dell'app.
+   */
+  TextStyle? _stileLink(ThemeData tema) => tema.textTheme.bodyMedium?.copyWith(
+    color: tema.colorScheme.primary,
+    decoration: TextDecoration.underline,
+    decorationColor: tema.colorScheme.primary,
+  );
+
+  /// Apre `/privacy` o `/condizioni` del sito.
+  ///
+  /// ══ ⚠️ L'INDIRIZZO SI RICAVA, NON SI SCRIVE ══════════════════════════════
+  ///
+  /// 🚨 Si toglie `/api/v1` dall'indirizzo dell'API. ⛔ Una costante col
+  /// dominio vero manderebbe **anche le build locali** sul sito pubblicato: lo
+  /// sviluppo gira su `10.0.2.2`, lo staging su `training.riccardoronconi.it`,
+  /// e i documenti non sono gli stessi mentre si lavora a un testo nuovo.
+  ///
+  /// 💡 Se il browser non parte lo si dice: un tocco che non fa niente lascia
+  /// pensare che il documento non esista.
+  Future<void> _apriDocumento(String quale) async {
+    final api = ref.read(appConfigProvider).apiBaseUrl;
+    final sito = api.replaceFirst(RegExp(r'/api/v\d+/?$'), '');
+    final indirizzo = '$sito/$quale';
+
+    final url = Uri.tryParse(indirizzo);
+    final aperto =
+        url != null &&
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+
+    if (!aperto && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Non sono riuscito ad aprire $indirizzo")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -230,7 +280,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GymHeader(branding: branding),
+                    MarchioInCima(branding: branding),
                     const SizedBox(height: Gap.sm),
                     Text(
                       'Crea il tuo account',
@@ -267,7 +317,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       autocorrect: false,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: const Icon(Icons.alternate_email_rounded),
+                        /*
+                         * 🆕 **La busta, non la chiocciola** — 14/09/2026.
+                         *
+                         * ⛔ Email e «Nome utente» avevano tutti e due
+                         * `alternate_email`: due campi diversi con lo stesso
+                         * segno, uno sopra l'altro. 🚨 In un modulo di cinque
+                         * campi l'icona è l'unica cosa che si guarda scorrendo,
+                         * e due uguali dicono «hai già compilato questo».
+                         */
+                        prefixIcon: const Icon(Icons.mail_outline_rounded),
                         errorText: _erroriCampo['email']?.first,
                       ),
                       onChanged: (_) => _ricalcolaForza(),
@@ -435,9 +494,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
-                      title: const Text(
-                        'Accetto le condizioni d\'uso e ho letto l\'informativa '
-                        'sulla privacy.',
+                      /*
+                       * ══ 🆕 I DUE DOCUMENTI SONO LINK — 14/09/2026 ════════
+                       *
+                       * ⛔ Qui c'era una frase e basta: *«ho letto
+                       * l'informativa sulla privacy»* **senza niente da
+                       * leggere**. ⚖️ È la spunta su cui poggia il consenso, e
+                       * chiedere di dichiarare di aver letto un documento che
+                       * non si può aprire non è una svista di grafica.
+                       *
+                       * ⚠️ **Si aprono nel browser, non dentro l'app**: sono le
+                       * stesse pagine che il sito pubblica, e una copia dentro
+                       * l'app sarebbe un secondo testo da tenere allineato —
+                       * cioè due versioni dello stesso impegno.
+                       */
+                      title: Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: 'Accetto le '),
+                            TextSpan(
+                              text: 'condizioni d\'uso',
+                              style: _stileLink(theme),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => _apriDocumento('condizioni'),
+                            ),
+                            const TextSpan(text: ' e ho letto l\''),
+                            TextSpan(
+                              text: 'informativa sulla privacy',
+                              style: _stileLink(theme),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => _apriDocumento('privacy'),
+                            ),
+                            const TextSpan(text: '.'),
+                          ],
+                        ),
                       ),
                     ),
 

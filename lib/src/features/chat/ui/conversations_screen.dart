@@ -203,7 +203,10 @@ class _MandaAPiuPersoneState extends ConsumerState<_MandaAPiuPersone> {
 
     return IconButton(
       icon: const Icon(Icons.send_to_mobile_rounded),
-      tooltip: 'Manda una scheda a piu\' persone',
+      // ⚠️ **Accentata.** Il commento del codice può permettersi `piu'`, un
+      // testo che si legge a schermo no: in mezzo a «più» scritti bene sembra
+      // un refuso, e lo è.
+      tooltip: 'Manda una scheda a più persone',
       onPressed: _avvia,
     );
   }

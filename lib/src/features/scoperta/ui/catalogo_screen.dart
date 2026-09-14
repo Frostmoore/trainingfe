@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/ui/intestazione_app.dart';
 
 // 💡 `ThreadScreen` vive dentro `conversations_screen.dart`, non in un file
@@ -59,7 +61,7 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
     final risultati = ref.watch(catalogoProvider(_cercato));
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Trova una palestra'),
+      appBar: const IntestazioneApp(titolo: 'Trova una palestra o un trainer'),
       body: Column(
         children: [
           Padding(
@@ -102,8 +104,29 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
                       // 💡 Se non ha detto dove sta, il consiglio utile è
                       // quello — non «riprova più tardi».
                       testo: _cercato.isEmpty
-                          ? 'Imposta la tua città dal profilo per vedere chi c\'è vicino a te.'
+                          ? 'Imposta la tua città per vedere chi c\'è vicino a te.'
                           : 'Prova con un altro nome, o con il nome della città.',
+
+                      /*
+                       * 🆕 ⛔ **Dire dove andare non basta: bisogna portarcelo.**
+                       *
+                       * 🚨 Il testo diceva «dal profilo», e il profilo sta due
+                       * tocchi più in là, dentro una voce che si chiama «Foto,
+                       * città e colore» — cioè non si trova cercando «città».
+                       * ⚠️ È lo stesso difetto che `MancaPerIlTarget` è nato
+                       * per chiudere: si manda la persona a cercare una cosa
+                       * che l'app sa già dov'è.
+                       */
+                      azione: _cercato.isEmpty
+                          ? FilledButton.icon(
+                              onPressed: () => context.push(AppRoutes.tu),
+                              icon: const Icon(
+                                Icons.location_city_rounded,
+                                size: 18,
+                              ),
+                              label: const Text('Imposta la città'),
+                            )
+                          : null,
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
@@ -220,6 +243,44 @@ class _Scheda extends ConsumerWidget {
                     color: tema.colorScheme.outline,
                   ),
                 ),
+              ] else ...[
+                /*
+                 * ══ 🆕 LA SCHEDA DICE COSA SUCCEDE SE LA TOCCHI — 14/09/2026 ═
+                 *
+                 * ⛔ **Era un rettangolo di testo e basta.** Toccarla apre una
+                 * conversazione — un gesto che si fa una volta sola e che si
+                 * vede dall'altra parte — e niente lo lasciava intuire: né un
+                 * pulsante, né una freccia, né una parola.
+                 *
+                 * 🚨 Il caso opposto è già gestito due righe più su: quando
+                 * **non** si può scrivere lo si dice. 💡 Dire solo il no e
+                 * tacere il sì lascia la strada buona come l'unica da
+                 * indovinare.
+                 *
+                 * ⚠️ Una riga e non un `FilledButton`: la scheda è già tutta
+                 * cliccabile, e un pulsante dentro una card cliccabile crea due
+                 * bersagli per la stessa azione — chi tocca «accanto» al
+                 * pulsante pensa di aver mancato.
+                 */
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 16,
+                      color: tema.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      scheda.ePalestra
+                          ? 'Tocca per scrivere alla palestra'
+                          : 'Tocca per scrivere al trainer',
+                      style: tema.textTheme.labelLarge?.copyWith(
+                        color: tema.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ],
           ),
@@ -278,11 +339,17 @@ class _Vuoto extends StatelessWidget {
     required this.icona,
     required this.titolo,
     required this.testo,
+    this.azione,
   });
 
   final IconData icona;
   final String titolo;
   final String testo;
+
+  /// 💡 Facoltativa: non tutti i vuoti hanno qualcosa da far fare. Quello del
+  /// catalogo sì — manca la città — e senza pulsante il consiglio resta una
+  /// indicazione stradale.
+  final Widget? azione;
 
   @override
   Widget build(BuildContext context) {
@@ -305,6 +372,7 @@ class _Vuoto extends StatelessWidget {
                 color: tema.colorScheme.outline,
               ),
             ),
+            if (azione != null) ...[const SizedBox(height: 20), azione!],
           ],
         ),
       ),

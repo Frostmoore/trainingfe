@@ -27,13 +27,34 @@ import '../theme/app_theme.dart';
 /// schermate, fra un anno sarebbero sei testi diversi — e quello che conta
 /// legalmente è il più debole dei sei.
 class AvvertenzaNutrizionale extends StatelessWidget {
-  const AvvertenzaNutrizionale({this.compatta = false, super.key});
+  const AvvertenzaNutrizionale({
+    this.compatta = false,
+    this.perIlPiano = false,
+    super.key,
+  });
 
   /// La forma corta, per starci sotto un numero senza rubargli la scena.
   ///
   /// ⚠️ Corta, **non** ammorbidita: dice comunque «stima» e «non è un consiglio
   /// medico». È la lunghezza a cambiare, non il contenuto.
   final bool compatta;
+
+  /// ══ 🆕 QUANDO NON C'È NESSUN NUMERO — 14/09/2026 ═════════════════════════
+  ///
+  /// ⛔ **Su `/diario/importa-piano` questo riquadro diceva «Questo numero è
+  /// una stima»**, e su quella schermata **non c'è nessun numero**: c'è un PDF
+  /// da caricare. Trovato guardando la schermata, non leggendo il codice — dal
+  /// codice sembrava giusto, perché il widget è giusto: è il posto che è
+  /// diverso.
+  ///
+  /// 🚨 **L'avvertenza lì serve eccome**, ed è il motivo per cui non si toglie:
+  /// importare una dieta è il momento in cui la responsabilità di chi l'ha
+  /// scritta va detta per intero. ⚠️ Ma un avviso che comincia parlando di una
+  /// cosa che non c'è è un avviso che si salta.
+  ///
+  /// 💡 Dice le stesse tre cose — cos'è, cosa non è, a chi rivolgersi —
+  /// partendo dal piano invece che dal numero.
+  final bool perIlPiano;
 
   static const String testoBreve =
       'Stima da formule generiche. Non è un consiglio medico.';
@@ -46,9 +67,19 @@ class AvvertenzaNutrizionale extends StatelessWidget {
       'rivolgiti a un biologo nutrizionista, a un dietista o al tuo medico: '
       'sono le figure abilitate a farlo.';
 
+  /// Lo stesso avviso, dove si importa un piano invece di leggere un numero.
+  static const String testoPerIlPiano =
+      'Questo piano non lo elabora l\'app: lo ricopia e basta, e resta '
+      'responsabilità di chi te l\'ha scritto. Quello che l\'app calcola da '
+      'sola sono stime da formule generiche, e non sono un consiglio medico.\n\n'
+      'Per un piano alimentare, o per un fabbisogno calcolato davvero su di te, '
+      'rivolgiti a un biologo nutrizionista, a un dietista o al tuo medico: '
+      'sono le figure abilitate a farlo.';
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final testo = perIlPiano ? testoPerIlPiano : testoPerEsteso;
 
     if (compatta) {
       return InkWell(
@@ -87,9 +118,7 @@ class AvvertenzaNutrizionale extends StatelessWidget {
           children: [
             Icon(Icons.info_outline, color: tema.colorScheme.onSurfaceVariant),
             const SizedBox(width: Gap.sm),
-            Expanded(
-              child: Text(testoPerEsteso, style: tema.textTheme.bodySmall),
-            ),
+            Expanded(child: Text(testo, style: tema.textTheme.bodySmall)),
           ],
         ),
       ),

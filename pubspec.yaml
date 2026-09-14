@@ -20,7 +20,7 @@ publish_to: 'none'
 #
 # ⚠️ Lo controlla `strumenti/costruisci-apk.ps1`: una versione ferma a `1.0.0`
 # o un `versionCode` che non torna **fermano la build**.
-version: 14.5.1+140501
+version: 14.7.0+140700
 
 environment:
   sdk: ^3.12.2
@@ -154,6 +154,14 @@ dependencies:
   # ⚠️ Serve solo a **disegnare la richiesta**: la verifica avviene nel chip
   # sicuro del telefono, e nessun dato biometrico passa mai da Dart.
   local_auth: ^3.0.2
+
+  # 🆕 **Dichiarato apposta, anche se arriva comunque come transitiva** —
+  # 15/09/2026. ⚠️ `AndroidAuthMessages` — i testi della finestra di sistema —
+  # vive qui dentro, e `local_auth` **non** lo riesporta: esporta solo
+  # `LocalAuthentication`, `BiometricType` e le sue eccezioni. 🚨 Usare l'API di
+  # un pacchetto senza dipenderne vuol dire che un aggiornamento di `local_auth`
+  # può toglierlo di sotto senza che niente lo dica prima.
+  local_auth_android: ^2.0.9
   share_plus: ^12.0.2
   google_sign_in: ^7.2.0
   googleapis: ^16.0.0

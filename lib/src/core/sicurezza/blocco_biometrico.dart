@@ -2,6 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
+// ⚠️ **`AndroidAuthMessages` sta qui, e `local_auth` NON lo riesporta**: da
+// lì arrivano solo `LocalAuthentication`, `BiometricType` e le eccezioni. 💡 Per
+// questo `local_auth_android` è dichiarato nel `pubspec.yaml` invece di essere
+// usato come transitiva.
+import 'package:local_auth_android/local_auth_android.dart';
+
 /// Cosa sappiamo del blocco — 3b-J.5, 27/08/2026.
 ///
 /// 🚨 **Tre stati e non due**, perché «non riesco a leggere» non è «spento»:
@@ -150,6 +156,21 @@ class BloccoBiometrico {
     }
 
     if (!await disponibile()) return false;
+
+    /*
+     * ⚖️ **Qui la descrizione resta l'azione, non la spiegazione** — 15/09/2026.
+     *
+     * 🚨 La spiegazione su dove finisce l'impronta sta sulla richiesta di
+     * **sblocco** (vedi `AuthController.sbloccaConImpronta()`), non su questa.
+     * ⛔ Era stata messa anche qui — è la prima volta che la finestra compare,
+     * e sembrava il posto giusto — ma il committente ha guardato la schermata e
+     * ha detto che va bene com'è.
+     *
+     * 💡 E il motivo tiene: qui la persona ha appena toccato «Sblocco rapido»,
+     * quindi sa perfettamente cosa sta facendo. La domanda a cui questa riga
+     * deve rispondere è *«cosa sto confermando?»*, non *«cosa ne fate del mio
+     * dito?»*.
+     */
     if (!await sblocca(motivo: 'Conferma per attivare lo sblocco rapido')) {
       return false;
     }
@@ -158,6 +179,45 @@ class BloccoBiometrico {
 
     return true;
   }
+
+  /// ══ 🆕 LE PAROLE DELLA FINESTRA DI SISTEMA — 15/09/2026 ══════════════════
+  ///
+  /// 📌 Il committente, dopo averla vista: *«È un po' troppo scarna»*.
+  ///
+  /// ⛔ **Erano in inglese e le scriveva il plugin**: «Authentication required»,
+  /// «Verify identity», «Cancel». 🚨 Non è una finestra di Android: è una
+  /// finestra **della nostra app**, con i nostri testi dentro — solo che
+  /// nessuno gliene aveva dati, e `local_auth` ripiega sui suoi.
+  ///
+  /// ⚠️ **Le tre righe non sono intercambiabili**, e sbagliare quale si riempie
+  /// è il modo di scrivere la frase giusta nel posto sbagliato:
+  ///
+  /// | Riga | Da dove viene |
+  /// |---|---|
+  /// | Titolo | `signInTitle` |
+  /// | Sottotitolo | `signInHint` — sì, si chiama «hint» |
+  /// | Descrizione | `localizedReason`, cioè `motivo` |
+  ///
+  /// 💡 Il titolo e il sottotitolo stanno **qui** perché non cambiano mai; la
+  /// descrizione la passa chi chiama, perché cambia con il momento — sbloccare
+  /// l'app non è attivare lo sblocco.
+  static const _paroleAndroid = AndroidAuthMessages(
+    signInTitle: "Autenticati con l'Impronta",
+
+    /*
+     * ⚠️ **`signInHint` è il sottotitolo**, non un suggerimento in fondo.
+     *
+     * 🚨 Il nome inganna, e il campo che si chiamava come quello che si vede —
+     * `biometricHint` — **in questa versione non esiste più**: dalla 2.0.0 la
+     * classe ha tre campi in tutto, e `signInHint` finisce nella stessa chiave
+     * di prima. ⛔ Scrivere `biometricHint` qui non compila: se un giorno
+     * compila di nuovo, vuol dire che il pacchetto è tornato indietro.
+     */
+    signInHint: 'Verifica la tua identità',
+
+    // ⚠️ Si legge anche questo, e in inglese stonava come gli altri due.
+    cancelButton: 'Annulla',
+  );
 
   /// Chiede la verifica. `false` se non è andata, per qualunque ragione.
   ///
@@ -169,6 +229,7 @@ class BloccoBiometrico {
     try {
       return await _auth.authenticate(
         localizedReason: motivo,
+        authMessages: const [_paroleAndroid],
 
         // `false`: il codice di sblocco del telefono va bene quanto l'impronta.
         // Sono la stessa garanzia — «questo telefono è di chi dice di essere» —

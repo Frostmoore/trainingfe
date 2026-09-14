@@ -19,11 +19,56 @@ import '../../../core/ui/intestazione_app.dart';
 /// a caratteri grandi, e non in una casella da spuntare in fondo a un modulo —
 /// che è il posto dove le cose importanti vanno a non essere lette.
 class SchermataPasswordDiRecupero extends ConsumerStatefulWidget {
-  const SchermataPasswordDiRecupero({super.key});
+  const SchermataPasswordDiRecupero({
+    this.perche = PercheLaChiave.messaggi,
+    super.key,
+  });
+
+  /// Cosa stava facendo la persona quando le è stata chiesta.
+  final PercheLaChiave perche;
 
   @override
   ConsumerState<SchermataPasswordDiRecupero> createState() =>
       _SchermataPasswordDiRecuperoState();
+}
+
+/// Perché la chiave serve **adesso** — 14/09/2026.
+///
+/// ══ 🚨 UNA CHIAVE SOLA, TRE MOTIVI PER CHIEDERLA ══════════════════════════
+///
+/// ⛔ La schermata diceva sempre «I tuoi messaggi sono cifrati», anche a chi
+/// aveva appena chiesto di importare un PDF. ⚠️ La chiave è la stessa e serve
+/// davvero in tutti i casi — è quella che apre anche i documenti importati — ma
+/// **il motivo che si legge dev'essere quello vero**, o la richiesta sembra
+/// arbitraria.
+///
+/// 💡 È un enum e non due stringhe passate a mano: i testi vivono in un posto
+/// solo, e chi aggiunge una quarta porta è costretto a decidere cosa dire.
+enum PercheLaChiave {
+  messaggi(
+    'I tuoi messaggi sono cifrati',
+    'Quello che scrivi al tuo trainer viene chiuso a chiave sul tuo telefono '
+        'e riaperto solo sul suo. Nessun altro può leggerlo: né la tua '
+        'palestra, né noi.',
+  ),
+
+  documenti(
+    'Il documento resta tuo',
+    'Quello che carichi viene chiuso a chiave sul tuo telefono, e da lì non '
+        'esce in chiaro. Serve una password che lo riapra: senza, non '
+        'potremmo custodirlo senza poterlo leggere.',
+  ),
+
+  schede(
+    'Le tue schede sono cifrate',
+    'Le schede e i piani che ricevi o che scrivi vengono chiusi a chiave sul '
+        'tuo telefono. Nessun altro può leggerli: né la tua palestra, né noi.',
+  );
+
+  const PercheLaChiave(this.titolo, this.spiegazione);
+
+  final String titolo;
+  final String spiegazione;
 }
 
 class _SchermataPasswordDiRecuperoState
@@ -103,17 +148,31 @@ class _SchermataPasswordDiRecuperoState
       body: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
+          /*
+           * ══ 🆕 SI DICE PERCHÉ SI STA CHIEDENDO ADESSO — 14/09/2026 ═════════
+           *
+           * ⛔ **Qui c'era sempre «I tuoi messaggi sono cifrati»**, anche a chi
+           * aveva appena toccato *«Importa una scheda da PDF»* o *«Ho un piano
+           * su PDF»*. 🚨 Quella persona non stava scrivendo a nessuno: chiedeva
+           * di caricare un documento, e si trovava davanti una pagina che
+           * parlava di messaggi e di trainer.
+           *
+           * ⚠️ Visto sull'emulatore il 14/09, da due strade diverse. La chiave
+           * **serve davvero** in tutti e tre i casi — è la stessa che apre i
+           * documenti importati — ma un motivo che non c'entra con quello che
+           * si stava facendo fa sembrare la richiesta arbitraria, ed è quando
+           * si comincia a cercare il modo di saltarla.
+           *
+           * 💡 Il titolo e la prima frase li decide chi apre la porta:
+           * `PortaDelleChiavi(perche: ...)`. Il valore di serie resta quello
+           * della chat, che è il caso più comune.
+           */
           Text(
-            'I tuoi messaggi sono cifrati',
+            widget.perche.titolo,
             style: testo.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: Gap.sm),
-          Text(
-            'Quello che scrivi al tuo trainer viene chiuso a chiave sul tuo '
-            'telefono e riaperto solo sul suo. Nessun altro può leggerlo: '
-            'né la tua palestra, né noi.',
-            style: testo.bodyMedium,
-          ),
+          Text(widget.perche.spiegazione, style: testo.bodyMedium),
           const SizedBox(height: Gap.lg),
           Text(
             'Questa password è la tua chiave',

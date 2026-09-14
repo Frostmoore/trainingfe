@@ -117,9 +117,23 @@ class CalendarScreen extends ConsumerWidget {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.all(Gap.sm),
+                /*
+                 * ══ 🆕 LA LEGENDA SPIEGA SOLO QUELLO CHE SI VEDE ═══════════
+                 *
+                 * ⛔ **Diceva «La barra è la percentuale sul tuo fabbisogno»
+                 * anche su un mese in cui di barre non ce n'era nessuna.** Su
+                 * un account nuovo il calendario è trenta caselle vuote, e la
+                 * riga in fondo spiega un elemento che non esiste: chi legge lo
+                 * cerca, e quello che trova è il bianco.
+                 *
+                 * 💡 Niente barre, niente frase sulle barre. L'invito a toccare
+                 * un giorno resta: quello vale sempre.
+                 */
                 child: Text(
-                  'La barra è la percentuale sul tuo fabbisogno. '
-                  'Tocca un giorno per il dettaglio.',
+                  p.days.any((g) => g.kcal != null)
+                      ? 'La barra è la percentuale sul tuo fabbisogno. '
+                            'Tocca un giorno per il dettaglio.'
+                      : 'Tocca un giorno per vedere cosa hai registrato.',
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),

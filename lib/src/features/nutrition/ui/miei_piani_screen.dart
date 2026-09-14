@@ -27,11 +27,24 @@ class MieiPianiScreen extends ConsumerWidget {
     final stato = ref.watch(mieiPianiProvider);
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'I miei consigli alimentari'),
+      /*
+       * ══ 🆕 UN NOME SOLO PER UNA COSA SOLA — 15/09/2026 ══════════════
+       *
+       * ⛔ **La stessa cosa si chiamava in tre modi in due schermate**: dal
+       * profilo «**I miei piani alimentari**», qui «**I miei consigli
+       * alimentari**», e il vuoto diceva «**Nessun consiglio**». ⚠️ Chi tocca
+       * una voce e ne trova un'altra si chiede se ha sbagliato strada.
+       *
+       * 💡 Vince **piano alimentare**, che è la parola usata dappertutto
+       * altrove — «Ho un piano su PDF», «Importa un piano», «Nessun piano» — e
+       * che è anche quella scritta nella rotta.
+       */
+      appBar: const IntestazioneApp(titolo: 'I miei piani alimentari'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.compositorePiano),
         icon: const Icon(Icons.add),
-        label: const Text('Nuovi consigli'),
+        // ⚠️ Singolare: il pulsante ne crea **uno**.
+        label: const Text('Nuovo piano'),
       ),
       body: stato.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -42,7 +55,7 @@ class MieiPianiScreen extends ConsumerWidget {
         data: (piani) => piani.isEmpty
             ? const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
-                title: 'Nessun consiglio',
+                title: 'Nessun piano',
                 message:
                     'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
               )

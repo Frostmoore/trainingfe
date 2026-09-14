@@ -1,6 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/features/onboarding/data/gym_branding.dart';
+import 'package:training_companion/src/features/onboarding/ui/widgets/marchio_in_cima.dart';
 
 /// «C'è una palestra?» si chiede a `haPalestra`, mai al nome — difetto O.D.2,
 /// **secondo giro**, 22/08/2026.
@@ -23,15 +26,19 @@ import 'package:flutter_test/flutter_test.dart';
 /// non lo ingannano. È l'unica differenza fra lui e il grep che ha fallito.
 void main() {
   /*
-   * ⛔ I due posti dove leggere il nome è giusto.
+   * ⛔ L'unico posto dove leggere il nome è giusto.
    *
-   * 🚨 Non sono eccezioni di comodo: lì la domanda è **«come si chiama?»**, non
+   * 🚨 Non è un'eccezione di comodo: lì la domanda è **«come si chiama?»**, non
    * «ce n'è una». Sulla schermata di accesso la palestra non si sa ancora, e
    * scrivere il nome dell'app è la cosa giusta da fare.
    */
   const leciti = {
     'lib/src/features/onboarding/data/gym_branding.dart',
-    'lib/src/features/auth/ui/widgets/gym_header.dart',
+    // 🆕 ⛔ **`gym_header.dart` non è più nell'elenco, e non è sparito il file:
+    // era il QUINTO punto, ed è tornato a mordere il 14/09.** Il cerchio in cima
+    // ad `/accedi` e `/registrati` mostrava una «T» a chi non ha nessuna
+    // palestra, perché guardava il nome. 💡 Adesso è `MarchioInCima`, che usa
+    // `haPalestra`: nessuna deroga da concedergli.
   };
 
   test('nessuno chiede al NOME se esiste una palestra', () {
@@ -102,5 +109,59 @@ void main() {
           'Usa `GymBranding.haPalestra`. Il nome non risponde a quella '
           'domanda: `neutral` ne ha uno, e vale «Training Companion».',
     );
+  });
+
+  // ─────────────────── e quello che si vede a schermo ───────────────────
+
+  /// ⛔ **La guardia qui sopra cerca una forma di codice, non un risultato.**
+  /// Il 14/09 il difetto è rientrato da una riga che lei non poteva vedere:
+  /// `nome != null && nome.isNotEmpty`, con `nome` estratto in una variabile
+  /// locale una riga prima. 💡 Questi due misurano invece **cosa legge una
+  /// persona**, che è la cosa che il committente ha visto.
+  testWidgets('senza palestra il marchio è l applicazione, non una «T»', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: MarchioInCima(branding: GymBranding.neutral)),
+      ),
+    );
+
+    // 🚨 La «T» di «Training Companion» dentro il cerchio: è quella che
+    // faceva sembrare l'app una palestra che non esiste.
+    expect(find.text('T'), findsNothing);
+
+    expect(find.byIcon(Icons.fitness_center_rounded), findsOneWidget);
+
+    // 💡 E il nome si scrive: `/benvenuto` è l'unica schermata che si vede
+    // prima di avere un account.
+    expect(find.text('Training Companion'), findsOneWidget);
+  });
+
+  /// ⚖️ **E la palestra vera non si perde per strada.** Togliere la «T» a tutti
+  /// sarebbe stato altrettanto sbagliato: chi è iscritto a una palestra deve
+  /// vedere la sua, non il manubrio.
+  testWidgets('con una palestra si vede la sua iniziale e il suo nome', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MarchioInCima(
+            branding: GymBranding(
+              name: 'Olympus Gym',
+              slug: 'olympus',
+              primary: Color(0xFF123456),
+              secondary: Color(0xFF123456),
+              accent: Color(0xFF123456),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('O'), findsOneWidget);
+    expect(find.text('Olympus Gym'), findsOneWidget);
+    expect(find.byIcon(Icons.fitness_center_rounded), findsNothing);
   });
 }

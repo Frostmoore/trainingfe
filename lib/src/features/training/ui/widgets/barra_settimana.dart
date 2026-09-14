@@ -137,12 +137,32 @@ class BarraSettimana extends ConsumerWidget {
            */
           IconButton(
             onPressed: () async {
+              /*
+               * ══ 🆕 DICE QUELLO CHE FA DAVVERO — 14/09/2026 ════════════════
+               *
+               * ⛔ **Il titolo diceva «Scegli una settimana» e il calendario
+               * accendeva un giorno solo.** Chi lo apriva cercava una riga
+               * evidenziata e non la trovava, e poi non sapeva quale dei sette
+               * giorni fosse «quello giusto» da toccare.
+               *
+               * 💡 Uno vale l'altro — `vaiA()` riporta comunque al lunedì — e
+               * adesso è quello che c'è scritto: si sceglie **un giorno**, e il
+               * pulsante dice dove si va a finire.
+               *
+               * ⚖️ **Non si dipinge la settimana intera**, e non è pigrizia: il
+               * calendario di Material non ha una selezione a intervallo di
+               * sette giorni, e riscriverlo vorrebbe dire una schermata nuova
+               * per un gesto che si fa due volte l'anno. ⚠️ Fra un titolo
+               * onesto e un calendario su misura, la cosa che toglie il dubbio
+               * è il titolo.
+               */
               final scelto = await showDatePicker(
                 context: context,
                 initialDate: inizio,
                 firstDate: DateTime(2020),
                 lastDate: DateTime.now(),
-                helpText: 'Scegli una settimana',
+                helpText: 'Scegli un giorno della settimana',
+                confirmText: 'Vai a quella settimana',
               );
 
               if (scelto != null) controllo.vaiA(scelto);

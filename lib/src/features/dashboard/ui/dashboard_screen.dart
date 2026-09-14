@@ -15,6 +15,7 @@ import '../../acquisti/ui/modale_acquisti.dart';
 import '../../acquisti/ui/widgets/sotto_abbonamento.dart';
 import '../../auth/auth_controller.dart';
 import '../../forma/ui/scheda_forma.dart';
+import '../../health/ui/widgets/banner_salute.dart';
 import '../../profile/corpo_controller.dart';
 import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
@@ -282,6 +283,23 @@ class DashboardScreen extends ConsumerWidget {
                    * ⚠️ Sparisce da solo per gli abbonati.
                    */
                   const BannerAbbonamento(),
+
+                  /*
+                   * ══ 🆕 GOOGLE HEALTH SI PROPONE QUI, NON ALL'INGRESSO ════
+                   *
+                   * 📌 *«per Collega google health c'è il tasto + quindi in
+                   * realtà quella la possiamo anche togliere, magari mettiamo
+                   * un bannerino in oggi»* — dopo il giro sull'emulatore.
+                   *
+                   * 💡 **Subito sotto la card delle calorie**, e non altrove:
+                   * il numero che il collegamento cambia è proprio quello —
+                   * le calorie bruciate si sommano all'obiettivo del giorno.
+                   * ⛔ In fondo alla pagina sarebbe un'offerta lontana dalla
+                   * cosa che migliora.
+                   *
+                   * ⚠️ Sparisce da solo a chi il permesso ce l'ha già.
+                   */
+                  const BannerSalute(),
 
                   if (abbonato) ...[
                     achievements,

@@ -39,6 +39,54 @@ class MancaPerIlTarget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
+    /*
+     * ══ 🆕 UN SOLO PULSANTE PIENO, E È QUELLO CHE SBLOCCA — 14/09/2026 ═══════
+     *
+     * 📌 Trovato girando l'app sull'emulatore: *«il tasto più evidente è quello
+     * meno utile»*.
+     *
+     * ⛔ **Prima erano pieni tutti e due i pulsanti che potevano comparire**
+     * (peso e attività) e grigio l'unico che porta al modulo con più campi
+     * mancanti. Con tre cose da fare, tre pesi visivi uguali non dicono da dove
+     * si comincia: chi guarda tocca quello più in vista, e quello non era
+     * necessariamente il passo giusto.
+     *
+     * 💡 **La regola adesso è una sola**: si riempie il *primo* pezzo che manca
+     * nell'ordine in cui conviene farli — i dati del profilo, poi il livello di
+     * attività, poi la pesata — e tutti gli altri sono link. Quando manca solo
+     * il peso, il peso **è** il primo, quindi il caso comune resta com'era.
+     */
+    final mancaProfilo = esito.mancano.any(
+      (p) => p.staNelProfilo && p != PezzoMancante.attivita,
+    );
+    final mancaAttivita = esito.mancano.contains(PezzoMancante.attivita);
+    final mancaPeso = esito.mancano.contains(PezzoMancante.peso);
+
+    // 🚨 Uno solo dei tre è vero: il primo che manca, nell'ordine dei passi.
+    final pienoProfilo = mancaProfilo;
+    final pienoAttivita = !mancaProfilo && mancaAttivita;
+    final pienoPeso = !mancaProfilo && !mancaAttivita;
+
+    /// Pieno se è il passo da fare adesso, link altrimenti.
+    Widget azione({
+      required bool pieno,
+      required IconData icona,
+      required String testo,
+      required VoidCallback vai,
+    }) {
+      return pieno
+          ? FilledButton.icon(
+              onPressed: vai,
+              icon: Icon(icona, size: 18),
+              label: Text(testo),
+            )
+          : TextButton.icon(
+              onPressed: vai,
+              icon: Icon(icona, size: 18),
+              label: Text(testo),
+            );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -55,27 +103,21 @@ class MancaPerIlTarget extends ConsumerWidget {
 
         const SizedBox(height: Gap.xs),
 
+        /*
+         * ⚠️ **L'ordine dei pulsanti è l'ordine dei passi**, non quello in cui
+         * è cresciuto il codice: il pieno deve stare per primo, o «prima questo»
+         * lo dice il colore e «prima quello» lo dice la posizione.
+         */
         Wrap(
           spacing: Gap.sm,
           children: [
-            /*
-             * 🚨 Il peso **prima** e con il pulsante pieno quando è l'unica cosa
-             * che manca: è il caso di gran lunga più comune — il profilo si
-             * compila una volta all'iscrizione, la pesata no — ed è quello in cui
-             * mandare al profilo sarebbe un giro a vuoto.
-             */
-            if (esito.mancano.contains(PezzoMancante.peso))
-              esito.soloIlPeso
-                  ? FilledButton.icon(
-                      onPressed: () => WeightSheet.mostra(context),
-                      icon: const Icon(Icons.monitor_weight_outlined, size: 18),
-                      label: const Text('Registra il peso'),
-                    )
-                  : TextButton.icon(
-                      onPressed: () => WeightSheet.mostra(context),
-                      icon: const Icon(Icons.monitor_weight_outlined, size: 18),
-                      label: const Text('Registra il peso'),
-                    ),
+            if (mancaProfilo)
+              azione(
+                pieno: pienoProfilo,
+                icona: Icons.badge_outlined,
+                testo: 'Compila i tuoi dati',
+                vai: () => context.push(AppRoutes.profileEdit),
+              ),
 
             /*
              * ⚖️ **Il livello di attività ha la SUA pagina** — 3b-G.1.
@@ -85,20 +127,31 @@ class MancaPerIlTarget extends ConsumerWidget {
              * schermata piena di campi già compilati e deve indovinare quale sia
              * quello che manca. ⚠️ Qui la cosa da fare è una sola, e si porta
              * dritti lì.
+             *
+             * 🆕 ⛔ **Il testo però diceva «Come contare le calorie»**, cioè
+             * prometteva una spiegazione e apriva un modulo. La pagina spiega
+             * *anche*, ma quello che chiede è una scelta: adesso lo dice.
              */
-            if (esito.mancano.contains(PezzoMancante.attivita))
-              FilledButton.icon(
-                onPressed: () => context.push(AppRoutes.modelloCalorie),
-                icon: const Icon(Icons.directions_run_rounded, size: 18),
-                label: const Text('Come contare le calorie'),
+            if (mancaAttivita)
+              azione(
+                pieno: pienoAttivita,
+                icona: Icons.directions_run_rounded,
+                testo: 'Scegli il livello di attività',
+                vai: () => context.push(AppRoutes.modelloCalorie),
               ),
 
-            if (esito.mancano.any(
-              (p) => p.staNelProfilo && p != PezzoMancante.attivita,
-            ))
-              TextButton(
-                onPressed: () => context.push(AppRoutes.profileEdit),
-                child: const Text('Compila i tuoi dati'),
+            /*
+             * 💡 Il peso in fondo: è il passo che si rifà più spesso — il
+             * profilo si compila una volta all'iscrizione, la pesata no — ma
+             * quando è l'unico che manca è anche l'unico pulsante, quindi non
+             * perde niente a stare per ultimo.
+             */
+            if (mancaPeso)
+              azione(
+                pieno: pienoPeso,
+                icona: Icons.monitor_weight_outlined,
+                testo: 'Registra il peso',
+                vai: () => WeightSheet.mostra(context),
               ),
           ],
         ),

@@ -20,7 +20,7 @@ publish_to: 'none'
 #
 # ⚠️ Lo controlla `strumenti/costruisci-apk.ps1`: una versione ferma a `1.0.0`
 # o un `versionCode` che non torna **fermano la build**.
-version: 14.7.0+140700
+version: 14.8.0+140800
 
 environment:
   sdk: ^3.12.2
@@ -214,6 +214,18 @@ flutter:
   #    prepara e' documentato in §72 dell'atlante.
   assets:
     - assets/corpo/
+
+    # 🆕 **Il marchio, dichiarato per essere usato a runtime** — 15/09/2026.
+    #
+    # ⛔ Questi PNG c'erano già dal 28/08, ma **solo per i generatori**
+    # dell'icona e della splash, che leggono dal disco al momento della build.
+    # 🚨 Non essendo dichiarati qui, dentro l'APK non finivano: un
+    # `Image.asset('assets/marchio/segno.png')` avrebbe lanciato a runtime, e
+    # solo sul telefono — in prova sul desktop il file c'è comunque.
+    #
+    # 💡 Servono alle tre schermate d'ingresso, che fino a oggi mostravano un
+    # manubrio generico al posto del marchio dell'app.
+    - assets/marchio/
 
 # ══════════════════════════════════════════════════════════════════════════
 # 🎨 L'icona dell'app — 3b-T

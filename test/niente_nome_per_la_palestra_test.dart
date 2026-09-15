@@ -131,7 +131,20 @@ void main() {
     // faceva sembrare l'app una palestra che non esiste.
     expect(find.text('T'), findsNothing);
 
-    expect(find.byIcon(Icons.fitness_center_rounded), findsOneWidget);
+    /*
+     * 🆕 **E c'è il marchio vero, non un'icona di serie** — 15/09/2026.
+     *
+     * ⛔ Fino a oggi il cerchio conteneva `Icons.fitness_center_rounded`, cioè
+     * il manubrio che avrebbe qualunque altra app di palestra. 📌 Il
+     * committente: *«deve essere proprio il logo dell'app»*.
+     *
+     * ⚠️ Si guarda il **percorso dell'asset** e non il pixel: l'immagine è
+     * bianca su trasparente, e in un test di widget non si disegna nulla che
+     * valga la pena confrontare.
+     */
+    final segno = tester.widget<Image>(find.byType(Image));
+
+    expect((segno.image as AssetImage).assetName, 'assets/marchio/segno.png');
 
     // 💡 E il nome si scrive: `/benvenuto` è l'unica schermata che si vede
     // prima di avere un account.
@@ -162,6 +175,8 @@ void main() {
 
     expect(find.text('O'), findsOneWidget);
     expect(find.text('Olympus Gym'), findsOneWidget);
-    expect(find.byIcon(Icons.fitness_center_rounded), findsNothing);
+    // ⚖️ E il marchio dell'app non c'è: lì il logo giusto è quello della
+    // palestra, non il nostro.
+    expect(find.byType(Image), findsNothing);
   });
 }

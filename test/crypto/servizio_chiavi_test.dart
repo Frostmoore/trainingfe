@@ -127,6 +127,13 @@ class _TokenStoreFinto implements TokenStore {
 class _PortachiaviFinto implements Portachiavi {
   Uint8List? _chiave;
 
+  /// 🆕 Da 15/09 il portachiavi sa di chi è: la chiave sta in uno slot con
+  /// dentro l'identificativo, così due persone sullo stesso telefono non si
+  /// incontrano. 💡 Qui il finto ne tiene una sola, quindi il numero non
+  /// serve a niente — ma deve esserci, o non implementa l'interfaccia.
+  @override
+  final int? utenteId = 1;
+
   @override
   Future<Uint8List?> chiaveMaestra() async => _chiave;
 

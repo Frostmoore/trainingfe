@@ -122,15 +122,16 @@ class BrandingController extends StateNotifier<BrandingState> {
 
   /// 🆕 **Adotta un branding che arriva da un'altra strada** — B4.
   ///
-  /// Serve a `POST /account/join-gym`, che risponde già con il branding della
-  /// palestra in cui si è appena entrati: senza questo, l'app resterebbe vestita
-  /// di neutro dentro una palestra che ha i suoi colori — e sembrerebbe non aver
-  /// funzionato.
+  /// Serve a chi entra in una palestra e si ritrova il branding **già dentro la
+  /// risposta**: senza questo, l'app resterebbe vestita di neutro dentro una
+  /// palestra che ha i suoi colori — e sembrerebbe non aver funzionato.
   ///
-  /// ⚠️ **Non chiama la rete e non ha un codice da salvare**: il `join_code`
-  /// della palestra è quello che l'utente ha appena digitato, ma qui non
-  /// serve — da adesso la palestra si legge dall'utente autenticato, non da un
-  /// codice in cache.
+  /// 🆕 ⚠️ **La strada era `POST /account/join-gym`, che dal 15/09/2026 non
+  /// esiste più**: in palestra si entra solo da un invito, e il branding arriva
+  /// con l'accettazione o col primo accesso.
+  ///
+  /// ⚠️ **Non chiama la rete e non ha un codice da salvare**: la palestra si
+  /// legge dall'utente autenticato, non da un codice in cache.
   Future<void> adotta(Map<String, dynamic> branding) async {
     await _cache.setBranding(branding);
     await _cache.setSenzaPalestra(false);

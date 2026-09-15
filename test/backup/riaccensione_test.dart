@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:training_companion/src/core/backup/backup_controller.dart';
 import 'package:training_companion/src/core/backup/cloud_di_backup.dart';
+import 'package:training_companion/src/core/crypto/portachiavi.dart';
+import 'package:training_companion/src/core/crypto/providers_crypto.dart';
 
 /// Il ripristino non deve poter distruggere ciò che sta ripristinando — N7.1.
 ///
@@ -33,9 +35,23 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
   });
 
+  /// ⚠️ **Da 15/09 serve anche il portachiavi, e il portachiavi sa di chi è.**
+  ///
+  /// 🚨 La chiave maestra sta in uno slot con dentro l'identificativo della
+  /// persona — due account sullo stesso telefono non devono incontrarsi —
+  /// quindi `portachiaviProvider` osserva chi è entrato, e da lì la catena
+  /// arriva ad `apiClientProvider` e `appConfigProvider`, che di proposito
+  /// **lanciano** finché `bootstrap()` non li sovrascrive.
+  ///
+  /// 💡 Qui non c'è nessun utente: si sovrascrive il portachiavi con uno
+  /// senza nome, che è esattamente la condizione del test — **nessuna chiave
+  /// maestra**.
   ProviderContainer contenitore(CloudFinto cloud) {
     final c = ProviderContainer(
-      overrides: [cloudDiBackupProvider.overrideWithValue(cloud)],
+      overrides: [
+        cloudDiBackupProvider.overrideWithValue(cloud),
+        portachiaviProvider.overrideWithValue(Portachiavi(utenteId: null)),
+      ],
     );
     addTearDown(c.dispose);
 

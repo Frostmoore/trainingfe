@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
+import '../../features/auth/auth_controller.dart';
 import '../providers.dart';
 import 'portachiavi.dart';
 import 'servizio_chiavi.dart';
@@ -21,7 +22,23 @@ final sodiumProvider = FutureProvider<SodiumSumo>(
   (ref) => SodiumSumoInit.init(),
 );
 
-final portachiaviProvider = Provider<Portachiavi>((ref) => Portachiavi());
+/// Il portachiavi **di chi è entrato** — 15/09/2026.
+///
+/// ⛔ **Prima era `Provider((ref) => Portachiavi())`**, senza nessun nome
+/// dentro: la chiave finiva in uno slot uguale per chiunque usasse quel
+/// telefono, e la seconda persona ereditava quella della prima. Il racconto per
+/// esteso sta nel dartdoc di `Portachiavi`.
+///
+/// ⚠️ **`select` e non `watch` sull'intero stato**: qui interessa solo *chi*
+/// è entrato. Osservando tutto `AuthState`, il portachiavi si ricostruirebbe a
+/// ogni `refresh()` dell'utente — cioè a ogni ritorno in primo piano — e con
+/// lui `ServizioChiavi`, buttando via la copia in memoria della chiave per
+/// niente.
+final portachiaviProvider = Provider<Portachiavi>((ref) {
+  final id = ref.watch(authControllerProvider.select((s) => s.user?.id));
+
+  return Portachiavi(utenteId: id);
+});
 
 /// Il servizio che tiene insieme chiave maestra, ripristino e cifratura.
 final servizioChiaviProvider = FutureProvider<ServizioChiavi>((ref) async {

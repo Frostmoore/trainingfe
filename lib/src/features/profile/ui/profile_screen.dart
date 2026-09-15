@@ -9,7 +9,6 @@ import '../../auth/auth_controller.dart';
 import '../../dashboard/consiglio_da_mostrare.dart';
 import '../../onboarding/branding_controller.dart';
 import '../profile_controller.dart';
-import 'widgets/entra_in_palestra_sheet.dart';
 import 'widgets/riga_blocco_biometrico.dart';
 
 /// Il profilo — A8.
@@ -389,29 +388,40 @@ class ProfileScreen extends ConsumerWidget {
             )
           else
             /*
-             * 🆕 **«Entra in una palestra»** — requisito B4, chiesto il
-             * 13/08/2026.
+             * ══ 🆕 IN PALESTRA SI ENTRA DA UN LINK, NON DA UN CODICE ══════
              *
-             * ⚠️ **Non è un cambio di etichetta: dietro c'è una migrazione di
-             * dati.** Diario, allenamenti, piani e foto sono marcati con il
-             * tenant personale, e senza spostarli il `TenantScope` li
-             * renderebbe **invisibili** a chi entra in palestra. Il lavoro sta
-             * in `UnisciAUnaPalestra`, lato server.
+             * 📌 Il committente, 15/09/2026: *«Il codice d'ingresso va tolto»*,
+             * e l'ingresso *«dovrà funzionare solo con link di invito»*.
              *
-             * 💡 Sta al posto della card «La tua palestra», non accanto: per
-             * chi non ne ha una, questa **è** quella sezione.
+             * ⛔ **Qui c'era un modulo con il campo del codice** (`B4`,
+             * 13/08/2026) che chiamava `POST /account/join-gym`. Era l'ultimo
+             * posto dell'app in cui un codice palestra si digitava a mano: le
+             * schermate d'ingresso avevano già smesso di chiederlo con 3b-J.1.
+             *
+             * 🚨 **Perché il link è meglio di un codice**, e non è una
+             * questione di comodità: l'invito è **monouso** e **scade**, il
+             * codice no. Un codice finito in una chat di gruppo fa entrare
+             * venti persone e consuma venti posti; un link ne fa entrare una.
+             *
+             * 💡 La riga resta — chi non ha una palestra deve sapere che può
+             * averne una — ma dice dove si prende l'invito invece di chiedere
+             * qualcosa che nessuno ha.
+             *
+             * ⚠️ `tenants.join_code` **non sparisce**: è il codice con cui il
+             * pannello genera gli inviti, non quello che digita una persona.
              */
-            Card(
+            // 💡 Tutta costante da quando non ha piu' un `onTap`: senza il
+            // modulo del codice, qui non c'e' piu' niente che cambi.
+            const Card(
               child: ListTile(
-                leading: const Icon(Icons.storefront_outlined),
-                title: const Text('Entra in una palestra'),
-                subtitle: const Text(
-                  'Ti sei iscritto da solo. Se hai il codice di una palestra, '
-                  'puoi entrarci portandoti dietro tutto.',
+                leading: Icon(Icons.storefront_outlined),
+                title: Text('Entrare in una palestra'),
+                subtitle: Text(
+                  'Ti sei iscritto da solo. Per entrare in una palestra serve '
+                  'un invito: chiedilo a loro, e apri il link che ti mandano. '
+                  'Ti porti dietro tutto.',
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
                 isThreeLine: true,
-                onTap: () => EntraInPalestraSheet.mostra(context),
               ),
             ),
 

@@ -9,8 +9,13 @@
 /// ══ ⛔ COSA SPARISCE, E COSA NO ═══════════════════════════════════════════
 ///
 /// Sparisce `GymCodeScreen`: il campo del codice palestra **prima** di avere un
-/// account. ⛔ Non sparisce la palestra: si entra da **Profilo › Entra in una
-/// palestra**, che esiste già e chiama `POST /account/join-gym`.
+/// account.
+///
+/// 🆕 ⛔ **E dal 15/09/2026 non c'è più nemmeno dopo.** Si entra in una palestra
+/// **solo da un link d'invito**: `POST /account/join-gym` non esiste più, e la
+/// voce «Entra in una palestra» nel profilo è stata tolta. 💡 Un codice che si
+/// digita è un codice che si può indovinare o passare a voce; un invito ha un
+/// destinatario, una scadenza e un solo uso.
 ///
 /// 💡 **È anche l'ordine giusto.** Il codice chiesto per primo faceva credere di
 /// doverne avere uno: chi non ce l'ha si fermava a leggere due volte prima di

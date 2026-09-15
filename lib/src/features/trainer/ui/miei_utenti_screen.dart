@@ -92,8 +92,23 @@ class _Elenco extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(Gap.md),
         children: [
-          _Posti(posti: dati.posti),
-          const SizedBox(height: Gap.md),
+          /*
+           * ══ 🆕 I POSTI LI VEDE CHI CE LI HA — 15/09/2026 ══════════════
+           *
+           * 📌 *«un trainer di una palestra non serve che veda il banner
+           * utenti illimitati, e un trainer indipendente (anche se lavora in
+           * una palestra) deve vederlo con il numero di allievi possibili per
+           * il suo piano»*.
+           *
+           * ⛔ A un trainer di sola palestra diceva **«Utenti illimitati»**,
+           * perché il limite arrivava `null` e `null` qui vuol dire «senza
+           * limite». 🚨 La verità è l'opposto: di posti **suoi** non ne ha
+           * nessuno, e gli iscritti li paga la palestra.
+           */
+          if (dati.posti.allieviPropri) ...[
+            _Posti(posti: dati.posti),
+            const SizedBox(height: Gap.md),
+          ],
 
           if (dati.utenti.isEmpty)
             Padding(
@@ -107,14 +122,27 @@ class _Elenco extends ConsumerWidget {
                   ),
                   const SizedBox(height: Gap.md),
                   Text(
-                    'Non segui ancora nessuno',
+                    dati.posti.allieviPropri
+                        ? 'Non segui ancora nessuno'
+                        : "Qui non c'è ancora nessuno",
                     style: theme.textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: Gap.sm),
+                  /*
+                   * 🆕 ⚠️ **Due vuoti diversi, perché sono due situazioni
+                   * diverse.** Chi ha allievi suoi può invitarne; un trainer di
+                   * palestra no, e dirgli di invitare qualcuno lo manderebbe a
+                   * cercare un pulsante che non ha — gli iscritti li porta la
+                   * palestra, e quando ci sono li vede tutti.
+                   */
                   Text(
-                    'Invita una persona con un link: vale una volta sola e scade '
-                    'dopo una settimana.',
+                    dati.posti.allieviPropri
+                        ? 'Invita una persona con un link: vale una volta sola '
+                              'e scade dopo una settimana.'
+                        : 'Quando la palestra avrà degli iscritti li troverai '
+                              'qui: sono di tutti i trainer, nessuno deve '
+                              'assegnarteli.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -126,18 +154,28 @@ class _Elenco extends ConsumerWidget {
           else
             ...dati.utenti.map((u) => _Riga(utente: u)),
 
-          const SizedBox(height: Gap.lg),
-          FilledButton.icon(
-            // 🚨 Spento **prima** che qualcuno lo prema: scoprire il limite dopo
-            // aver compilato un modulo fa sembrare rotto un vincolo commerciale.
-            onPressed: dati.posti.puoInvitare
-                ? () => _invita(context, ref)
-                : null,
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            label: const Text('Invita una persona'),
-          ),
+          /*
+           * 🆕 ⛔ **E chi non può avere allievi suoi non vede nemmeno il
+           * pulsante.** Un trainer di sola palestra lo toccava e riceveva un
+           * rifiuto del server: è la stessa regola che vale per l'icona «manda
+           * a più persone» nella chat — un pulsante che apre un cartello di
+           * scuse è peggio di un pulsante che non c'è.
+           */
+          if (dati.posti.allieviPropri) ...[
+            const SizedBox(height: Gap.lg),
+            FilledButton.icon(
+              // 🚨 Spento **prima** che qualcuno lo prema: scoprire il limite
+              // dopo aver compilato un modulo fa sembrare rotto un vincolo
+              // commerciale.
+              onPressed: dati.posti.puoInvitare
+                  ? () => _invita(context, ref)
+                  : null,
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              label: const Text('Invita una persona'),
+            ),
+          ],
 
-          if (!dati.posti.puoInvitare) ...[
+          if (dati.posti.allieviPropri && !dati.posti.puoInvitare) ...[
             const SizedBox(height: Gap.sm),
             Text(
               'Hai occupato tutti i posti del tuo piano. Per averne di più serve '
@@ -233,11 +271,25 @@ class _Riga extends ConsumerWidget {
               ? null
               : TextStyle(color: theme.colorScheme.error),
         ),
-        trailing: IconButton(
-          tooltip: utente.attivo
-              ? 'Chiudi la conversazione'
-              : 'Riapri la conversazione',
-          /*
+        /*
+         * ══ 🆕 NIENTE PULSANTE SU CHI NON È SUO — 16/09/2026 ═════════════════
+         *
+         * 🚨 Da quando il trainer vede **tutti** gli iscritti della palestra,
+         * questa riga compariva anche per loro — col pulsante «chiudi la
+         * conversazione», che sul server risponde **404 «Persona non
+         * trovata»**: una persona lì in elenco, dichiarata inesistente.
+         *
+         * ⚠️ Il no del server è giusto: quel rapporto è della palestra, e non
+         * sta al trainer chiuderlo. 💡 Quello che si toglie è la **promessa**,
+         * non il permesso.
+         */
+        trailing: !utente.suo
+            ? null
+            : IconButton(
+                tooltip: utente.attivo
+                    ? 'Chiudi la conversazione'
+                    : 'Riapri la conversazione',
+                /*
            * ══ 🆕 UN'ICONA CHE PARLA DI MESSAGGI — 15/09/2026 ════════════════
            *
            * ⛔ **C'era «pausa» e «riproduci».** Quei due simboli dicono
@@ -250,13 +302,13 @@ class _Riga extends ConsumerWidget {
            * 💡 Il fumetto barrato lo dice da solo, e sta nella stessa famiglia
            * dell'icona dei Messaggi in fondo allo schermo.
            */
-          icon: Icon(
-            utente.attivo
-                ? Icons.speaker_notes_off_outlined
-                : Icons.chat_bubble_outline_rounded,
-          ),
-          onPressed: () => _cambia(context, ref),
-        ),
+                icon: Icon(
+                  utente.attivo
+                      ? Icons.speaker_notes_off_outlined
+                      : Icons.chat_bubble_outline_rounded,
+                ),
+                onPressed: () => _cambia(context, ref),
+              ),
       ),
     );
   }

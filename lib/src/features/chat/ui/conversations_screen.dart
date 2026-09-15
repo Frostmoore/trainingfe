@@ -946,97 +946,148 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             ),
           ),
 
+          /*
+           * ══ 🆕 DUE RIGHE, NON UNA — 15/09/2026 ═══════════════════════════
+           *
+           * 📌 Il committente, guardando la chat: *«tutti i tasti, a parte
+           * quello per inviare messaggi, devono stare su una riga diversa
+           * rispetto al campo per scrivere, sennò viene fuori una monnezza
+           * così, col campo dei messaggi che fa schifo»*.
+           *
+           * ⛔ **Erano tutti sulla stessa riga**, e ognuno si prendeva il suo
+           * spazio: a un trainer comparivano **cinque** icone, e all'`Expanded`
+           * in mezzo restava una colonna larga un paio di parole. 🚨 Il campo
+           * mandava a capo ogni tre sillabe e cresceva in altezza, quindi più
+           * icone c'erano e più il posto per scrivere diventava piccolo — cioè
+           * il contrario di quello che serve.
+           *
+           * 💡 Adesso: gli allegati sopra, il campo e l'invio sotto. Il campo
+           * prende tutta la larghezza meno il pulsante, e non dipende più da
+           * quante icone ha davanti.
+           *
+           * ⚠️ **L'invio resta accanto al campo**, ed è l'unico: è l'unico
+           * gesto che si fa *dopo* aver scritto, e allontanarlo vorrebbe dire
+           * spostare il pollice due volte per ogni messaggio.
+           */
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(Gap.sm),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(Gap.sm, 0, Gap.sm, Gap.sm),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🚨 S7 — «allega una scheda». Compare **solo a chi allena**:
-                  // l'endpoint dei modelli risponde 403 a un iscritto, e un
-                  // pulsante che dà sempre errore fa sembrare rotta tutta
-                  // l'applicazione, non solo quel pulsante.
-                  if (ref.watch(authControllerProvider).user?.isTrainer ??
-                      false)
-                    IconButton(
-                      onPressed: _inCorso ? null : _allega,
-                      icon: const Icon(Icons.assignment_outlined),
-                      tooltip: 'Manda una scheda',
-                    ),
-                  // 🆕 G8.2 — e un piano alimentare. `ContenutoPianoAlimentare`
-                  // esisteva da S7 e **non lo mandava nessuno**: mancava solo
-                  // il posto da cui sceglierlo.
-                  if (ref.watch(authControllerProvider).user?.isTrainer ??
-                      false)
-                    IconButton(
-                      onPressed: _inCorso ? null : _allegaPiano,
-                      icon: const Icon(Icons.eco_outlined),
-                      tooltip: 'Manda dei consigli alimentari',
-                    ),
-                  /*
-                   * 🆕 N13.3 — la foto, e questo lo vedono **tutti e due**.
-                   *
-                   * 💡 A differenza della scheda e del piano, mandare una foto
-                   * non è un gesto da chi allena: un iscritto fotografa un
-                   * infortunio, un'etichetta, la propria postura. Anzi, è più
-                   * spesso lui a volerlo fare.
-                   */
-                  IconButton(
-                    onPressed: _inCorso ? null : _allegaFoto,
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    tooltip: 'Manda una foto',
-                  ),
-                  /*
-                   * 🆕 N21.4 — un documento.
-                   *
-                   * 💡 Separato dalla foto e non nascosto dentro lo stesso
-                   * foglio: sono due gesti diversi. Chi manda un PDF sa gia'
-                   * di volerlo fare, e non deve passare da «scatta / galleria»
-                   * per scoprire che c'e' anche una terza voce.
-                   */
-                  IconButton(
-                    onPressed: _inCorso ? null : _allegaDocumento,
-                    icon: const Icon(Icons.attach_file_rounded),
-                    tooltip: 'Manda un documento',
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _testo,
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLength: 4000,
-                      minLines: 1,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        hintText: 'Scrivi un messaggio…',
-                        counterText: '',
+                  // ── quello che si può allegare ──────────────────────────
+                  Row(
+                    children: [
+                      // 🚨 S7 — «allega una scheda». Compare **solo a chi
+                      // allena**: l'endpoint dei modelli risponde 403 a un
+                      // iscritto, e un pulsante che dà sempre errore fa
+                      // sembrare rotta tutta l'applicazione, non solo quel
+                      // pulsante.
+                      if (ref.watch(authControllerProvider).user?.isTrainer ??
+                          false)
+                        IconButton(
+                          onPressed: _inCorso ? null : _allega,
+                          icon: const Icon(Icons.assignment_outlined),
+                          tooltip: 'Manda una scheda',
+                        ),
+
+                      // 🆕 G8.2 — e un piano alimentare.
+                      // `ContenutoPianoAlimentare` esisteva da S7 e **non lo
+                      // mandava nessuno**: mancava solo il posto da cui
+                      // sceglierlo.
+                      if (ref.watch(authControllerProvider).user?.isTrainer ??
+                          false)
+                        IconButton(
+                          onPressed: _inCorso ? null : _allegaPiano,
+                          icon: const Icon(Icons.eco_outlined),
+                          tooltip: 'Manda dei consigli alimentari',
+                        ),
+
+                      /*
+                       * 🆕 N13.3 — la foto, e questo lo vedono **tutti e due**.
+                       *
+                       * 💡 A differenza della scheda e del piano, mandare una
+                       * foto non è un gesto da chi allena: un iscritto
+                       * fotografa un infortunio, un'etichetta, la propria
+                       * postura. Anzi, è più spesso lui a volerlo fare.
+                       */
+                      IconButton(
+                        onPressed: _inCorso ? null : _allegaFoto,
+                        icon: const Icon(Icons.photo_camera_outlined),
+                        tooltip: 'Manda una foto',
                       ),
-                      onSubmitted: (_) => _invia(),
-                    ),
+
+                      /*
+                       * 🆕 N21.4 — un documento.
+                       *
+                       * 💡 Separato dalla foto e non nascosto dentro lo stesso
+                       * foglio: sono due gesti diversi. Chi manda un PDF sa
+                       * gia' di volerlo fare, e non deve passare da «scatta /
+                       * galleria» per scoprire che c'e' anche una terza voce.
+                       */
+                      IconButton(
+                        onPressed: _inCorso ? null : _allegaDocumento,
+                        icon: const Icon(Icons.attach_file_rounded),
+                        tooltip: 'Manda un documento',
+                      ),
+
+                      const Spacer(),
+
+                      /*
+                       * 🆕 N16.1 — «una volta sola».
+                       *
+                       * 🚨 **Un interruttore, non un menu nascosto.** Chi lo
+                       * accende deve vedere che e' acceso mentre scrive: una
+                       * scelta sepolta in un foglio si dimentica, e ci si
+                       * dimentica sempre nella direzione sbagliata — mandando
+                       * in chiaro quello che si voleva effimero.
+                       *
+                       * 💡 Vale per il testo **e** per la foto: e' il modo di
+                       * consegnare, non il tipo di contenuto.
+                       *
+                       * ⚠️ **In fondo alla riga, staccato dagli allegati**: non
+                       * è una cosa da mandare, è un modo di mandarla.
+                       */
+                      IconButton(
+                        onPressed: _inCorso ? null : _cambiaUsaEGetta,
+                        isSelected: _usaEGetta,
+                        icon: const Icon(Icons.local_fire_department_outlined),
+                        selectedIcon: const Icon(Icons.local_fire_department),
+                        tooltip: _usaEGetta
+                            ? 'Una volta sola: attivo'
+                            : 'Manda una volta sola',
+                      ),
+                    ],
                   ),
-                  /*
-                   * 🆕 N16.1 — «una volta sola».
-                   *
-                   * 🚨 **Un interruttore, non un menu nascosto.** Chi lo
-                   * accende deve vedere che e' acceso mentre scrive: una scelta
-                   * sepolta in un foglio si dimentica, e ci si dimentica sempre
-                   * nella direzione sbagliata — mandando in chiaro quello che si
-                   * voleva effimero.
-                   *
-                   * 💡 Vale per il testo **e** per la foto: e' il modo di
-                   * consegnare, non il tipo di contenuto.
-                   */
-                  IconButton(
-                    onPressed: _inCorso ? null : _cambiaUsaEGetta,
-                    isSelected: _usaEGetta,
-                    icon: const Icon(Icons.local_fire_department_outlined),
-                    selectedIcon: const Icon(Icons.local_fire_department),
-                    tooltip: _usaEGetta
-                        ? 'Una volta sola: attivo'
-                        : 'Manda una volta sola',
-                  ),
-                  const SizedBox(width: Gap.sm),
-                  IconButton.filled(
-                    onPressed: _inCorso ? null : _invia,
-                    icon: const Icon(Icons.send_rounded),
+
+                  // ── quello che si scrive ────────────────────────────────
+                  Row(
+                    // ⚠️ `end`: il campo cresce fino a quattro righe, e con
+                    // l'allineamento di serie il pulsante si alzerebbe insieme
+                    // a lui invece di restare in fondo, accanto all'ultima riga.
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _testo,
+                          textCapitalization: TextCapitalization.sentences,
+                          maxLength: 4000,
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                            hintText: 'Scrivi un messaggio…',
+                            counterText: '',
+                          ),
+                          onSubmitted: (_) => _invia(),
+                        ),
+                      ),
+                      const SizedBox(width: Gap.sm),
+                      IconButton.filled(
+                        onPressed: _inCorso ? null : _invia,
+                        icon: const Icon(Icons.send_rounded),
+                      ),
+                    ],
                   ),
                 ],
               ),

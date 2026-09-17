@@ -25,6 +25,7 @@ import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/schermata_benvenuto.dart';
 import '../../features/onboarding/ui/schermata_invito.dart';
+import '../../features/onboarding/ui/schermata_invito_trainer.dart';
 import '../../features/privacy/ui/schermata_consensi.dart';
 import '../../features/profile/ui/credentials_screen.dart';
 import '../../features/profile/ui/delete_account_screen.dart';
@@ -279,7 +280,10 @@ class AppRoutes {
   static bool eUnInvito(String location) =>
       location.startsWith('$invito/') ||
       location.startsWith('$registerDaInvito/') ||
-      location.startsWith('$loginDaInvito/');
+      location.startsWith('$loginDaInvito/') ||
+      location.startsWith('$invitoTrainer/') ||
+      location.startsWith('$registerDaInvitoTrainer/') ||
+      location.startsWith('$loginDaInvitoTrainer/');
 
   /// 🆕 🔗 La registrazione, **con l'invito in tasca** — 17/09/2026.
   ///
@@ -310,6 +314,29 @@ class AppRoutes {
   static const loginDaInvito = '/accedi/da-invito';
 
   static String accediPerInvito(String token) => '$loginDaInvito/$token';
+
+  /*
+   * ── 🆕 🤝 L'invito di un TRAINER — F6.2, 17/09/2026 ────────────
+   *
+   * 🚨 **Non e' lo stesso di `/invito-palestra`**, e il commento li' sopra lo
+   * diceva gia': quello sposta una persona dentro un'organizzazione, questo
+   * crea un legame fra **due persone**.
+   *
+   * ⛔ **Fino al 17/09 questa rotta non esisteva nell'app.** La pagina web
+   * diceva *«apri l'app e tocca "Ho un invito"»* e quel pulsante non c'era: i
+   * due endpoint che accettano un invito da trainer non li chiamava nessuno.
+   */
+  static const invitoTrainer = '/invito';
+
+  static const loginDaInvitoTrainer = '/accedi/da-invito-trainer';
+
+  static const registerDaInvitoTrainer = '/registrati/da-invito-trainer';
+
+  static String accediPerInvitoTrainer(String token) =>
+      '$loginDaInvitoTrainer/$token';
+
+  static String registratiPerInvitoTrainer(String token) =>
+      '$registerDaInvitoTrainer/$token';
 }
 
 /// **Dove si può stare**, come funzione pura — l'unico punto che lo decide.
@@ -523,6 +550,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${AppRoutes.loginDaInvito}/:token',
         builder: (_, stato) =>
             LoginScreen(invito: stato.pathParameters['token']),
+      ),
+
+      /*
+       * 🆕 🤝 **L'invito di un TRAINER, e le sue due porte** — 17/09/2026.
+       *
+       * ⚠️ Tre rotte come per la palestra, e per le stesse ragioni: il token
+       * nel **percorso** (la cascata riceve `matchedLocation`, che la query non
+       * ce l'ha) e le due porte per chi un account ce l'ha e per chi no.
+       */
+      GoRoute(
+        path: '${AppRoutes.invitoTrainer}/:token',
+        builder: (_, stato) =>
+            SchermataInvitoTrainer(token: stato.pathParameters['token'] ?? ''),
+      ),
+      GoRoute(
+        path: '${AppRoutes.loginDaInvitoTrainer}/:token',
+        builder: (_, stato) => LoginScreen(
+          invito: stato.pathParameters['token'],
+          diUnTrainer: true,
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.registerDaInvitoTrainer}/:token',
+        builder: (_, stato) => RegisterScreen(
+          invito: stato.pathParameters['token'],
+          diUnTrainer: true,
+        ),
       ),
       GoRoute(
         path: AppRoutes.register,

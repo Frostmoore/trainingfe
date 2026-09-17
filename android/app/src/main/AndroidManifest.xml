@@ -356,6 +356,29 @@
                     android:pathPrefix="/invito-palestra"/>
             </intent-filter>
             <!--
+              🆕 L'invito di un TRAINER — F6.2, 17/09/2026.
+
+              ⛔ Fino a oggi questo link NON apriva l'app: apriva il browser,
+              che mostrava una pagina con scritto "apri l'app e tocca Ho un
+              invito" — e quel pulsante non esisteva. L'intero giro viveva sul
+              server senza un cliente.
+
+              🚨 pathPattern e NON pathPrefix, ed e' la trappola descritta
+              qui sopra vista dall'altra parte: "/invito" come PREFISSO
+              catturerebbe anche "/invito-palestra/xyz" e lo aprirebbe sulla
+              schermata sbagliata. Con "/invito/.*" serve la barra subito dopo,
+              e "-palestra" non e' una barra.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="training.riccardoronconi.it"
+                    android:pathPattern="/invito/.*"/>
+            </intent-filter>
+            <!--
               🚨 OBBLIGATORIO per Health Connect: Google rifiuta la
               pubblicazione senza. È il punto in cui il sistema chiede all'app
               di spiegare PERCHÉ vuole quei dati, e apre la nostra schermata di

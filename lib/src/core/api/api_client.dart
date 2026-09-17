@@ -368,6 +368,20 @@ class ApiClient {
           return _annunciaCheVaAggiornata(message, body['store']?.toString());
         }
 
+        /*
+         * 🆕 👥 **Ti segue già qualcun altro** — AH.1-ter.4, 17/09/2026.
+         *
+         * ⛔ Senza questo ramo cadeva nella riga qui sotto e diventava
+         * *«qualcosa non ha funzionato»*: la persona avrebbe riprovato per
+         * sempre, perché non c'è niente di rotto — manca una **risposta**.
+         */
+        if (code == TiSegueGiaQualcunoException.codice) {
+          return TiSegueGiaQualcunoException(
+            message ?? 'Ti segue già qualcun altro.',
+            body['chi_ti_segue']?.toString() ?? '',
+          );
+        }
+
         return ServerException(message ?? const ServerException().message);
 
       /*

@@ -34,7 +34,7 @@ import 'widgets/social_buttons.dart';
 /// 💡 Quindi ci si registra sempre **senza palestra**, e il server la sa
 /// gestire: fa nascere un tenant personale.
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key, this.invito});
+  const RegisterScreen({super.key, this.invito, this.diUnTrainer = false});
 
   /// 🆕 🔗 **Il token dell'invito da cui si sta arrivando** — 17/09/2026.
   ///
@@ -45,6 +45,13 @@ class RegisterScreen extends ConsumerStatefulWidget {
   /// ⚠️ `null` per chi si registra normalmente, e in quel caso non cambia
   /// niente.
   final String? invito;
+
+  /// 🆕 🤝 **L'invito e' di un trainer, non di una palestra** — 17/09/2026.
+  ///
+  /// ⚠️ Sono due percorsi diversi (`/invito` e `/invito-palestra`) e tornarci
+  /// sul quello sbagliato aprirebbe *«questo invito non e' piu' valido»* su un
+  /// invito buono: un difetto che si legge come una scadenza.
+  final bool diUnTrainer;
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -202,7 +209,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
        * questa riga c'e' una rete di mezzo.
        */
       if (widget.invito != null && mounted) {
-        context.go('${AppRoutes.invito}/${widget.invito}');
+        context.go(
+          '${widget.diUnTrainer ? AppRoutes.invitoTrainer : AppRoutes.invito}'
+          '/${widget.invito}',
+        );
 
         return;
       }

@@ -147,6 +147,29 @@ class GettoniEsauritiException extends ApiException {
       : (servivano! - saldo!).clamp(0, servivano!);
 }
 
+/// 🆕 409 con `code: hai_gia_un_trainer` — **ti segue già qualcun altro**.
+///
+/// 🚨 **Non è un errore: è una domanda.** Il server si ferma perché un secondo
+/// trainer non deve arrivare di nascosto — da quel momento tutti e due vedono
+/// gli allenamenti di questa persona, tutti e due le scrivono, e tutti e due le
+/// tengono occupato uno slot. ⚠️ Tre cose che ha il diritto di sapere **prima**.
+///
+/// ⛔ **Ha una classe sua per la stessa ragione dei gettoni**: senza, il 409
+/// cadrebbe nel ramo generico e diventerebbe *«qualcosa non ha funzionato,
+/// riprova»*. 💡 E riprovare non può funzionare, perché non c'è niente di
+/// rotto: manca una risposta.
+///
+/// 💡 Porta il **nome** dell'altro, che serve a scrivere la frase: l'app da
+/// sola non ce l'ha, sta guardando un invito e non l'elenco dei propri trainer.
+class TiSegueGiaQualcunoException extends ApiException {
+  const TiSegueGiaQualcunoException(super.message, this.chiTiSegue);
+
+  /// 🚨 Il contratto col server. Non cambia insieme alla frase.
+  static const codice = 'hai_gia_un_trainer';
+
+  final String chiTiSegue;
+}
+
 /// 429 generico o 503 dal fornitore AI: si può riprovare.
 class RateLimitedException extends ApiException {
   const RateLimitedException(super.message, this.retryAfter);

@@ -13,7 +13,7 @@ import 'widgets/social_buttons.dart';
 
 /// L'accesso — A2.3.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key, this.invito});
+  const LoginScreen({super.key, this.invito, this.diUnTrainer = false});
 
   /// 🆕 🔗 **Il token dell'invito da cui si sta arrivando** — 17/09/2026.
   ///
@@ -25,6 +25,13 @@ class LoginScreen extends ConsumerStatefulWidget {
   /// 💡 Quando c'è, la schermata dice **perché** si sta accedendo e, finito,
   /// riporta all'invito invece che a casa.
   final String? invito;
+
+  /// 🆕 🤝 **L'invito e' di un trainer, non di una palestra** — 17/09/2026.
+  ///
+  /// ⚠️ Sono due percorsi diversi (`/invito` e `/invito-palestra`) e tornarci
+  /// sul quello sbagliato aprirebbe *«questo invito non e' piu' valido»* su un
+  /// invito buono: un difetto che si legge come una scadenza.
+  final bool diUnTrainer;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -86,7 +93,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
        * invitato sparirebbe senza un errore.
        */
       if (widget.invito != null && mounted) {
-        context.go('${AppRoutes.invito}/${widget.invito}');
+        context.go(
+          '${widget.diUnTrainer ? AppRoutes.invitoTrainer : AppRoutes.invito}'
+          '/${widget.invito}',
+        );
 
         return;
       }
@@ -267,6 +277,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () => context.go(
                         widget.invito == null
                             ? AppRoutes.register
+                            : widget.diUnTrainer
+                            ? AppRoutes.registratiPerInvitoTrainer(
+                                widget.invito!,
+                              )
                             : AppRoutes.registratiPerInvito(widget.invito!),
                       ),
                       child: const Text('Non ho ancora un account'),

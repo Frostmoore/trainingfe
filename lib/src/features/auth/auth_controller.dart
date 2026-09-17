@@ -725,6 +725,22 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   ),
 );
 
+/// 🆕 🔑 **C'è una sessione, sì o no?** — 17/09/2026.
+///
+/// ⚠️ Esiste per dare alle schermate che devono solo **saperlo** una domanda
+/// piccola invece dell'intero controller. 💡 La differenza si vede nei test:
+/// sostituire questo vuol dire scrivere `true` o `false`, mentre sostituire
+/// `authControllerProvider` vuol dire costruire un `AuthController` con dentro
+/// client, token store, cache e blocco biometrico — quattro cose che a una
+/// pagina d'invito non interessano.
+///
+/// 🚨 Non è un doppione: è **la stessa** sorgente, vista da uno spiraglio più
+/// stretto. Chi la legge non può far finta di essere autenticato, può solo
+/// sapere se lo è.
+final sessioneAttivaProvider = Provider<bool>(
+  (ref) => ref.watch(authControllerProvider.select((s) => s.isAuthenticated)),
+);
+
 final bloccoBiometricoProvider = Provider<BloccoBiometrico>(
   (ref) => BloccoBiometrico(),
 );

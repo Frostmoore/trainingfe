@@ -120,9 +120,9 @@ class _DettagliState extends ConsumerState<_Dettagli> {
 
         /*
          * ⛔ **Il pulsante è defilato, e non per timidezza.** È un'azione che
-         * non si annulla da sola: per rientrare serve di nuovo il codice della
-         * palestra, e quello lo dà la palestra. 💡 Un `OutlinedButton` in fondo
-         * si trova quando lo si cerca, e non si tocca per sbaglio scorrendo.
+         * non si annulla da sola: per rientrare serve un invito, e quello lo
+         * manda la palestra. 💡 Un `OutlinedButton` in fondo si trova quando lo
+         * si cerca, e non si tocca per sbaglio scorrendo.
          */
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
@@ -137,7 +137,19 @@ class _DettagliState extends ConsumerState<_Dettagli> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.logout_rounded),
-          label: const Text('Esci dalla palestra'),
+          /*
+           * 🆕 📌 **«Dissocia palestra», non «Esci dalla palestra»** — AH.2,
+           * deciso dal committente il 17/09/2026.
+           *
+           * ⚠️ Il problema era una parola sola: **«Esci» è anche il logout**, e
+           * le due voci stanno a due tocchi di distanza dentro il profilo. Chi
+           * legge in fretta ne tocca una per l'altra, e una delle due non si
+           * annulla da sola.
+           *
+           * 💡 «Dissocia» non somiglia a niente altro in questa app, ed è
+           * esattamente per questo che va bene.
+           */
+          label: const Text('Dissocia palestra'),
         ),
       ],
     );
@@ -155,15 +167,15 @@ class _DettagliState extends ConsumerState<_Dettagli> {
     final conferma = await showDialog<bool>(
       context: context,
       builder: (dialogo) => AlertDialog(
-        title: Text('Uscire da ${widget.palestra.nome}?'),
+        title: Text('Dissociare ${widget.palestra.nome}?'),
         content: const Text(
           'Il tuo diario, le tue misure e le schede che ti sei scritto da solo '
           'restano tuoi e ti seguono.\n\n'
           'Restano invece alla palestra: le schede e i piani che ti ha scritto '
           'il trainer, e la conversazione con lui — i messaggi sono di tutti e '
           'due, e non te li puoi portare via.\n\n'
-          'Per rientrare ti servirà di nuovo il codice della palestra, e te lo '
-          'può dare solo lei.',
+          'Per rientrare ti servirà un nuovo invito, e te lo può mandare solo '
+          'la palestra.',
         ),
         actions: [
           TextButton(
@@ -172,7 +184,7 @@ class _DettagliState extends ConsumerState<_Dettagli> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogo).pop(true),
-            child: const Text('Esci'),
+            child: const Text('Dissocia'),
           ),
         ],
       ),

@@ -170,9 +170,17 @@ class _SchermataBenvenutoState extends ConsumerState<SchermataBenvenuto> {
                    * parte pensa di aver sbagliato app: una riga che glielo dice
                    * costa niente e gli evita di cercare.
                    */
+                  /*
+                   * 🆕 ⛔ **Qui c'era «col codice che ti ha dato»** — 17/09/2026.
+                   *
+                   * 🚨 Il codice digitato è stato tolto il 15/09: in palestra si
+                   * entra **solo da un invito**. ⚠️ La frase mandava chi si era
+                   * appena registrato a cercare nel profilo una voce che non
+                   * esiste più, con in mano un codice che non serve a niente.
+                   */
                   Text(
-                    'Se sei iscritto a una palestra potrai entrarci dopo, '
-                    'dal tuo profilo, con il codice che ti ha dato.',
+                    'Se sei iscritto a una palestra, chiedile il link '
+                    "d'invito: aprendolo entri con un tocco.",
                     textAlign: TextAlign.center,
                     style: tema.textTheme.bodySmall?.copyWith(
                       color: tema.colorScheme.onSurfaceVariant,

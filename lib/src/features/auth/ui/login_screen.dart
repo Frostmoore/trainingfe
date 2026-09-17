@@ -13,7 +13,18 @@ import 'widgets/social_buttons.dart';
 
 /// L'accesso — A2.3.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.invito});
+
+  /// 🆕 🔗 **Il token dell'invito da cui si sta arrivando** — 17/09/2026.
+  ///
+  /// 📌 Il committente: *«se ho già un account non ha senso essere rimandati
+  /// alla registrazione»*. ⚠️ Chi riceve un invito può averlo già — telefono
+  /// nuovo, app reinstallata, sessione scaduta — e deve poter **entrare**
+  /// invece di crearne un secondo.
+  ///
+  /// 💡 Quando c'è, la schermata dice **perché** si sta accedendo e, finito,
+  /// riporta all'invito invece che a casa.
+  final String? invito;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -67,6 +78,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _password.text,
             joinCode: ref.read(brandingControllerProvider).joinCode,
           );
+
+      /*
+       * 🆕 🔗 **Chi arriva da un invito ci torna** — 17/09/2026.
+       *
+       * ⛔ Senza, il router lo porterebbe **a casa** e la palestra che l'aveva
+       * invitato sparirebbe senza un errore.
+       */
+      if (widget.invito != null && mounted) {
+        context.go('${AppRoutes.invito}/${widget.invito}');
+
+        return;
+      }
+
       // Il router porta dentro da solo: `redirect` reagisce al cambio di stato.
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
@@ -137,6 +161,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     MarchioInCima(branding: branding),
+
+                    /*
+                     * 🆕 🔗 **Perché sei qui** — 17/09/2026.
+                     *
+                     * 📌 Il committente: *«un pannello di accesso con tipo un
+                     * toast o qualcosa del genere»*.
+                     *
+                     * ⚠️ **Una riga e non un toast**, e la differenza conta: un
+                     * toast dura tre secondi e chi sta cercando la password non
+                     * lo legge. 💡 Questa resta finché serve, e sparisce da sola
+                     * per chi arriva da un accesso normale.
+                     */
+                    if (widget.invito != null) ...[
+                      const SizedBox(height: Gap.md),
+                      Text(
+                        "Accedi per accettare l'invito: appena entri te lo "
+                        'ritrovi qui.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: Gap.xl),
 
                     TextFormField(
@@ -211,7 +259,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: Gap.sm),
                     TextButton(
-                      onPressed: () => context.go(AppRoutes.register),
+                      /*
+                       * 🆕 🔗 **E l'invito si porta dietro anche di qua** —
+                       * 17/09/2026. ⚠️ Chi scopre qui di non avere un account non
+                       * deve perdere la palestra che l'ha invitato.
+                       */
+                      onPressed: () => context.go(
+                        widget.invito == null
+                            ? AppRoutes.register
+                            : AppRoutes.registratiPerInvito(widget.invito!),
+                      ),
                       child: const Text('Non ho ancora un account'),
                     ),
 

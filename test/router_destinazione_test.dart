@@ -20,6 +20,8 @@ import 'package:training_companion/src/features/auth/auth_controller.dart';
 /// verificabile senza montare tutta l'app. Estratta in `destinazione()`, si
 /// prova in venti righe.
 void main() {
+  proveDellInvito();
+
   String? dove(
     AuthStatus stato, {
     String posizione = AppRoutes.home,
@@ -200,5 +202,127 @@ void main() {
         );
       }
     }
+  });
+}
+
+/// 🔗 L'invito deve arrivare a destinazione — 17/09/2026.
+///
+/// ══ 🚨 IL DIFETTO CHE QUESTI TEST HANNO TROVATO ═══════════════════════════
+///
+/// ⛔ **Il link d'invito non funzionava per chi non ha una sessione**, cioè
+/// esattamente la persona a cui un invito si manda.
+///
+/// `_public` contiene `{gymCode, login, register, gymInactive}` e `isPublic()`
+/// confronta la stringa **intera**. 🚨 Due motivi perché `/invito-palestra/ABC`
+/// non ci finisse dentro: non è nell'elenco, e porta un token appeso — quindi
+/// nemmeno aggiungendolo il confronto esatto lo riconoscerebbe.
+///
+/// ⚠️ Risultato: la regola 6 mandava al **login**, e il token spariva. La
+/// schermata d'accesso arrivava vestita della palestra — il branding si carica
+/// per conto suo — quindi sembrava che avesse funzionato.
+///
+/// 🚨 **E colpiva anche chi installa dal link.** `app.dart` legge il referrer
+/// del Play Store e fa `go('/invito-palestra/$token')`: quel `go` passa dalla
+/// stessa cascata, quindi anche il giro «installo e entro» finiva al login.
+/// Cioè l'unica strada per entrare in una palestra, da quando il codice è stato
+/// tolto il 15/09.
+void proveDellInvito() {
+  const token = '/invito-palestra/AtE1AiDYOrfoR8yDi5IGKRX9pYwbcK1i';
+
+  group("l'invito arriva a destinazione", () {
+    /// 🚨 Il caso per cui l'invito esiste: qualcuno che non è ancora nessuno.
+    test('chi non ha una sessione ci resta sopra', () {
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedOut,
+          sceltaFatta: true,
+          posizione: token,
+        ),
+        isNull,
+        reason:
+            'Chi apre un invito senza account viene mandato al login, e il '
+            'token si perde.',
+      );
+    });
+
+    /// ⚖️ E chi invece ce l'ha già non deve essere buttato a casa: sta
+    /// guardando un invito, non una schermata d'accesso.
+    test('e chi ce l\'ha non viene buttato dentro', () {
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedIn,
+          sceltaFatta: true,
+          posizione: token,
+        ),
+        isNull,
+      );
+    });
+
+    /// 🚨 **Anche prima di aver scelto una palestra.** Chi installa dal link non
+    /// è mai passato dal benvenuto: la regola 5 lo rimanderebbe lì, e l'invito
+    /// sarebbe di nuovo perso.
+    test('anche per chi non ha ancora scelto niente', () {
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedOut,
+          sceltaFatta: false,
+          posizione: token,
+        ),
+        isNull,
+        reason: 'Chi installa dal link non è mai passato dal benvenuto.',
+      );
+    });
+
+    /// 🆕 🚨 **E vale anche per la registrazione che arriva da li'.**
+    ///
+    /// ⛔ Il primo tentativo passava il token in una **query**
+    /// (`/registrati?invito=...`), e la cascata riceve `matchedLocation`, che la
+    /// query non ce l'ha: la regola 5 mandava al benvenuto chi aveva appena
+    /// toccato «Crea un account». 🔬 Visto sull'emulatore.
+    test('e la registrazione che ne arriva', () {
+      const daInvito = '/registrati/da-invito/AtE1AiDYOrfoR8yDi5IGKRX9pYwbcK1i';
+
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedOut,
+          sceltaFatta: false,
+          posizione: daInvito,
+        ),
+        isNull,
+        reason:
+            'Chi tocca «Crea un account» da un invito finisce al benvenuto.',
+      );
+    });
+
+    /// 🆕 🔑 **E l'accesso che ne arriva** — 17/09/2026.
+    ///
+    /// 📌 Il committente: *«se ho già un account non ha senso essere rimandati
+    /// alla registrazione»*. ⚠️ Chi ha cambiato telefono passa di qui, e la
+    /// regola 5 lo manderebbe al benvenuto come faceva con la registrazione.
+    test("e l'accesso che ne arriva", () {
+      const daInvito = '/accedi/da-invito/AtE1AiDYOrfoR8yDi5IGKRX9pYwbcK1i';
+
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedOut,
+          sceltaFatta: false,
+          posizione: daInvito,
+        ),
+        isNull,
+        reason: 'Chi ha già un account e apre un invito finisce al benvenuto.',
+      );
+    });
+
+    /// ⛔ Ma le altre schermate restano chiuse: si apre l'invito, non l'app.
+    test('e non apre nient\'altro', () {
+      expect(
+        destinazione(
+          stato: AuthStatus.loggedOut,
+          sceltaFatta: true,
+          posizione: AppRoutes.diary,
+        ),
+        AppRoutes.login,
+      );
+    });
   });
 }

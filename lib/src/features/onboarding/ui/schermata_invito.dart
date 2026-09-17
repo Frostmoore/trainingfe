@@ -138,7 +138,39 @@ class _PaginaState extends ConsumerState<_Pagina> {
               _DueTasti(
                 inCorso: _inCorso,
                 nome: marchio.name,
+                /*
+                 * 🆕 🚨 **Senza un account non si entra, e va detto PRIMA**
+                 * — 17/09/2026.
+                 *
+                 * ⛔ Fino al 16/09 il tasto diceva «Entro in Palestra Demo» a
+                 * chiunque. Chi non aveva un account lo premeva, la richiesta
+                 * partiva senza sessione, e tornava un errore tecnico: un
+                 * vicolo cieco, e per la persona che l'invito esiste per
+                 * raggiungere. 🔬 Provato sull'emulatore con i dati puliti.
+                 *
+                 * 📌 Il committente: *«due passi, ma detti chiari»*.
+                 */
+                serveUnAccount: !ref.watch(sessioneAttivaProvider),
                 onAccetta: _accetta,
+                /*
+                 * 🆕 🔑 **All'accesso, non alla registrazione** — 17/09/2026.
+                 *
+                 * 📌 Il committente: *«e se sono su un telefono nuovo o
+                 * semplicemente non ho fatto il login? Non mi deve mandare per
+                 * forza alla registrazione»*.
+                 *
+                 * ⚠️ È il caso che il primo giro aveva dimenticato: chi riceve un
+                 * invito **può avere già un account**. Mandarlo a registrarsi gli
+                 * fa creare un secondo account, oppure lo blocca su un'email
+                 * «già in uso» senza dirgli cosa fare.
+                 *
+                 * 💡 E dall'accesso la registrazione è a un tocco — col token
+                 * ancora in tasca.
+                 */
+                onAccedi: () =>
+                    context.push(AppRoutes.accediPerInvito(widget.token)),
+                onRegistrati: () =>
+                    context.push(AppRoutes.registratiPerInvito(widget.token)),
                 onRifiuta: _rifiuta,
               ),
             ],
@@ -360,13 +392,22 @@ class _DueTasti extends StatelessWidget {
   const _DueTasti({
     required this.inCorso,
     required this.nome,
+    required this.serveUnAccount,
     required this.onAccetta,
+    required this.onAccedi,
+    required this.onRegistrati,
     required this.onRifiuta,
   });
 
   final bool inCorso;
   final String? nome;
+
+  /// 🆕 Chi guarda non ha una sessione: il primo passo e' iscriversi.
+  final bool serveUnAccount;
+
   final VoidCallback onAccetta;
+  final VoidCallback onAccedi;
+  final VoidCallback onRegistrati;
   final VoidCallback onRifiuta;
 
   @override
@@ -375,19 +416,63 @@ class _DueTasti extends StatelessWidget {
       padding: const EdgeInsets.all(Gap.lg),
       child: Column(
         children: [
+          /*
+           * 🆕 ⚠️ **La riga che spiega il primo passo** — 17/09/2026.
+           *
+           * 💡 Sta **sopra** il tasto e non dentro: chi legge deve sapere cosa
+           * sta per succedere **prima** di premere, non scoprirlo dopo. E chi
+           * un account ce l'ha gia' non la vede affatto.
+           */
+          if (serveUnAccount) ...[
+            Text(
+              "Per entrare serve il tuo account. L'invito ti aspetta qui.",
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+          ],
+
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: inCorso ? null : onAccetta,
+              onPressed: inCorso
+                  ? null
+                  : (serveUnAccount ? onAccedi : onAccetta),
               child: inCorso
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text('Entro in ${nome ?? 'palestra'}'),
+                  : Text(
+                      serveUnAccount
+                          ? 'Accedi'
+                          : 'Entro in ${nome ?? 'palestra'}',
+                    ),
             ),
           ),
+
+          /*
+           * 🆕 ⚖️ **E la registrazione accanto, non sotto** — 17/09/2026.
+           *
+           * ⚠️ Due porte, e non si sa quale serve: chi riceve un invito può
+           * essere nuovo **o** avere già un account su un telefono che ha
+           * cambiato. 💡 L'accesso è quello pieno perché è l'unico che può
+           * fallire in modo confuso — un'email «già in uso» non dice a nessuno
+           * che deve accedere invece di iscriversi.
+           */
+          if (serveUnAccount) ...[
+            const SizedBox(height: Gap.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: inCorso ? null : onRegistrati,
+                child: const Text('Non ho ancora un account'),
+              ),
+            ),
+          ],
           const SizedBox(height: Gap.sm),
 
           /*

@@ -34,7 +34,17 @@ import 'widgets/social_buttons.dart';
 /// 💡 Quindi ci si registra sempre **senza palestra**, e il server la sa
 /// gestire: fa nascere un tenant personale.
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.invito});
+
+  /// 🆕 🔗 **Il token dell'invito da cui si sta arrivando** — 17/09/2026.
+  ///
+  /// 📌 Il committente ha scelto *«due passi, ma detti chiari»*: chi riceve un
+  /// invito e non ha un account si registra, e **torna all'invito** invece di
+  /// ritrovarsi a casa senza sapere che fine abbia fatto la palestra.
+  ///
+  /// ⚠️ `null` per chi si registra normalmente, e in quel caso non cambia
+  /// niente.
+  final String? invito;
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -179,6 +189,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             maggiorenne: _maggiorenne,
             condizioniAccettate: _condizioni,
           );
+
+      /*
+       * 🆕 🔗 **Chi arriva da un invito ci torna** — 17/09/2026.
+       *
+       * ⛔ Senza questo, finita l'iscrizione la regola 7 del router lo
+       * porterebbe **a casa**: la palestra che l'aveva invitato sparirebbe
+       * senza un errore, e quella persona non saprebbe nemmeno cosa ha
+       * sbagliato. 💡 E' il secondo dei «due passi detti chiari».
+       *
+       * ⚠️ `mounted` prima di toccare il contesto: fra la chiamata al server e
+       * questa riga c'e' una rete di mezzo.
+       */
+      if (widget.invito != null && mounted) {
+        context.go('${AppRoutes.invito}/${widget.invito}');
+
+        return;
+      }
     } on Object catch (error) {
       final tradotto = ApiClient.unwrapError(error);
 

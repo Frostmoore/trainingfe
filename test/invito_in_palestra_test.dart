@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/onboarding/data/invito_in_palestra.dart';
 import 'package:training_companion/src/features/onboarding/invito_controller.dart';
+import 'package:training_companion/src/features/auth/auth_controller.dart';
 import 'package:training_companion/src/features/onboarding/ui/schermata_invito.dart';
 
 /// 🎯 La pagina che si apre toccando un link d'invito — 3b-V.
@@ -58,11 +59,22 @@ Map<String, dynamic> _rispostaDelServer({
 ///
 /// 💡 È anche la forma giusta: due affermazioni diverse vogliono due test, così
 /// quando uno diventa rosso si sa **quale** delle due è saltata.
-Widget _schermata(Map<String, dynamic> risposta) => ProviderScope(
+/// 🆕 ⚠️ **`sessioneAttiva` decide quali tasti si vedono** — 17/09/2026.
+///
+/// 📌 Da quando l'invito distingue chi ha un account da chi non ce l'ha, la
+/// pagina ha bisogno di saperlo. 💡 Qui basta un booleano: `sessioneAttivaProvider`
+/// esiste apposta per non dover costruire un `AuthController` intero — con
+/// client, token store, cache e blocco biometrico — dentro un test che parla
+/// d'altro.
+Widget _schermata(
+  Map<String, dynamic> risposta, {
+  bool sessioneAttiva = true,
+}) => ProviderScope(
   overrides: [
     invitoProvider(
       'tok',
     ).overrideWith((ref) async => InvitoInPalestra.fromJson(risposta)),
+    sessioneAttivaProvider.overrideWithValue(sessioneAttiva),
   ],
   child: const MaterialApp(home: SchermataInvito(token: 'tok')),
 );
@@ -169,6 +181,46 @@ void main() {
 
     /// ⛔ **Non si entra per sbaglio**: accettare sposta una persona dentro
     /// un'organizzazione, e da lì si esce solo parlando con loro.
+    /// 🆕 🔑 **Chi non ha una sessione trova due porte** — 17/09/2026.
+    ///
+    /// ⛔ **Prima il tasto diceva «Entro in Olimpo» a chiunque.** Chi non aveva
+    /// un account lo premeva, la richiesta partiva senza sessione e tornava un
+    /// errore tecnico: un vicolo cieco, e proprio per la persona che l'invito
+    /// esiste per raggiungere. 🔬 Provato sull'emulatore con i dati puliti.
+    ///
+    /// 📌 Il committente, dopo averlo visto: *«e se sono su un telefono nuovo
+    /// o semplicemente non ho fatto il login? Non mi deve mandare per forza
+    /// alla registrazione»*. ⚠️ È il caso che il primo rimedio aveva
+    /// dimenticato: chi riceve un invito **può avere già un account**.
+    testWidgets('senza sessione si accede, e la registrazione è accanto', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _schermata(_rispostaDelServer(), sessioneAttiva: false),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Accedi'), findsOneWidget);
+      expect(find.text('Non ho ancora un account'), findsOneWidget);
+
+      // ⛔ E non si offre di entrare: senza sessione non si può, e prometterlo
+      // porterebbe a un errore tecnico.
+      expect(find.text('Entro in Olimpo'), findsNothing);
+
+      // 💡 E si dice **prima** che l'invito non si perde.
+      expect(find.textContaining("L'invito ti aspetta qui"), findsOneWidget);
+    });
+
+    /// ⚖️ E chi la sessione ce l'ha entra e basta: nessun passaggio in più.
+    testWidgets('con la sessione si entra e basta', (tester) async {
+      await tester.pumpWidget(_schermata(_rispostaDelServer()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Entro in Olimpo'), findsOneWidget);
+      expect(find.text('Accedi'), findsNothing);
+      expect(find.text('Non ho ancora un account'), findsNothing);
+    });
+
     testWidgets('accettare chiede conferma', (tester) async {
       await tester.pumpWidget(_schermata(_rispostaDelServer()));
       await tester.pumpAndSettle();

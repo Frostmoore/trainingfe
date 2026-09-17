@@ -264,6 +264,52 @@ class AppRoutes {
   static const _public = {gymCode, login, register, gymInactive};
 
   static bool isPublic(String location) => _public.contains(location);
+
+  /// 🆕 🔗 **Sto guardando un invito?** — 17/09/2026.
+  ///
+  /// ⚠️ **Per prefisso e non per uguaglianza**, perché l'invito porta un token
+  /// appeso: `isPublic()` confronta la stringa intera, e
+  /// `/invito-palestra/AbC123` non sarebbe mai stato riconosciuto nemmeno
+  /// mettendolo nell'elenco.
+  ///
+  /// 🚨 **Ed è esattamente il difetto che c'era**: chi apriva un invito senza
+  /// sessione finiva al **login**, e il token spariva. La schermata d'accesso
+  /// arrivava vestita della palestra — il branding si carica per conto suo —
+  /// quindi sembrava che avesse funzionato.
+  static bool eUnInvito(String location) =>
+      location.startsWith('$invito/') ||
+      location.startsWith('$registerDaInvito/') ||
+      location.startsWith('$loginDaInvito/');
+
+  /// 🆕 🔗 La registrazione, **con l'invito in tasca** — 17/09/2026.
+  ///
+  /// 📌 Il committente: *«due passi, ma detti chiari»*. 💡 Il token viaggia
+  /// nella query e non in un provider: cosi' sopravvive a tutto — al riavvio
+  /// della schermata, a un errore di rete, a un ritorno indietro — e chi legge
+  /// l'indirizzo vede da dove sta arrivando quella persona.
+  ///
+  /// ⚠️ **Un percorso e non una query**, e non è estetica: la cascata del
+  /// router riceve `matchedLocation`, che la query **non ce l'ha**. 🚨 Con
+  /// `?invito=` la regola 5 — «non hai ancora scelto una palestra» — mandava al
+  /// benvenuto chi aveva appena toccato «Crea un account». 🔬 Visto
+  /// sull'emulatore: dall'invito si finiva sulla schermata di presentazione.
+  static String registratiPerInvito(String token) => '$registerDaInvito/$token';
+
+  /// 🆕 La registrazione che arriva da un invito — 17/09/2026.
+  static const registerDaInvito = '/registrati/da-invito';
+
+  /// 🆕 🔑 **L'accesso che arriva da un invito** — 17/09/2026.
+  ///
+  /// 📌 Il committente: *«e se sono su un telefono nuovo o semplicemente non
+  /// ho fatto il login? Non mi deve mandare per forza alla registrazione»*.
+  ///
+  /// ⚠️ È il caso che il primo giro aveva dimenticato: chi riceve un invito
+  /// **può avere già un account** — ha cambiato telefono, ha reinstallato, si
+  /// era sloggato. Mandarlo a registrarsi gli fa creare un secondo account, o
+  /// lo blocca su un'email che «è già in uso» senza dirgli cosa fare.
+  static const loginDaInvito = '/accedi/da-invito';
+
+  static String accediPerInvito(String token) => '$loginDaInvito/$token';
 }
 
 /// **Dove si può stare**, come funzione pura — l'unico punto che lo decide.
@@ -355,6 +401,28 @@ String? destinazione({
   if (posizione == AppRoutes.bloccata && autenticato) return AppRoutes.home;
 
   /*
+   * 4-bis. 🆕 🔗 **Un invito si apre sempre** — 17/09/2026.
+   *
+   * 🚨 **Sta prima della regola 5 e della 6, e sono le due che lo
+   * rompevano**: la 6 mandava al login chi non ha una sessione, la 5 mandava
+   * al benvenuto chi non ha ancora scelto una palestra. ⚠️ Cioè le due
+   * condizioni di **chiunque riceva un invito**: uno che l'app non ce l'ha, o
+   * l'ha appena installata.
+   *
+   * ⛔ E colpiva anche chi **installa dal link**: `app.dart` legge il referrer
+   * del Play Store e fa `go('/invito-palestra/<token>')`, che passa da questa
+   * stessa cascata. Cioè l'unica strada per entrare in una palestra, da quando
+   * il codice digitato è stato tolto il 15/09.
+   *
+   * ⚖️ **Dopo il blocco, pero'.** Un telefono con la sessione bloccata resta
+   * bloccato: un link non e' una chiave, e lasciar passare qualunque schermata
+   * a chi non ha ancora sbloccato vorrebbe dire che il blocco non blocca.
+   *
+   * 💡 E non apre nient'altro: e' una rotta sola, con il suo token.
+   */
+  if (AppRoutes.eUnInvito(posizione)) return null;
+
+  /*
    * 5. **Non ha ancora scelto**: l'app non sa nemmeno di che colore essere.
    *
    * 🚨 `sceltaFatta` e non `haPalestra` — F3. Chi ha toccato «continuo senza
@@ -433,9 +501,39 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, stato) =>
             SchermataInvito(token: stato.pathParameters['token'] ?? ''),
       ),
+      /*
+       * 🆕 🔗 **La registrazione che arriva da un invito** — 17/09/2026.
+       *
+       * ⚠️ Una rotta sua, col token nel **percorso**: la cascata del router
+       * riceve `matchedLocation`, che una query non se la porta dietro.
+       */
+      GoRoute(
+        path: '${AppRoutes.registerDaInvito}/:token',
+        builder: (_, stato) =>
+            RegisterScreen(invito: stato.pathParameters['token']),
+      ),
+
+      /*
+       * 🆕 🔑 **L'accesso che arriva da un invito** — 17/09/2026.
+       *
+       * 📌 *«se ho già un account non ha senso essere rimandati alla
+       * registrazione»*: chi ha cambiato telefono passa di qui.
+       */
+      GoRoute(
+        path: '${AppRoutes.loginDaInvito}/:token',
+        builder: (_, stato) =>
+            LoginScreen(invito: stato.pathParameters['token']),
+      ),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, _) => const RegisterScreen(),
+        /*
+         * 🆕 🔗 **L'invito, se si arriva da li'** — 17/09/2026.
+         *
+         * ⚠️ `null` quando ci si registra normalmente, e in quel caso non
+         * cambia niente: finita l'iscrizione si va a casa come sempre.
+         */
+        builder: (_, stato) =>
+            RegisterScreen(invito: stato.uri.queryParameters['invito']),
       ),
       GoRoute(
         path: AppRoutes.gymInactive,

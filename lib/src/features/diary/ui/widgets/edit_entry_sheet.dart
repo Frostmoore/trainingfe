@@ -145,8 +145,9 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
 
     setState(() {
       if (!_toccati.contains('kcal')) _kcal.text = _pulito(nuovi.kcal);
-      if (!_toccati.contains('protein'))
+      if (!_toccati.contains('protein')) {
         _proteine.text = _pulito(nuovi.proteine);
+      }
       if (!_toccati.contains('carbs')) _carbo.text = _pulito(nuovi.carboidrati);
       if (!_toccati.contains('fat')) _grassi.text = _pulito(nuovi.grassi);
     });

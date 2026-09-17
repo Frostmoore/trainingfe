@@ -7,10 +7,10 @@ import '../../../core/theme/app_theme.dart';
 import '../carica_batteria.dart';
 import '../carica_controller.dart';
 import '../forma_controller.dart';
-import '../indici_di_forma.dart';
 import '../indice_di_effetto.dart';
-import '../reattivita.dart';
 import '../indice_di_effetto_controller.dart';
+import '../indici_di_forma.dart';
+import '../reattivita.dart';
 import 'barra_carico.dart';
 import 'tachimetro_prontezza.dart';
 

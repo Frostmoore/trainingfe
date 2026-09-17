@@ -506,10 +506,12 @@ class _RigaVoceState extends State<_RigaVoce> {
 
     // I campi non toccati si riscrivono con il valore nuovo, gli altri no.
     if (!_toccati.contains('kcal')) _kcal.text = _testo(riscalata.kcal);
-    if (!_toccati.contains('protein'))
+    if (!_toccati.contains('protein')) {
       _proteine.text = _testo(riscalata.proteine);
-    if (!_toccati.contains('carbs'))
+    }
+    if (!_toccati.contains('carbs')) {
       _carbo.text = _testo(riscalata.carboidrati);
+    }
     if (!_toccati.contains('fat')) _grassi.text = _testo(riscalata.grassi);
 
     _applica();

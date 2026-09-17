@@ -511,8 +511,9 @@ class _InterruttoreCloudState extends ConsumerState<_InterruttoreCloud> {
 
     final quando = s.ultimo;
 
-    if (quando == null)
+    if (quando == null) {
       return 'Acceso · non so ancora quando è stato l\'ultimo';
+    }
 
     return 'Ultimo backup: ${daQuando(quando)}';
   }

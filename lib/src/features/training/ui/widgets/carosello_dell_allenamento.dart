@@ -32,13 +32,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../health/tipo_allenamento.dart';
 import '../../../profile/corpo_controller.dart';
 import '../../data/calorie_allenamento.dart';
 import '../../data/catalogo_esercizi.dart';
 import '../../data/storico_unificato.dart';
 import '../../data/tipo_scelto.dart';
 import '../../muscoli_allenati.dart';
-import '../../../health/tipo_allenamento.dart';
 import '../../statistiche_allenamento.dart';
 import '../../statistiche_controller.dart';
 import '../../training_controller.dart';

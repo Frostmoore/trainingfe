@@ -26,6 +26,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/storage/archivio_salute.dart';
 import '../../health/health_controller.dart';
 import '../training_controller.dart' show revisioneSchedeProvider;
 import 'gruppo_muscolare.dart';
@@ -386,10 +387,113 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
       jsonEncode(righe.map((e) => e.toJson()).toList()),
     );
 
-    return CatalogoEsercizi(righe);
+    final catalogo = CatalogoEsercizi(righe);
+
+    /*
+     * 🔁 **Le serie fatte senza rete prendono l'id vero** — 3b-B.16.13.
+     *
+     * 💡 Qui e non altrove perché questo è il momento in cui la rete c'è
+     * **di sicuro**: il catalogo è appena arrivato. ⚠️ In un `try` suo: una
+     * riconciliazione che non riesce non deve portarsi via il catalogo.
+     */
+    try {
+      final api = ref.read(apiClientProvider);
+
+      final toccate = await riconciliaLeSerieProvvisorie(
+        archivio: ref.read(archivioSaluteProvider),
+        catalogo: catalogo,
+        crea: (nome) =>
+            api.post<Map<String, dynamic>>('/exercises', body: {'name': nome}),
+      );
+
+      if (toccate > 0) debugPrint('serie provvisorie: $toccate ripuntate');
+    } on Object catch (e) {
+      debugPrint('serie provvisorie: riconciliazione rimandata — $e');
+    }
+
+    return catalogo;
   } on Object catch (e) {
     debugPrint('catalogo: dalla rete non arriva — $e');
 
     return await dallaCopia() ?? CatalogoEsercizi.vuoto;
   }
 });
+
+/// Dà l'id vero alle serie salvate con un id **provvisorio** — 3b-B.16.13,
+/// 18/09/2026.
+///
+/// ══ 📌 IL DEBITO CHE CHIUDE ════════════════════════════════════════════
+///
+/// Senza rete, e con un nome che il catalogo sul telefono non conosceva,
+/// `logSet` salva la serie con un id negativo invece di buttarla
+/// (B.16.10-bis: *«una serie fatta non si perde mai»*). ⛔ Ma quell'id restava
+/// lì **per sempre**: lo storico e i muscoli funzionavano lo stesso — la
+/// ricerca ricade sul nome — mentre la progressione per esercizio, i primati e
+/// il MET delle calorie cercano per id, e non la trovavano.
+///
+/// ══ 🎯 COME ══════════════════════════════════════════════════════════════
+///
+/// 1. si cerca il nome nel catalogo appena arrivato;
+/// 2. se non c'è, lo si chiede al server con [crea] — la stessa `POST
+///    /exercises` che `logSet` avrebbe fatto con la rete: il server riconosce i
+///    nomi, e due persone che scrivono «Panca piana» finiscono sullo **stesso**
+///    esercizio;
+/// 3. si passa il MET, poi si ripunta con `applicaLeRiconciliazioni` — lo
+///    stesso binario delle fusioni di 3b-Q, con la sua protezione sul vincolo
+///    unico.
+///
+/// ⛔ **Mai con una seduta aperta** (B.16.4): la serie che stai registrando non
+/// si riscrive sotto le mani. Si fa al prossimo catalogo.
+///
+/// 💡 Ripetibile: la seconda volta non trova più niente di negativo. E un
+/// nome che il server rifiuta resta provvisorio, e si riprova la volta dopo.
+///
+/// @return quante righe sono state ripuntate
+@visibleForTesting
+Future<int> riconciliaLeSerieProvvisorie({
+  required ArchivioSalute archivio,
+  required CatalogoEsercizi catalogo,
+  required Future<Map<String, dynamic>> Function(String nome) crea,
+}) async {
+  if (await archivio.sedutaAperta() != null) return 0;
+
+  final provvisori = await archivio.eserciziProvvisori();
+
+  if (provvisori.isEmpty) return 0;
+
+  final rinvii = <int, int>{};
+  final met = <int, double>{};
+
+  for (final voce in provvisori.entries) {
+    int? vero;
+    double? suoMet;
+
+    final noto = catalogo.perNome(voce.value);
+
+    if (noto != null) {
+      vero = noto.id;
+      suoMet = noto.met;
+    } else {
+      try {
+        final creato = await crea(voce.value);
+
+        vero = (creato['id'] as num?)?.toInt();
+        suoMet = (creato['met'] as num?)?.toDouble();
+      } on Object catch (e) {
+        debugPrint("serie provvisoria «${voce.value}»: resta com'è — $e");
+      }
+    }
+
+    // ⚠️ Solo un id vero: un altro negativo non è una riconciliazione.
+    if (vero == null || vero <= 0) continue;
+
+    rinvii[voce.key] = vero;
+    if (suoMet != null) met[voce.key] = suoMet;
+  }
+
+  if (rinvii.isEmpty) return 0;
+
+  await archivio.completaIlMetDelleProvvisorie(met);
+
+  return archivio.applicaLeRiconciliazioni(rinvii);
+}

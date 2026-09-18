@@ -306,9 +306,9 @@ class SessionActions {
      * id e **poi per nome**, e il nome ce l'ha. Le calorie usano il MET, che
      * senza catalogo non c'è — e lì la stima ricade sul valore di serie.
      *
-     * ⏳ **Debito dichiarato**: la riconciliazione (dare l'id vero a una serie
-     * provvisoria quando la rete torna) non c'è ancora. Sta nel piano come
-     * B.16.13, e finché non c'è quella serie resta con l'id negativo.
+     * 🔁 **E quando la rete torna l'id diventa vero** — B.16.13, 18/09/2026:
+     * `riconciliaLeSerieProvvisorie` in `catalogo_esercizi.dart`, al primo
+     * catalogo arrivato dalla rete con nessuna seduta aperta.
      */
     id ??= -exerciseName.hashCode.abs();
 

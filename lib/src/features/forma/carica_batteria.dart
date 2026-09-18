@@ -636,11 +636,33 @@ abstract final class CaricaBatteria {
 
     final ultimo = giorni.length - 1;
 
+    final ieri = siViveAncoraIeri(
+      notteDiOggi: giorni[ultimo].minutiDormiti != null,
+      notteDiIeri: ultimo > 0 && giorni[ultimo - 1].minutiDormiti != null,
+      oraLocale: oraLocale,
+    );
+
+    return ieri ? ultimo - 1 : ultimo;
+  }
+
+  /// La regola di [indiceDelGiornoInCorso], **senza la catena** — 3b-AD.5,
+  /// 18/09/2026.
+  ///
+  /// 🚨 **Esiste perché la regola serviva in due posti**: la Carica e il
+  /// Carico dell'header nascono dagli stessi giorni, e il Carico cambiava
+  /// giorno a mezzanotte mentre la Carica al risveglio. Due confini diversi
+  /// nella stessa riga dell'header. 💡 Scritta una volta sola, non possono più
+  /// divergere.
+  static bool siViveAncoraIeri({
+    required bool notteDiOggi,
+    required bool notteDiIeri,
+    required int oraLocale,
+  }) {
     // 💡 La notte di oggi c'è: la giornata è cominciata, e siamo dentro.
-    if (giorni[ultimo].minutiDormiti != null) return ultimo;
+    if (notteDiOggi) return false;
 
     // ⛔ Tardi, e la notte non è comparsa: non l'ha registrata nessuno.
-    if (oraLocale >= oraOltreLaQualeIlGiornoEComunqueCominciato) return ultimo;
+    if (oraLocale >= oraOltreLaQualeIlGiornoEComunqueCominciato) return false;
 
     /*
      * 🌙 Presto, e la notte di oggi non c'è ancora: si sta ancora vivendo
@@ -648,11 +670,7 @@ abstract final class CaricaBatteria {
      * sappiamo niente nemmeno di quella, e tornare indietro sposterebbe il
      * problema di un giorno senza risolverlo.
      */
-    if (ultimo > 0 && giorni[ultimo - 1].minutiDormiti != null) {
-      return ultimo - 1;
-    }
-
-    return ultimo;
+    return notteDiIeri;
   }
 
   /// Quanto si è speso **da quel risveglio a adesso**, mezzanotte compresa.

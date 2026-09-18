@@ -1326,6 +1326,47 @@ class ArchivioSalute extends _$ArchivioSalute {
     return spostate;
   }
 
+  /// Le serie salvate con un **id provvisorio**, e il nome con cui sono state
+  /// fatte — 3b-B.16.13, 18/09/2026.
+  ///
+  /// 💡 Un id negativo nasce solo in `SessionActions.logSet`, quando il nome
+  /// non era nel catalogo e la rete non rispondeva (B.16.10-bis): è l'unico
+  /// modo di riconoscerle, ed è il motivo per cui è negativo.
+  Future<Map<int, String>> eserciziProvvisori() async {
+    final righe =
+        await (selectOnly(serieDelleSedute, distinct: true)
+              ..addColumns([
+                serieDelleSedute.esercizioId,
+                serieDelleSedute.nomeEsercizio,
+              ])
+              ..where(serieDelleSedute.esercizioId.isSmallerThanValue(0)))
+            .get();
+
+    return {
+      for (final r in righe)
+        r.read(serieDelleSedute.esercizioId)!: r.read(
+          serieDelleSedute.nomeEsercizio,
+        )!,
+    };
+  }
+
+  /// Dà il MET alle serie provvisorie che non l'avevano — 3b-B.16.13.
+  ///
+  /// ⚠️ **Prima** di ripuntarle con [applicaLeRiconciliazioni]: dopo, non si
+  /// distinguerebbero più dalle serie di quell'esercizio senza MET per scelta
+  /// della palestra, e quelle vanno lasciate come sono.
+  ///
+  /// ⛔ Le calorie delle sedute già chiuse **non si ricalcolano**: sono state
+  /// scritte col MET di ripiego, e riscriverle cambierebbe a posteriori un
+  /// giorno del diario che la persona ha già visto.
+  Future<void> completaIlMetDelleProvvisorie(Map<int, double> metPerId) async {
+    for (final voce in metPerId.entries) {
+      await (update(serieDelleSedute)
+            ..where((t) => t.esercizioId.equals(voce.key) & t.met.isNull()))
+          .write(SerieDelleSeduteCompanion(met: Value(voce.value)));
+    }
+  }
+
   /// Riscrive gli id dentro le **schede salvate sul telefono** — 3b-Q.
   ///
   /// ══ 🚨 SENZA QUESTO, LA FUSIONE NON SI VEDE PROPRIO ═══════════════════

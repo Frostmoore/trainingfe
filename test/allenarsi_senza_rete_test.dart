@@ -295,6 +295,124 @@ void main() {
       expect(await archivio.laScheda(id), isNotNull);
     },
   );
+
+  /// ══ 🔁 E QUANDO LA RETE TORNA, L'ID PROVVISORIO DIVENTA VERO ══════════
+  ///
+  /// 3b-B.16.13, 18/09/2026. ⛔ Prima la serie restava col suo id negativo
+  /// **per sempre**: progressione e primati cercano per id, e non la trovavano.
+  group('la riconciliazione degli id provvisori', () {
+    const macchina = 'Macchina strana della palestra nuova';
+
+    Future<int> unaSerieFattaSenzaRete({bool chiusa = true}) async {
+      final seduta = await archivio.apriSeduta();
+
+      await archivio.registraSerie(
+        SerieDelleSeduteCompanion.insert(
+          sedutaId: seduta,
+          esercizioId: -macchina.hashCode.abs(),
+          nomeEsercizio: macchina,
+          numero: 1,
+        ),
+      );
+
+      if (chiusa) await archivio.chiudiSeduta(seduta);
+
+      return seduta;
+    }
+
+    test('il nome che il catalogo conosce prende il suo id e il MET', () async {
+      final seduta = await unaSerieFattaSenzaRete();
+
+      final toccate = await riconciliaLeSerieProvvisorie(
+        archivio: archivio,
+        catalogo: CatalogoEsercizi(const [
+          EsercizioDelCatalogo(
+            id: 301,
+            nome: macchina,
+            primario: null,
+            secondari: [],
+            met: 4.5,
+          ),
+        ]),
+        crea: (_) => throw StateError('il catalogo lo conosceva già'),
+      );
+
+      final serie = await archivio.serieDi(seduta);
+
+      expect(toccate, 1);
+      expect(serie.single.esercizioId, 301);
+      expect(serie.single.met, 4.5);
+    });
+
+    /// 💡 **Lo stesso `POST /exercises` che `logSet` avrebbe fatto con la
+    /// rete**: il server riconosce i nomi.
+    test('un nome sconosciuto si chiede al server', () async {
+      final seduta = await unaSerieFattaSenzaRete();
+      final chiesti = <String>[];
+
+      await riconciliaLeSerieProvvisorie(
+        archivio: archivio,
+        catalogo: CatalogoEsercizi.vuoto,
+        crea: (nome) async {
+          chiesti.add(nome);
+
+          return {'id': 777, 'name': nome};
+        },
+      );
+
+      expect(chiesti, [macchina]);
+      expect((await archivio.serieDi(seduta)).single.esercizioId, 777);
+    });
+
+    /// ⛔ **Il server che non risponde non perde niente**: resta provvisoria,
+    /// e si riprova al prossimo catalogo.
+    test('se il server non risponde resta provvisoria', () async {
+      final seduta = await unaSerieFattaSenzaRete();
+
+      final toccate = await riconciliaLeSerieProvvisorie(
+        archivio: archivio,
+        catalogo: CatalogoEsercizi.vuoto,
+        crea: (_) => throw DioException(requestOptions: RequestOptions()),
+      );
+
+      expect(toccate, 0);
+      expect((await archivio.serieDi(seduta)).single.esercizioId, lessThan(0));
+    });
+
+    /// 🚨 B.16.4: **mai sotto le mani di chi si sta allenando**.
+    test('con una seduta aperta non si tocca niente', () async {
+      final seduta = await unaSerieFattaSenzaRete(chiusa: false);
+
+      final toccate = await riconciliaLeSerieProvvisorie(
+        archivio: archivio,
+        catalogo: CatalogoEsercizi(const [
+          EsercizioDelCatalogo(
+            id: 301,
+            nome: macchina,
+            primario: null,
+            secondari: [],
+          ),
+        ]),
+        crea: (_) => throw StateError('non doveva chiedere'),
+      );
+
+      expect(toccate, 0);
+      expect((await archivio.serieDi(seduta)).single.esercizioId, lessThan(0));
+    });
+
+    test('rilanciata non trova più niente', () async {
+      await unaSerieFattaSenzaRete();
+
+      Future<int> giro() => riconciliaLeSerieProvvisorie(
+        archivio: archivio,
+        catalogo: CatalogoEsercizi.vuoto,
+        crea: (nome) async => {'id': 777, 'name': nome},
+      );
+
+      expect(await giro(), 1);
+      expect(await giro(), 0);
+    });
+  });
 }
 
 class _TokenFinto implements TokenStore {

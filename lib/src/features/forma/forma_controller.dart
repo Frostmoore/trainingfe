@@ -35,6 +35,7 @@ import '../health/dati_salute.dart';
 import '../health/health_controller.dart';
 import '../training/data/storico_unificato.dart';
 import '../training/storico_unificato_controller.dart';
+import 'carica_batteria.dart';
 import 'indici_di_forma.dart';
 import 'reattivita.dart';
 
@@ -175,33 +176,69 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   final oggi = DateTime.now();
   final mezzanotte = DateTime(oggi.year, oggi.month, oggi.day);
 
+  // ── Il sonno ─────────────────────────────────────────────────────────────
+  //
+  // ⚠️ **Prima del carico, e non dopo come stava** — 3b-AD.5: il carico deve
+  // sapere se la notte di oggi c'è, per sapere quale giorno si sta vivendo.
+  final minuti = <double>[];
+
+  /*
+   * 🆕 **L'ultima notte per intero, non solo i suoi minuti** — 06/09/2026.
+   *
+   * 💡 La Reattività ha bisogno di `GiudizioNotte.a`, cioè **l'ora del
+   * risveglio**: è da lì che si contano le ore in piedi, ed è l'ingrediente
+   * principale del processo omeostatico.
+   *
+   * ⛔ Dedurla da «mezzanotte + qualcosa» sarebbe una finzione: chi si sveglia
+   * alle 5:30 e chi si sveglia alle 11 hanno giornate diverse, ed è esattamente
+   * quello che il modello deve distinguere.
+   */
+  GiudizioNotte? ultimaNotte;
+  var notteDiOggi = false;
+  var notteDiIeri = false;
+
+  for (var i = 0; i < _finestra; i++) {
+    final n = await AnalizzatoreSonno.notte(
+      archivio,
+      DateTime(mezzanotte.year, mezzanotte.month, mezzanotte.day - i),
+    );
+
+    // ⚠️ I buchi non si riempiono: una notte senza dati non è una notte da zero.
+    if (n != null) {
+      minuti.add(n.minutiDormiti.toDouble());
+      ultimaNotte ??= n;
+
+      if (i == 0) notteDiOggi = true;
+      if (i == 1) notteDiIeri = true;
+    }
+  }
+
   // ── Il carico, un valore per giorno ──────────────────────────────────────
   final voci = await ref.watch(storicoUnificatoProvider.future);
 
   /*
-   * 🚨 **Si parte da 28 zeri e si riempiono i giorni che ci sono.**
+   * ══ 🌙 IL GIORNO DEL CARICO COMINCIA AL RISVEGLIO — 3b-AD.5, 18/09/2026 ═══
    *
-   * ⚠️ Non si costruisce la lista dagli allenamenti: un giorno di riposo è un
-   * carico di **zero**, non un giorno che non esiste. Saltandolo, il carico
-   * acuto sembrerebbe sempre pieno e l'indice non scenderebbe mai — cioè
-   * direbbe «sei carico» a chi è fermo da una settimana.
+   * ⛔ **Qui il giorno cambiava a mezzanotte**, mentre la Carica — nella
+   * stessa riga dell'header — cambia al risveglio (3b-AD). Alle 00:30, dopo
+   * un allenamento alle 23, entrava un giorno nuovo a zero e il carico
+   * calava di un quarto: *«sei meno carico»* a chi non ha ancora dormito.
+   *
+   * 💡 La regola è **quella della Carica, la stessa funzione**: finché la notte
+   * di oggi non c'è si vive ancora ieri, e i minuti dopo la mezzanotte
+   * finiscono nel giorno di ieri.
    */
-  final carico = List<double>.filled(_finestra, 0);
-
-  for (final v in voci) {
-    final giorno = DateTime(v.quando.year, v.quando.month, v.quando.day);
-    final quantiFa = mezzanotte.difference(giorno).inDays;
-
-    if (quantiFa < 0 || quantiFa >= _finestra) continue;
-
-    final kcal = v.kcalDalPolso ?? v.kcalDalleSedute;
-    if (kcal == null) continue;
-
-    // 💡 L'indice va dal più vecchio (0) al più recente: è l'ordine che
-    // `IndiciDiForma.ewma` si aspetta, e invertirlo darebbe un numero
-    // plausibile e sbagliato.
-    carico[_finestra - 1 - quantiFa] += kcal.toDouble();
-  }
+  final carico = caricoDeiGiorni(
+    voci.map(
+      (v) => (quando: v.quando, kcal: v.kcalDalPolso ?? v.kcalDalleSedute),
+    ),
+    oggi: oggi,
+    ancoraIeri: CaricaBatteria.siViveAncoraIeri(
+      notteDiOggi: notteDiOggi,
+      notteDiIeri: notteDiIeri,
+      oraLocale: oggi.hour,
+    ),
+  );
 
   /*
    * ⚠️ **`giorniDiStoria` non è «28 perché la lista è lunga 28».**
@@ -263,35 +300,7 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
   final zHrv = hrv.z;
   final zBattito = battito.z;
 
-  // ── Il sonno ─────────────────────────────────────────────────────────────
-  final minuti = <double>[];
-
-  /*
-   * 🆕 **L'ultima notte per intero, non solo i suoi minuti** — 06/09/2026.
-   *
-   * 💡 La Reattività ha bisogno di `GiudizioNotte.a`, cioè **l'ora del
-   * risveglio**: è da lì che si contano le ore in piedi, ed è l'ingrediente
-   * principale del processo omeostatico.
-   *
-   * ⛔ Dedurla da «mezzanotte + qualcosa» sarebbe una finzione: chi si sveglia
-   * alle 5:30 e chi si sveglia alle 11 hanno giornate diverse, ed è esattamente
-   * quello che il modello deve distinguere.
-   */
-  GiudizioNotte? ultimaNotte;
-
-  for (var i = 0; i < _finestra; i++) {
-    final n = await AnalizzatoreSonno.notte(
-      archivio,
-      mezzanotte.subtract(Duration(days: i)),
-    );
-
-    // ⚠️ I buchi non si riempiono: una notte senza dati non è una notte da zero.
-    if (n != null) {
-      minuti.add(n.minutiDormiti.toDouble());
-      ultimaNotte ??= n;
-    }
-  }
-
+  // ── Il sonno, i numeri (le notti si sono lette in cima) ───────────────────
   double? zSonno;
   double? sonnoOggi;
   double? sonnoMedio;
@@ -355,7 +364,7 @@ final formaProvider = FutureProvider.autoDispose<Forma>((ref) async {
    * impossibile da provare alle quattro di notte — cioè proprio all'ora in cui
    * conta di più.
    */
-  final zCarico = _zDelCarico(carico);
+  final zCarico = zDelCarico(carico);
 
   final reattivita = await _reattivitaAdesso(
     adesso: oggi,
@@ -498,11 +507,75 @@ Future<Reattivita?> _reattivitaAdesso({
   );
 }
 
-/// Quanto è stato pesante il carico di oggi rispetto alla propria finestra.
+/// Il carico di ogni giorno della finestra, **dal più vecchio (0) al giorno in
+/// corso (l'ultimo)** — 3b-AD.5, 18/09/2026.
+///
+/// 🚨 **Si parte da 28 zeri e si riempiono i giorni che ci sono.** Non si
+/// costruisce la lista dagli allenamenti: un giorno di riposo è un carico di
+/// **zero**, non un giorno che non esiste. Saltandolo, il carico acuto
+/// sembrerebbe sempre pieno e l'indice non scenderebbe mai — cioè direbbe «sei
+/// carico» a chi è fermo da una settimana.
+///
+/// 🌙 Con [ancoraIeri] il giorno in corso è **ieri**, e quello che è successo
+/// dopo la mezzanotte ci finisce dentro: è la stessa giornata sveglia. È la
+/// regola di `CaricaBatteria.siViveAncoraIeri`.
+///
+/// ⚠️ I giorni si contano **per data di calendario**, non a blocchi di 24 ore:
+/// il giorno del cambio d'ora ne dura 23 o 25, e `inDays` su quello mette
+/// l'allenamento di ieri dentro oggi.
+@visibleForTesting
+List<double> caricoDeiGiorni(
+  Iterable<({DateTime quando, num? kcal})> voci, {
+  required DateTime oggi,
+  required bool ancoraIeri,
+  int finestra = _finestra,
+}) {
+  final carico = List<double>.filled(finestra, 0);
+  final inCorso = _data(oggi) - (ancoraIeri ? 1 : 0);
+
+  for (final v in voci) {
+    final kcal = v.kcal;
+    if (kcal == null) continue;
+
+    var quantiFa = inCorso - _data(v.quando);
+
+    // 🌙 Dopo la mezzanotte, ma prima di dormire: è ancora il giorno in corso.
+    if (ancoraIeri && quantiFa == -1) quantiFa = 0;
+
+    if (quantiFa < 0 || quantiFa >= finestra) continue;
+
+    // 💡 L'indice va dal più vecchio (0) al più recente: è l'ordine che
+    // `IndiciDiForma.ewma` si aspetta, e invertirlo darebbe un numero
+    // plausibile e sbagliato.
+    carico[finestra - 1 - quantiFa] += kcal.toDouble();
+  }
+
+  return carico;
+}
+
+/// Il numero del giorno di calendario: la differenza fra due di questi è in
+/// giorni veri, anche a cavallo del cambio d'ora.
+int _data(DateTime t) =>
+    DateTime.utc(t.year, t.month, t.day).millisecondsSinceEpoch ~/
+    Duration.millisecondsPerDay;
+
+/// Quanto è stato pesante il carico **del giorno in corso** rispetto alla
+/// propria finestra.
+///
+/// ══ 🚨 LEGGEVA IL GIORNO DI 27 GIORNI FA — 3b-AD.5, 18/09/2026 ══════════
+///
+/// ⛔ **Qui c'era `carico.first`**, con il commento *«`carico` è dal più
+/// recente all'indietro, come `minuti`»*. Non era vero: `carico` va dal più
+/// vecchio al più recente (è l'ordine che vuole `ewma`), e `minuti` no. Così
+/// la Reattività — la «prontezza» dell'header e della card — toglieva fino a
+/// 2,4 punti per un allenamento di **quattro settimane fa**, e l'allenamento
+/// di oggi non contava niente. 💡 Nessun test lo vedeva: il numero era
+/// plausibile.
 ///
 /// ⚠️ `null` con meno di due giorni: uno z-score su un giorno solo non è uno
 /// z-score, è quel giorno diviso se stesso.
-double? _zDelCarico(List<double> carico) {
+@visibleForTesting
+double? zDelCarico(List<double> carico) {
   final visti = carico.where((c) => c > 0).toList();
 
   if (visti.length < 2) return null;
@@ -511,9 +584,9 @@ double? _zDelCarico(List<double> carico) {
 
   if (stat == null) return null;
 
-  // 💡 `carico` è dal più recente all'indietro, come `minuti`.
+  // 🚨 `carico` va dal più vecchio al più recente: il giorno in corso è l'ULTIMO.
   return IndiciDiForma.z(
-    valore: carico.first,
+    valore: carico.last,
     media: stat.$1,
     deviazione: stat.$2,
   );
@@ -529,8 +602,9 @@ int _giorniDagliAllenamenti(List<VoceStorico> voci, DateTime mezzanotte) {
   var piuVecchio = 0;
 
   for (final v in voci) {
-    final giorno = DateTime(v.quando.year, v.quando.month, v.quando.day);
-    final quantiFa = mezzanotte.difference(giorno).inDays;
+    // ⚠️ Per data di calendario, come `caricoDeiGiorni`: `inDays` sbaglia di
+    // uno a cavallo del cambio d'ora.
+    final quantiFa = _data(mezzanotte) - _data(v.quando);
 
     if (quantiFa > piuVecchio) piuVecchio = quantiFa;
   }

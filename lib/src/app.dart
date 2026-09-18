@@ -14,6 +14,7 @@ import 'features/diary/data/trasloco_del_diario.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
+import 'features/trainer/ui/scelta_dello_slot_al_rientro.dart';
 import 'features/training/data/limiti_delle_schede.dart';
 
 /// La radice dell'app.
@@ -217,9 +218,20 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
          * ⛔ **Sotto la schermata di aggiornamento obbligatorio**, non sopra: a
          * chi deve aggiornare l'app non si chiede niente al server.
          */
+        /*
+         * 🆕 🎟️ **E la domanda sullo slot, allo stesso piano** — AH.1-ter.6.
+         *
+         * ⚠️ Sopra il router per la stessa ragione del ricontrollo: la domanda
+         * nasce **fuori** da questo telefono — un allievo che entra in palestra
+         * — e il trainer può ritrovarsela su qualunque schermata.
+         */
         return daAggiornare
             ? const SchermataAggiorna()
-            : RicontrolloAlRientro(child: figlio ?? const SizedBox.shrink());
+            : RicontrolloAlRientro(
+                child: SceltaDelloSlotAlRientro(
+                  child: figlio ?? const SizedBox.shrink(),
+                ),
+              );
       },
     );
   }

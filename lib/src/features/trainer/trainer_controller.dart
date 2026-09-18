@@ -82,4 +82,71 @@ class TrainerActions {
 
     return dati['attivo'] as bool? ?? true;
   }
+
+  /// 🆕 🎟️ **Tengo il posto, o lo libero** — AH.1-ter.6, 18/09/2026.
+  ///
+  /// 📌 Il committente: *«se il trainer decide di mantenere lo slot occupato,
+  /// l'allievo passa alla palestra, poi se si dissocia dalla palestra torna al
+  /// trainer. Se il trainer decide di liberare lo slot, […] non torna al
+  /// trainer.»*
+  ///
+  /// ⚠️ **La scelta si passa sempre**, e il server la pretende: è una decisione
+  /// che costa soldi in un verso e un allievo nell'altro, e un valore di serie
+  /// sarebbe deciderla al posto del trainer.
+  Future<void> decidiLoSlot(int allievoId, {required bool tengo}) async {
+    await _api.post<Map<String, dynamic>>(
+      '/trainer/slot/$allievoId',
+      body: {'tengo_lo_slot': tengo},
+    );
+
+    _ref
+      ..invalidate(slotDaDecidereProvider)
+      ..invalidate(mieiUtentiProvider);
+  }
 }
+
+/// 🆕 🎟️ **Un allievo entrato nella palestra dove lavori anche tu** — AH.1-ter.6.
+///
+/// ⛔ **Non vuol dire che il rapporto sia fermo.** Il committente, 18/09:
+/// *«un allievo deve poter essere iscritto a infiniti free_trainer e una sola
+/// palestra, anche contemporaneamente»*. Il rapporto resta intero; la domanda
+/// riguarda solo **chi paga il posto**.
+class SlotDaDecidere {
+  const SlotDaDecidere({
+    required this.allievoId,
+    required this.nome,
+    required this.palestra,
+  });
+
+  factory SlotDaDecidere.fromJson(Map<String, dynamic> json) => SlotDaDecidere(
+    allievoId: (json['member_id'] as num).toInt(),
+    nome: json['nome']?.toString() ?? '',
+    palestra: json['palestra']?.toString(),
+  );
+
+  final int allievoId;
+  final String nome;
+
+  /// ⚠️ Può mancare: se la palestra è stata cancellata la colonna diventa
+  /// `null` (`nullOnDelete`), e la schermata non deve scrivere «null».
+  final String? palestra;
+}
+
+/// Le scelte sullo slot che questo trainer deve ancora fare.
+///
+/// 💡 **Le domande non hanno una tabella loro, sul server**: sono i rapporti
+/// sovrapposti senza risposta. Qui si chiedono e basta.
+final slotDaDecidereProvider = FutureProvider<List<SlotDaDecidere>>((
+  ref,
+) async {
+  final api = ref.watch(apiClientProvider);
+
+  final risposta = await api.get<Map<String, dynamic>>(
+    '/trainer/slot-da-decidere',
+    unwrap: false,
+  );
+
+  return (risposta['data'] as List? ?? const [])
+      .map((e) => SlotDaDecidere.fromJson((e as Map).cast<String, dynamic>()))
+      .toList(growable: false);
+});

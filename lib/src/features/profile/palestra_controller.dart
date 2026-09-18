@@ -31,12 +31,25 @@ class DettagliPalestra {
 }
 
 /// 💡 `null` non è un errore: è «non sei iscritto a nessuna palestra».
+///
+/// ══ 🚨 `unwrap: false`, E NON PER GUSTO — trovato nel giro del 18/09/2026 ══
+///
+/// ⛔ **Senza, questa schermata non ha mai funzionato** (dal 23/08, v9.10.0).
+/// `get()` di serie toglie già l'involucro `data`:
+///
+/// | Chi | Cosa arrivava qui | Cosa si vedeva |
+/// |---|---|---|
+/// | chi è in palestra | la palestra stessa, e `['data']` su quella è `null` | 🚨 *«Non sei iscritto a nessuna palestra»* — e nessun modo di dissociarsi |
+/// | chi non è in palestra | `null` forzato in una `Map` | un errore di tipo |
+///
+/// 💡 Si legge l'inviluppo intero, e `data` si guarda qui: è l'unico modo di
+/// distinguere «nessuna palestra» (`data: null`) da «questa palestra».
 final dettagliPalestraProvider = FutureProvider.autoDispose<DettagliPalestra?>((
   ref,
 ) async {
   final risposta = await ref
       .read(apiClientProvider)
-      .get<Map<String, dynamic>>('/account/gym');
+      .get<Map<String, dynamic>>('/account/gym', unwrap: false);
 
   final dati = risposta['data'];
 

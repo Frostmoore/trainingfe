@@ -170,6 +170,30 @@ class TiSegueGiaQualcunoException extends ApiException {
   final String chiTiSegue;
 }
 
+/// 🆕 409 con `code: sei_gia_in_una_palestra` — regola 8.1.4, 18/09/2026.
+///
+/// 📌 Il committente: *«Assicurati che un allievo possa essere iscritto a una
+/// sola palestra. Nel caso di invito a una seconda palestra, la pagina
+/// dell'invito gli deve chiedere se desidera lasciare la palestra
+/// precedente.»*
+///
+/// 🚨 **Anche questa è una domanda, non un errore** — la sorella di
+/// [TiSegueGiaQualcunoException]. ⛔ Senza una classe sua cadrebbe nel ramo
+/// generico e diventerebbe *«qualcosa non ha funzionato, riprova»*: e riprovare
+/// darebbe lo stesso 409 per sempre, perché manca una risposta.
+///
+/// 💡 Porta il **nome** della palestra attuale, che serve alla domanda: l'app
+/// sta guardando l'invito della palestra **nuova**, e della vecchia non sa
+/// niente.
+class SeiGiaInUnaPalestraException extends ApiException {
+  const SeiGiaInUnaPalestraException(super.message, this.palestraAttuale);
+
+  /// 🚨 Il contratto col server. Non cambia insieme alla frase.
+  static const codice = 'sei_gia_in_una_palestra';
+
+  final String palestraAttuale;
+}
+
 /// 429 generico o 503 dal fornitore AI: si può riprovare.
 class RateLimitedException extends ApiException {
   const RateLimitedException(super.message, this.retryAfter);

@@ -382,6 +382,20 @@ class ApiClient {
           );
         }
 
+        /*
+         * 🆕 🏛️ **Sei già in un'altra palestra** — regola 8.1.4, 18/09/2026.
+         *
+         * ⚠️ Stessa forma del ramo qui sopra, e per la stessa ragione: senza,
+         * diventerebbe «qualcosa non ha funzionato» e la persona riproverebbe
+         * per sempre contro lo stesso 409.
+         */
+        if (code == SeiGiaInUnaPalestraException.codice) {
+          return SeiGiaInUnaPalestraException(
+            message ?? 'Sei già iscritto a un\'altra palestra.',
+            body['palestra_attuale']?.toString() ?? '',
+          );
+        }
+
         return ServerException(message ?? const ServerException().message);
 
       /*

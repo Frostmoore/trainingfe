@@ -35,10 +35,21 @@ class RispostaAllInvito {
   /// fare una seconda richiesta per una cosa che il server sa già, e per
   /// qualche istante la persona resterebbe dentro una palestra vestita coi
   /// colori di prima.
-  Future<Map<String, dynamic>> accetta(String token) async {
+  ///
+  /// 🆕 `lasciaLaPrecedente` — regola 8.1.4: il sì a lasciare la palestra in
+  /// cui si è già. ⚠️ Di serie `false`, e si manda solo dopo averlo chiesto: il
+  /// server risponde `409` finché non arriva, e un client che lo mandasse sempre
+  /// cambierebbe palestra a chiunque senza dirglielo.
+  Future<Map<String, dynamic>> accetta(
+    String token, {
+    bool lasciaLaPrecedente = false,
+  }) async {
     final dati = await _ref
         .read(apiClientProvider)
-        .post<Map<String, dynamic>>('/inviti-palestra/$token/accetta');
+        .post<Map<String, dynamic>>(
+          '/inviti-palestra/$token/accetta',
+          body: {if (lasciaLaPrecedente) 'lascia_la_precedente': true},
+        );
 
     return (dati['palestra'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};

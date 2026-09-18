@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/api_client.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
@@ -180,8 +182,7 @@ class _PaginaState extends ConsumerState<_Pagina> {
     );
   }
 
-  /// ⚠️ **Chiede conferma**, e non è una gentilezza: accettare sposta la
-  /// persona dentro un'organizzazione, e da lì si esce solo parlando con loro.
+  /// ⚠️ **Chiede conferma**: accettare cambia chi copre il tuo abbonamento.
   Future<void> _accetta() async {
     final marchio = widget.invito.palestra;
 
@@ -189,9 +190,26 @@ class _PaginaState extends ConsumerState<_Pagina> {
       context: context,
       builder: (d) => AlertDialog(
         title: Text('Entri in ${marchio.name ?? 'questa palestra'}?'),
+
+        /*
+         * 🆕 🚨 **La frase di prima diceva il falso due volte** — 18/09/2026.
+         *
+         * ⛔ *«I tuoi dati e i tuoi allenamenti si spostano dentro la palestra.
+         * Per uscirne dovrai parlare con loro.»*
+         *
+         * 1. **I dati non si spostano da nessuna parte**: restano della persona
+         *    e del suo telefono. Il committente, 18/09: *«quello (il tenant)
+         *    riguarda solo chi paga, i dati restano account-bound o
+         *    device-bound»*.
+         * 2. **Da una palestra si esce da soli**: c'è «Dissocia palestra» nel
+         *    profilo. Era vero quando la frase è stata scritta, e non lo è più.
+         *
+         * 💡 Adesso dice le due cose che cambiano davvero.
+         */
         content: const Text(
-          'I tuoi dati e i tuoi allenamenti si spostano dentro la palestra. '
-          'Per uscirne dovrai parlare con loro.',
+          'Da ora è la palestra a coprire il tuo abbonamento, e ti vesti dei '
+          'suoi colori. I tuoi allenamenti restano tuoi, e puoi dissociarti '
+          'quando vuoi dal profilo.',
         ),
         actions: [
           TextButton(
@@ -208,12 +226,17 @@ class _PaginaState extends ConsumerState<_Pagina> {
 
     if (sicuro != true || !mounted) return;
 
+    await _entra();
+  }
+
+  /// Entra davvero. `lasciaLaPrecedente` arriva solo dopo averlo chiesto.
+  Future<void> _entra({bool lasciaLaPrecedente = false}) async {
     setState(() => _inCorso = true);
 
     try {
       final marchioNuovo = await ref
           .read(rispostaAllInvitoProvider)
-          .accetta(widget.token);
+          .accetta(widget.token, lasciaLaPrecedente: lasciaLaPrecedente);
 
       // 🏷️ Adesso sì: da questo momento l'app **è** vestita della palestra.
       await ref.read(brandingControllerProvider.notifier).adotta(marchioNuovo);
@@ -234,17 +257,84 @@ class _PaginaState extends ConsumerState<_Pagina> {
     } on Object catch (e) {
       if (!mounted) return;
 
+      setState(() => _inCorso = false);
+
+      /*
+       * 🚨 **`unwrapError` prima, e poi si guarda** — la trappola già pagata
+       * sulla modale del secondo trainer. Il client rilancia l'errore grezzo
+       * del trasporto: un `on <Tipo> catch` non prende mai niente.
+       *
+       * ⛔ E prima qui si stampava `$e` così com'era, cioè il testo di una
+       * `DioException` davanti a una persona.
+       */
+      final errore = ApiClient.unwrapError(e);
+
+      if (errore is SeiGiaInUnaPalestraException) {
+        await _chiediSeLasciarla(errore.palestraAttuale);
+
+        return;
+      }
+
+      if (!mounted) return;
+
       /*
        * 🚨 **Qui l'errore si mostra**, al contrario del rifiuto: la persona ha
        * chiesto di entrare e non è entrata. ⛔ Un silenzio la lascerebbe a
        * guardare la stessa pagina senza sapere se ha funzionato.
        */
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Non sono riuscito a farti entrare. $e')),
+        SnackBar(
+          content: Text('Non sono riuscito a farti entrare. ${errore.message}'),
+        ),
       );
-    } finally {
-      if (mounted) setState(() => _inCorso = false);
     }
+  }
+
+  /// 🆕 🏛️ **Sei già in un'altra palestra: la lasci?** — regola 8.1.4.
+  ///
+  /// 📌 Il committente: *«Nel caso di invito a una seconda palestra, la pagina
+  /// dell'invito gli deve chiedere se desidera lasciare la palestra
+  /// precedente.»*
+  ///
+  /// ⚖️ **«Resto in X» è il tasto pieno**, ed è lo stesso principio delle altre
+  /// due domande di questo giro: la scelta che non cambia niente deve costare
+  /// meno di quella che cambia. Chi ha toccato l'invito di un'altra palestra
+  /// per curiosità non deve ritrovarsi fuori dalla sua con un tocco solo.
+  Future<void> _chiediSeLasciarla(String attuale) async {
+    final vecchia = attuale.isEmpty ? 'la tua palestra' : attuale;
+    final nuova = widget.invito.palestra.name ?? 'questa palestra';
+
+    final lascia = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('Sei già iscritto a $vecchia'),
+
+        /*
+         * 💡 **Cosa comporta, detto prima della domanda.** ⚠️ E senza dire
+         * che si perdono dati: non si perdono. Le schede ricevute restano sul
+         * telefono.
+         */
+        content: Text(
+          'Si può stare in una palestra sola. Se entri in $nuova, lasci '
+          '$vecchia: da lì non ti coprirà più l\'abbonamento. Le tue schede '
+          'restano sul telefono.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(true),
+            child: Text('Passo a $nuova'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(d).pop(false),
+            child: Text('Resto in $vecchia'),
+          ),
+        ],
+      ),
+    );
+
+    if (lascia != true || !mounted) return;
+
+    await _entra(lasciaLaPrecedente: true);
   }
 
   Future<void> _rifiuta() async {

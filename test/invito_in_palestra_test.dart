@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/core/errors/api_exception.dart';
 import 'package:training_companion/src/features/onboarding/data/invito_in_palestra.dart';
 import 'package:training_companion/src/features/onboarding/invito_controller.dart';
 import 'package:training_companion/src/features/auth/auth_controller.dart';
@@ -179,8 +180,9 @@ void main() {
       expect(find.text('Entro in Olimpo'), findsOneWidget);
     });
 
-    /// ⛔ **Non si entra per sbaglio**: accettare sposta una persona dentro
-    /// un'organizzazione, e da lì si esce solo parlando con loro.
+    /// ⛔ **Non si entra per sbaglio**: accettare cambia chi copre il tuo
+    /// abbonamento. ⚠️ Fino al 18/09 qui c'era scritto «da lì si esce solo
+    /// parlando con loro», che non è più vero: c'è «Dissocia palestra».
     /// 🆕 🔑 **Chi non ha una sessione trova due porte** — 17/09/2026.
     ///
     /// ⛔ **Prima il tasto diceva «Entro in Olimpo» a chiunque.** Chi non aveva
@@ -229,10 +231,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Entri in Olimpo?'), findsOneWidget);
-      expect(
-        find.textContaining('Per uscirne dovrai parlare con loro'),
-        findsOneWidget,
-      );
+
+      /*
+       * 🆕 🚨 **Questo test proteggeva una frase falsa**, e l'ha protetta bene
+       * fino al 18/09: *«I tuoi dati e i tuoi allenamenti si spostano dentro
+       * la palestra. Per uscirne dovrai parlare con loro.»*
+       *
+       * ⛔ I dati non si spostano — il tenant dice **chi paga**, e i dati
+       * restano della persona e del suo telefono (il committente, 18/09). E da
+       * una palestra si esce da soli, con «Dissocia palestra».
+       *
+       * 💡 Adesso controlla la frase vera **e** che le due false non tornino:
+       * un test che verifica solo la presenza del testo giusto non si accorge
+       * di chi rimette quello sbagliato accanto.
+       */
+      expect(find.textContaining('coprire il tuo abbonamento'), findsOneWidget);
+      expect(find.textContaining('puoi dissociarti'), findsOneWidget);
+      expect(find.textContaining('si spostano'), findsNothing);
+      expect(find.textContaining('parlare con loro'), findsNothing);
 
       // 💡 E si può tornare indietro senza entrare.
       await tester.tap(find.text('Aspetta'));
@@ -277,4 +293,120 @@ void main() {
     // #B71C1C — il rosso dell'Olimpo, non il teal dell'app.
     expect(tema.colorScheme.primary.toARGB32(), isNot(0xFF00897B));
   });
+
+  /// 🆕 🏛️ **Una palestra sola, e l'invito a una seconda chiede** — regola
+  /// 8.1.4, 18/09/2026.
+  ///
+  /// 📌 Il committente: *«Nel caso di invito a una seconda palestra, la pagina
+  /// dell'invito gli deve chiedere se desidera lasciare la palestra
+  /// precedente.»*
+  group("chi è già in un'altra palestra", () {
+    Future<List<bool>> tentaDiEntrare(WidgetTester tester) async {
+      final chiamate = <bool>[];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            invitoProvider('tok').overrideWith(
+              (ref) async => InvitoInPalestra.fromJson(_rispostaDelServer()),
+            ),
+            sessioneAttivaProvider.overrideWithValue(true),
+            rispostaAllInvitoProvider.overrideWith(
+              (ref) => _RispostaFinta(ref, chiamate),
+            ),
+          ],
+          child: const MaterialApp(home: SchermataInvito(token: 'tok')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Entro in Olimpo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Entro'));
+      await tester.pumpAndSettle();
+
+      return chiamate;
+    }
+
+    /// 🚨 **Il 409 diventa una domanda**, non «non sono riuscito».
+    testWidgets('gli si chiede se lasciare la palestra di prima', (
+      tester,
+    ) async {
+      await tentaDiEntrare(tester);
+
+      expect(find.text('Sei già iscritto a Ares'), findsOneWidget);
+      expect(find.textContaining('Non sono riuscito'), findsNothing);
+    });
+
+    /// ⚖️ **«Resto in Ares» è il tasto pieno**: la scelta che non cambia niente
+    /// costa meno di quella che cambia.
+    testWidgets('restare è il tasto in evidenza', (tester) async {
+      await tentaDiEntrare(tester);
+
+      expect(
+        find.widgetWithText(FilledButton, 'Resto in Ares'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, 'Passo a Olimpo'), findsOneWidget);
+    });
+
+    /// ⛔ **Nessuna perdita di dati promessa**: le schede restano sul telefono.
+    testWidgets('non dice che si perdono le schede', (tester) async {
+      await tentaDiEntrare(tester);
+
+      expect(find.textContaining('restano sul telefono'), findsOneWidget);
+      expect(find.textContaining('perderai'), findsNothing);
+    });
+
+    /// 🚨 **Il sì arriva al server**, e solo il sì.
+    testWidgets('passando alla nuova si richiede con il consenso', (
+      tester,
+    ) async {
+      final chiamate = await tentaDiEntrare(tester);
+
+      await tester.tap(find.text('Passo a Olimpo'));
+      await tester.pumpAndSettle();
+
+      // Prima senza consenso — che produce la domanda — poi con.
+      expect(chiamate, [false, true]);
+    });
+
+    testWidgets('restando non si richiede niente', (tester) async {
+      final chiamate = await tentaDiEntrare(tester);
+
+      await tester.tap(find.text('Resto in Ares'));
+      await tester.pumpAndSettle();
+
+      expect(chiamate, [false], reason: 'restando e partita unaltra richiesta');
+    });
+  });
+}
+
+/// Il server finto: la prima volta risponde «sei già in Ares», la seconda si
+/// segna il consenso.
+///
+/// ⚠️ **La seconda lancia apposta**: il ramo di successo chiede il branding e
+/// il profilo a provider veri, e qui interessa soltanto **cosa arriva al
+/// server**. Farla riuscire metterebbe alla prova un'altra cosa.
+class _RispostaFinta extends RispostaAllInvito {
+  _RispostaFinta(super.ref, this.chiamate);
+
+  final List<bool> chiamate;
+
+  @override
+  Future<Map<String, dynamic>> accetta(
+    String token, {
+    bool lasciaLaPrecedente = false,
+  }) async {
+    chiamate.add(lasciaLaPrecedente);
+
+    if (!lasciaLaPrecedente) {
+      throw const SeiGiaInUnaPalestraException(
+        'Sei già iscritto a Ares.',
+        'Ares',
+      );
+    }
+
+    throw const ServerException();
+  }
 }

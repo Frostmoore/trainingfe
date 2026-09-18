@@ -12,6 +12,7 @@ import '../../auth/auth_controller.dart';
 import '../data/utente_seguito.dart';
 import '../trainer_controller.dart';
 import 'abbonamento_scaduto.dart';
+import 'scelta_del_piano.dart';
 
 /// «I miei utenti» — F5.1 e F6 della Parte B.
 ///
@@ -107,7 +108,23 @@ class _Elenco extends ConsumerWidget {
            */
           if (dati.posti.allieviPropri) ...[
             _Posti(posti: dati.posti),
-            const SizedBox(height: Gap.md),
+
+            /*
+             * 🆕 💳 **Il piano si sceglie da qui** — §9.6, 18/09/2026.
+             *
+             * ⛔ Prima un trainer non aveva nessun posto dove pagare il suo
+             * piano. 💡 Accanto ai posti, perché è guardando i posti che si
+             * capisce di volerne di più.
+             */
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => SceltaDelPiano.mostra(context),
+                icon: const Icon(Icons.credit_card_rounded, size: 18),
+                label: const Text('Il tuo piano'),
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
           ],
 
           if (dati.utenti.isEmpty)
@@ -184,6 +201,16 @@ class _Elenco extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
+            ),
+
+            /*
+             * 🆕 ⛔ **La frase qui sopra rimandava a un pulsante che non
+             * esisteva** — §9.6. Diceva «serve un piano superiore» e lasciava lì
+             * il trainer, senza nessun modo di prenderlo.
+             */
+            OutlinedButton(
+              onPressed: () => SceltaDelPiano.mostra(context),
+              child: const Text('Scegli un piano superiore'),
             ),
           ],
         ],

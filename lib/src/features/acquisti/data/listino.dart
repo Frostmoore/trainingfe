@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/providers.dart';
 
 /// Un taglio di gettoni.
@@ -109,6 +110,36 @@ class AbbonamentoInCorso {
 }
 
 /// Cosa si può comprare, e cosa si ha già.
+/// 🆕 💳 **Un piano da trainer o da palestra** — §9.6, 18/09/2026.
+///
+/// ⛔ Prima l'app non li conosceva: il listino mandava solo il piano personale e
+/// i gettoni, e un trainer non aveva nessun posto dove pagare il suo piano.
+class PianoInVendita {
+  const PianoInVendita({
+    required this.codice,
+    required this.nome,
+    required this.prezzoCent,
+    this.posti,
+    this.aConsumo = false,
+  });
+
+  factory PianoInVendita.fromJson(Map<String, dynamic> j) => PianoInVendita(
+    codice: j['codice']?.toString() ?? '',
+    nome: j['nome']?.toString() ?? '',
+    prezzoCent: (j['prezzo_cent'] as num?)?.toInt() ?? 0,
+    posti: (j['posti'] as num?)?.toInt(),
+    aConsumo: j['a_consumo'] as bool? ?? false,
+  );
+
+  final String codice;
+  final String nome;
+  final int prezzoCent;
+
+  /// ⚠️ `null` = senza limite.
+  final int? posti;
+  final bool aConsumo;
+}
+
 class Listino {
   const Listino({
     required this.abbonato,
@@ -118,6 +149,10 @@ class Listino {
     required this.pacchetti,
     required this.gettoniDisponibili,
     this.inCorso,
+    this.piani = const [],
+    this.pianoAttuale,
+    this.puoCambiare = false,
+    this.pagamentoFallitoIl,
   });
 
   factory Listino.fromJson(Map<String, dynamic> j) {
@@ -134,6 +169,19 @@ class Listino {
           .toList(),
       gettoniDisponibili: (j['gettoni_disponibili'] as num?)?.toInt() ?? 0,
       inCorso: AbbonamentoInCorso.daJson(j['abbonamento_attivo']),
+
+      /*
+       * 🆕 §9.6 — tolleranti come il resto: un server vecchio non li manda, e
+       * allora non c'è niente da comprare — che è la risposta onesta.
+       */
+      piani: ((j['piani'] as List?) ?? const [])
+          .map((e) => PianoInVendita.fromJson((e as Map).cast()))
+          .toList(),
+      pianoAttuale: j['piano_attuale']?.toString(),
+      puoCambiare: j['puo_cambiare'] as bool? ?? false,
+      pagamentoFallitoIl: DateTime.tryParse(
+        j['pagamento_fallito_il']?.toString() ?? '',
+      ),
     );
   }
 
@@ -149,6 +197,18 @@ class Listino {
 
   /// `null` se non c'è nessun abbonamento in corso.
   final AbbonamentoInCorso? inCorso;
+
+  /// 🆕 I piani da trainer o da palestra che questa persona può comprare.
+  final List<PianoInVendita> piani;
+
+  /// Il codice del piano che ha già, se è della stessa famiglia.
+  final String? pianoAttuale;
+
+  /// 🚨 Ha un canone pagato su Stripe: si **cambia**, non se ne compra un secondo.
+  final bool puoCambiare;
+
+  /// 🆕 §9.4 — la prima volta che un rinnovo è stato rifiutato.
+  final DateTime? pagamentoFallitoIl;
 
   /// Il taglio con il prezzo per gettone più basso.
   ///
@@ -259,6 +319,50 @@ Future<EsitoPagamento> cambiaIlRinnovo(
     return errore.toString().contains('422')
         ? 'Questo abbonamento lo gestisce la tua palestra.'
         : 'Non sono riuscito a cambiarlo. Riprova fra poco.';
+  }
+}
+
+/// 🆕 💳 **Scegli un piano da trainer** — §9.6, 18/09/2026.
+///
+/// ⚠️ **La strada la decide il server**, non il pulsante: con un canone già pagato
+/// si **cambia** (Stripe fa il conguaglio), altrimenti si **apre il pagamento**.
+/// 🚨 Farlo decidere all'app vorrebbe dire che un tasto sbagliato apre un secondo
+/// abbonamento — due addebiti al mese.
+///
+/// 💡 L'errore si legge **dopo** `ApiClient.unwrapError`, e si mostra il messaggio
+/// del server — che è già scritto per chi lo legge.
+Future<EsitoPagamento> scegliIlPiano(
+  WidgetRef ref, {
+  required String codice,
+  required bool cambia,
+}) async {
+  try {
+    final api = ref.read(apiClientProvider);
+
+    if (cambia) {
+      await api.post<Map<String, dynamic>>(
+        '/billing/cambia-piano',
+        body: {'piano': codice},
+      );
+      ref.invalidate(listinoProvider);
+
+      return null;
+    }
+
+    final risposta = await api.post<Map<String, dynamic>>(
+      '/billing/checkout',
+      body: {'tipo': 'piano', 'piano': codice},
+    );
+
+    final url = Uri.tryParse(risposta['url']?.toString() ?? '');
+
+    if (url == null) return 'Il pagamento non si è aperto. Riprova fra poco.';
+
+    final partito = await launchUrl(url, mode: LaunchMode.externalApplication);
+
+    return partito ? null : 'Non sono riuscito ad aprire il browser.';
+  } on Object catch (e) {
+    return ApiClient.unwrapError(e).message;
   }
 }
 

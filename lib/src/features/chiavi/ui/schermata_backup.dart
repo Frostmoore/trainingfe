@@ -16,6 +16,7 @@ import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../diary/data/trasloco_del_diario.dart';
 import '../../health/health_controller.dart';
+import '../../privacy/i_miei_dati.dart';
 
 /// L'esportazione del file di backup — M7.3, 18/08/2026.
 ///
@@ -228,6 +229,18 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
               _codice == null ? 'Crea il file' : 'Crea un file nuovo',
             ),
           ),
+
+          /*
+           * 🆕 📦 «I miei dati» — artt. 15 e 20, 19/09/2026.
+           *
+           * 💡 Qui e non nel Profilo: è la schermata dove la persona viene già
+           * a cercare «i miei dati», e sta sotto il backup apposta — il backup
+           * è per ripristinare, questo è per leggere o portare altrove.
+           */
+          const SizedBox(height: 36),
+          const Divider(),
+          const SizedBox(height: 20),
+          const _IMieiDati(),
         ],
       ),
     );
@@ -874,4 +887,83 @@ String daQuando(DateTime quando) {
     1 => 'ieri alle $ora',
     _ => '$giorni giorni fa',
   };
+}
+
+/// 📦 **Scarica i miei dati** — artt. 15 e 20, 19/09/2026.
+///
+/// ⚠️ Il file è **in chiaro**, ed è detto prima del pulsante: il backup qui
+/// sopra si protegge col codice, questo no — deve poterlo leggere chiunque,
+/// compresa un'altra app.
+class _IMieiDati extends ConsumerStatefulWidget {
+  const _IMieiDati();
+
+  @override
+  ConsumerState<_IMieiDati> createState() => _IMieiDatiState();
+}
+
+class _IMieiDatiState extends ConsumerState<_IMieiDati> {
+  bool _inCorso = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Scarica i miei dati', style: tema.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const Text(
+          'Un file con tutto quello che sappiamo di te: quello che sta sul '
+          'server e quello che sta su questo telefono. Puoi leggerlo o '
+          'portarlo in un\'altra app.',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Il file non è protetto da nessun codice: chi lo apre lo legge. '
+          'Conservalo come conserveresti un referto.',
+          style: tema.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: _inCorso ? null : _scarica,
+          icon: _inCorso
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.download_rounded),
+          label: const Text('Scarica i miei dati'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _scarica() async {
+    setState(() => _inCorso = true);
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    try {
+      final file = await ref.read(iMieiDatiProvider).prepara();
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'application/json')],
+          subject: 'I miei dati — Training Companion',
+        ),
+      );
+    } on Object catch (_) {
+      // ⚠️ La metà del server si chiede adesso: senza rete non si fa.
+      messaggeria.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Non riesco a preparare il file. Controlla la connessione e riprova.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
 }

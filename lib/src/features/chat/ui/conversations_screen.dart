@@ -969,42 +969,78 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
            * gesto che si fa *dopo* aver scritto, e allontanarlo vorrebbe dire
            * spostare il pollice due volte per ogni messaggio.
            */
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.sm, 0, Gap.sm, Gap.sm),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── quello che si può allegare ──────────────────────────
-                  Row(
-                    children: [
-                      // 🚨 S7 — «allega una scheda». Compare **solo a chi
-                      // allena**: l'endpoint dei modelli risponde 403 a un
-                      // iscritto, e un pulsante che dà sempre errore fa
-                      // sembrare rotta tutta l'applicazione, non solo quel
-                      // pulsante.
-                      if (ref.watch(authControllerProvider).user?.isTrainer ??
-                          false)
-                        IconButton(
-                          onPressed: _inCorso ? null : _allega,
-                          icon: const Icon(Icons.assignment_outlined),
-                          tooltip: 'Manda una scheda',
+          /*
+           * 🆕 ⛔ **Se non si può scrivere, non si mostra il campo** — 19/09/2026.
+           *
+           * 🚨 Visto sull'emulatore dopo D9: la conversazione con chi non ti
+           * segue più resta leggibile — giusto — ma il campo sembrava normale,
+           * e il rifiuto arrivava dopo aver scritto il messaggio e premuto
+           * invio. ⚠️ Scrivere qualcosa che non parte è peggio che non poter
+           * scrivere: la frase è già stata pensata.
+           *
+           * 💡 Il motivo lo dice il server, come il rifiuto (M3.4).
+           */
+          if (ref.watch(motivoChiusuraProvider(widget.id))
+              case final String motivo)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(Gap.md),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.lock_outline_rounded,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: Text(
+                        motivo,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Gap.sm, 0, Gap.sm, Gap.sm),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── quello che si può allegare ──────────────────────────
+                    Row(
+                      children: [
+                        // 🚨 S7 — «allega una scheda». Compare **solo a chi
+                        // allena**: l'endpoint dei modelli risponde 403 a un
+                        // iscritto, e un pulsante che dà sempre errore fa
+                        // sembrare rotta tutta l'applicazione, non solo quel
+                        // pulsante.
+                        if (ref.watch(authControllerProvider).user?.isTrainer ??
+                            false)
+                          IconButton(
+                            onPressed: _inCorso ? null : _allega,
+                            icon: const Icon(Icons.assignment_outlined),
+                            tooltip: 'Manda una scheda',
+                          ),
 
-                      // 🆕 G8.2 — e un piano alimentare.
-                      // `ContenutoPianoAlimentare` esisteva da S7 e **non lo
-                      // mandava nessuno**: mancava solo il posto da cui
-                      // sceglierlo.
-                      if (ref.watch(authControllerProvider).user?.isTrainer ??
-                          false)
-                        IconButton(
-                          onPressed: _inCorso ? null : _allegaPiano,
-                          icon: const Icon(Icons.eco_outlined),
-                          tooltip: 'Manda dei consigli alimentari',
-                        ),
+                        // 🆕 G8.2 — e un piano alimentare.
+                        // `ContenutoPianoAlimentare` esisteva da S7 e **non lo
+                        // mandava nessuno**: mancava solo il posto da cui
+                        // sceglierlo.
+                        if (ref.watch(authControllerProvider).user?.isTrainer ??
+                            false)
+                          IconButton(
+                            onPressed: _inCorso ? null : _allegaPiano,
+                            icon: const Icon(Icons.eco_outlined),
+                            tooltip: 'Manda dei consigli alimentari',
+                          ),
 
-                      /*
+                        /*
                        * 🆕 N13.3 — la foto, e questo lo vedono **tutti e due**.
                        *
                        * 💡 A differenza della scheda e del piano, mandare una
@@ -1012,13 +1048,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                        * fotografa un infortunio, un'etichetta, la propria
                        * postura. Anzi, è più spesso lui a volerlo fare.
                        */
-                      IconButton(
-                        onPressed: _inCorso ? null : _allegaFoto,
-                        icon: const Icon(Icons.photo_camera_outlined),
-                        tooltip: 'Manda una foto',
-                      ),
+                        IconButton(
+                          onPressed: _inCorso ? null : _allegaFoto,
+                          icon: const Icon(Icons.photo_camera_outlined),
+                          tooltip: 'Manda una foto',
+                        ),
 
-                      /*
+                        /*
                        * 🆕 N21.4 — un documento.
                        *
                        * 💡 Separato dalla foto e non nascosto dentro lo stesso
@@ -1026,15 +1062,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                        * gia' di volerlo fare, e non deve passare da «scatta /
                        * galleria» per scoprire che c'e' anche una terza voce.
                        */
-                      IconButton(
-                        onPressed: _inCorso ? null : _allegaDocumento,
-                        icon: const Icon(Icons.attach_file_rounded),
-                        tooltip: 'Manda un documento',
-                      ),
+                        IconButton(
+                          onPressed: _inCorso ? null : _allegaDocumento,
+                          icon: const Icon(Icons.attach_file_rounded),
+                          tooltip: 'Manda un documento',
+                        ),
 
-                      const Spacer(),
+                        const Spacer(),
 
-                      /*
+                        /*
                        * 🆕 N16.1 — «una volta sola».
                        *
                        * 🚨 **Un interruttore, non un menu nascosto.** Chi lo
@@ -1049,50 +1085,52 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                        * ⚠️ **In fondo alla riga, staccato dagli allegati**: non
                        * è una cosa da mandare, è un modo di mandarla.
                        */
-                      IconButton(
-                        onPressed: _inCorso ? null : _cambiaUsaEGetta,
-                        isSelected: _usaEGetta,
-                        icon: const Icon(Icons.local_fire_department_outlined),
-                        selectedIcon: const Icon(Icons.local_fire_department),
-                        tooltip: _usaEGetta
-                            ? 'Una volta sola: attivo'
-                            : 'Manda una volta sola',
-                      ),
-                    ],
-                  ),
-
-                  // ── quello che si scrive ────────────────────────────────
-                  Row(
-                    // ⚠️ `end`: il campo cresce fino a quattro righe, e con
-                    // l'allineamento di serie il pulsante si alzerebbe insieme
-                    // a lui invece di restare in fondo, accanto all'ultima riga.
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _testo,
-                          textCapitalization: TextCapitalization.sentences,
-                          maxLength: 4000,
-                          minLines: 1,
-                          maxLines: 4,
-                          decoration: const InputDecoration(
-                            hintText: 'Scrivi un messaggio…',
-                            counterText: '',
+                        IconButton(
+                          onPressed: _inCorso ? null : _cambiaUsaEGetta,
+                          isSelected: _usaEGetta,
+                          icon: const Icon(
+                            Icons.local_fire_department_outlined,
                           ),
-                          onSubmitted: (_) => _invia(),
+                          selectedIcon: const Icon(Icons.local_fire_department),
+                          tooltip: _usaEGetta
+                              ? 'Una volta sola: attivo'
+                              : 'Manda una volta sola',
                         ),
-                      ),
-                      const SizedBox(width: Gap.sm),
-                      IconButton.filled(
-                        onPressed: _inCorso ? null : _invia,
-                        icon: const Icon(Icons.send_rounded),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+
+                    // ── quello che si scrive ────────────────────────────────
+                    Row(
+                      // ⚠️ `end`: il campo cresce fino a quattro righe, e con
+                      // l'allineamento di serie il pulsante si alzerebbe insieme
+                      // a lui invece di restare in fondo, accanto all'ultima riga.
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _testo,
+                            textCapitalization: TextCapitalization.sentences,
+                            maxLength: 4000,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: const InputDecoration(
+                              hintText: 'Scrivi un messaggio…',
+                              counterText: '',
+                            ),
+                            onSubmitted: (_) => _invia(),
+                          ),
+                        ),
+                        const SizedBox(width: Gap.sm),
+                        IconButton.filled(
+                          onPressed: _inCorso ? null : _invia,
+                          icon: const Icon(Icons.send_rounded),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

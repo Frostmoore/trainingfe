@@ -232,6 +232,14 @@ final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((
 /// Il polling chiede **solo il nuovo** (`?after=`): riscaricare il filo intero
 /// ogni quindici secondi lo renderebbe inutilizzabile con qualche centinaio di
 /// messaggi.
+/// 🆕 Perché in questa conversazione non si può scrivere, o `null` se si può.
+///
+/// 🚨 Lo dice il **server** (`puoi_scrivere` e `motivo` in `GET .../messages`):
+/// la regola non si riscrive qui, o il giorno che cambia l'app mente.
+final motivoChiusuraProvider = StateProvider.family<String?, int>(
+  (ref, conversationId) => null,
+);
+
 class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
   ThreadController(this._ref, this.conversationId)
     : super(const AsyncValue.loading()) {
@@ -441,9 +449,25 @@ class ThreadController extends StateNotifier<AsyncValue<List<ChatMessage>>> {
     try {
       await _preparaChiavi();
 
-      final data = await _ref
+      /*
+       * 🆕 `unwrap: false`: oltre ai messaggi servono `puoi_scrivere` e
+       * `motivo` — 19/09/2026. Senza, il campo per scrivere sembra normale in
+       * una conversazione chiusa e il rifiuto arriva **dopo** l'invio.
+       */
+      final risposta = await _ref
           .read(apiClientProvider)
-          .get<List<dynamic>>('/conversations/$conversationId/messages');
+          .get<Map<String, dynamic>>(
+            '/conversations/$conversationId/messages',
+            unwrap: false,
+          );
+
+      _ref
+          .read(motivoChiusuraProvider(conversationId).notifier)
+          .state = (risposta['puoi_scrivere'] as bool? ?? true)
+          ? null
+          : risposta['motivo'] as String?;
+
+      final data = risposta['data'] as List<dynamic>;
 
       final messaggi = data
           .map((e) => _apri((e as Map).cast<String, dynamic>()))

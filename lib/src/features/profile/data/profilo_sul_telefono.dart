@@ -10,10 +10,12 @@
 /// si ricostruisce **lo stesso JSON**, così `UserProfile.fromJson` — e ogni
 /// schermata che lo usa — non si accorge che il server non c'è più.
 ///
-/// ⚠️ **Le etichette e gli orari sono copiati dal server**
-/// (`Profile::ACTIVITY_LEVELS`, `Profile::GOALS`, `MealType::DEFAULT_HOURS`):
-/// se cambiano là, vanno cambiati qui. Il server li tiene per il pannello dei
-/// trainer, che compone **modelli** di piano su valori d'esempio.
+/// ⚠️ **Da qui in avanti la fonte sono questi elenchi.** Erano copiati da
+/// `Profile::ACTIVITY_LEVELS` e `Profile::GOALS`, che il 19/09/2026 sono stati
+/// tolti dal server insieme alle colonne. Gli orari di serie restano uguali a
+/// `MealType::DEFAULT_HOURS` del server, che li usa per il suo vecchio diario.
+/// ⚠️ Un obiettivo nuovo va aggiunto anche in `CalcolatoreCalorie` (e nel
+/// server in `CalorieCalculator::GOAL_DELTA`, che vale per il consiglio).
 library;
 
 /// I livelli di attività, con l'etichetta — `Profile::ACTIVITY_LEVELS`.

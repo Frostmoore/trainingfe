@@ -17,6 +17,7 @@ import '../../auth/auth_controller.dart';
 import '../../forma/ui/scheda_forma.dart';
 import '../../health/ui/widgets/banner_salute.dart';
 import '../../profile/corpo_controller.dart';
+import '../../profile/profile_controller.dart';
 import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
@@ -138,8 +139,10 @@ class DashboardScreen extends ConsumerWidget {
      * riepilogo — e leggerlo qui evita di spezzare la lambda in un blocco solo
      * per portarsi dietro un `double?`.
      */
+    // 🆕 Dal 19/09 il peso obiettivo sta nel profilo **sul telefono**: il
+    // riepilogo del server non lo sa più.
     final peso = SchedaPeso(
-      pesoObiettivo: riepilogo.valueOrNull?.body.targetWeightKg,
+      pesoObiettivo: ref.watch(profileProvider).valueOrNull?.targetWeightKg,
     );
 
     /*

@@ -39,6 +39,7 @@ class TargetLocale {
     required this.kcalStimato,
     required this.macroStimato,
     this.aMano = false,
+    this.obiettivo,
   });
 
   /// Quello **in uso**: la scelta della persona se c'è, altrimenti la stima.
@@ -59,6 +60,11 @@ class TargetLocale {
 
   /// Se i valori in uso li ha scelti la persona.
   final bool aMano;
+
+  /// 🆕 L'obiettivo, come lo vuole la formula (`lose_slow`, `maintain`…) — va
+  /// col consiglio del giorno. ⛔ Prima il server lo leggeva dal profilo, che
+  /// dal 19/09 sta sul telefono.
+  final String? obiettivo;
 }
 
 /// Il pezzo che manca per poter calcolare.
@@ -345,6 +351,7 @@ final targetLocaleProvider = FutureProvider.autoDispose<EsitoTarget>((
       kcalStimato: kcal,
       macroStimato: macroStimato,
       aMano: scelto != null,
+      obiettivo: profilo.obiettivoPerFormula,
     ),
   );
 });

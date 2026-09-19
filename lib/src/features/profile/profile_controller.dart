@@ -4,17 +4,34 @@ import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../auth/auth_controller.dart';
+import '../health/health_controller.dart';
 import 'corpo_controller.dart';
 import 'data/profile_models.dart';
+import 'data/profilo_sul_telefono.dart';
 
 /// Il profilo dell'iscritto — C8.
+///
+/// 🆕 🚨 **Dal 19/09/2026 si legge dal TELEFONO**, non da `GET /profile`.
+/// 📌 *«assicurati che non ci scriva niente di personale (esattamente come peso
+/// altezza e data di nascita)»*. Quello che c'era sul server lo porta a casa
+/// `TraslocoDelProfilo`, una volta sola.
+///
+/// ⚠️ La firma non cambia — `UserProfile` — così nessuna schermata si accorge
+/// del trasloco: è la stessa disciplina di `weightHistoryProvider` (S5.2).
 final profileProvider = FutureProvider.autoDispose<UserProfile>((ref) async {
-  final data = await ref
-      .watch(apiClientProvider)
-      .get<Map<String, dynamic>>('/profile');
+  final utente = ref.watch(authControllerProvider.select((s) => s.user?.id));
+  ref.watch(revisioneDelProfiloProvider);
 
-  return UserProfile.fromJson(data);
+  final dati = utente == null
+      ? <String, dynamic>{}
+      : await ref.read(archivioSaluteProvider).leggiProfilo(utente);
+
+  return UserProfile.fromJson(profiloComeLoMandavaIlServer(dati));
 });
+
+/// 💡 Cambia a ogni scrittura, e il profilo si rilegge: il provider legge un
+/// archivio che non avvisa da solo quando cambia sotto.
+final revisioneDelProfiloProvider = StateProvider<int>((ref) => 0);
 
 /// Lo storico del peso, per il grafico e per l'ultima pesata.
 ///
@@ -78,7 +95,18 @@ class ProfileActions {
 
     if (corpo.isEmpty) return;
 
-    await _api.patch<dynamic>('/profile', body: corpo);
+    /*
+     * 🆕 🚨 **Sul telefono, non sul server** — 19/09/2026. ⛔ Qui c'era
+     * `PATCH /profile`: sesso, data di nascita, altezza e il resto finivano sul
+     * server, e il pannello della palestra li vedeva e li modificava. Il server
+     * adesso quella richiesta la rifiuta.
+     */
+    final utente = _ref.read(authControllerProvider).user?.id;
+
+    if (utente == null) return;
+
+    await _ref.read(archivioSaluteProvider).scriviNelProfilo(utente, corpo);
+    _ref.read(revisioneDelProfiloProvider.notifier).state++;
 
     _invalida();
   }

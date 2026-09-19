@@ -483,6 +483,8 @@ final contestoConsiglioProvider =
           'training_days_since_last': settimanaAllenamento.giorniDallUltimo,
         if (locale != null) ...{
           'target_kcal': locale.kcal,
+          // 🆕 19/09: il server non ha più il profilo, l'obiettivo glielo si dice.
+          if (locale.obiettivo != null) 'goal': locale.obiettivo,
           'target_protein_g': locale.macro.proteineG,
           'target_carbs_g': locale.macro.carboidratiG,
           'target_fat_g': locale.macro.grassiG,

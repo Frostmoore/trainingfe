@@ -10903,6 +10903,262 @@ class EserciziSulTelefonoCompanion
   }
 }
 
+class $ProfiloSulTelefonoTable extends ProfiloSulTelefono
+    with TableInfo<$ProfiloSulTelefonoTable, ProfiloSalvato> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfiloSulTelefonoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _utenteIdMeta = const VerificationMeta(
+    'utenteId',
+  );
+  @override
+  late final GeneratedColumn<int> utenteId = GeneratedColumn<int>(
+    'utente_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _datiMeta = const VerificationMeta('dati');
+  @override
+  late final GeneratedColumn<String> dati = GeneratedColumn<String>(
+    'dati',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _aggiornatoIlMeta = const VerificationMeta(
+    'aggiornatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> aggiornatoIl = GeneratedColumn<DateTime>(
+    'aggiornato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [utenteId, dati, aggiornatoIl];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profilo_sul_telefono';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProfiloSalvato> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('utente_id')) {
+      context.handle(
+        _utenteIdMeta,
+        utenteId.isAcceptableOrUnknown(data['utente_id']!, _utenteIdMeta),
+      );
+    }
+    if (data.containsKey('dati')) {
+      context.handle(
+        _datiMeta,
+        dati.isAcceptableOrUnknown(data['dati']!, _datiMeta),
+      );
+    }
+    if (data.containsKey('aggiornato_il')) {
+      context.handle(
+        _aggiornatoIlMeta,
+        aggiornatoIl.isAcceptableOrUnknown(
+          data['aggiornato_il']!,
+          _aggiornatoIlMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_aggiornatoIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {utenteId};
+  @override
+  ProfiloSalvato map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfiloSalvato(
+      utenteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}utente_id'],
+      )!,
+      dati: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dati'],
+      )!,
+      aggiornatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}aggiornato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $ProfiloSulTelefonoTable createAlias(String alias) {
+    return $ProfiloSulTelefonoTable(attachedDatabase, alias);
+  }
+}
+
+class ProfiloSalvato extends DataClass implements Insertable<ProfiloSalvato> {
+  final int utenteId;
+  final String dati;
+  final DateTime aggiornatoIl;
+  const ProfiloSalvato({
+    required this.utenteId,
+    required this.dati,
+    required this.aggiornatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['utente_id'] = Variable<int>(utenteId);
+    map['dati'] = Variable<String>(dati);
+    map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl);
+    return map;
+  }
+
+  ProfiloSulTelefonoCompanion toCompanion(bool nullToAbsent) {
+    return ProfiloSulTelefonoCompanion(
+      utenteId: Value(utenteId),
+      dati: Value(dati),
+      aggiornatoIl: Value(aggiornatoIl),
+    );
+  }
+
+  factory ProfiloSalvato.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfiloSalvato(
+      utenteId: serializer.fromJson<int>(json['utenteId']),
+      dati: serializer.fromJson<String>(json['dati']),
+      aggiornatoIl: serializer.fromJson<DateTime>(json['aggiornatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'utenteId': serializer.toJson<int>(utenteId),
+      'dati': serializer.toJson<String>(dati),
+      'aggiornatoIl': serializer.toJson<DateTime>(aggiornatoIl),
+    };
+  }
+
+  ProfiloSalvato copyWith({
+    int? utenteId,
+    String? dati,
+    DateTime? aggiornatoIl,
+  }) => ProfiloSalvato(
+    utenteId: utenteId ?? this.utenteId,
+    dati: dati ?? this.dati,
+    aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
+  );
+  ProfiloSalvato copyWithCompanion(ProfiloSulTelefonoCompanion data) {
+    return ProfiloSalvato(
+      utenteId: data.utenteId.present ? data.utenteId.value : this.utenteId,
+      dati: data.dati.present ? data.dati.value : this.dati,
+      aggiornatoIl: data.aggiornatoIl.present
+          ? data.aggiornatoIl.value
+          : this.aggiornatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfiloSalvato(')
+          ..write('utenteId: $utenteId, ')
+          ..write('dati: $dati, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(utenteId, dati, aggiornatoIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfiloSalvato &&
+          other.utenteId == this.utenteId &&
+          other.dati == this.dati &&
+          other.aggiornatoIl == this.aggiornatoIl);
+}
+
+class ProfiloSulTelefonoCompanion extends UpdateCompanion<ProfiloSalvato> {
+  final Value<int> utenteId;
+  final Value<String> dati;
+  final Value<DateTime> aggiornatoIl;
+  const ProfiloSulTelefonoCompanion({
+    this.utenteId = const Value.absent(),
+    this.dati = const Value.absent(),
+    this.aggiornatoIl = const Value.absent(),
+  });
+  ProfiloSulTelefonoCompanion.insert({
+    this.utenteId = const Value.absent(),
+    this.dati = const Value.absent(),
+    required DateTime aggiornatoIl,
+  }) : aggiornatoIl = Value(aggiornatoIl);
+  static Insertable<ProfiloSalvato> custom({
+    Expression<int>? utenteId,
+    Expression<String>? dati,
+    Expression<DateTime>? aggiornatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (utenteId != null) 'utente_id': utenteId,
+      if (dati != null) 'dati': dati,
+      if (aggiornatoIl != null) 'aggiornato_il': aggiornatoIl,
+    });
+  }
+
+  ProfiloSulTelefonoCompanion copyWith({
+    Value<int>? utenteId,
+    Value<String>? dati,
+    Value<DateTime>? aggiornatoIl,
+  }) {
+    return ProfiloSulTelefonoCompanion(
+      utenteId: utenteId ?? this.utenteId,
+      dati: dati ?? this.dati,
+      aggiornatoIl: aggiornatoIl ?? this.aggiornatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (utenteId.present) {
+      map['utente_id'] = Variable<int>(utenteId.value);
+    }
+    if (dati.present) {
+      map['dati'] = Variable<String>(dati.value);
+    }
+    if (aggiornatoIl.present) {
+      map['aggiornato_il'] = Variable<DateTime>(aggiornatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfiloSulTelefonoCompanion(')
+          ..write('utenteId: $utenteId, ')
+          ..write('dati: $dati, ')
+          ..write('aggiornatoIl: $aggiornatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -10940,6 +11196,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $PercorsiDegliAllenamentiTable(this);
   late final $EserciziSulTelefonoTable eserciziSulTelefono =
       $EserciziSulTelefonoTable(this);
+  late final $ProfiloSulTelefonoTable profiloSulTelefono =
+      $ProfiloSulTelefonoTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10965,6 +11223,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     documentiImportati,
     percorsiDegliAllenamenti,
     eserciziSulTelefono,
+    profiloSulTelefono,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -16572,6 +16831,177 @@ typedef $$EserciziSulTelefonoTableProcessedTableManager =
       EsercizioSulTelefono,
       PrefetchHooks Function()
     >;
+typedef $$ProfiloSulTelefonoTableCreateCompanionBuilder =
+    ProfiloSulTelefonoCompanion Function({
+      Value<int> utenteId,
+      Value<String> dati,
+      required DateTime aggiornatoIl,
+    });
+typedef $$ProfiloSulTelefonoTableUpdateCompanionBuilder =
+    ProfiloSulTelefonoCompanion Function({
+      Value<int> utenteId,
+      Value<String> dati,
+      Value<DateTime> aggiornatoIl,
+    });
+
+class $$ProfiloSulTelefonoTableFilterComposer
+    extends Composer<_$ArchivioSalute, $ProfiloSulTelefonoTable> {
+  $$ProfiloSulTelefonoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get utenteId => $composableBuilder(
+    column: $table.utenteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dati => $composableBuilder(
+    column: $table.dati,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfiloSulTelefonoTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $ProfiloSulTelefonoTable> {
+  $$ProfiloSulTelefonoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get utenteId => $composableBuilder(
+    column: $table.utenteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dati => $composableBuilder(
+    column: $table.dati,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfiloSulTelefonoTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $ProfiloSulTelefonoTable> {
+  $$ProfiloSulTelefonoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get utenteId =>
+      $composableBuilder(column: $table.utenteId, builder: (column) => column);
+
+  GeneratedColumn<String> get dati =>
+      $composableBuilder(column: $table.dati, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get aggiornatoIl => $composableBuilder(
+    column: $table.aggiornatoIl,
+    builder: (column) => column,
+  );
+}
+
+class $$ProfiloSulTelefonoTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $ProfiloSulTelefonoTable,
+          ProfiloSalvato,
+          $$ProfiloSulTelefonoTableFilterComposer,
+          $$ProfiloSulTelefonoTableOrderingComposer,
+          $$ProfiloSulTelefonoTableAnnotationComposer,
+          $$ProfiloSulTelefonoTableCreateCompanionBuilder,
+          $$ProfiloSulTelefonoTableUpdateCompanionBuilder,
+          (
+            ProfiloSalvato,
+            BaseReferences<
+              _$ArchivioSalute,
+              $ProfiloSulTelefonoTable,
+              ProfiloSalvato
+            >,
+          ),
+          ProfiloSalvato,
+          PrefetchHooks Function()
+        > {
+  $$ProfiloSulTelefonoTableTableManager(
+    _$ArchivioSalute db,
+    $ProfiloSulTelefonoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfiloSulTelefonoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfiloSulTelefonoTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfiloSulTelefonoTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> utenteId = const Value.absent(),
+                Value<String> dati = const Value.absent(),
+                Value<DateTime> aggiornatoIl = const Value.absent(),
+              }) => ProfiloSulTelefonoCompanion(
+                utenteId: utenteId,
+                dati: dati,
+                aggiornatoIl: aggiornatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> utenteId = const Value.absent(),
+                Value<String> dati = const Value.absent(),
+                required DateTime aggiornatoIl,
+              }) => ProfiloSulTelefonoCompanion.insert(
+                utenteId: utenteId,
+                dati: dati,
+                aggiornatoIl: aggiornatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfiloSulTelefonoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $ProfiloSulTelefonoTable,
+      ProfiloSalvato,
+      $$ProfiloSulTelefonoTableFilterComposer,
+      $$ProfiloSulTelefonoTableOrderingComposer,
+      $$ProfiloSulTelefonoTableAnnotationComposer,
+      $$ProfiloSulTelefonoTableCreateCompanionBuilder,
+      $$ProfiloSulTelefonoTableUpdateCompanionBuilder,
+      (
+        ProfiloSalvato,
+        BaseReferences<
+          _$ArchivioSalute,
+          $ProfiloSulTelefonoTable,
+          ProfiloSalvato
+        >,
+      ),
+      ProfiloSalvato,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -16619,4 +17049,6 @@ class $ArchivioSaluteManager {
       );
   $$EserciziSulTelefonoTableTableManager get eserciziSulTelefono =>
       $$EserciziSulTelefonoTableTableManager(_db, _db.eserciziSulTelefono);
+  $$ProfiloSulTelefonoTableTableManager get profiloSulTelefono =>
+      $$ProfiloSulTelefonoTableTableManager(_db, _db.profiloSulTelefono);
 }

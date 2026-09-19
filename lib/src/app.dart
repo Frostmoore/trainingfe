@@ -14,6 +14,8 @@ import 'features/diary/data/trasloco_del_diario.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/profile/colore_accento.dart';
+import 'features/profile/profile_controller.dart';
+import 'features/profile/trasloco_del_profilo.dart';
 import 'features/trainer/ui/scelta_dello_slot_al_rientro.dart';
 import 'features/training/data/limiti_delle_schede.dart';
 
@@ -83,6 +85,21 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
 
     if (esito == EsitoTrasloco.fatto) {
       debugPrint('trasloco: il diario è sul telefono');
+    }
+
+    /*
+     * 🆕 📦 **E il profilo** — 19/09/2026: sesso, data di nascita, altezza e
+     * il resto lasciano il server. Una volta sola **per persona**.
+     */
+    final utente = ref.read(authControllerProvider).user?.id;
+
+    if (utente == null) return;
+
+    final profilo = await ref.read(traslocoDelProfiloProvider).porta(utente);
+
+    if (profilo == EsitoTraslocoProfilo.fatto) {
+      ref.read(revisioneDelProfiloProvider.notifier).state++;
+      debugPrint('trasloco: il profilo è sul telefono');
     }
   }
 

@@ -54,6 +54,7 @@ part 'archivio_salute.g.dart';
     DocumentiImportati,
     PercorsiDegliAllenamenti,
     EserciziSulTelefono,
+    ProfiloSulTelefono,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -80,7 +81,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -726,6 +727,9 @@ class ArchivioSalute extends _$ArchivioSalute {
           );
         }
       }
+
+      // v32 → v33 (19/09/2026): il profilo sta sul telefono.
+      if (da < 33) await m.createTable(profiloSulTelefono);
     },
   );
 
@@ -1358,6 +1362,53 @@ class ArchivioSalute extends _$ArchivioSalute {
 
     return spostate;
   }
+
+  /// Il profilo di questa persona, com'è sul telefono — 19/09/2026.
+  ///
+  /// 💡 Una mappa vuota se non ha ancora scritto niente: «non lo so» e non un
+  /// errore.
+  Future<Map<String, dynamic>> leggiProfilo(int utenteId) async {
+    final riga = await (select(
+      profiloSulTelefono,
+    )..where((t) => t.utenteId.equals(utenteId))).getSingleOrNull();
+
+    if (riga == null) return {};
+
+    try {
+      return (jsonDecode(riga.dati) as Map).cast<String, dynamic>();
+    } on Object {
+      return {};
+    }
+  }
+
+  /// Scrive **solo i campi passati**, come faceva la `PATCH` sul server.
+  ///
+  /// ⚠️ Un campo assente non si tocca; un campo `null` si svuota. È la
+  /// differenza fra «non l'ho cambiato» e «l'ho tolto».
+  ///
+  /// 💡 [soloSeMancano]: per il trasloco dal server — quello che la persona ha
+  /// già scritto sul telefono vince su quello che arriva.
+  Future<void> scriviNelProfilo(
+    int utenteId,
+    Map<String, dynamic> campi, {
+    bool soloSeMancano = false,
+  }) => transaction(() async {
+    final dati = await leggiProfilo(utenteId);
+
+    for (final c in campi.entries) {
+      if (soloSeMancano && dati[c.key] != null) continue;
+
+      dati[c.key] = c.value;
+    }
+
+    await into(profiloSulTelefono).insertOnConflictUpdate(
+      ProfiloSulTelefonoCompanion.insert(
+        utenteId: Value(utenteId),
+        dati: Value(jsonEncode(dati)),
+        aggiornatoIl: DateTime.now(),
+      ),
+    );
+  });
 
   /// Gli esercizi che stanno sul telefono — D6 e D8, 19/09/2026.
   Future<List<EsercizioSulTelefono>> leggiEserciziSulTelefono() =>
@@ -5216,4 +5267,36 @@ eserciziDellaScheda(String json) {
   }
 
   return trovati.values.toList(growable: false);
+}
+
+/// 🆕 **Il profilo sta sul telefono** — 19/09/2026.
+///
+/// 📌 Il committente: *«assicurati che non ci scriva niente di personale
+/// (esattamente come peso altezza e data di nascita)»*.
+///
+/// ⛔ Fino al 19/09 sesso, data di nascita, altezza, livello di attività,
+/// obiettivo, peso obiettivo e orari dei pasti andavano al server con
+/// `PATCH /profile`, e il pannello della palestra li mostrava e li modificava.
+/// Il registro dei trattamenti diceva il contrario.
+///
+/// ══ ⚠️ PER PERSONA, NON PER TELEFONO ══════════════════════════════════════
+///
+/// La chiave è l'id dell'utente: sullo stesso telefono possono entrare due
+/// persone, ed è la trappola già pagata con la chiave della chat (DA-FARE §0).
+///
+/// 💡 `dati` è il JSON con **gli stessi nomi del server** (`sex`, `birthdate`,
+/// `height_cm`, …): `UserProfile.fromJson` lo legge com'era, e nessuna
+/// schermata si è accorta del trasloco.
+///
+/// 🚨 È nell'archivio, quindi nel backup.
+@DataClassName('ProfiloSalvato')
+class ProfiloSulTelefono extends Table {
+  IntColumn get utenteId => integer()();
+
+  TextColumn get dati => text().withDefault(const Constant('{}'))();
+
+  DateTimeColumn get aggiornatoIl => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {utenteId};
 }

@@ -50,7 +50,10 @@ void main() {
 
       expect(find.text('Ti manda le schede'), findsOneWidget);
       expect(find.text('Potete scrivervi senza limiti'), findsOneWidget);
-      expect(find.text('Vede i tuoi allenamenti'), findsOneWidget);
+      // ⛔ «Vede i tuoi allenamenti» era falso (giro del 18/09): il trainer
+      // riceve nome, email e foto. Non deve tornare.
+      expect(find.text('I tuoi dati restano tuoi'), findsOneWidget);
+      expect(find.text('Vede i tuoi allenamenti'), findsNothing);
     });
 
     /// ⚠️ Il server può non dire il nome: la pagina non deve scrivere «null».

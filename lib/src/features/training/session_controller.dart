@@ -1,9 +1,6 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/providers.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../acquisti/data/gate_dell_abbonamento.dart';
 import '../health/health_controller.dart';
@@ -143,8 +140,6 @@ class SessionActions {
 
   final Ref _ref;
 
-  ApiClient get _api => _ref.read(apiClientProvider);
-
   /// Nome → (id, MET), per non richiedere lo stesso esercizio a ogni serie.
   final _noti = <String, (int, double?)>{};
 
@@ -276,18 +271,36 @@ class SessionActions {
           met = dalTelefono.met;
           nome = dalTelefono.nome;
         } else {
-          try {
-            final creato = await _catalogo(exerciseName, muscoli);
+          /*
+           * ══ 🆕 🚨 UN NOME NUOVO È UN ESERCIZIO SUO, SUL TELEFONO — D6 ══════
+           *
+           * ⛔ Qui si chiamava `POST /exercises`, e senza rete si salvava un id
+           * provvisorio che poi il server rifiutava di rendere vero (mancavano
+           * i muscoli: giro del 18/09). 📌 Il committente, 19/09: *«non vedo
+           * per quale motivo dovrebbe essere salvato sul server. Resta suo, e
+           * lo vede solo lui. I muscoli devono essere obbligatori»*.
+           *
+           * 💡 Quindi niente rete, mai: l'esercizio nasce nell'archivio con i
+           * muscoli scelti nel player (`_muscoliSeServono` non lascia passare
+           * un esercizio nuovo senza), e ha subito il suo id definitivo.
+           */
+          id = await _archivio.salvaEsercizioMio(
+            nome: exerciseName.trim(),
+            // ⚠️ `null` solo se qualcuno chiama `logSet` senza passare dal
+            // player: un muscolo inventato sarebbe peggio di «da indicare».
+            primario: muscoli?.primario?.valore,
+            secondari: [
+              for (final m in muscoli?.secondari ?? const <GruppoMuscolare>[])
+                m.valore,
+            ],
+          );
+          nome = exerciseName.trim();
 
-            id = (creato['id'] as num?)?.toInt() ?? exerciseId;
-            met = (creato['met'] as num?)?.toDouble();
-            nome = creato['name']?.toString() ?? exerciseName;
-          } on Object catch (e) {
-            debugPrint('serie: il catalogo non risponde — $e');
-          }
+          // 💡 Da adesso il catalogo lo conosce: la prossima ricerca lo trova.
+          _ref.invalidate(catalogoEserciziProvider);
         }
 
-        if (id != null) _noti[exerciseName] = (id, met);
+        _noti[exerciseName] = (id, met);
       }
     }
 
@@ -306,11 +319,12 @@ class SessionActions {
      * id e **poi per nome**, e il nome ce l'ha. Le calorie usano il MET, che
      * senza catalogo non c'è — e lì la stima ricade sul valore di serie.
      *
-     * 🔁 **E quando la rete torna l'id diventa vero** — B.16.13, 18/09/2026:
-     * `riconciliaLeSerieProvvisorie` in `catalogo_esercizi.dart`, al primo
-     * catalogo arrivato dalla rete con nessuna seduta aperta.
+     * 🆕 **Da D6 (19/09) ci si arriva solo senza nome**: un nome nuovo diventa
+     * un esercizio suo sul telefono, qui sopra, con un id definitivo. ⛔ La
+     * «riconciliazione» di B.16.13 non esiste più: il server rifiutava gli
+     * esercizi senza muscoli, e comunque non dovevano andarci.
      */
-    id ??= -exerciseName.hashCode.abs();
+    id ??= -(exerciseName ?? nome).hashCode.abs();
 
     await _archivio.registraSerie(
       SerieDelleSeduteCompanion.insert(
@@ -396,26 +410,6 @@ class SessionActions {
     _rileggi();
     _ref.invalidate(sessionsProvider);
   }
-
-  /// L'esercizio aggiunto al volo, riconciliato col catalogo del server.
-  ///
-  /// 🚨 `200` se esisteva già, `201` solo se è nato adesso — il server
-  /// riconosce i nomi. 💡 Ed è il motivo per cui questa chiamata non si può
-  /// togliere: due iscritti che scrivono «Panca piana» devono finire
-  /// sullo **stesso** esercizio, o lo storico non è confrontabile.
-  Future<Map<String, dynamic>> _catalogo(String nome, MuscoliScelti? muscoli) =>
-      _api.post<Map<String, dynamic>>(
-        '/exercises',
-        body: {
-          'name': nome,
-
-          // 🚨 Solo se qualcuno ha risposto: mandare un elenco vuoto senza che
-          // nessuno l'abbia detto scriverebbe in libreria «questo esercizio
-          // isola», che è una dichiarazione diversa da «non lo so». La regola
-          // sta in `muscoliInJson`, in un posto solo.
-          ...muscoliInJson(muscoli),
-        },
-      );
 }
 
 final sessionActionsProvider = Provider<SessionActions>(SessionActions.new);

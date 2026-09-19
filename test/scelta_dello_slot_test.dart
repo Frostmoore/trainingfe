@@ -109,7 +109,8 @@ void main() {
       expect(find.textContaining('sospes'), findsNothing);
       expect(find.textContaining('pausa'), findsNothing);
       expect(
-        find.textContaining('Continui a seguirlo come prima'),
+        // 💡 `due` allievi: il testo è al plurale, come il titolo.
+        find.textContaining('Continui a seguirli come prima'),
         findsOneWidget,
       );
     });

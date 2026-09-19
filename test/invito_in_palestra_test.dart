@@ -257,6 +257,27 @@ void main() {
       expect(find.text('Entri in Olimpo?'), findsNothing);
     });
 
+    /// 🆕 🚨 **A un trainer la conferma dice un'altra cosa** — giro del 18/09.
+    ///
+    /// ⛔ Riceveva la frase dell'iscritto: *«la palestra copre il tuo
+    /// abbonamento, e ti vesti dei suoi colori»*. Chi allena tiene il suo
+    /// piano e il suo spazio, e non si veste della palestra.
+    testWidgets('a un trainer la conferma non promette cose da iscritto', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _schermata({..._rispostaDelServer(), 'ruolo': 'trainer'}),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Entro in Olimpo'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Alleni anche qui'), findsOneWidget);
+      expect(find.textContaining('coprire il tuo abbonamento'), findsNothing);
+      expect(find.textContaining('ti vesti'), findsNothing);
+    });
+
     /// ⛔ **Un invito non valido non dice perché**, e non potrebbe: il server
     /// risponde lo stesso 404 a scaduto, revocato, usato e mai esistito.
     testWidgets('un invito non valido dice l\'unica cosa utile', (

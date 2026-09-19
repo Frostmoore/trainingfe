@@ -138,13 +138,24 @@ class _SceltaDelloSlotState extends ConsumerState<SceltaDelloSlot> {
            *
            * ⛔ E nessuna parola su un rapporto «in pausa»: non lo è.
            */
+          /*
+           * 🆕 ⚠️ **Singolare o plurale, come il titolo** — giro del 18/09.
+           * ⛔ Il titolo diceva «Alcuni tuoi allievi» e il testo «Continui a
+           * seguirlo»: con due persone sotto, la frase non tornava.
+           */
           Text(
-            'Continui a seguirlo come prima. Ora però è anche iscritto '
-            'alla palestra, che copre il suo posto.\n\n'
-            'Se tieni il posto, continui a pagarlo: quando uscirà dalla '
-            'palestra resterà tuo.\n'
-            'Se lo liberi, non lo paghi più: quando uscirà dalla palestra '
-            'non tornerà da te.',
+            uno
+                ? 'Continui a seguirlo come prima. Ora però è anche iscritto '
+                      'alla palestra, che copre il suo posto.\n\n'
+                      'Se tieni il posto, continui a pagarlo: quando uscirà '
+                      'dalla palestra resterà tuo.\n'
+                      'Se lo liberi, non lo paghi più: quando uscirà dalla '
+                      'palestra non tornerà da te.'
+                : 'Continui a seguirli come prima. Ora però sono anche '
+                      'iscritti alla palestra, che copre il loro posto.\n\n'
+                      'Per ciascuno: se tieni il posto, continui a pagarlo, e '
+                      'quando uscirà dalla palestra resterà tuo. Se lo liberi, '
+                      'non lo paghi più, e quando uscirà non tornerà da te.',
             style: tema.textTheme.bodyMedium?.copyWith(
               color: tema.colorScheme.onSurfaceVariant,
             ),

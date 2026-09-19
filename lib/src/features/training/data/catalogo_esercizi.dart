@@ -387,113 +387,83 @@ final catalogoEserciziProvider = FutureProvider<CatalogoEsercizi>((ref) async {
       jsonEncode(righe.map((e) => e.toJson()).toList()),
     );
 
-    final catalogo = CatalogoEsercizi(righe);
-
-    /*
-     * 🔁 **Le serie fatte senza rete prendono l'id vero** — 3b-B.16.13.
-     *
-     * 💡 Qui e non altrove perché questo è il momento in cui la rete c'è
-     * **di sicuro**: il catalogo è appena arrivato. ⚠️ In un `try` suo: una
-     * riconciliazione che non riesce non deve portarsi via il catalogo.
-     */
-    try {
-      final api = ref.read(apiClientProvider);
-
-      final toccate = await riconciliaLeSerieProvvisorie(
-        archivio: ref.read(archivioSaluteProvider),
-        catalogo: catalogo,
-        crea: (nome) =>
-            api.post<Map<String, dynamic>>('/exercises', body: {'name': nome}),
-      );
-
-      if (toccate > 0) debugPrint('serie provvisorie: $toccate ripuntate');
-    } on Object catch (e) {
-      debugPrint('serie provvisorie: riconciliazione rimandata — $e');
-    }
-
-    return catalogo;
+    return conQuelliSulTelefono(righe, await _sulTelefono(ref));
   } on Object catch (e) {
     debugPrint('catalogo: dalla rete non arriva — $e');
 
-    return await dallaCopia() ?? CatalogoEsercizi.vuoto;
+    return conQuelliSulTelefono(
+      (await dallaCopia())?.tutti ?? const [],
+      await _sulTelefono(ref),
+    );
   }
 });
 
-/// Dà l'id vero alle serie salvate con un id **provvisorio** — 3b-B.16.13,
-/// 18/09/2026.
-///
-/// ══ 📌 IL DEBITO CHE CHIUDE ════════════════════════════════════════════
-///
-/// Senza rete, e con un nome che il catalogo sul telefono non conosceva,
-/// `logSet` salva la serie con un id negativo invece di buttarla
-/// (B.16.10-bis: *«una serie fatta non si perde mai»*). ⛔ Ma quell'id restava
-/// lì **per sempre**: lo storico e i muscoli funzionavano lo stesso — la
-/// ricerca ricade sul nome — mentre la progressione per esercizio, i primati e
-/// il MET delle calorie cercano per id, e non la trovavano.
-///
-/// ══ 🎯 COME ══════════════════════════════════════════════════════════════
-///
-/// 1. si cerca il nome nel catalogo appena arrivato;
-/// 2. se non c'è, lo si chiede al server con [crea] — la stessa `POST
-///    /exercises` che `logSet` avrebbe fatto con la rete: il server riconosce i
-///    nomi, e due persone che scrivono «Panca piana» finiscono sullo **stesso**
-///    esercizio;
-/// 3. si passa il MET, poi si ripunta con `applicaLeRiconciliazioni` — lo
-///    stesso binario delle fusioni di 3b-Q, con la sua protezione sul vincolo
-///    unico.
-///
-/// ⛔ **Mai con una seduta aperta** (B.16.4): la serie che stai registrando non
-/// si riscrive sotto le mani. Si fa al prossimo catalogo.
-///
-/// 💡 Ripetibile: la seconda volta non trova più niente di negativo. E un
-/// nome che il server rifiuta resta provvisorio, e si riprova la volta dopo.
-///
-/// @return quante righe sono state ripuntate
-@visibleForTesting
-Future<int> riconciliaLeSerieProvvisorie({
-  required ArchivioSalute archivio,
-  required CatalogoEsercizi catalogo,
-  required Future<Map<String, dynamic>> Function(String nome) crea,
-}) async {
-  if (await archivio.sedutaAperta() != null) return 0;
+/// Gli esercizi che stanno sul telefono, letti in un modo che non può far
+/// cadere il catalogo — D6 e D8.
+Future<List<EsercizioSulTelefono>> _sulTelefono(Ref ref) async {
+  try {
+    return await ref.read(archivioSaluteProvider).leggiEserciziSulTelefono();
+  } on Object catch (e) {
+    debugPrint('catalogo: gli esercizi del telefono non si leggono — $e');
 
-  final provvisori = await archivio.eserciziProvvisori();
-
-  if (provvisori.isEmpty) return 0;
-
-  final rinvii = <int, int>{};
-  final met = <int, double>{};
-
-  for (final voce in provvisori.entries) {
-    int? vero;
-    double? suoMet;
-
-    final noto = catalogo.perNome(voce.value);
-
-    if (noto != null) {
-      vero = noto.id;
-      suoMet = noto.met;
-    } else {
-      try {
-        final creato = await crea(voce.value);
-
-        vero = (creato['id'] as num?)?.toInt();
-        suoMet = (creato['met'] as num?)?.toDouble();
-      } on Object catch (e) {
-        debugPrint("serie provvisoria «${voce.value}»: resta com'è — $e");
-      }
-    }
-
-    // ⚠️ Solo un id vero: un altro negativo non è una riconciliazione.
-    if (vero == null || vero <= 0) continue;
-
-    rinvii[voce.key] = vero;
-    if (suoMet != null) met[voce.key] = suoMet;
+    return const [];
   }
+}
 
-  if (rinvii.isEmpty) return 0;
+/// 🆕 **La libreria, più gli esercizi che stanno sul telefono** — D6 e D8,
+/// 19/09/2026.
+///
+/// ══ 📌 PERCHÉ ════════════════════════════════════════════════════════════
+///
+/// | Chi | Cosa | Dove |
+/// |---|---|---|
+/// | la piattaforma, la palestra | la libreria | il server |
+/// | 🆕 la persona | gli esercizi che si inventa | **solo** il suo telefono (D6) |
+/// | 🆕 il trainer | gli esercizi delle schede che manda | anche il telefono dell'allievo, **per sempre** (D8) |
+///
+/// ⛔ Prima c'era qui la «riconciliazione» di B.16.13: mandava al server gli
+/// esercizi inventati senza rete. Il server li rifiutava (mancavano i muscoli),
+/// e comunque non dovevano andarci: 📌 *«Resta suo, e lo vede solo lui»*.
+///
+/// ⚠️ **La libreria vince**: un esercizio del telefono entra solo se il suo id
+/// non c'è già, e un esercizio `mio` solo se il suo nome non c'è già — chi
+/// scrive «Panca piana» deve finire sull'esercizio della libreria, o lo
+/// storico non è confrontabile.
+@visibleForTesting
+CatalogoEsercizi conQuelliSulTelefono(
+  List<EsercizioDelCatalogo> libreria,
+  List<EsercizioSulTelefono> sulTelefono,
+) {
+  final ids = {for (final e in libreria) e.id};
+  final nomi = {for (final e in libreria) CatalogoEsercizi.normalizza(e.nome)};
 
-  await archivio.completaIlMetDelleProvvisorie(met);
+  final aggiunti = <EsercizioDelCatalogo>[
+    for (final e in sulTelefono)
+      if (!ids.contains(e.id) &&
+          !(e.origine == 'mio' &&
+              nomi.contains(CatalogoEsercizi.normalizza(e.nome))))
+        EsercizioDelCatalogo(
+          id: e.id,
+          nome: e.nome,
+          primario: GruppoMuscolare.da(e.primario),
+          secondari: _muscoli(e.secondari),
+          met: e.met,
+          origine: e.origine == 'mio'
+              ? OrigineEsercizio.mia
+              : OrigineEsercizio.condivisa,
+        ),
+  ];
 
-  return archivio.applicaLeRiconciliazioni(rinvii);
+  return CatalogoEsercizi([...libreria, ...aggiunti]);
+}
+
+List<GruppoMuscolare> _muscoli(String json) {
+  try {
+    return ((jsonDecode(json) as List?) ?? const [])
+        .map(GruppoMuscolare.da)
+        .nonNulls
+        .toList(growable: false);
+  } on Object {
+    return const [];
+  }
 }

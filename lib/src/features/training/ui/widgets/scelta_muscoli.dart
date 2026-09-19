@@ -13,8 +13,11 @@
 /// e quando una domanda non serve, si smette di leggerla anche quando serve.
 ///
 /// 💡 Quindi: nome riconosciuto → si **mostra** quello che il catalogo sa; nome
-/// nuovo → si **chiede**, perché è l'unico momento in cui la risposta entra
-/// davvero nella libreria.
+/// nuovo → si **chiede**, perché è l'unico momento in cui la risposta serve.
+///
+/// 🆕 Da D6 (19/09/2026) un esercizio nuovo scritto nel player **non va più in
+/// libreria**: resta sul telefono di chi l'ha scritto, con questi muscoli —
+/// che adesso sono obbligatori (il principale almeno).
 library;
 
 import 'package:flutter/material.dart';
@@ -174,16 +177,25 @@ class _FoglioMuscoliState extends State<_FoglioMuscoli> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop((
-                    primario: _primario,
+                  /*
+                   * 🆕 🚨 **Senza il muscolo principale non si conferma** —
+                   * D6, 19/09/2026. 📌 *«I muscoli devono essere
+                   * obbligatori»*. ⛔ Prima «Va bene» chiudeva anche a scelta
+                   * vuota, e l'esercizio nasceva senza muscoli: niente figura
+                   * del corpo, niente grafico.
+                   */
+                  onPressed: _primario == null
+                      ? null
+                      : () => Navigator.of(context).pop((
+                          primario: _primario,
 
-                    // ⚠️ L'ordine dei chip e non quello dei tocchi: due volte
-                    // lo stesso esercizio deve dare la stessa riga, o due
-                    // scritture identiche sembrano diverse.
-                    secondari: GruppoMuscolare.values
-                        .where(_secondari.contains)
-                        .toList(growable: false),
-                  )),
+                          // ⚠️ L'ordine dei chip e non quello dei tocchi: due volte
+                          // lo stesso esercizio deve dare la stessa riga, o due
+                          // scritture identiche sembrano diverse.
+                          secondari: GruppoMuscolare.values
+                              .where(_secondari.contains)
+                              .toList(growable: false),
+                        )),
                   child: const Text('Va bene'),
                 ),
               ),

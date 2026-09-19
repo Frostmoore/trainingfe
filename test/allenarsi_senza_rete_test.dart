@@ -12,6 +12,7 @@ import 'package:training_companion/src/features/acquisti/data/gate_dell_abboname
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/health/health_controller.dart';
 import 'package:training_companion/src/features/training/data/catalogo_esercizi.dart';
+import 'package:training_companion/src/features/training/data/gruppo_muscolare.dart';
 import 'package:training_companion/src/features/training/session_controller.dart';
 import 'package:training_companion/src/features/training/training_controller.dart';
 
@@ -296,121 +297,177 @@ void main() {
     },
   );
 
-  /// ══ 🔁 E QUANDO LA RETE TORNA, L'ID PROVVISORIO DIVENTA VERO ══════════
+  /// ══ 🆕 D6 — UN ESERCIZIO INVENTATO RESTA SUL TELEFONO ══════════════════
   ///
-  /// 3b-B.16.13, 18/09/2026. ⛔ Prima la serie restava col suo id negativo
-  /// **per sempre**: progressione e primati cercano per id, e non la trovavano.
-  group('la riconciliazione degli id provvisori', () {
+  /// 📌 Il committente, 19/09/2026: *«se io utente medio creo un esercizio …
+  /// non vedo per quale motivo dovrebbe essere salvato sul server. Resta suo, e
+  /// lo vede solo lui. I muscoli devono essere obbligatori»*.
+  ///
+  /// ⛔ Qui c'erano i test della «riconciliazione» di B.16.13, che mandava al
+  /// server gli esercizi inventati senza rete: il server li rifiutava (giro del
+  /// 18/09, D6), e comunque non dovevano andarci.
+  group('un esercizio inventato resta sul telefono', () {
     const macchina = 'Macchina strana della palestra nuova';
 
-    Future<int> unaSerieFattaSenzaRete({bool chiusa = true}) async {
+    test(
+      'nasce nell\'archivio con i suoi muscoli, senza chiamare il server',
+      () async {
+        // ⚠️ La rete risponde con un errore a tutto: se logSet la chiamasse, il
+        // test lo vedrebbe dal risultato sbagliato, non da un'eccezione.
+        staccaLaRete();
+
+        final attori = conIlCatalogo(CatalogoEsercizi.vuoto);
+        final seduta = await attori.read(sessionActionsProvider).start();
+
+        final id = await attori
+            .read(sessionActionsProvider)
+            .logSet(
+              sessionId: seduta.id,
+              setNumber: 1,
+              exerciseName: macchina,
+              muscoli: (
+                primario: GruppoMuscolare.petto,
+                secondari: const [GruppoMuscolare.tricipiti],
+              ),
+              reps: 10,
+            );
+
+        final suoi = await archivio.leggiEserciziSulTelefono();
+
+        expect(id, lessThan(0));
+        expect(suoi.single.id, id);
+        expect(suoi.single.nome, macchina);
+        expect(suoi.single.primario, 'chest');
+        expect(suoi.single.origine, 'mio');
+        expect((await archivio.serieDi(seduta.id)).single.esercizioId, id);
+      },
+    );
+
+    test('scritto due volte è lo stesso esercizio', () async {
+      final uno = await archivio.salvaEsercizioMio(
+        nome: macchina,
+        primario: 'chest',
+      );
+      final due = await archivio.salvaEsercizioMio(
+        nome: '  macchina strana della palestra NUOVA ',
+        primario: 'back',
+      );
+
+      expect(due, uno);
+    });
+
+    /// ⚠️ Un id nuovo non deve prendere quello di una serie provvisoria di
+    /// prima di D6, che vive ancora nelle serie.
+    test('un id nuovo non collide con le serie di prima', () async {
       final seduta = await archivio.apriSeduta();
 
       await archivio.registraSerie(
         SerieDelleSeduteCompanion.insert(
           sedutaId: seduta,
-          esercizioId: -macchina.hashCode.abs(),
-          nomeEsercizio: macchina,
+          esercizioId: -500,
+          nomeEsercizio: 'vecchio',
           numero: 1,
         ),
       );
 
-      if (chiusa) await archivio.chiudiSeduta(seduta);
-
-      return seduta;
-    }
-
-    test('il nome che il catalogo conosce prende il suo id e il MET', () async {
-      final seduta = await unaSerieFattaSenzaRete();
-
-      final toccate = await riconciliaLeSerieProvvisorie(
-        archivio: archivio,
-        catalogo: CatalogoEsercizi(const [
-          EsercizioDelCatalogo(
-            id: 301,
-            nome: macchina,
-            primario: null,
-            secondari: [],
-            met: 4.5,
-          ),
-        ]),
-        crea: (_) => throw StateError('il catalogo lo conosceva già'),
+      expect(
+        await archivio.salvaEsercizioMio(nome: 'nuovo', primario: 'chest'),
+        -501,
       );
-
-      final serie = await archivio.serieDi(seduta);
-
-      expect(toccate, 1);
-      expect(serie.single.esercizioId, 301);
-      expect(serie.single.met, 4.5);
     });
 
-    /// 💡 **Lo stesso `POST /exercises` che `logSet` avrebbe fatto con la
-    /// rete**: il server riconosce i nomi.
-    test('un nome sconosciuto si chiede al server', () async {
-      final seduta = await unaSerieFattaSenzaRete();
-      final chiesti = <String>[];
+    /// 💡 **La libreria vince**: chi scrive «Panca piana» deve finire
+    /// sull'esercizio della libreria, o lo storico non è confrontabile.
+    test('il catalogo li unisce, e la libreria vince', () async {
+      await archivio.salvaEsercizioMio(nome: macchina, primario: 'chest');
+      await archivio.salvaEsercizioMio(nome: 'Panca piana', primario: 'back');
 
-      await riconciliaLeSerieProvvisorie(
-        archivio: archivio,
-        catalogo: CatalogoEsercizi.vuoto,
-        crea: (nome) async {
-          chiesti.add(nome);
+      final catalogo = conQuelliSulTelefono(const [
+        EsercizioDelCatalogo(
+          id: 1,
+          nome: 'Panca piana',
+          primario: GruppoMuscolare.petto,
+          secondari: [],
+        ),
+      ], await archivio.leggiEserciziSulTelefono());
 
-          return {'id': 777, 'name': nome};
+      expect(catalogo.perNome(macchina)?.primario, GruppoMuscolare.petto);
+      expect(catalogo.perNome('Panca piana')?.id, 1);
+      expect(catalogo.tutti.length, 2);
+    });
+  });
+
+  /// ══ 🆕 D8 — GLI ESERCIZI DI UNA SCHEDA RICEVUTA RESTANO PER SEMPRE ══════
+  ///
+  /// 📌 *«gli esercizi che creano [trainer e palestre] devono essere salvati
+  /// anche nei telefoni degli allievi (anche se si disiscrivono) per sempre»*.
+  group('gli esercizi di una scheda ricevuta', () {
+    final scheda = jsonEncode({
+      'id': 99,
+      'name': 'Giorno A',
+      'days': [
+        {
+          'name': 'Spinta',
+          'exercises': [
+            {
+              'id': 7, // ⚠️ l'id della RIGA: non va preso
+              'exercise_id': 812,
+              'name': 'Spinte alla macchina del coach',
+              'muscle_group': 'chest',
+              'secondary_muscles': ['triceps'],
+              'alternatives': [
+                {
+                  'exercise': {'id': 813, 'name': 'Variante del coach'},
+                },
+              ],
+            },
+          ],
         },
-      );
-
-      expect(chiesti, [macchina]);
-      expect((await archivio.serieDi(seduta)).single.esercizioId, 777);
+      ],
     });
 
-    /// ⛔ **Il server che non risponde non perde niente**: resta provvisoria,
-    /// e si riprova al prossimo catalogo.
-    test('se il server non risponde resta provvisoria', () async {
-      final seduta = await unaSerieFattaSenzaRete();
+    test('si trovano tutti, alternative comprese, con l\'id giusto', () {
+      final trovati = eserciziDellaScheda(scheda);
 
-      final toccate = await riconciliaLeSerieProvvisorie(
-        archivio: archivio,
-        catalogo: CatalogoEsercizi.vuoto,
-        crea: (_) => throw DioException(requestOptions: RequestOptions()),
-      );
-
-      expect(toccate, 0);
-      expect((await archivio.serieDi(seduta)).single.esercizioId, lessThan(0));
+      expect(trovati.map((e) => e.id), unorderedEquals([812, 813]));
+      expect(trovati.firstWhere((e) => e.id == 812).primario, 'chest');
+      expect(trovati.firstWhere((e) => e.id == 812).secondari, ['triceps']);
     });
 
-    /// 🚨 B.16.4: **mai sotto le mani di chi si sta allenando**.
-    test('con una seduta aperta non si tocca niente', () async {
-      final seduta = await unaSerieFattaSenzaRete(chiusa: false);
-
-      final toccate = await riconciliaLeSerieProvvisorie(
-        archivio: archivio,
-        catalogo: CatalogoEsercizi(const [
-          EsercizioDelCatalogo(
-            id: 301,
-            nome: macchina,
-            primario: null,
-            secondari: [],
-          ),
-        ]),
-        crea: (_) => throw StateError('non doveva chiedere'),
+    test('salvando la scheda dalla chat restano sul telefono', () async {
+      await archivio.salvaSchedaDallaChat(
+        messaggioId: 1,
+        nome: 'Giorno A',
+        scheda: scheda,
       );
 
-      expect(toccate, 0);
-      expect((await archivio.serieDi(seduta)).single.esercizioId, lessThan(0));
+      final sulTelefono = await archivio.leggiEserciziSulTelefono();
+
+      expect(sulTelefono.map((e) => e.id), unorderedEquals([812, 813]));
+      expect(sulTelefono.every((e) => e.origine == 'ricevuto'), isTrue);
     });
 
-    test('rilanciata non trova più niente', () async {
-      await unaSerieFattaSenzaRete();
-
-      Future<int> giro() => riconciliaLeSerieProvvisorie(
-        archivio: archivio,
-        catalogo: CatalogoEsercizi.vuoto,
-        crea: (nome) async => {'id': 777, 'name': nome},
+    /// ⛔ Un esercizio suo non lo sovrascrive nessuno.
+    test('non toccano un esercizio mio', () async {
+      final mio = await archivio.salvaEsercizioMio(
+        nome: 'Mio',
+        primario: 'chest',
       );
 
-      expect(await giro(), 1);
-      expect(await giro(), 0);
+      await archivio.ricordaEserciziRicevuti([
+        (
+          id: mio,
+          nome: 'Altro',
+          primario: 'back',
+          secondari: const [],
+          met: null,
+        ),
+      ]);
+
+      final e = (await archivio.leggiEserciziSulTelefono()).single;
+
+      expect(e.nome, 'Mio');
+      expect(e.origine, 'mio');
     });
   });
 }

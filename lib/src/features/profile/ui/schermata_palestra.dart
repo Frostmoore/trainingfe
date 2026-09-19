@@ -168,12 +168,18 @@ class _DettagliState extends ConsumerState<_Dettagli> {
       context: context,
       builder: (dialogo) => AlertDialog(
         title: Text('Dissociare ${widget.palestra.nome}?'),
+        /*
+         * 🆕 ⛔ **Qui c'era scritto che schede e conversazione «restano alla
+         * palestra»** — falso, e contro due regole del committente (18-19/09):
+         * *«le schede restano sul telefono dell'allievo»* e *«la conversazione
+         * non deve né sparire né nascondersi mai: al massimo non gli posso più
+         * scrivere»* (DA-FARE D8, D9).
+         */
         content: const Text(
-          'Il tuo diario, le tue misure e le schede che ti sei scritto da solo '
-          'restano tuoi e ti seguono.\n\n'
-          'Restano invece alla palestra: le schede e i piani che ti ha scritto '
-          'il trainer, e la conversazione con lui — i messaggi sono di tutti e '
-          'due, e non te li puoi portare via.\n\n'
+          'Il tuo diario, le tue misure e tutte le tue schede — anche quelle '
+          'che ti ha scritto il trainer — restano sul tuo telefono.\n\n'
+          'Le conversazioni restano: potrai sempre rileggerle, ma non potrai '
+          'più scrivere a chi ti seguiva in palestra.\n\n'
           'Per rientrare ti servirà un nuovo invito, e te lo può mandare solo '
           'la palestra.',
         ),

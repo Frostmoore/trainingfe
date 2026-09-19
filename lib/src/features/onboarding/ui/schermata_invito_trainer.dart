@@ -143,12 +143,20 @@ class _PaginaState extends ConsumerState<_Pagina> {
                                 'I messaggi li leggete solo voi due: nemmeno '
                                 'noi possiamo aprirli.',
                           ),
+                          /*
+                           * ⛔ Qui c'era «Vede i tuoi allenamenti», ed era
+                           * falso: gli allenamenti stanno sul telefono dal
+                           * 23/08, e il trainer riceve solo nome, email e foto
+                           * (`TrainerController::members`). Trovato nel giro
+                           * del 18/09.
+                           */
                           _Riga(
-                            icona: Icons.visibility_outlined,
-                            titolo: 'Vede i tuoi allenamenti',
+                            icona: Icons.lock_outline_rounded,
+                            titolo: 'I tuoi dati restano tuoi',
                             testo:
-                                'Gli serve per scriverti le schede giuste. '
-                                'Il diario di quello che mangi resta tuo.',
+                                'Allenamenti, diario e misure stanno sul tuo '
+                                'telefono: lui vede il tuo nome, la tua email '
+                                'e la foto del profilo.',
                           ),
                         ],
                       ),

@@ -47,8 +47,10 @@ class SchermataPasswordDiRecupero extends ConsumerStatefulWidget {
 enum PercheLaChiave {
   messaggi(
     'I tuoi messaggi sono cifrati',
-    'Quello che scrivi al tuo trainer viene chiuso a chiave sul tuo telefono '
-        'e riaperto solo sul suo. Nessun altro può leggerlo: né la tua '
+    // ⛔ Diceva «quello che scrivi al tuo trainer» anche ai trainer: giro del
+    // 18/09. 💡 Chi scrive e chi legge, senza dire chi sono.
+    'Quello che scrivi viene chiuso a chiave sul tuo telefono e riaperto solo '
+        'su quello di chi lo riceve. Nessun altro può leggerlo: né la '
         'palestra, né noi.',
   ),
 

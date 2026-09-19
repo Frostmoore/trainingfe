@@ -22,6 +22,7 @@ class InvitoInPalestra {
     required this.cosaOttieni,
     this.descrizione,
     this.scadeIl,
+    this.daTrainer = false,
   });
 
   /// 🚨 **Tollerante come [GymBranding]**: questa risposta arriva a un'app che
@@ -41,6 +42,7 @@ class InvitoInPalestra {
           .map((e) => VantaggioInPalestra.fromJson(e.cast<String, dynamic>()))
           .toList(growable: false),
       scadeIl: DateTime.tryParse(json['scade_il']?.toString() ?? ''),
+      daTrainer: json['ruolo'] == 'trainer',
     );
   }
 
@@ -52,6 +54,13 @@ class InvitoInPalestra {
   final List<VantaggioInPalestra> cosaOttieni;
 
   final DateTime? scadeIl;
+
+  /// 🆕 **L'invito è per allenare, non per iscriversi** — giro del 18/09/2026.
+  ///
+  /// ⛔ Senza, la conferma diceva a un trainer *«la palestra copre il tuo
+  /// abbonamento, e ti vesti dei suoi colori»*: false tutte e due. 💡 Un
+  /// server vecchio non manda `ruolo`, e allora vale «iscritto», com'era.
+  final bool daTrainer;
 }
 
 /// Una riga dell'elenco «cosa ottieni».

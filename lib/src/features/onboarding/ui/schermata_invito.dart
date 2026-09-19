@@ -206,10 +206,18 @@ class _PaginaState extends ConsumerState<_Pagina> {
          *
          * 💡 Adesso dice le due cose che cambiano davvero.
          */
-        content: const Text(
-          'Da ora è la palestra a coprire il tuo abbonamento, e ti vesti dei '
-          'suoi colori. I tuoi allenamenti restano tuoi, e puoi dissociarti '
-          'quando vuoi dal profilo.',
+        /*
+         * 🆕 **E a un trainer si dice un'altra cosa** — giro del 18/09/2026.
+         * ⛔ Riceveva questa stessa frase: ma chi allena tiene il suo piano, il
+         * suo spazio e i suoi allievi, e non si veste della palestra.
+         */
+        content: Text(
+          widget.invito.daTrainer
+              ? 'Alleni anche qui: vedrai i suoi iscritti. Il tuo spazio, il '
+                    'tuo piano e i tuoi allievi restano come sono.'
+              : 'Da ora è la palestra a coprire il tuo abbonamento, e ti vesti '
+                    'dei suoi colori. I tuoi allenamenti restano tuoi, e puoi '
+                    'dissociarti quando vuoi dal profilo.',
         ),
         actions: [
           TextButton(
@@ -425,6 +433,8 @@ class _CosaOttieni extends StatelessWidget {
     'chat' => Icons.chat_bubble_outline_rounded,
     'restaurant' => Icons.restaurant_rounded,
     'auto_awesome' => Icons.auto_awesome_rounded,
+    'group' => Icons.groups_rounded,
+    'lock' => Icons.lock_outline_rounded,
     _ => Icons.check_circle_outline_rounded,
   };
 

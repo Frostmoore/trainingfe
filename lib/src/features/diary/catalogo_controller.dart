@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../health/health_controller.dart';
 import 'data/alimento_catalogo.dart';
 
 /// La ricerca nel catalogo alimenti — 17/08/2026.
@@ -47,12 +48,53 @@ final ricercaAlimentiProvider = FutureProvider.autoDispose
 
       // 💡 `List` e non `Map`: il client scarta gia' l'involucro `data`, e
       // chiedere una mappa qui darebbe un errore di tipo a ogni ricerca.
-      final elenco = await ref
-          .watch(apiClientProvider)
-          .get<List<dynamic>>('/foods/search', query: {'q': q});
+      /*
+       * ══ 🆕 PRIMA I SUOI, CHE STANNO SUL TELEFONO — D7, 19/09/2026 ══════════
+       *
+       * 📌 *«gli alimenti di un utente restano i suoi e li vede solo lui
+       * perché stanno sul suo telefono»*. 💡 Un alimento inventato non va al
+       * server: si ritrova qui, cercando nel suo diario — anche senza rete.
+       *
+       * ⚠️ `id: 0`: non ha un id nel catalogo, e non deve averlo — nessuno lo
+       * usa per rimandarlo al server.
+       */
+      final suoi = [
+        for (final a
+            in await ref.read(archivioSaluteProvider).alimentiScrittiDaMe(q))
+          AlimentoCatalogo(
+            id: 0,
+            nome: a.nome,
+            kcal100: a.kcal100,
+            proteine100: a.proteine100,
+            carboidrati100: a.carboidrati100,
+            grassi100: a.grassi100,
+            note: 'Scritto da te',
+          ),
+      ];
 
-      return elenco
-          .whereType<Map<String, dynamic>>()
-          .map(AlimentoCatalogo.fromJson)
-          .toList(growable: false);
+      List<AlimentoCatalogo> dalServer;
+
+      try {
+        final elenco = await ref
+            .watch(apiClientProvider)
+            .get<List<dynamic>>('/foods/search', query: {'q': q});
+
+        dalServer = elenco
+            .whereType<Map<String, dynamic>>()
+            .map(AlimentoCatalogo.fromJson)
+            .toList(growable: false);
+      } on Object {
+        // 💡 Senza rete restano i suoi: meglio di un errore.
+        if (suoi.isNotEmpty) return suoi;
+
+        rethrow;
+      }
+
+      final nomi = {for (final a in suoi) a.nome.trim().toLowerCase()};
+
+      return [
+        ...suoi,
+        for (final a in dalServer)
+          if (!nomi.contains(a.nome.trim().toLowerCase())) a,
+      ];
     });

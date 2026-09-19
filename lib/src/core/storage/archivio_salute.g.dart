@@ -10458,6 +10458,451 @@ class PercorsiDegliAllenamentiCompanion
   }
 }
 
+class $EserciziSulTelefonoTable extends EserciziSulTelefono
+    with TableInfo<$EserciziSulTelefonoTable, EsercizioSulTelefono> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EserciziSulTelefonoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
+  @override
+  late final GeneratedColumn<String> nome = GeneratedColumn<String>(
+    'nome',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _primarioMeta = const VerificationMeta(
+    'primario',
+  );
+  @override
+  late final GeneratedColumn<String> primario = GeneratedColumn<String>(
+    'primario',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _secondariMeta = const VerificationMeta(
+    'secondari',
+  );
+  @override
+  late final GeneratedColumn<String> secondari = GeneratedColumn<String>(
+    'secondari',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _metMeta = const VerificationMeta('met');
+  @override
+  late final GeneratedColumn<double> met = GeneratedColumn<double>(
+    'met',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _origineMeta = const VerificationMeta(
+    'origine',
+  );
+  @override
+  late final GeneratedColumn<String> origine = GeneratedColumn<String>(
+    'origine',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creatoIlMeta = const VerificationMeta(
+    'creatoIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creatoIl = GeneratedColumn<DateTime>(
+    'creato_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nome,
+    primario,
+    secondari,
+    met,
+    origine,
+    creatoIl,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'esercizi_sul_telefono';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EsercizioSulTelefono> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nome')) {
+      context.handle(
+        _nomeMeta,
+        nome.isAcceptableOrUnknown(data['nome']!, _nomeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomeMeta);
+    }
+    if (data.containsKey('primario')) {
+      context.handle(
+        _primarioMeta,
+        primario.isAcceptableOrUnknown(data['primario']!, _primarioMeta),
+      );
+    }
+    if (data.containsKey('secondari')) {
+      context.handle(
+        _secondariMeta,
+        secondari.isAcceptableOrUnknown(data['secondari']!, _secondariMeta),
+      );
+    }
+    if (data.containsKey('met')) {
+      context.handle(
+        _metMeta,
+        met.isAcceptableOrUnknown(data['met']!, _metMeta),
+      );
+    }
+    if (data.containsKey('origine')) {
+      context.handle(
+        _origineMeta,
+        origine.isAcceptableOrUnknown(data['origine']!, _origineMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_origineMeta);
+    }
+    if (data.containsKey('creato_il')) {
+      context.handle(
+        _creatoIlMeta,
+        creatoIl.isAcceptableOrUnknown(data['creato_il']!, _creatoIlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_creatoIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  EsercizioSulTelefono map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EsercizioSulTelefono(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome'],
+      )!,
+      primario: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}primario'],
+      ),
+      secondari: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}secondari'],
+      )!,
+      met: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}met'],
+      ),
+      origine: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origine'],
+      )!,
+      creatoIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creato_il'],
+      )!,
+    );
+  }
+
+  @override
+  $EserciziSulTelefonoTable createAlias(String alias) {
+    return $EserciziSulTelefonoTable(attachedDatabase, alias);
+  }
+}
+
+class EsercizioSulTelefono extends DataClass
+    implements Insertable<EsercizioSulTelefono> {
+  final int id;
+  final String nome;
+
+  /// Il nome di `GruppoMuscolare`, o `null` per un esercizio di prima di D6.
+  final String? primario;
+
+  /// JSON: l'elenco dei nomi di `GruppoMuscolare`.
+  final String secondari;
+  final double? met;
+
+  /// `mio` o `ricevuto`.
+  final String origine;
+  final DateTime creatoIl;
+  const EsercizioSulTelefono({
+    required this.id,
+    required this.nome,
+    this.primario,
+    required this.secondari,
+    this.met,
+    required this.origine,
+    required this.creatoIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['nome'] = Variable<String>(nome);
+    if (!nullToAbsent || primario != null) {
+      map['primario'] = Variable<String>(primario);
+    }
+    map['secondari'] = Variable<String>(secondari);
+    if (!nullToAbsent || met != null) {
+      map['met'] = Variable<double>(met);
+    }
+    map['origine'] = Variable<String>(origine);
+    map['creato_il'] = Variable<DateTime>(creatoIl);
+    return map;
+  }
+
+  EserciziSulTelefonoCompanion toCompanion(bool nullToAbsent) {
+    return EserciziSulTelefonoCompanion(
+      id: Value(id),
+      nome: Value(nome),
+      primario: primario == null && nullToAbsent
+          ? const Value.absent()
+          : Value(primario),
+      secondari: Value(secondari),
+      met: met == null && nullToAbsent ? const Value.absent() : Value(met),
+      origine: Value(origine),
+      creatoIl: Value(creatoIl),
+    );
+  }
+
+  factory EsercizioSulTelefono.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EsercizioSulTelefono(
+      id: serializer.fromJson<int>(json['id']),
+      nome: serializer.fromJson<String>(json['nome']),
+      primario: serializer.fromJson<String?>(json['primario']),
+      secondari: serializer.fromJson<String>(json['secondari']),
+      met: serializer.fromJson<double?>(json['met']),
+      origine: serializer.fromJson<String>(json['origine']),
+      creatoIl: serializer.fromJson<DateTime>(json['creatoIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nome': serializer.toJson<String>(nome),
+      'primario': serializer.toJson<String?>(primario),
+      'secondari': serializer.toJson<String>(secondari),
+      'met': serializer.toJson<double?>(met),
+      'origine': serializer.toJson<String>(origine),
+      'creatoIl': serializer.toJson<DateTime>(creatoIl),
+    };
+  }
+
+  EsercizioSulTelefono copyWith({
+    int? id,
+    String? nome,
+    Value<String?> primario = const Value.absent(),
+    String? secondari,
+    Value<double?> met = const Value.absent(),
+    String? origine,
+    DateTime? creatoIl,
+  }) => EsercizioSulTelefono(
+    id: id ?? this.id,
+    nome: nome ?? this.nome,
+    primario: primario.present ? primario.value : this.primario,
+    secondari: secondari ?? this.secondari,
+    met: met.present ? met.value : this.met,
+    origine: origine ?? this.origine,
+    creatoIl: creatoIl ?? this.creatoIl,
+  );
+  EsercizioSulTelefono copyWithCompanion(EserciziSulTelefonoCompanion data) {
+    return EsercizioSulTelefono(
+      id: data.id.present ? data.id.value : this.id,
+      nome: data.nome.present ? data.nome.value : this.nome,
+      primario: data.primario.present ? data.primario.value : this.primario,
+      secondari: data.secondari.present ? data.secondari.value : this.secondari,
+      met: data.met.present ? data.met.value : this.met,
+      origine: data.origine.present ? data.origine.value : this.origine,
+      creatoIl: data.creatoIl.present ? data.creatoIl.value : this.creatoIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EsercizioSulTelefono(')
+          ..write('id: $id, ')
+          ..write('nome: $nome, ')
+          ..write('primario: $primario, ')
+          ..write('secondari: $secondari, ')
+          ..write('met: $met, ')
+          ..write('origine: $origine, ')
+          ..write('creatoIl: $creatoIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, nome, primario, secondari, met, origine, creatoIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EsercizioSulTelefono &&
+          other.id == this.id &&
+          other.nome == this.nome &&
+          other.primario == this.primario &&
+          other.secondari == this.secondari &&
+          other.met == this.met &&
+          other.origine == this.origine &&
+          other.creatoIl == this.creatoIl);
+}
+
+class EserciziSulTelefonoCompanion
+    extends UpdateCompanion<EsercizioSulTelefono> {
+  final Value<int> id;
+  final Value<String> nome;
+  final Value<String?> primario;
+  final Value<String> secondari;
+  final Value<double?> met;
+  final Value<String> origine;
+  final Value<DateTime> creatoIl;
+  const EserciziSulTelefonoCompanion({
+    this.id = const Value.absent(),
+    this.nome = const Value.absent(),
+    this.primario = const Value.absent(),
+    this.secondari = const Value.absent(),
+    this.met = const Value.absent(),
+    this.origine = const Value.absent(),
+    this.creatoIl = const Value.absent(),
+  });
+  EserciziSulTelefonoCompanion.insert({
+    this.id = const Value.absent(),
+    required String nome,
+    this.primario = const Value.absent(),
+    this.secondari = const Value.absent(),
+    this.met = const Value.absent(),
+    required String origine,
+    required DateTime creatoIl,
+  }) : nome = Value(nome),
+       origine = Value(origine),
+       creatoIl = Value(creatoIl);
+  static Insertable<EsercizioSulTelefono> custom({
+    Expression<int>? id,
+    Expression<String>? nome,
+    Expression<String>? primario,
+    Expression<String>? secondari,
+    Expression<double>? met,
+    Expression<String>? origine,
+    Expression<DateTime>? creatoIl,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nome != null) 'nome': nome,
+      if (primario != null) 'primario': primario,
+      if (secondari != null) 'secondari': secondari,
+      if (met != null) 'met': met,
+      if (origine != null) 'origine': origine,
+      if (creatoIl != null) 'creato_il': creatoIl,
+    });
+  }
+
+  EserciziSulTelefonoCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nome,
+    Value<String?>? primario,
+    Value<String>? secondari,
+    Value<double?>? met,
+    Value<String>? origine,
+    Value<DateTime>? creatoIl,
+  }) {
+    return EserciziSulTelefonoCompanion(
+      id: id ?? this.id,
+      nome: nome ?? this.nome,
+      primario: primario ?? this.primario,
+      secondari: secondari ?? this.secondari,
+      met: met ?? this.met,
+      origine: origine ?? this.origine,
+      creatoIl: creatoIl ?? this.creatoIl,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nome.present) {
+      map['nome'] = Variable<String>(nome.value);
+    }
+    if (primario.present) {
+      map['primario'] = Variable<String>(primario.value);
+    }
+    if (secondari.present) {
+      map['secondari'] = Variable<String>(secondari.value);
+    }
+    if (met.present) {
+      map['met'] = Variable<double>(met.value);
+    }
+    if (origine.present) {
+      map['origine'] = Variable<String>(origine.value);
+    }
+    if (creatoIl.present) {
+      map['creato_il'] = Variable<DateTime>(creatoIl.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EserciziSulTelefonoCompanion(')
+          ..write('id: $id, ')
+          ..write('nome: $nome, ')
+          ..write('primario: $primario, ')
+          ..write('secondari: $secondari, ')
+          ..write('met: $met, ')
+          ..write('origine: $origine, ')
+          ..write('creatoIl: $creatoIl')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -10493,6 +10938,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $DocumentiImportatiTable(this);
   late final $PercorsiDegliAllenamentiTable percorsiDegliAllenamenti =
       $PercorsiDegliAllenamentiTable(this);
+  late final $EserciziSulTelefonoTable eserciziSulTelefono =
+      $EserciziSulTelefonoTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10517,6 +10964,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     consigliDelGiorno,
     documentiImportati,
     percorsiDegliAllenamenti,
+    eserciziSulTelefono,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -15876,6 +16324,254 @@ typedef $$PercorsiDegliAllenamentiTableProcessedTableManager =
       PercorsiDegliAllenamentiData,
       PrefetchHooks Function()
     >;
+typedef $$EserciziSulTelefonoTableCreateCompanionBuilder =
+    EserciziSulTelefonoCompanion Function({
+      Value<int> id,
+      required String nome,
+      Value<String?> primario,
+      Value<String> secondari,
+      Value<double?> met,
+      required String origine,
+      required DateTime creatoIl,
+    });
+typedef $$EserciziSulTelefonoTableUpdateCompanionBuilder =
+    EserciziSulTelefonoCompanion Function({
+      Value<int> id,
+      Value<String> nome,
+      Value<String?> primario,
+      Value<String> secondari,
+      Value<double?> met,
+      Value<String> origine,
+      Value<DateTime> creatoIl,
+    });
+
+class $$EserciziSulTelefonoTableFilterComposer
+    extends Composer<_$ArchivioSalute, $EserciziSulTelefonoTable> {
+  $$EserciziSulTelefonoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get primario => $composableBuilder(
+    column: $table.primario,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get secondari => $composableBuilder(
+    column: $table.secondari,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get met => $composableBuilder(
+    column: $table.met,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origine => $composableBuilder(
+    column: $table.origine,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creatoIl => $composableBuilder(
+    column: $table.creatoIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EserciziSulTelefonoTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $EserciziSulTelefonoTable> {
+  $$EserciziSulTelefonoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get primario => $composableBuilder(
+    column: $table.primario,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get secondari => $composableBuilder(
+    column: $table.secondari,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get met => $composableBuilder(
+    column: $table.met,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origine => $composableBuilder(
+    column: $table.origine,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creatoIl => $composableBuilder(
+    column: $table.creatoIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EserciziSulTelefonoTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $EserciziSulTelefonoTable> {
+  $$EserciziSulTelefonoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nome =>
+      $composableBuilder(column: $table.nome, builder: (column) => column);
+
+  GeneratedColumn<String> get primario =>
+      $composableBuilder(column: $table.primario, builder: (column) => column);
+
+  GeneratedColumn<String> get secondari =>
+      $composableBuilder(column: $table.secondari, builder: (column) => column);
+
+  GeneratedColumn<double> get met =>
+      $composableBuilder(column: $table.met, builder: (column) => column);
+
+  GeneratedColumn<String> get origine =>
+      $composableBuilder(column: $table.origine, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creatoIl =>
+      $composableBuilder(column: $table.creatoIl, builder: (column) => column);
+}
+
+class $$EserciziSulTelefonoTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $EserciziSulTelefonoTable,
+          EsercizioSulTelefono,
+          $$EserciziSulTelefonoTableFilterComposer,
+          $$EserciziSulTelefonoTableOrderingComposer,
+          $$EserciziSulTelefonoTableAnnotationComposer,
+          $$EserciziSulTelefonoTableCreateCompanionBuilder,
+          $$EserciziSulTelefonoTableUpdateCompanionBuilder,
+          (
+            EsercizioSulTelefono,
+            BaseReferences<
+              _$ArchivioSalute,
+              $EserciziSulTelefonoTable,
+              EsercizioSulTelefono
+            >,
+          ),
+          EsercizioSulTelefono,
+          PrefetchHooks Function()
+        > {
+  $$EserciziSulTelefonoTableTableManager(
+    _$ArchivioSalute db,
+    $EserciziSulTelefonoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EserciziSulTelefonoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EserciziSulTelefonoTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$EserciziSulTelefonoTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nome = const Value.absent(),
+                Value<String?> primario = const Value.absent(),
+                Value<String> secondari = const Value.absent(),
+                Value<double?> met = const Value.absent(),
+                Value<String> origine = const Value.absent(),
+                Value<DateTime> creatoIl = const Value.absent(),
+              }) => EserciziSulTelefonoCompanion(
+                id: id,
+                nome: nome,
+                primario: primario,
+                secondari: secondari,
+                met: met,
+                origine: origine,
+                creatoIl: creatoIl,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nome,
+                Value<String?> primario = const Value.absent(),
+                Value<String> secondari = const Value.absent(),
+                Value<double?> met = const Value.absent(),
+                required String origine,
+                required DateTime creatoIl,
+              }) => EserciziSulTelefonoCompanion.insert(
+                id: id,
+                nome: nome,
+                primario: primario,
+                secondari: secondari,
+                met: met,
+                origine: origine,
+                creatoIl: creatoIl,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EserciziSulTelefonoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $EserciziSulTelefonoTable,
+      EsercizioSulTelefono,
+      $$EserciziSulTelefonoTableFilterComposer,
+      $$EserciziSulTelefonoTableOrderingComposer,
+      $$EserciziSulTelefonoTableAnnotationComposer,
+      $$EserciziSulTelefonoTableCreateCompanionBuilder,
+      $$EserciziSulTelefonoTableUpdateCompanionBuilder,
+      (
+        EsercizioSulTelefono,
+        BaseReferences<
+          _$ArchivioSalute,
+          $EserciziSulTelefonoTable,
+          EsercizioSulTelefono
+        >,
+      ),
+      EsercizioSulTelefono,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -15921,4 +16617,6 @@ class $ArchivioSaluteManager {
         _db,
         _db.percorsiDegliAllenamenti,
       );
+  $$EserciziSulTelefonoTableTableManager get eserciziSulTelefono =>
+      $$EserciziSulTelefonoTableTableManager(_db, _db.eserciziSulTelefono);
 }

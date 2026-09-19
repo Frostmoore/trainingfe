@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -53,6 +53,7 @@ part 'archivio_salute.g.dart';
     ConsigliDelGiorno,
     DocumentiImportati,
     PercorsiDegliAllenamenti,
+    EserciziSulTelefono,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -79,7 +80,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -692,6 +693,38 @@ class ArchivioSalute extends _$ArchivioSalute {
           allenamentiDaOrologio.idSalute,
         );
         await m.createTable(percorsiDegliAllenamenti);
+      }
+
+      /*
+       * v31 → v32 (D6 e D8, 19/09/2026): gli esercizi che stanno sul telefono.
+       *
+       * 💡 **E gli id provvisori di prima diventano esercizi suoi**: le serie
+       * salvate senza rete con un id negativo (B.16.10-bis) trovano cosi' il
+       * loro esercizio, invece di restare «orfane» in attesa di una
+       * riconciliazione che il server rifiutava. I muscoli non si sanno:
+       * restano da indicare.
+       */
+      if (da < 32) {
+        await m.createTable(eserciziSulTelefono);
+
+        // ⚠️ Solo se la tabella delle serie c'è: un database che arriva da
+        // molto lontano (i test della v14 lo costruiscono a mano) può non
+        // averla, e una migrazione che esplode a metà è peggio di una serie
+        // provvisoria senza esercizio.
+        final ceLeSerie = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+          "AND name = 'serie_delle_sedute'",
+        ).get();
+
+        if (ceLeSerie.isNotEmpty) {
+          await customStatement(
+            'INSERT OR IGNORE INTO esercizi_sul_telefono '
+            '(id, nome, primario, secondari, met, origine, creato_il) '
+            "SELECT esercizio_id, MIN(nome_esercizio), NULL, '[]', NULL, 'mio', "
+            "CAST(strftime('%s', 'now') AS INTEGER) "
+            'FROM serie_delle_sedute WHERE esercizio_id < 0 GROUP BY esercizio_id',
+          );
+        }
       }
     },
   );
@@ -1326,46 +1359,116 @@ class ArchivioSalute extends _$ArchivioSalute {
     return spostate;
   }
 
-  /// Le serie salvate con un **id provvisorio**, e il nome con cui sono state
-  /// fatte — 3b-B.16.13, 18/09/2026.
-  ///
-  /// 💡 Un id negativo nasce solo in `SessionActions.logSet`, quando il nome
-  /// non era nel catalogo e la rete non rispondeva (B.16.10-bis): è l'unico
-  /// modo di riconoscerle, ed è il motivo per cui è negativo.
-  Future<Map<int, String>> eserciziProvvisori() async {
-    final righe =
-        await (selectOnly(serieDelleSedute, distinct: true)
-              ..addColumns([
-                serieDelleSedute.esercizioId,
-                serieDelleSedute.nomeEsercizio,
-              ])
-              ..where(serieDelleSedute.esercizioId.isSmallerThanValue(0)))
-            .get();
+  /// Gli esercizi che stanno sul telefono — D6 e D8, 19/09/2026.
+  Future<List<EsercizioSulTelefono>> leggiEserciziSulTelefono() =>
+      select(eserciziSulTelefono).get();
 
-    return {
-      for (final r in righe)
-        r.read(serieDelleSedute.esercizioId)!: r.read(
-          serieDelleSedute.nomeEsercizio,
-        )!,
-    };
-  }
+  /// Un esercizio **suo**, inventato da questa persona — D6.
+  ///
+  /// 💡 Se ne ha già uno con lo stesso nome, torna quello: scrivere due volte
+  /// «Macchina strana» deve dare lo stesso esercizio, o lo storico si spezza.
+  ///
+  /// ⛔ **Non va al server.** 📌 *«Resta suo, e lo vede solo lui»*.
+  ///
+  /// @return l'id, negativo
+  Future<int> salvaEsercizioMio({
+    required String nome,
+    required String? primario,
+    List<String> secondari = const [],
+  }) => transaction(() async {
+    final chiave = nome.trim().toLowerCase();
 
-  /// Dà il MET alle serie provvisorie che non l'avevano — 3b-B.16.13.
-  ///
-  /// ⚠️ **Prima** di ripuntarle con [applicaLeRiconciliazioni]: dopo, non si
-  /// distinguerebbero più dalle serie di quell'esercizio senza MET per scelta
-  /// della palestra, e quelle vanno lasciate come sono.
-  ///
-  /// ⛔ Le calorie delle sedute già chiuse **non si ricalcolano**: sono state
-  /// scritte col MET di ripiego, e riscriverle cambierebbe a posteriori un
-  /// giorno del diario che la persona ha già visto.
-  Future<void> completaIlMetDelleProvvisorie(Map<int, double> metPerId) async {
-    for (final voce in metPerId.entries) {
-      await (update(serieDelleSedute)
-            ..where((t) => t.esercizioId.equals(voce.key) & t.met.isNull()))
-          .write(SerieDelleSeduteCompanion(met: Value(voce.value)));
+    for (final e in await (select(
+      eserciziSulTelefono,
+    )..where((t) => t.origine.equals('mio'))).get()) {
+      if (e.nome.trim().toLowerCase() == chiave) {
+        // 💡 Uno di prima di D6, senza muscoli: adesso li ha.
+        if (e.primario == null && primario != null) {
+          await (update(
+            eserciziSulTelefono,
+          )..where((t) => t.id.equals(e.id))).write(
+            EserciziSulTelefonoCompanion(
+              primario: Value(primario),
+              secondari: Value(jsonEncode(secondari)),
+            ),
+          );
+        }
+
+        return e.id;
+      }
     }
-  }
+
+    /*
+     * ⚠️ **Il più piccolo che c'è, meno uno** — guardando anche le serie: un
+     * id provvisorio di prima di D6 vive lì anche se non è ancora qui.
+     */
+    final minimo = await customSelect(
+      'SELECT MIN(m) AS m FROM ('
+      'SELECT MIN(id) AS m FROM esercizi_sul_telefono '
+      'UNION ALL SELECT MIN(esercizio_id) FROM serie_delle_sedute)',
+    ).getSingle();
+
+    final piuPiccolo = minimo.read<int?>('m') ?? 0;
+    final id = (piuPiccolo < 0 ? piuPiccolo : 0) - 1;
+
+    await into(eserciziSulTelefono).insert(
+      EserciziSulTelefonoCompanion.insert(
+        id: Value(id),
+        nome: nome.trim(),
+        primario: Value(primario),
+        secondari: Value(jsonEncode(secondari)),
+        origine: 'mio',
+        creatoIl: DateTime.now(),
+      ),
+    );
+
+    return id;
+  });
+
+  /// Ricorda gli esercizi di una scheda ricevuta — D8.
+  ///
+  /// 📌 *«devono essere salvati anche nei telefoni degli allievi (anche se si
+  /// disiscrivono) per sempre»*. 💡 Si aggiornano nome e muscoli se il
+  /// trainer li ha cambiati; ⛔ un esercizio `mio` non si tocca mai.
+  Future<void> ricordaEserciziRicevuti(
+    List<
+      ({
+        int id,
+        String nome,
+        String? primario,
+        List<String> secondari,
+        double? met,
+      })
+    >
+    esercizi,
+  ) => transaction(() async {
+    for (final e in esercizi) {
+      if (e.id <= 0 || e.nome.trim().isEmpty) continue;
+
+      final gia = await (select(
+        eserciziSulTelefono,
+      )..where((t) => t.id.equals(e.id))).getSingleOrNull();
+
+      if (gia != null && gia.origine == 'mio') continue;
+
+      await into(eserciziSulTelefono).insertOnConflictUpdate(
+        EserciziSulTelefonoCompanion.insert(
+          id: Value(e.id),
+          nome: e.nome.trim(),
+          // ⚠️ Un muscolo che la scheda non dice non cancella quello saputo.
+          primario: Value(e.primario ?? gia?.primario),
+          secondari: Value(
+            e.secondari.isNotEmpty || gia == null
+                ? jsonEncode(e.secondari)
+                : gia.secondari,
+          ),
+          met: Value(e.met ?? gia?.met),
+          origine: 'ricevuto',
+          creatoIl: gia?.creatoIl ?? DateTime.now(),
+        ),
+      );
+    }
+  });
 
   /// Riscrive gli id dentro le **schede salvate sul telefono** — 3b-Q.
   ///
@@ -2532,6 +2635,62 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ **`salvatoIl` come terzo criterio**, e non come primo: chi non ha mai
   /// usato niente ha tutti gli zeri, e senza un terzo criterio l'ordine fra
   /// quelli sarebbe quello che decide SQLite — cioè diverso a ogni lettura.
+  /// 🆕 **Gli alimenti che questa persona si è scritta da sé** — D7, 19/09/2026.
+  ///
+  /// 📌 Il committente: *«gli alimenti di un utente restano i suoi e li vede
+  /// solo lui perché stanno sul suo telefono»*.
+  ///
+  /// 💡 Non serve una tabella nuova: un alimento inventato — scritto a mano o
+  /// stimato dall'AI — sta già nel diario, con i suoi valori per 100 g, ed è già
+  /// nel backup. Qui si cercano quelli, **uno per nome** (il più recente).
+  ///
+  /// ⛔ Solo `manual`, `ai_text`, `ai_photo`: quelli presi dal catalogo, da un
+  /// piano o da un preferito il catalogo li ha già.
+  Future<
+    List<
+      ({
+        String nome,
+        double? kcal100,
+        double? proteine100,
+        double? carboidrati100,
+        double? grassi100,
+      })
+    >
+  >
+  alimentiScrittiDaMe(String testo, {int quanti = 8}) async {
+    final q = testo.trim().toLowerCase();
+
+    if (q.length < 2) return const [];
+
+    final righe = await customSelect(
+      'SELECT descrizione, kcal100, proteine100, carboidrati100, grassi100 '
+      'FROM voci_diario v '
+      "WHERE kcal100 IS NOT NULL AND fonte IN ('manual', 'ai_text', 'ai_photo') "
+      'AND lower(descrizione) LIKE ? '
+      'AND mangiato_il = ('
+      '  SELECT MAX(w.mangiato_il) FROM voci_diario w '
+      // ⚠️ Stesse fonti anche qui: riusato dalla ricerca, un suo alimento
+      // diventa una voce `catalog` più recente, e lo nasconderebbe.
+      '  WHERE lower(w.descrizione) = lower(v.descrizione) AND w.kcal100 IS NOT NULL '
+      "  AND w.fonte IN ('manual', 'ai_text', 'ai_photo')"
+      ') '
+      'GROUP BY lower(descrizione) '
+      'ORDER BY mangiato_il DESC LIMIT ?',
+      variables: [Variable.withString('%$q%'), Variable.withInt(quanti)],
+    ).get();
+
+    return [
+      for (final r in righe)
+        (
+          nome: r.read<String>('descrizione'),
+          kcal100: r.read<double?>('kcal100'),
+          proteine100: r.read<double?>('proteine100'),
+          carboidrati100: r.read<double?>('carboidrati100'),
+          grassi100: r.read<double?>('grassi100'),
+        ),
+    ];
+  }
+
   Future<List<PreferitoCibo>> preferitiDelDiario() =>
       (select(preferitiCibo)..orderBy([
             (t) => OrderingTerm.desc(t.volteUsato),
@@ -3136,6 +3295,42 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// 📌 `false` vuol dire «non l'ho salvata», ed è **una risposta normale**: la
   /// chat non deve dire niente a nessuno.
   Future<bool> salvaSchedaDallaChat({
+    required int messaggioId,
+    required String nome,
+    required String scheda,
+    String? origineId,
+  }) async {
+    final salvata = await _salvaSchedaDallaChat(
+      messaggioId: messaggioId,
+      nome: nome,
+      scheda: scheda,
+      origineId: origineId,
+    );
+
+    /*
+     * 🆕 **E i suoi esercizi restano sul telefono, per sempre** — D8,
+     * 19/09/2026. 📌 *«gli esercizi che creano [trainer e palestre] devono
+     * essere salvati anche nei telefoni degli allievi (anche se si
+     * disiscrivono) per sempre»*.
+     *
+     * ⛔ Prima nome e muscoli di un esercizio del trainer si sapevano solo
+     * finché la libreria del server li mostrava: uscendo dalla palestra
+     * sparivano figura e grafico dei muscoli di quella scheda.
+     *
+     * ⚠️ In un `try`: ricordare gli esercizi non deve far fallire la scheda.
+     */
+    if (salvata) {
+      try {
+        await ricordaEserciziRicevuti(eserciziDellaScheda(scheda));
+      } on Object catch (e) {
+        debugPrint('scheda ricevuta: esercizi non ricordati — $e');
+      }
+    }
+
+    return salvata;
+  }
+
+  Future<bool> _salvaSchedaDallaChat({
     required int messaggioId,
     required String nome,
     required String scheda,
@@ -4904,4 +5099,121 @@ class VersioniDelleSchede extends Table {
 
   /// Il JSON della scheda, com'era.
   TextColumn get contenuto => text()();
+}
+
+/// 🆕 **Gli esercizi che stanno sul telefono** — D6 e D8, 19/09/2026.
+///
+/// ══ 📌 LE DUE REGOLE DEL COMMITTENTE ══════════════════════════════════════
+///
+/// | | |
+/// |---|---|
+/// | `mio` | 📌 *«se io utente medio creo un esercizio "saltare sopra alla mia stufa a pellet legata su un albero a Nepi" non vedo per quale motivo dovrebbe essere salvato sul server. Resta suo, e lo vede solo lui. I muscoli devono essere obbligatori»* |
+/// | `ricevuto` | 📌 *«gli esercizi che creano [trainer e palestre] devono essere salvati anche nei telefoni degli allievi (anche se si disiscrivono) per sempre»* |
+///
+/// ⛔ **Prima** un nome che la libreria non conosceva veniva mandato al server
+/// (`POST /exercises`), o — senza rete — salvato con un id provvisorio che poi
+/// il server rifiutava di rendere vero perché mancavano i muscoli (giro del
+/// 18/09, D6). E gli esercizi del trainer si vedevano solo finché la libreria
+/// del server li mostrava: uscendo dalla palestra sparivano muscoli e figura.
+///
+/// ══ 💡 GLI ID ══════════════════════════════════════════════════════════════
+///
+/// - `mio`: **negativi**, come gli id provvisori di prima, così le serie già
+///   salvate con uno di quelli non cambiano numero. Un id nuovo è il più
+///   piccolo che c'è meno uno: non può collidere con niente.
+/// - `ricevuto`: l'id **del server**, lo stesso che la scheda ha dentro — così
+///   le serie fatte su quella scheda si ritrovano.
+///
+/// 🚨 Sta nell'archivio, quindi **nel backup** (`esportaPerBackup` prende tutte
+/// le tabelle): regola *«ogni dato nuovo deve finire nel backup»*.
+@DataClassName('EsercizioSulTelefono')
+class EserciziSulTelefono extends Table {
+  IntColumn get id => integer()();
+
+  TextColumn get nome => text()();
+
+  /// Il nome di `GruppoMuscolare`, o `null` per un esercizio di prima di D6.
+  TextColumn get primario => text().nullable()();
+
+  /// JSON: l'elenco dei nomi di `GruppoMuscolare`.
+  TextColumn get secondari => text().withDefault(const Constant('[]'))();
+
+  RealColumn get met => real().nullable()();
+
+  /// `mio` o `ricevuto`.
+  TextColumn get origine => text()();
+
+  DateTimeColumn get creatoIl => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Gli esercizi dentro il JSON di una scheda — D8, 19/09/2026.
+///
+/// 💡 **Ricorsiva**, come `_riscriviLeSchede`: gli esercizi stanno nelle righe,
+/// dentro i giorni, e dentro le alternative. Una passeggiata scritta sulla
+/// forma di oggi mancherebbe le alternative senza dirlo.
+///
+/// 🚨 **L'id è quello dell'esercizio, mai quello della riga** (la trappola di
+/// 3b-Q.5.2): una riga si riconosce da `exercise_id` o da `exercise` annidato,
+/// e il suo `id` non si guarda.
+@visibleForTesting
+List<
+  ({int id, String nome, String? primario, List<String> secondari, double? met})
+>
+eserciziDellaScheda(String json) {
+  final trovati =
+      <
+        int,
+        ({
+          int id,
+          String nome,
+          String? primario,
+          List<String> secondari,
+          double? met,
+        })
+      >{};
+
+  void cammina(Object? nodo) {
+    if (nodo is List) {
+      nodo.forEach(cammina);
+
+      return;
+    }
+
+    if (nodo is! Map) return;
+
+    final esercizio = nodo['exercise'] is Map ? nodo['exercise'] as Map : null;
+    final id =
+        (nodo['exercise_id'] as num?)?.toInt() ??
+        (esercizio?['id'] as num?)?.toInt();
+    final nome = (nodo['name'] ?? esercizio?['name'])?.toString().trim();
+
+    if (id != null && id > 0 && nome != null && nome.isNotEmpty) {
+      final secondari =
+          nodo['secondary_muscles'] ?? esercizio?['secondary_muscles'];
+
+      trovati[id] = (
+        id: id,
+        nome: nome,
+        primario: (nodo['muscle_group'] ?? esercizio?['muscle_group'])
+            ?.toString(),
+        secondari: secondari is List
+            ? [for (final m in secondari) m.toString()]
+            : const <String>[],
+        met: ((nodo['met'] ?? esercizio?['met']) as num?)?.toDouble(),
+      );
+    }
+
+    nodo.values.forEach(cammina);
+  }
+
+  try {
+    cammina(jsonDecode(json));
+  } on FormatException {
+    return const [];
+  }
+
+  return trovati.values.toList(growable: false);
 }

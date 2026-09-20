@@ -23,6 +23,10 @@ class DayScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final giorno = ref.watch(calendarDayProvider(date));
 
+    // 💡 `YYYY-MM-DD` da tutte e due le parti: confrontare stringhe evita di
+    // ragionare sui fusi, che qui non servono — il giorno è già quello locale.
+    final eOggi = date == DateTime.now().toIso8601String().substring(0, 10);
+
     return Scaffold(
       appBar: const IntestazioneApp(titolo: 'Giornata'),
       body: giorno.when(
@@ -109,9 +113,28 @@ class DayScreen extends ConsumerWidget {
               const SizedBox(height: Gap.md),
               Text('Pasti', style: Theme.of(context).textTheme.titleSmall),
               if (voci.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: Gap.sm),
-                  child: Text('Nessun alimento registrato.'),
+                /*
+                 * 🆕 **Da un giorno vuoto si deve poter fare qualcosa** — 20/09/2026.
+                 *
+                 * ⛔ Prima qui c'era solo «Nessun alimento registrato.»: chi
+                 * arrivava su questa schermata per **rimettere a posto un
+                 * giorno saltato** doveva tornare indietro, cambiare giorno dal
+                 * diario e rifare la strada. 📌 Il committente: *«Schermata
+                 * giornata su un giorno vuoto ok»*.
+                 *
+                 * 💡 Il pulsante porta al diario **di quel giorno**, non a
+                 * oggi: senza impostare la data, il pasto finirebbe nel giorno
+                 * sbagliato — cioè il difetto, peggiorato.
+                 */
+                _NienteQui(
+                  testo: 'Nessun alimento registrato.',
+                  azione: 'Aggiungi un pasto di questo giorno',
+                  icona: Icons.restaurant_rounded,
+                  premuto: () {
+                    ref.read(selectedDateProvider.notifier).state =
+                        DateTime.parse(date);
+                    context.go(AppRoutes.diary);
+                  },
                 )
               else
                 for (final v in voci)
@@ -131,9 +154,24 @@ class DayScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               if (sessioni.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: Gap.sm),
-                  child: Text('Nessun allenamento.'),
+                /*
+                 * ⚠️ **L'allenamento, solo se il giorno è oggi.**
+                 *
+                 * 🚨 Una seduta si registra **mentre la si fa**
+                 * (`SessionController` la data con `DateTime.now()`): non
+                 * esiste modo di allenarsi ieri. Un pulsante «Inizia un
+                 * allenamento» su un giorno passato aprirebbe una seduta di
+                 * **oggi** da una schermata che parla di un altro giorno, e
+                 * l'errore si scoprirebbe il giorno dopo, nel posto sbagliato.
+                 */
+                _NienteQui(
+                  testo: eOggi
+                      ? 'Nessun allenamento.'
+                      : 'Nessun allenamento. Le sedute si registrano mentre le '
+                            'fai, quindi questo giorno non si può più riempire.',
+                  azione: eOggi ? 'Inizia un allenamento' : null,
+                  icona: Icons.fitness_center_rounded,
+                  premuto: () => context.go(AppRoutes.training),
                 )
               else
                 for (final s in sessioni)
@@ -189,6 +227,43 @@ class _Numero extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),
+      ],
+    ),
+  );
+}
+
+/// 🆕 Una sezione vuota che **offre un gesto**, invece di constatare — 20/09/2026.
+///
+/// 💡 `azione` può essere `null`: ci sono vuoti che non si possono riempire, e
+/// allora si dice perché invece di mostrare un pulsante che mentirebbe.
+class _NienteQui extends StatelessWidget {
+  const _NienteQui({
+    required this.testo,
+    required this.azione,
+    required this.icona,
+    required this.premuto,
+  });
+
+  final String testo;
+  final String? azione;
+  final IconData icona;
+  final VoidCallback premuto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: Gap.sm),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(testo, style: Theme.of(context).textTheme.bodyMedium),
+        if (azione case final String etichetta) ...[
+          const SizedBox(height: Gap.sm),
+          FilledButton.tonalIcon(
+            onPressed: premuto,
+            icon: Icon(icona),
+            label: Text(etichetta),
+          ),
+        ],
       ],
     ),
   );

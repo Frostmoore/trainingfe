@@ -13,6 +13,8 @@ import 'features/auth/auth_controller.dart';
 import 'features/diary/data/trasloco_del_diario.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
+import 'features/privacy/liberatoria_controller.dart';
+import 'features/privacy/ui/avviso_liberatoria.dart';
 import 'features/profile/colore_accento.dart';
 import 'features/profile/profile_controller.dart';
 import 'features/profile/trasloco_del_profilo.dart';
@@ -101,6 +103,32 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
       ref.read(revisioneDelProfiloProvider.notifier).state++;
       debugPrint('trasloco: il profilo è sul telefono');
     }
+
+    await _laLiberatoria();
+  }
+
+  /*
+   * 🆕 ✍️ **La liberatoria dell'art. 28, per chi allena** — 20/09/2026.
+   *
+   * 🚨 Chi vede i dati di altre persone deve prima accettare per iscritto cosa
+   * può farci. Il muro vero è sul server — che rifiuta comunque — ma trovarselo
+   * dopo aver accettato un allievo sarebbe il momento peggiore per scoprirlo.
+   *
+   * ⚠️ Solo per chi allena: a un iscritto il server risponde «non serve», e qui
+   * non compare niente.
+   */
+  Future<void> _laLiberatoria() async {
+    final stato = await ref.read(liberatoriaProvider).cosaServe();
+
+    if (!stato.serve || stato.tipo == null) return;
+
+    if (!mounted) return;
+
+    final contesto = chiaveDelNavigatore.currentContext;
+
+    if (contesto == null || !contesto.mounted) return;
+
+    await AvvisoLiberatoria.mostra(contesto, tipo: stato.tipo!);
   }
 
   Future<void> _invitoDallInstallazione() async {

@@ -43,8 +43,12 @@ class ModaleAcquisti {
   /// 🚨 **E non è solo navigazione: offrire lì l'abbonamento sarebbe una
   /// bugia.** Un abbonato ha **zero gettoni** finché non li compra — 📌 *«Un
   /// abbonato ha comunque 0 gettoni se non li compra»* — quindi a chi ha finito
-  /// i gettoni l'abbonamento **non sblocca niente**: pagherebbe 7,99 e
+  /// i gettoni l'abbonamento **non sblocca niente**: pagherebbe il canone e
   /// resterebbe esattamente dov'era.
+  ///
+  /// ⚠️ Qui c'era scritto *«pagherebbe 7,99»*, e dal 20/09/2026 il piano
+  /// personale costa **8,00 €**. 💡 Il prezzo non si scrive più nemmeno nei
+  /// commenti: sta in `config/listino.php` sul server, e da lì arriva all'app.
   ///
   /// ⚠️ Resta `false` di serie: dalla pillola dei gettoni nell'header, o da una
   /// funzione negata **per mancanza di abbonamento**, l'offerta giusta è ancora
@@ -417,21 +421,43 @@ class _Insegna extends StatelessWidget {
          * a chi lo cerca — condizioni d'uso, assistenza — ma non è quello che
          * si vende.
          */
+        /*
+         * ══ ⛔ QUI C'ERA UNA COSA NON COMPRESA — corretto il 21/09/2026 ════
+         *
+         * Diceva *«Fotografi il piatto e finisce nel diario»* e lo ripeteva
+         * nella prima riga dell'elenco: *«Il piatto dalla foto, o da una
+         * frase»*. 🚨 **Non è compreso.** `FoodPhoto` e `FoodText` partono con
+         * `aRichiesta: true` e si pagano **a gettoni anche da abbonati** — il
+         * cancello vero è `CancelloDeiGettoni`, lato server.
+         *
+         * ⛔ Vendere come inclusa la funzione che poi chiede gettoni è il modo
+         * di far sentire truffato chi ha appena pagato: paga, fotografa il
+         * piatto, e si vede chiedere altri soldi. 💡 Lo stesso errore era sul
+         * sito, ed è stato corretto il 20/09 (atlante §103.3).
+         *
+         * 💡 Adesso l'elenco dice quello che l'abbonamento apre **davvero**:
+         * l'automatico e le letture della schermata di oggi.
+         */
         Text(
-          'Fotografi il piatto e finisce nel diario, con calorie e macro. '
           'Ogni mattina un consiglio costruito su come hai mangiato, dormito '
-          'e ti sei allenato.',
+          'e ti sei allenato. E la schermata di oggi si apre tutta.',
           style: tema.textTheme.bodyMedium?.copyWith(height: 1.35),
         ),
         const SizedBox(height: Gap.md),
 
         const _Riga(
-          icona: Icons.photo_camera_rounded,
-          testo: 'Il piatto dalla foto, o da una frase',
-        ),
-        const _Riga(
           icona: Icons.auto_awesome_outlined,
           testo: 'Il consiglio del giorno, tutti i giorni',
+        ),
+        const _Riga(
+          icona: Icons.insights_rounded,
+          testo: 'Spunto di oggi, carico e carica, recupero, com\'è fatto '
+              'e i tuoi allenamenti',
+        ),
+        const _Riga(
+          icona: Icons.fitness_center_rounded,
+          testo: 'Allenamenti senza limite: senza abbonamento ne parte uno '
+              'al giorno',
         ),
         /*
          * ⛔ **Il piano alimentare da PDF è uscito da qui** — 26/08/2026.
@@ -446,6 +472,23 @@ class _Insegna extends StatelessWidget {
         const _Riga(
           icona: Icons.lock_open_rounded,
           testo: 'E tutto quello che arriva dopo, senza pagare di nuovo',
+        ),
+
+        /*
+         * ⚠️ **Si dice prima, e in piccolo.** Che il piatto dalla foto costi
+         * gettoni anche da abbonati è una cosa che si scopre comunque: o la si
+         * legge qui, o la si scopre dopo aver pagato — e allora è una
+         * richiesta di rimborso. 💡 Detta prima, è la ragione per cui i
+         * pacchetti qui sotto hanno senso.
+         */
+        const SizedBox(height: Gap.xs),
+        Text(
+          'Il piatto dalla foto o da una frase si paga a gettoni, anche con '
+          'l\'abbonamento: è una cosa che chiedi tu, e la paghi solo quando '
+          'la chiedi.',
+          style: tema.textTheme.bodySmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -595,9 +638,17 @@ class _GiaAbbonato extends StatelessWidget {
                  * li ha pagati a parte, e vuole sapere quanti gliene restano.
                  */
                 Text(
+                  /*
+                   * ⛔ **Diceva «i gettoni servono solo se finisci le
+                   * richieste incluse»** — corretto il 21/09/2026. Era falso, e
+                   * lo smentiva questa stessa modale venti righe più sotto: le
+                   * richieste incluse coprono quello che l'app fa **da sola**,
+                   * i gettoni quello che **chiedi tu**. 🚨 Non è che finiscono
+                   * le une e cominciano gli altri.
+                   */
                   listino.gettoniDisponibili > 0
-                      ? '${listino.gettoniDisponibili} gettoni comprati, oltre a quelle incluse'
-                      : 'Hai tutto quello che serve. I gettoni servono solo se finisci le richieste incluse.',
+                      ? '${listino.gettoniDisponibili} gettoni comprati, oltre a quello che l\'app fa da sola'
+                      : 'Hai tutto quello che l\'app fa da sola. I gettoni servono per quello che chiedi tu: un alimento, una foto, un\'analisi da rifare.',
                   style: tema.textTheme.bodySmall?.copyWith(
                     color: tema.colorScheme.onSecondaryContainer,
                   ),

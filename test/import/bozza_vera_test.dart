@@ -21,18 +21,21 @@ void main() {
  ]}
 ''';
 
-  test('la bozza vera diventa una scheda con i suoi giorni e i suoi esercizi', () {
-    final scheda = schedaDallaBozza(
-      json.decode(grezza) as Map<String, dynamic>,
-    );
+  test(
+    'la bozza vera diventa una scheda con i suoi giorni e i suoi esercizi',
+    () {
+      final scheda = schedaDallaBozza(
+        json.decode(grezza) as Map<String, dynamic>,
+      );
 
-    expect(scheda.nome, 'Scheda Palestra 3 Giorni - Demo/Test');
-    expect(scheda.giorni, hasLength(3));
-    expect(scheda.giorni[0].nome, 'Giorno 1 - Spinta + quadricipiti');
-    expect(scheda.giorni[0].esercizi, hasLength(2));
-    expect(scheda.giorni[2].esercizi.single.nome, 'Plank');
+      expect(scheda.nome, 'Scheda Palestra 3 Giorni - Demo/Test');
+      expect(scheda.giorni, hasLength(3));
+      expect(scheda.giorni[0].nome, 'Giorno 1 - Spinta + quadricipiti');
+      expect(scheda.giorni[0].esercizi, hasLength(2));
+      expect(scheda.giorni[2].esercizi.single.nome, 'Plank');
 
-    // ⚠️ `reps` non è sempre un numero: «30-45 sec» deve sopravvivere.
-    expect(scheda.giorni[2].esercizi.single.ripetizioni, '30-45 sec');
-  });
+      // ⚠️ `reps` non è sempre un numero: «30-45 sec» deve sopravvivere.
+      expect(scheda.giorni[2].esercizi.single.ripetizioni, '30-45 sec');
+    },
+  );
 }

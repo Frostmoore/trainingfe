@@ -50,6 +50,23 @@ class BarraDelDocumento extends StatelessWidget {
                */
               Expanded(
                 child: Align(
+                  /*
+                   * 🚨 **`heightFactor: 1`, e non è un dettaglio** — 20/09/2026.
+                   *
+                   * ⛔ Senza, `Align` con vincoli **larghi** si prende tutta
+                   * l'altezza disponibile: questa barra è la
+                   * `bottomNavigationBar` dello `Scaffold`, quindi diventava
+                   * **alta quanto lo schermo** e al corpo della pagina
+                   * restava **zero**.
+                   *
+                   * 🚨 Effetto visto sull'emulatore: «Controlla la scheda» si
+                   * apriva **vuota** — nessuna delle righe da controllare —
+                   * con questa barra disegnata a metà schermo. Non è un
+                   * problema di dati: la lista c'era e non aveva spazio.
+                   *
+                   * 💡 `heightFactor: 1` dice «alto quanto il tuo figlio».
+                   */
+                  heightFactor: 1,
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: () => _apri(context),

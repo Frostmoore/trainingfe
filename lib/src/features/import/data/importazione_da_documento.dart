@@ -236,15 +236,30 @@ class ImportazioniDaDocumento {
      */
     final risposta = await _api.upload<Map<String, dynamic>>(
       '/importazioni',
-      FormData.fromMap({
-        'file': [
-          for (final d in documenti)
-            MultipartFile.fromBytes(d.byte, filename: d.nome),
-        ],
-        'dichiarazione': dichiarazione ? '1' : '0',
-        'consenso_documento': consensoDocumento ? '1' : '0',
-        'genere': genere.valore,
-      }),
+      FormData.fromMap(
+        {
+          'file': [
+            for (final d in documenti)
+              MultipartFile.fromBytes(d.byte, filename: d.nome),
+          ],
+          'dichiarazione': dichiarazione ? '1' : '0',
+          'consenso_documento': consensoDocumento ? '1' : '0',
+          'genere': genere.valore,
+        },
+
+        /*
+         * 🚨 **`multiCompatible`, cioè `file[]`** — 20/09/2026.
+         *
+         * ⛔ Senza, Dio manda la stessa chiave `file` ripetuta una volta per
+         * documento: **PHP tiene solo l'ultima**, il server non vede un elenco
+         * e la richiesta muore su `validation.array`. 🚨 L'import da documento
+         * **non ha mai funzionato dall'app**, e i test non potevano accorgersene
+         * perché provano il server, che con `file[]` risponde bene.
+         *
+         * Trovato facendo il giro vero sull'emulatore (K7.3), 20/09/2026.
+         */
+        ListFormat.multiCompatible,
+      ),
     );
 
     return ImportazioneDaDocumento.fromJson(risposta);

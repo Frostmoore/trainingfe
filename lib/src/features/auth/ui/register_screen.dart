@@ -12,6 +12,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
 import '../../onboarding/ui/widgets/marchio_in_cima.dart';
+import '../../promozioni/data/promozioni.dart';
 import '../auth_controller.dart';
 import '../data/password_strength.dart';
 import 'widgets/password_meter.dart';
@@ -65,6 +66,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _password = TextEditingController();
   final _conferma = TextEditingController();
 
+  /// 🆕 🤝 P8 di `plan_promozioni.md` — il codice amico, facoltativo.
+  ///
+  /// 💡 Precompilato da un link `…/amico/{codice}` aperto prima (la cache lo
+  /// tiene da parte). Si manda **dopo** l'iscrizione, con `POST /account/amico`:
+  /// il server lo accetta solo nei primi giorni, quindi è adesso o mai.
+  late final _codiceAmico = TextEditingController(
+    text:
+        ref.read(localCacheProvider).getString(chiaveCodiceAmicoInAttesa) ?? '',
+  );
+
   /// Il nome utente si propone dal nome, ma **smette** appena l'utente lo
   /// tocca: continuare a sovrascriverlo mentre corregge il cognome sarebbe il
   /// modo più rapido per fargli odiare il modulo.
@@ -114,6 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _username.dispose();
     _password.dispose();
     _conferma.dispose();
+    _codiceAmico.dispose();
     super.dispose();
   }
 
@@ -183,6 +195,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _erroriCampo = const {};
     });
 
+    // 🆕 🤝 P8 — letti **prima**: dopo l'iscrizione il router può chiudere questa schermata.
+    final api = ref.read(apiClientProvider);
+    final cache = ref.read(localCacheProvider);
+    final messaggeria = ScaffoldMessenger.of(context);
+
     try {
       await ref
           .read(authControllerProvider.notifier)
@@ -196,6 +213,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             maggiorenne: _maggiorenne,
             condizioniAccettate: _condizioni,
           );
+
+      /*
+       * 🆕 🤝 **Il codice amico, subito dopo l'iscrizione** — P8.
+       *
+       * ⚠️ Un codice sbagliato **non annulla** l'iscrizione, che è già
+       * avvenuta: si dice cosa non è andato, e basta.
+       */
+      final amico = _codiceAmico.text.trim();
+
+      if (amico.isNotEmpty) {
+        final errore = await collegaLAmico(api, amico);
+
+        await cache.setString(chiaveCodiceAmicoInAttesa, '');
+
+        if (errore != null) {
+          messaggeria.showSnackBar(
+            SnackBar(content: Text('Codice amico: $errore')),
+          );
+        }
+      }
 
       /*
        * 🆕 🔗 **Chi arriva da un invito ci torna** — 17/09/2026.
@@ -471,6 +508,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
 
                     PasswordMeter(forza: _forza),
+                    const SizedBox(height: Gap.md),
+
+                    // 🆕 🤝 P8 — facoltativo: chi non ha un amico che l'ha invitato lo lascia vuoto.
+                    TextFormField(
+                      controller: _codiceAmico,
+                      textCapitalization: TextCapitalization.characters,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Codice amico (facoltativo)',
+                        prefixIcon: Icon(Icons.group_add_outlined),
+                      ),
+                    ),
                     const SizedBox(height: Gap.md),
 
                     TextFormField(

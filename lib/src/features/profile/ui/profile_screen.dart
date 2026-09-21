@@ -260,6 +260,30 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(height: 1),
 
                 /*
+                 * 🆕 🎁 P8 di plan_promozioni.md — le offerte e «porta un amico».
+                 * 💡 Sempre visibili: un'offerta può arrivare in qualunque
+                 * momento, e il posto per trovarla deve esserci prima.
+                 */
+                ListTile(
+                  leading: const Icon(Icons.card_giftcard_rounded),
+                  title: const Text('Offerte per te'),
+                  subtitle: const Text(
+                    'Regali, sconti, e il posto per un codice',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.offerte),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.group_add_rounded),
+                  title: const Text('Porta un amico'),
+                  subtitle: const Text('Il tuo link da condividere'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.portaUnAmico),
+                ),
+                const Divider(height: 1),
+
+                /*
                  * 🆕 **Dove si riaccende il consiglio nascosto** — 3b-O.3.2.
                  *
                  * 🚨 È la metà che rende accettabile il pulsante «nascondi»

@@ -248,17 +248,22 @@ typedef EsitoPagamento = String?;
 /// sta scrivendo. 🚨 Un modulo di pagamento senza barra dell'indirizzo è
 /// indistinguibile da una truffa, e insegnare alle persone che va bene così è
 /// un danno che sopravvive a questa app.
+///
+/// 🆕 🎟️ `promozione`: il codice scritto in «Hai un codice?» (P8 di
+/// `plan_promozioni.md`). ⚠️ Un codice che non vale non blocca il pagamento: il
+/// server fa pagare a prezzo pieno.
 Future<EsitoPagamento> apriIlPagamento(
   WidgetRef ref, {
   required String tipo,
   int? gettoni,
+  String? promozione,
 }) async {
   try {
     final risposta = await ref
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
           '/billing/checkout',
-          body: {'tipo': tipo, 'gettoni': ?gettoni},
+          body: {'tipo': tipo, 'gettoni': ?gettoni, 'promozione': ?promozione},
         );
 
     final url = Uri.tryParse(risposta['url']?.toString() ?? '');

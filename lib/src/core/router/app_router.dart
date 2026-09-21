@@ -35,6 +35,9 @@ import '../../features/profile/ui/schermata_modello_calorie.dart';
 import '../../features/profile/ui/schermata_palestra.dart';
 import '../../features/profile/ui/schermata_tu.dart';
 import '../../features/progress/ui/progress_screen.dart';
+import '../../features/promozioni/ui/schermata_amico.dart';
+import '../../features/promozioni/ui/schermata_offerte.dart';
+import '../../features/promozioni/ui/schermata_porta_un_amico.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
@@ -224,6 +227,13 @@ class AppRoutes {
   /// ⚠️ Oggi è una vetrina: i pagamenti non sono collegati, e la schermata lo
   /// dice in cima. Vedi `SchermataAcquisti.inArrivo`.
   static const acquisti = '/acquisti';
+
+  /// 🆕 🎁 P8 di `plan_promozioni.md` — le offerte e «porta un amico».
+  static const offerte = '/profilo/offerte';
+  static const portaUnAmico = '/profilo/porta-un-amico';
+
+  /// 🆕 🤝 Il link «porta un amico» (`https://…/amico/{codice}`), come un invito.
+  static const amico = '/amico';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
 
@@ -283,7 +293,9 @@ class AppRoutes {
       location.startsWith('$loginDaInvito/') ||
       location.startsWith('$invitoTrainer/') ||
       location.startsWith('$registerDaInvitoTrainer/') ||
-      location.startsWith('$loginDaInvitoTrainer/');
+      location.startsWith('$loginDaInvitoTrainer/') ||
+      // 🆕 🤝 P8 — anche il link amico: chi lo apre senza sessione non va al login.
+      location.startsWith('$amico/');
 
   /// 🆕 🔗 La registrazione, **con l'invito in tasca** — 17/09/2026.
   ///
@@ -578,6 +590,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           diUnTrainer: true,
         ),
       ),
+      // 🆕 🤝 P8 — il link amico, raggiungibile anche senza sessione (vedi `eUnInvito`).
+      GoRoute(
+        path: '${AppRoutes.amico}/:codice',
+        builder: (_, stato) =>
+            SchermataAmico(codice: stato.pathParameters['codice'] ?? ''),
+      ),
       GoRoute(
         path: AppRoutes.register,
         /*
@@ -789,6 +807,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.acquisti,
         builder: (_, _) => const SchermataAcquisti(),
+      ),
+      // 🆕 🎁 P8 di plan_promozioni.md.
+      GoRoute(
+        path: AppRoutes.offerte,
+        builder: (_, stato) => SchermataOfferte(
+          codiceIniziale: stato.uri.queryParameters['codice'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.portaUnAmico,
+        builder: (_, _) => const SchermataPortaUnAmico(),
       ),
       GoRoute(
         path: AppRoutes.calendar,

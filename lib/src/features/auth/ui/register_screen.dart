@@ -168,26 +168,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     /*
-     * 🆕 **Il codice può non esserci, e non è più un errore** — F3.
-     *
-     * Qui c'era un blocco che rifiutava l'iscrizione con «Manca il codice della
-     * palestra», ed era giusto finché ogni utente doveva appartenere a una: chi
-     * arrivava senza codice ci era arrivato per sbaglio.
-     *
-     * ⚠️ Da F3 «nessun codice» era una scelta esplicita — il pulsante «continuo
-     * senza palestra» della schermata precedente — e il server la sa gestire:
-     * fa nascere un tenant personale.
-     *
-     * ⛔ **Da 3b-J.1 non è più nemmeno una scelta: è l'unica strada.** Nessuno
-     * scrive più `joinCode`, quindi qui vale sempre `null`.
-     *
-     * 🚨 **La riga resta**, e non è codice morto per sbaglio: è il punto in cui
-     * un domani si riattacca un invito che arriva da fuori — un link, un QR
-     * sul volantino della palestra. 💡 Toglierla vorrebbe dire dover ritrovare
-     * *tutti e tre* i punti che lo mandano al server (accesso, iscrizione,
-     * social) invece di riempirne uno solo.
+     * ⛔ **Via il codice palestra** — F11, 24/09/2026. 📌 *«il codice non esiste
+     * più»*. Qui una riga leggeva un `joinCode` rimasto in cache e lo mandava
+     * al server; dal 27/08 non lo scriveva più nessuno, ma una versione vecchia
+     * dell'app poteva averlo lasciato sul telefono. In palestra si entra solo
+     * da un link d'invito.
      */
-    final code = ref.read(brandingControllerProvider).joinCode;
 
     setState(() {
       _inCorso = true;
@@ -204,7 +190,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .register(
-            joinCode: code,
             name: _nome.text,
             email: _email.text,
             username: _username.text,

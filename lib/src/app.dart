@@ -24,8 +24,8 @@ import 'features/training/data/limiti_delle_schede.dart';
 /// La radice dell'app.
 ///
 /// 🚨 **Il tema si ricostruisce quando cambia il branding.** È il punto in cui
-/// ADR-A01 diventa vero: `watch` sul branding significa che appena arriva la
-/// risposta di `/branding/lookup` tutta l'app cambia colore, senza riavviarla e
+/// ADR-A01 diventa vero: `watch` sul branding significa che appena arriva un
+/// branding nuovo (accesso, invito) tutta l'app cambia colore, senza riavviarla e
 /// senza che nessuna schermata debba saperne niente.
 class TrainingCompanionApp extends ConsumerStatefulWidget {
   const TrainingCompanionApp({super.key});

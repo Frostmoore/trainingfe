@@ -317,18 +317,18 @@ class AuthController extends StateNotifier<AuthState> {
   /// Il campo si chiama `login` perché accetta entrambi: chiamarlo `email`
   /// sarebbe un nome che mente, ed è il motivo per cui prima o poi qualcuno gli
   /// rimetterebbe una validazione sull'email credendo di correggere una svista.
-  Future<void> login({
-    required String login,
-    required String password,
-    String? joinCode,
-  }) async {
+  ///
+  /// ⛔ **Niente più `join_code`** — F11, 24/09/2026. 📌 Il committente: *«il
+  /// codice non esiste più»*. 🚨 Una versione vecchia lo rimandava da una cache
+  /// rimasta sul telefono: il server lo ignora comunque al login, ma l'app non
+  /// deve più nemmeno averlo.
+  Future<void> login({required String login, required String password}) async {
     final payload = <String, dynamic>{
       'login': login.trim(),
       'password': password,
       // Il nome del dispositivo finisce nell'elenco dei token: serve
       // all'utente per riconoscere e revocare una sessione che non ricorda.
       'device_name': 'app',
-      if (joinCode != null && joinCode.isNotEmpty) 'join_code': joinCode,
     };
 
     // 🚨 `unwrap: false`: la risposta è `{token, data, branding}`, non un
@@ -350,15 +350,10 @@ class AuthController extends StateNotifier<AuthState> {
   /// disattiva senza toglierlo. È il tipo di finta protezione che si scopre
   /// quando qualcuno resta chiuso fuori dal proprio account il giorno dopo
   /// l'iscrizione.
-  /// 🆕 **`joinCode` è facoltativo da F3.** Senza, il server fa nascere un
-  /// *tenant personale* e la persona diventa un utente senza palestra.
-  ///
-  /// ⚠️ Si manda `null` e **non la stringa vuota**: il server tratta il vuoto
-  /// come assente, ma affidarsi a quella tolleranza vorrebbe dire che il giorno
-  /// in cui qualcuno la togliesse l'app smetterebbe di funzionare senza che
-  /// niente qui dentro sia cambiato.
+  /// ⛔ **Niente più codice palestra** — F11. Chi si iscrive nasce col suo
+  /// spazio personale; in una palestra si entra solo da un **link d'invito**.
+  /// Il server rifiuta una registrazione che porti ancora un `join_code`.
   Future<void> register({
-    String? joinCode,
     required String name,
     required String email,
     required String username,
@@ -370,9 +365,6 @@ class AuthController extends StateNotifier<AuthState> {
     final data = await _api.post<Map<String, dynamic>>(
       '/auth/register',
       body: {
-        'join_code': joinCode == null || joinCode.trim().isEmpty
-            ? null
-            : joinCode.trim(),
         'name': name.trim(),
         'email': email.trim(),
         'username': username.trim().toLowerCase(),
@@ -397,17 +389,14 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// Accesso con Google o Apple — C17.
   ///
-  /// 🚨 `joinCode` serve **solo la prima volta**, e il server lo dice: se
-  /// risponde `join_code_required`, l'app deve chiedere il codice palestra e
-  /// riprovare. Mandarlo sempre non servirebbe — dal secondo accesso il server
-  /// lo ignora, perché la palestra di una persona è quella scritta sul suo
-  /// utente e non quella che presenta al momento dell'accesso.
+  /// ⛔ **Niente più codice palestra** — F11. Al primo accesso il server collega
+  /// l'identità all'account che ha già quell'email (verificata), ovunque sia;
+  /// se non ce n'è, fa nascere lo spazio personale.
   ///
   /// Restituisce `false` se la persona ha annullato: **non è un errore** e non
   /// va mostrato come tale.
   Future<bool> loginWithSocial(
     String provider, {
-    String? joinCode,
     bool maggiorenne = false,
     bool condizioniAccettate = false,
   }) async {
@@ -420,7 +409,6 @@ class AuthController extends StateNotifier<AuthState> {
       body: {
         'provider': credenziale.provider,
         'id_token': credenziale.idToken,
-        'join_code': ?joinCode,
 
         // 🚨 S9.2 — **si mandano sempre**, e da F3 è obbligatorio che sia così.
         //

@@ -429,8 +429,8 @@ class ProfileScreen extends ConsumerWidget {
              * averne una — ma dice dove si prende l'invito invece di chiedere
              * qualcosa che nessuno ha.
              *
-             * ⚠️ `tenants.join_code` **non sparisce**: è il codice con cui il
-             * pannello genera gli inviti, non quello che digita una persona.
+             * ✅ Con F11 (24/09/2026) il codice palestra non esiste più
+             * nemmeno sul server.
              */
             // 💡 Tutta costante da quando non ha piu' un `onTap`: senza il
             // modulo del codice, qui non c'e' piu' niente che cambi.

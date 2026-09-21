@@ -4,9 +4,9 @@ import '../../auth/data/social_sign_in.dart';
 
 /// Il branding della palestra — ADR-A01.
 ///
-/// È l'unica cosa che l'app scarica **prima** di autenticarsi: serve a vestirsi
-/// dei colori giusti già nella schermata di accesso. Arriva da
-/// `GET /api/v1/branding/lookup?code=`, che è pubblico.
+/// Arriva con l'accesso (`branding` nella risposta di login e registrazione),
+/// con `auth/me` e con l'invito di una palestra. ⛔ `GET branding/lookup?code=`
+/// non esiste più: il codice palestra è stato tolto (F11, 24/09/2026).
 class GymBranding {
   const GymBranding({
     this.name,

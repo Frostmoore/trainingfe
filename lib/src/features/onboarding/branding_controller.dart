@@ -8,22 +8,17 @@ import 'data/gym_branding.dart';
 class BrandingState {
   const BrandingState({
     required this.branding,
-    this.joinCode,
     this.senzaPalestra = false,
     this.sceltaFatta = false,
     this.isLoading = false,
   });
 
   final GymBranding branding;
-  final String? joinCode;
 
   /// 🚨 Ha scelto **di non averne una** — F3.
   final bool senzaPalestra;
 
   final bool isLoading;
-
-  /// `true` quando l'utente ha già scelto una palestra.
-  bool get hasGym => joinCode != null && joinCode!.isNotEmpty;
 
   /// 🚨 **Ha fatto la scelta**, qualunque essa sia — F3.
   ///
@@ -61,8 +56,6 @@ class BrandingController extends StateNotifier<BrandingState> {
           branding: _cache.branding != null
               ? GymBranding.fromJson(_cache.branding!)
               : GymBranding.neutral,
-          joinCode: _cache.joinCode,
-
           // ⚠️ Si rilegge dal disco all'avvio: la scelta deve sopravvivere a
           // una chiusura dell'app a metà registrazione.
           senzaPalestra: _cache.senzaPalestra,
@@ -74,8 +67,7 @@ class BrandingController extends StateNotifier<BrandingState> {
            * modifica che non lo riguarda.
            */
           sceltaFatta: _cache.sceltaFatta(
-            oppure:
-                _cache.senzaPalestra || (_cache.joinCode?.isNotEmpty ?? false),
+            oppure: _cache.senzaPalestra || _cache.avevaUnCodiceVecchio,
           ),
         ),
       );

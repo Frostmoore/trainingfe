@@ -111,7 +111,6 @@ void main() {
     final auth = AuthController(client, token);
 
     await auth.register(
-      joinCode: 'DEMO2345',
       name: 'Mario Rossi',
       email: 'mario@esempio.test',
       username: 'mario.rossi',
@@ -153,7 +152,6 @@ void main() {
     final auth = AuthController(client, token);
 
     await auth.register(
-      joinCode: 'DEMO2345',
       name: 'Mario Rossi',
       email: 'mario@esempio.test',
       username: 'mario.rossi',

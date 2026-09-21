@@ -80,11 +80,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .login(
-            login: _login.text,
-            password: _password.text,
-            joinCode: ref.read(brandingControllerProvider).joinCode,
-          );
+          .login(login: _login.text, password: _password.text);
 
       /*
        * 🆕 🔗 **Chi arriva da un invito ci torna** — 17/09/2026.

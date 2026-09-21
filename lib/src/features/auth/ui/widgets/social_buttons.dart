@@ -42,20 +42,16 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
     });
 
     try {
-      // ⚠️ Il codice palestra si manda **se lo sappiamo**: serve solo al primo
-      // accesso, e il server lo ignora dal secondo in poi. Chi arriva qui l'ha
-      // già inserito nella schermata precedente, quindi nella pratica c'è
-      // sempre — ma il server risponde comunque `join_code_required` se manca,
-      // e quel caso va detto invece di mostrare un errore generico.
+      // ⛔ F11 — niente più codice palestra: al primo accesso il server collega
+      // l'identità all'account con la stessa email verificata.
       await ref
           .read(authControllerProvider.notifier)
           .loginWithSocial(
             provider,
-            joinCode: ref.read(brandingControllerProvider).joinCode,
             // 🚨 Arrivano fin qui solo se le caselle sono spuntate: il pulsante
-            // è disabilitato altrimenti. Il server le pretende comunque insieme
-            // al `join_code`, quindi anche un percorso che le saltasse
-            // fallirebbe con un 422 — rumorosamente, invece che in silenzio.
+            // è disabilitato altrimenti. Il server le pretende comunque al primo
+            // accesso, quindi anche un percorso che le saltasse fallirebbe con
+            // un 422 — rumorosamente, invece che in silenzio.
             maggiorenne: widget.dichiarazioniDate,
             condizioniAccettate: widget.dichiarazioniDate,
           );

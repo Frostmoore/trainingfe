@@ -115,9 +115,14 @@ class LocalCache {
 
   // ───────────────────────── palestra ─────────────────────────
 
-  String? get joinCode => _prefs.getString(_joinCode);
-
-  Future<void> setJoinCode(String code) => _prefs.setString(_joinCode, code);
+  /// ⛔ **Il codice palestra non si legge né si scrive più** — F11, 24/09/2026.
+  ///
+  /// 💡 Resta solo questa domanda, per il ripiego di [sceltaFatta]: chi aveva
+  /// un'installazione vecchia col codice in cache ha già superato il
+  /// benvenuto, e rimandarcelo lo farebbe ripartire da capo. ⚠️ Il valore non
+  /// esce da qui: **non si manda mai al server**.
+  bool get avevaUnCodiceVecchio =>
+      (_prefs.getString(_joinCode) ?? '').isNotEmpty;
 
   /// 🚨 **«Ho scelto di non avere una palestra»** — F3, difetto del 13/08/2026.
   ///

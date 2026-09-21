@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/errors/api_exception.dart';
@@ -371,6 +372,28 @@ class _Intestazione extends StatelessWidget {
 
     return Column(
       children: [
+        /*
+         * 🆕 🖼️ **La testata, in cima** — F6.2 (A2).
+         *
+         * ⚠️ Prima del logo, non dopo: è la foto della sala, e dice «questo
+         * posto» prima ancora del nome. 💡 Se non si scarica non lascia un buco:
+         * l'invito vale lo stesso.
+         */
+        if (invito.immagineTestata != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                invito.immagineTestata!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          const SizedBox(height: Gap.md),
+        ],
+
         if (marchio.logoUrl != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -414,6 +437,69 @@ class _Intestazione extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+
+        // 🆕 📍 F6.2 (A3) — dove sta, e un tocco per arrivarci.
+        if (invito.indirizzo != null) ...[
+          const SizedBox(height: Gap.md),
+          _Indirizzo(indirizzo: invito.indirizzo!, mappa: invito.mappa),
+        ],
+      ],
+    );
+  }
+}
+
+/// 📍 **L'indirizzo della palestra, con «apri nelle mappe»** — F6.2 (A3).
+///
+/// 📌 *«serve anche l'indirizzo preciso (con cap provincia e tutto)»*, e
+/// l'app deve poterlo aprire nelle mappe.
+///
+/// 💡 Il pulsante c'è solo se il server ha mandato il collegamento: ⛔ un
+/// pulsante che non apre niente è peggio di nessun pulsante.
+class _Indirizzo extends StatelessWidget {
+  const _Indirizzo({required this.indirizzo, this.mappa});
+
+  final String indirizzo;
+  final String? mappa;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.place_outlined,
+              size: 18,
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: Gap.xs),
+            Flexible(
+              child: Text(
+                indirizzo,
+                style: tema.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        if (mappa != null)
+          TextButton.icon(
+            onPressed: () => launchUrl(
+              Uri.parse(mappa!),
+              /*
+               * ⚠️ `externalApplication`: le mappe si aprono **nell'app delle
+               * mappe**, non in una vista web dentro la nostra — dove non ci
+               * sarebbero la posizione, le indicazioni e la navigazione, cioè
+               * le tre cose per cui la si apre.
+               */
+              mode: LaunchMode.externalApplication,
+            ),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Apri nelle mappe'),
+          ),
       ],
     );
   }

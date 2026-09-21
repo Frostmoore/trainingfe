@@ -34,6 +34,15 @@ class Comune {
   /// esistono otto comuni che si chiamano `Castro`, e senza la sigla un elenco
   /// di risultati sarebbe una fila di righe identiche fra cui non si può
   /// scegliere.
+  ///
+  /// 🆕 🌍 **Dal 23/09/2026 anche fuori dall'Italia** (fase F6.1): «Monaco di
+  /// Baviera, Baviera (Germania)». ⚠️ La frase la compone **il server**, e
+  /// questa classe non deve cambiare: gli Stati Uniti hanno trentaquattro
+  /// `Springfield`, e la regione nel testo è quello che le distingue.
+  ///
+  /// ⏳ Quando l'app sarà internazionale, `ricercaComuniProvider` manderà anche
+  /// `paese` (il server lo accetta già): serve a mettere prima le città del
+  /// paese di chi cerca. Oggi non lo manda, e il server assume l'Italia.
   final String esteso;
 
   final String? provincia;

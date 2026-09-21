@@ -23,6 +23,9 @@ class InvitoInPalestra {
     this.descrizione,
     this.scadeIl,
     this.daTrainer = false,
+    this.immagineTestata,
+    this.indirizzo,
+    this.mappa,
   });
 
   /// 🚨 **Tollerante come [GymBranding]**: questa risposta arriva a un'app che
@@ -43,6 +46,14 @@ class InvitoInPalestra {
           .toList(growable: false),
       scadeIl: DateTime.tryParse(json['scade_il']?.toString() ?? ''),
       daTrainer: json['ruolo'] == 'trainer',
+
+      /*
+       * 🆕 🖼️ 📍 F6.2 — testata, indirizzo e mappa. 💡 Un server vecchio non
+       * li manda: restano `null`, e la pagina si disegna come prima.
+       */
+      immagineTestata: _testoOppureNull(json['immagine_testata']),
+      indirizzo: _testoOppureNull(json['indirizzo']),
+      mappa: _testoOppureNull(json['mappa']),
     );
   }
 
@@ -54,6 +65,21 @@ class InvitoInPalestra {
   final List<VantaggioInPalestra> cosaOttieni;
 
   final DateTime? scadeIl;
+
+  /// 🆕 🖼️ **L'immagine di testata della palestra** — F6.2 (A2).
+  ///
+  /// 📌 *«mettiamoci anche un'immagine di testata (si dovrà vedere
+  /// nell'app)»*. ⚠️ È qui che si vede: il catalogo non esiste ancora, e
+  /// l'invito è il primo posto in cui una persona incontra la palestra.
+  final String? immagineTestata;
+
+  /// 🆕 📍 **L'indirizzo per esteso** — F6.2 (A3). «Via Roma, 12 · 01036 Nepi
+  /// (VT)». Lo compone il server: città e provincia vengono dal comune.
+  final String? indirizzo;
+
+  /// 🆕 🗺️ **Dove aprire le mappe.** ⚠️ Lo manda il server già pronto, così
+  /// l'app non deve sapere come si costruisce un link di Google Maps.
+  final String? mappa;
 
   /// 🆕 **L'invito è per allenare, non per iscriversi** — giro del 18/09/2026.
   ///
@@ -86,4 +112,13 @@ class VantaggioInPalestra {
 
   final String titolo;
   final String dettaglio;
+}
+
+/// 💡 Una stringa vuota vale quanto un campo che manca: il server la manda
+/// vuota quando la palestra non ha compilato il campo, e un `Text('')` lascerebbe
+/// un buco a forma di riga.
+String? _testoOppureNull(Object? valore) {
+  final testo = valore?.toString().trim();
+
+  return (testo == null || testo.isEmpty) ? null : testo;
 }

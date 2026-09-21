@@ -396,6 +396,20 @@
                     android:pathPattern="/amico/.*"/>
             </intent-filter>
             <!--
+              🆕 🔗 Il link di attivazione di un'offerta — 24/09/2026. Niente
+              codici sconto: le offerte si attivano da sole o da questo link.
+              Senza l'app, il sito spiega cos'è e come attivarla.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="training.riccardoronconi.it"
+                    android:pathPattern="/promo/.*"/>
+            </intent-filter>
+            <!--
               🚨 OBBLIGATORIO per Health Connect: Google rifiuta la
               pubblicazione senza. È il punto in cui il sistema chiede all'app
               di spiegare PERCHÉ vuole quei dati, e apre la nostra schermata di

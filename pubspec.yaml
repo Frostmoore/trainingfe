@@ -173,6 +173,13 @@ dependencies:
   workmanager: ^0.10.9
   package_info_plus: ^9.0.1
   url_launcher: ^6.3.2
+  # 🆕 🔔 Le notifiche push — 24/09/2026. ⚠️ PREDISPOSTE MA SPENTE: senza
+  # `android/app/google-services.json` (e su iOS `GoogleService-Info.plist` +
+  # APNs) Firebase non parte e l'app funziona come prima. 📌 Il committente:
+  # «impostare firebase sia per android che per apple dopo che abbiamo il
+  # dominio» — è in DA-FARE. Vedi `lib/src/core/notifications/notifiche_push.dart`.
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:

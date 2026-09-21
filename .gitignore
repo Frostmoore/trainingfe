@@ -85,3 +85,8 @@ run.err
 
 # Cartella di lavoro del compilatore Kotlin (build, non sorgente)
 android/.kotlin/
+
+# 🔔 Firebase (24/09/2026): i file di configurazione restano fuori dal repo.
+# Vedi DA-FARE: si impostano dopo il dominio.
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

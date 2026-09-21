@@ -16,7 +16,7 @@ class Offerta {
     required this.cosa,
     this.descrizione,
     this.scadeIl,
-    this.riscattabile = false,
+    this.attivabile = false,
     this.inSospeso = false,
     this.siUsaPagando = false,
   });
@@ -27,7 +27,7 @@ class Offerta {
     cosa: json['cosa']?.toString() ?? '',
     descrizione: json['descrizione']?.toString(),
     scadeIl: DateTime.tryParse(json['scade_il']?.toString() ?? '')?.toLocal(),
-    riscattabile: json['riscattabile'] == true,
+    attivabile: json['attivabile'] == true,
     inSospeso: json['in_sospeso'] == true,
     siUsaPagando: json['si_usa_pagando'] == true,
   );
@@ -40,10 +40,13 @@ class Offerta {
   final String? descrizione;
   final DateTime? scadeIl;
 
-  /// Ha dei regali che si possono prendere adesso («Riscatta»).
-  final bool riscattabile;
+  /// È un'offerta **col link** che si può attivare adesso («Attiva»).
+  ///
+  /// ⛔ Niente codici sconto (24/09/2026): le offerte si attivano da sole o dal
+  /// link. Le automatiche non hanno il tasto: arrivano da sole.
+  final bool attivabile;
 
-  /// È già tua: uno sconto che vale al prossimo pagamento, senza codice.
+  /// È già attivata: lo sconto vale al prossimo pagamento, da solo.
   final bool inSospeso;
 
   /// Ha uno sconto o un bonus che vale pagando.
@@ -64,21 +67,21 @@ final offertePerTeProvider = FutureProvider.autoDispose<List<Offerta>>((
   return dati.whereType<Map<String, dynamic>>().map(Offerta.fromJson).toList();
 });
 
-/// «Hai un codice?»: vale per me? — `POST /promozioni/verifica`.
+/// L'offerta di un **link** aperto nell'app — `GET /promozioni/{codice}`.
 ///
-/// Restituisce l'offerta, oppure il messaggio del server («Questo codice non
-/// esiste.», «Hai già ricevuto questa offerta.»…): ⛔ mai un «non valido»
-/// generico, che fa arrivare tutte le telefonate uguali.
-Future<({Offerta? offerta, String? errore})> verificaIlCodice(
+/// ⛔ Non è un codice scritto a mano (24/09/2026): il codice arriva **dentro il
+/// link** (`…/promo/{codice}`) o da una notifica. Restituisce l'offerta, oppure
+/// il messaggio del server («Questo link non porta a nessuna offerta.», «Hai già
+/// ricevuto questa offerta.»…).
+Future<({Offerta? offerta, String? errore})> offertaDelLink(
   WidgetRef ref,
   String codice,
 ) async {
   try {
     final dati = await ref
         .read(apiClientProvider)
-        .post<Map<String, dynamic>>(
-          '/promozioni/verifica',
-          body: {'codice': codice.trim()},
+        .get<Map<String, dynamic>>(
+          '/promozioni/${Uri.encodeComponent(codice.trim())}',
         );
 
     return (offerta: Offerta.fromJson(dati), errore: null);
@@ -87,10 +90,11 @@ Future<({Offerta? offerta, String? errore})> verificaIlCodice(
   }
 }
 
-/// «Riscatta»: prende i regali di un'offerta — `POST /promozioni/{codice}/riscatta`.
+/// «Attiva»: prende l'offerta di un link — `POST /promozioni/{codice}/attiva`.
 ///
-/// Restituisce i gettoni ricevuti, oppure il messaggio del server.
-Future<({int gettoni, String? errore})> riscatta(
+/// I regali arrivano subito; lo sconto resta pronto e il prossimo pagamento lo
+/// usa da solo (`scontoPronto`). Restituisce anche il messaggio del server.
+Future<({int gettoni, bool scontoPronto, String? errore})> attiva(
   WidgetRef ref,
   String codice,
 ) async {
@@ -98,12 +102,20 @@ Future<({int gettoni, String? errore})> riscatta(
     final dati = await ref
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
-          '/promozioni/${Uri.encodeComponent(codice.trim())}/riscatta',
+          '/promozioni/${Uri.encodeComponent(codice.trim())}/attiva',
         );
 
-    return (gettoni: (dati['gettoni'] as num?)?.toInt() ?? 0, errore: null);
+    return (
+      gettoni: (dati['gettoni'] as num?)?.toInt() ?? 0,
+      scontoPronto: dati['sconto_pronto'] == true,
+      errore: null,
+    );
   } on Object catch (e) {
-    return (gettoni: 0, errore: ApiClient.unwrapError(e).message);
+    return (
+      gettoni: 0,
+      scontoPronto: false,
+      errore: ApiClient.unwrapError(e).message,
+    );
   }
 }
 
@@ -164,3 +176,7 @@ Future<String?> collegaLAmico(ApiClient api, String codice) async {
 /// 💡 Nella cache locale e non in un provider: deve sopravvivere al passaggio
 /// dal link alla registrazione, anche se l'app viene chiusa in mezzo.
 const chiaveCodiceAmicoInAttesa = 'promozioni.codice_amico_in_attesa';
+
+/// 🔗 Il link di un'offerta aperto **prima dell'accesso**: la schermata delle
+/// offerte lo ritrova dopo, invece di perderlo al login.
+const chiaveOffertaInAttesa = 'promozioni.offerta_in_attesa';

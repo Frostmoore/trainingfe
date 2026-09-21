@@ -4,6 +4,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+/*
+ * 🆕 🔔 Le notifiche push — 24/09/2026.
+ *
+ * ⚠️ Il plugin di Google si applica **solo se c'è `google-services.json`**, il file
+ * che dà la console di Firebase. ⛔ Applicato senza, la build si fermerebbe; e il
+ * file ancora non c'è — 📌 «impostare firebase … dopo che abbiamo il dominio».
+ * 💡 Il giorno che il file arriva in questa cartella, i push si accendono da soli.
+ * 🚨 Il file NON è un segreto come la chiave di servizio del server, ma resta
+ * fuori dal repository pubblico lo stesso: identifica il progetto Firebase.
+ */
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.smp.mytrainingcompanion"
     /*

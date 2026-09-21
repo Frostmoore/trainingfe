@@ -21,6 +21,9 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
+    // 🆕 🔔 24/09/2026 — le notifiche push. Si applica in `app/build.gradle.kts`
+    // SOLO se c'è `google-services.json` (DA-FARE: Firebase dopo il dominio).
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 include(":app")

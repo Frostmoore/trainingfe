@@ -249,21 +249,20 @@ typedef EsitoPagamento = String?;
 /// indistinguibile da una truffa, e insegnare alle persone che va bene così è
 /// un danno che sopravvive a questa app.
 ///
-/// 🆕 🎟️ `promozione`: il codice scritto in «Hai un codice?» (P8 di
-/// `plan_promozioni.md`). ⚠️ Un codice che non vale non blocca il pagamento: il
-/// server fa pagare a prezzo pieno.
+/// ⛔ **Niente codici sconto** (24/09/2026): gli sconti li trova il server — le
+/// promozioni automatiche e quelle attivate da un link — senza che l'app mandi
+/// niente.
 Future<EsitoPagamento> apriIlPagamento(
   WidgetRef ref, {
   required String tipo,
   int? gettoni,
-  String? promozione,
 }) async {
   try {
     final risposta = await ref
         .read(apiClientProvider)
         .post<Map<String, dynamic>>(
           '/billing/checkout',
-          body: {'tipo': tipo, 'gettoni': ?gettoni, 'promozione': ?promozione},
+          body: {'tipo': tipo, 'gettoni': ?gettoni},
         );
 
     final url = Uri.tryParse(risposta['url']?.toString() ?? '');

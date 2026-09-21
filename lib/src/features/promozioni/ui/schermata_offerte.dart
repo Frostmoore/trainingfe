@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../data/promozioni.dart';
@@ -9,17 +10,21 @@ import '../data/promozioni.dart';
 ///
 /// 📌 Opzione 38: *«Dove si vede: nella pagina "Offerta per te" dell'app»*.
 ///
-/// | Parte | Cosa fa |
+/// ⛔ **Niente codici sconto** (24/09/2026): 📌 *«il codice sconto non deve
+/// esistere, le promo si attivano solo in automatico o con il link di
+/// attivazione»*. Qui non si scrive niente:
+///
+/// | Parte | Da dove arriva |
 /// |---|---|
-/// | «Hai un codice?» | verifica un codice; se regala qualcosa, lo si riscatta da lì |
-/// | l'elenco | le offerte che il server dice di mostrare (e quelle già tue) |
+/// | l'offerta in cima | un **link** (`…/promo/{codice}`) o il **tocco su una notifica** — `codiceIniziale`, o quella messa da parte prima dell'accesso |
+/// | l'elenco | le offerte che il server dice di mostrare, e quelle già attivate |
 ///
 /// ⚠️ Gli sconti **non** si usano da qui: si applicano da soli al pagamento. La
 /// schermata lo dice, così nessuno cerca un tasto «usa» che non c'è.
 class SchermataOfferte extends ConsumerStatefulWidget {
   const SchermataOfferte({super.key, this.codiceIniziale});
 
-  /// Un codice arrivato da fuori (un link), da verificare subito.
+  /// L'offerta di un link o di una notifica, da mostrare in cima.
   final String? codiceIniziale;
 
   @override
@@ -27,53 +32,50 @@ class SchermataOfferte extends ConsumerStatefulWidget {
 }
 
 class _SchermataOfferteState extends ConsumerState<SchermataOfferte> {
-  late final TextEditingController _codice = TextEditingController(
-    text: widget.codiceIniziale ?? '',
-  );
-
   bool _inCorso = false;
   String? _esito;
-  Offerta? _trovata;
+  Offerta? _dalLink;
 
   @override
   void initState() {
     super.initState();
 
-    if ((widget.codiceIniziale ?? '').isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _verifica());
+    /*
+     * 💡 Il codice arriva dal percorso, o dalla cache se il link era stato
+     * aperto **prima dell'accesso** (`SchermataPromo`): in quel caso si usa una
+     * volta sola e si toglie, o ricomparirebbe per sempre.
+     */
+    final cache = ref.read(localCacheProvider);
+    final inAttesa = cache.getString(chiaveOffertaInAttesa) ?? '';
+    final codice = (widget.codiceIniziale ?? '').isNotEmpty
+        ? widget.codiceIniziale!
+        : inAttesa;
+
+    if (inAttesa.isNotEmpty) cache.setString(chiaveOffertaInAttesa, '');
+
+    if (codice.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _carica(codice));
     }
   }
 
-  @override
-  void dispose() {
-    _codice.dispose();
-    super.dispose();
-  }
+  Future<void> _carica(String codice) async {
+    setState(() => _inCorso = true);
 
-  Future<void> _verifica() async {
-    if (_codice.text.trim().isEmpty) return;
-
-    setState(() {
-      _inCorso = true;
-      _esito = null;
-      _trovata = null;
-    });
-
-    final risposta = await verificaIlCodice(ref, _codice.text);
+    final risposta = await offertaDelLink(ref, codice);
 
     if (!mounted) return;
 
     setState(() {
       _inCorso = false;
-      _trovata = risposta.offerta;
+      _dalLink = risposta.offerta;
       _esito = risposta.errore;
     });
   }
 
-  Future<void> _riscatta(Offerta offerta) async {
+  Future<void> _attiva(Offerta offerta) async {
     setState(() => _inCorso = true);
 
-    final risposta = await riscatta(ref, offerta.codice);
+    final risposta = await attiva(ref, offerta.codice);
 
     if (!mounted) return;
 
@@ -86,13 +88,15 @@ class _SchermataOfferteState extends ConsumerState<SchermataOfferte> {
           risposta.errore ??
               (risposta.gettoni > 0
                   ? 'Hai ricevuto ${risposta.gettoni} gettoni.'
+                  : risposta.scontoPronto
+                  ? 'Attivata: lo sconto si applica da solo al prossimo pagamento.'
                   : 'Fatto: l\'offerta è tua.'),
         ),
       ),
     );
 
     if (risposta.errore == null) {
-      setState(() => _trovata = null);
+      setState(() => _dalLink = null);
     }
   }
 
@@ -108,47 +112,23 @@ class _SchermataOfferteState extends ConsumerState<SchermataOfferte> {
         child: ListView(
           padding: const EdgeInsets.all(Gap.lg),
           children: [
-            Text('Hai un codice?', style: tema.textTheme.titleMedium),
-            const SizedBox(height: Gap.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _codice,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      hintText: 'Scrivilo qui',
-                      prefixIcon: Icon(Icons.confirmation_number_outlined),
-                    ),
-                    onSubmitted: (_) => _verifica(),
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                FilledButton(
-                  onPressed: _inCorso ? null : _verifica,
-                  child: const Text('Verifica'),
-                ),
-              ],
-            ),
             if (_esito != null) ...[
-              const SizedBox(height: Gap.sm),
               Text(
                 _esito!,
                 style: tema.textTheme.bodyMedium?.copyWith(
                   color: tema.colorScheme.error,
                 ),
               ),
+              const SizedBox(height: Gap.lg),
             ],
-            if (_trovata != null) ...[
-              const SizedBox(height: Gap.md),
+            if (_dalLink != null) ...[
               _SchedaOfferta(
-                offerta: _trovata!,
+                offerta: _dalLink!,
                 inCorso: _inCorso,
-                onRiscatta: _riscatta,
-                daCodice: true,
+                onAttiva: _attiva,
               ),
+              const SizedBox(height: Gap.lg),
             ],
-            const SizedBox(height: Gap.lg),
             Text('Le tue offerte', style: tema.textTheme.titleMedium),
             const SizedBox(height: Gap.sm),
             offerte.when(
@@ -165,7 +145,7 @@ class _SchermataOfferteState extends ConsumerState<SchermataOfferte> {
                             child: _SchedaOfferta(
                               offerta: o,
                               inCorso: _inCorso,
-                              onRiscatta: _riscatta,
+                              onAttiva: _attiva,
                             ),
                           ),
                       ],
@@ -186,16 +166,12 @@ class _SchedaOfferta extends StatelessWidget {
   const _SchedaOfferta({
     required this.offerta,
     required this.inCorso,
-    required this.onRiscatta,
-    this.daCodice = false,
+    required this.onAttiva,
   });
 
   final Offerta offerta;
   final bool inCorso;
-  final Future<void> Function(Offerta) onRiscatta;
-
-  /// Trovata col codice: se si usa pagando, lo si ricorda al pagamento.
-  final bool daCodice;
+  final Future<void> Function(Offerta) onAttiva;
 
   @override
   Widget build(BuildContext context) {
@@ -224,20 +200,20 @@ class _SchedaOfferta extends StatelessWidget {
             if (offerta.siUsaPagando) ...[
               const SizedBox(height: Gap.sm),
               Text(
-                daCodice && !offerta.inSospeso
-                    ? 'Per lo sconto, scrivi questo codice quando paghi.'
+                offerta.attivabile
+                    ? 'Attivala: poi lo sconto si applica da solo al prossimo pagamento.'
                     : 'Lo sconto si applica da solo al prossimo pagamento.',
                 style: tema.textTheme.bodySmall,
               ),
             ],
-            if (offerta.riscattabile) ...[
+            if (offerta.attivabile) ...[
               const SizedBox(height: Gap.md),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: inCorso ? null : () => onRiscatta(offerta),
+                  onPressed: inCorso ? null : () => onAttiva(offerta),
                   icon: const Icon(Icons.card_giftcard_rounded),
-                  label: const Text('Riscatta'),
+                  label: const Text('Attiva'),
                 ),
               ),
             ],

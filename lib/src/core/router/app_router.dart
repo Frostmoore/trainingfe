@@ -38,6 +38,7 @@ import '../../features/progress/ui/progress_screen.dart';
 import '../../features/promozioni/ui/schermata_amico.dart';
 import '../../features/promozioni/ui/schermata_offerte.dart';
 import '../../features/promozioni/ui/schermata_porta_un_amico.dart';
+import '../../features/promozioni/ui/schermata_promo.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
@@ -234,6 +235,14 @@ class AppRoutes {
 
   /// 🆕 🤝 Il link «porta un amico» (`https://…/amico/{codice}`), come un invito.
   static const amico = '/amico';
+
+  /// 🆕 🔗 Il link di attivazione di un'offerta (`https://…/promo/{codice}`).
+  /// ⛔ Niente codici sconto: le offerte si attivano da sole o da qui.
+  static const promo = '/promo';
+
+  /// Le offerte, con quella di un link o di una notifica in cima.
+  static String offertaDaMostrare(String codice) =>
+      '$offerte?codice=${Uri.encodeQueryComponent(codice)}';
   static const calendar = '/calendario';
   static const history = '/allenamento/storico';
 
@@ -295,7 +304,9 @@ class AppRoutes {
       location.startsWith('$registerDaInvitoTrainer/') ||
       location.startsWith('$loginDaInvitoTrainer/') ||
       // 🆕 🤝 P8 — anche il link amico: chi lo apre senza sessione non va al login.
-      location.startsWith('$amico/');
+      location.startsWith('$amico/') ||
+      // 🆕 🔗 E il link di un'offerta: senza sessione mette da parte il codice.
+      location.startsWith('$promo/');
 
   /// 🆕 🔗 La registrazione, **con l'invito in tasca** — 17/09/2026.
   ///
@@ -589,6 +600,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           invito: stato.pathParameters['token'],
           diUnTrainer: true,
         ),
+      ),
+      // 🆕 🔗 Il link di attivazione di un'offerta, raggiungibile anche senza sessione.
+      GoRoute(
+        path: '${AppRoutes.promo}/:codice',
+        builder: (_, stato) =>
+            SchermataPromo(codice: stato.pathParameters['codice'] ?? ''),
       ),
       // 🆕 🤝 P8 — il link amico, raggiungibile anche senza sessione (vedi `eUnInvito`).
       GoRoute(

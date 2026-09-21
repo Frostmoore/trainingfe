@@ -12,6 +12,7 @@ import 'src/core/backup/backup_in_background.dart';
 import 'src/core/config/app_config.dart';
 import 'src/core/media/archivio_foto.dart';
 import 'src/core/notifications/notifications.dart';
+import 'src/core/notifications/notifiche_push.dart';
 import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
 import 'src/features/aggiornamento/aggiornamento_controller.dart';
@@ -75,6 +76,17 @@ Future<void> main() async {
         localCacheProvider.overrideWithValue(cache),
       ],
     );
+
+    /*
+     * 🆕 🔔 Le notifiche push — 24/09/2026. ⚠️ **Spente** finché mancano i file
+     * di Firebase (DA-FARE: dopo il dominio): `avvia()` lo capisce da sola e
+     * torna senza fare niente. ⛔ Non deve poter impedire l'apertura dell'app.
+     */
+    try {
+      await NotifichePush.avvia(container);
+    } on Object catch (errore) {
+      debugPrint('Notifiche push non avviate: $errore');
+    }
 
     // 🚨 Si fa partire il ripristino della sessione **prima** di disegnare:
     // il router resta su `AuthStatus.unknown` e non decide niente finché non

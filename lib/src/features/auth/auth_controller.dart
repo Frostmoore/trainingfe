@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/errors/api_exception.dart';
+import '../../core/notifications/notifiche_push.dart';
 import '../../core/providers.dart';
 import '../../core/sicurezza/blocco_biometrico.dart';
 import '../../core/storage/local_cache.dart';
@@ -452,6 +453,13 @@ class AuthController extends StateNotifier<AuthState> {
   /// finché non scade: quello lo si revoca dall'elenco dispositivi, l'altro è
   /// un telefono prestato a qualcuno con la sessione aperta.
   Future<void> logout() async {
+    /*
+     * 🆕 🔔 24/09/2026 — **prima** di uscire, il token delle notifiche si toglie
+     * dal server: ⛔ dopo non si potrebbe più (la sessione non c'è), e le
+     * notifiche di chi esce arriverebbero a chi entra dopo sullo stesso telefono.
+     */
+    await NotifichePush.dimenticaIlDispositivo(_api);
+
     try {
       await _api.post<dynamic>('/auth/logout');
     } on Object {

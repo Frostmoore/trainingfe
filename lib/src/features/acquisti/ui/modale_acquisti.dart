@@ -7,7 +7,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
 import '../../dashboard/gettoni_controller.dart';
-import '../../promozioni/data/promozioni.dart';
 import '../data/listino.dart';
 
 /// La modale che vende l'assistente — 3b-H, 26/08/2026.
@@ -98,45 +97,10 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
   /// sbaglio non potrebbe più scegliere il taglio giusto senza riaprire.
   String? _inCorso;
 
-  /// 🆕 🎟️ P8 di `plan_promozioni.md` — **«Hai un codice?»**. Verificato prima
-  /// (il server dice se vale), poi mandato al pagamento: lo sconto vero lo
-  /// calcola il server, qui non si fa nessun conto.
-  final _codice = TextEditingController();
-  String? _codiceValido;
-  String? _esitoCodice;
-
-  @override
-  void dispose() {
-    _codice.dispose();
-    super.dispose();
-  }
-
-  Future<void> _verificaIlCodice() async {
-    final scritto = _codice.text.trim();
-
-    if (scritto.isEmpty) return;
-
-    final risposta = await verificaIlCodice(ref, scritto);
-
-    if (!mounted) return;
-
-    setState(() {
-      _codiceValido = risposta.offerta == null ? null : scritto.toUpperCase();
-      _esitoCodice = risposta.offerta == null
-          ? risposta.errore
-          : 'Codice valido: ${risposta.offerta!.cosa}. Si applica al pagamento.';
-    });
-  }
-
   Future<void> _compra({required String tipo, int? gettoni}) async {
     setState(() => _inCorso = '$tipo${gettoni ?? ''}');
 
-    final errore = await apriIlPagamento(
-      ref,
-      tipo: tipo,
-      gettoni: gettoni,
-      promozione: _codiceValido,
-    );
+    final errore = await apriIlPagamento(ref, tipo: tipo, gettoni: gettoni);
 
     if (!mounted) return;
 
@@ -387,49 +351,6 @@ class _CorpoState extends ConsumerState<CorpoAcquisti> {
               inCorso: _inCorso == 'gettoni${p.gettoni}',
               onTap: () => _compra(tipo: 'gettoni', gettoni: p.gettoni),
             ),
-
-          /*
-           * 🆕 🎟️ P8 — **«Hai un codice?»**, chiuso di default: chi non ce l'ha
-           * non deve pensare di stare pagando troppo.
-           */
-          const SizedBox(height: Gap.sm),
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text('Hai un codice?'),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _codice,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        hintText: 'Codice promozione',
-                      ),
-                      onSubmitted: (_) => _verificaIlCodice(),
-                    ),
-                  ),
-                  const SizedBox(width: Gap.sm),
-                  OutlinedButton(
-                    onPressed: _verificaIlCodice,
-                    child: const Text('Usa'),
-                  ),
-                ],
-              ),
-              if (_esitoCodice != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: Gap.xs, bottom: Gap.sm),
-                  child: Text(
-                    _esitoCodice!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _codiceValido == null
-                          ? Theme.of(context).colorScheme.error
-                          : null,
-                    ),
-                  ),
-                ),
-            ],
-          ),
 
           const SizedBox(height: Gap.md),
           const _NotaLegale(),

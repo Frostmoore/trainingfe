@@ -267,9 +267,7 @@ class ProfileScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.card_giftcard_rounded),
                   title: const Text('Offerte per te'),
-                  subtitle: const Text(
-                    'Regali, sconti, e il posto per un codice',
-                  ),
+                  subtitle: const Text('Regali e sconti per te'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(AppRoutes.offerte),
                 ),

@@ -365,6 +365,7 @@ Map<String, dynamic> esercizioInJson({
   int? exerciseId,
   String? note,
   String? immagine,
+  String? immagineUrl,
   Map<String, dynamic> muscoli = const {},
 }) {
   final reps = ripetizioniRiassunte(serie);
@@ -377,6 +378,26 @@ Map<String, dynamic> esercizioInJson({
     'exercise_id': ?exerciseId,
     if (note != null && note.isNotEmpty) 'notes': note,
     if (immagine != null && immagine.isNotEmpty) 'immagine': immagine,
+
+    /*
+     * ══ 🆕 🖼️ LA FOTO MESSA DAL PANNELLO — 23/09/2026, F5.13 (A1) ═══════
+     *
+     * 📌 *«nel builder delle schede devo poter aggiungere un'immagine a ogni
+     * esercizio»*, e *«la scheda ricevuta deve mostrare quell'immagine durante
+     * l'allenamento»*.
+     *
+     * 🚨 **Va riscritta qui, o non arriva vivo il secondo allenamento.** È
+     * esattamente la trappola di 3b-E.12: un campo che manda **il server** e
+     * che questa funzione non riscrive sparisce **al primo salvataggio
+     * locale** — e da 3b-E la scheda si risalva a *ogni* allenamento.
+     * ⛔ L'illustrazione svanirebbe senza nessun errore, e sembrerebbe che il
+     * trainer non l'avesse mai caricata.
+     *
+     * ⚠️ È un **URL**, non un percorso dell'archivio come `immagine`: sta sul
+     * nostro server, e si scarica. 💡 Le due non si sostituiscono — la foto
+     * scattata col telefono vince comunque su quella del pannello.
+     */
+    if (immagineUrl != null && immagineUrl.isNotEmpty) 'image_url': immagineUrl,
 
     // ── ⏪ Il riassunto, per chi legge il formato vecchio ────────────────
     /*

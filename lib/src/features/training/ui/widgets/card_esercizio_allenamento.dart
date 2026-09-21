@@ -194,6 +194,19 @@ class _CardChiusa extends ConsumerWidget {
                  */
                 FotoDellEsercizio(
                   immagine: esercizio.immagine,
+
+                  /*
+                   * 🆕 🖼️ **F5.13 (A1) — è QUESTA la richiesta.**
+                   *
+                   * 📌 *«la scheda ricevuta deve mostrare quell'immagine
+                   * durante l'allenamento»*: qui è l'allenamento, e prima di
+                   * oggi questo widget guardava **solo** il catalogo.
+                   *
+                   * ⛔ La foto caricata dal pannello si vedeva nella pagina
+                   * della scheda e spariva appena si cominciava a fare gli
+                   * esercizi — cioè nel momento in cui serve.
+                   */
+                  urlProprio: esercizio.immagineUrl,
                   url: dalCatalogo?.immagine,
                   etichetta: nome,
                   lato: 48,

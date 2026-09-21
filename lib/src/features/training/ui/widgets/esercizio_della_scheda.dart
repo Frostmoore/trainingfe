@@ -83,6 +83,8 @@ class EsercizioDellaScheda extends ConsumerWidget {
           children: [
             FotoDellEsercizio(
               immagine: esercizio.immagine,
+              // 🖼️ F5.13 — quella che ha messo chi ha scritto la scheda.
+              urlProprio: esercizio.immagineUrl,
               url: esercizio.imageUrl ?? dalCatalogo?.immagine,
               etichetta: esercizio.name,
               credito: dalCatalogo?.credito,
@@ -211,6 +213,7 @@ class FotoDellEsercizio extends StatelessWidget {
     required this.immagine,
     required this.url,
     required this.etichetta,
+    this.urlProprio,
     this.lato = EsercizioDellaScheda._lato,
     this.credito,
     super.key,
@@ -232,6 +235,14 @@ class FotoDellEsercizio extends StatelessWidget {
   /// L'illustrazione del catalogo, quando c'è.
   final String? url;
 
+  /// 🆕 La foto messa dal **pannello** su questa riga di scheda — F5.13.
+  ///
+  /// 💡 Sta fra le altre due: vince sul catalogo, perde contro la foto
+  /// scattata col telefono. ⚠️ **Non si tinge mai**, ed è il motivo per cui è
+  /// un parametro a parte invece di finire dentro [url]: `credito` accende la
+  /// tinta, e una fotografia grigia è illeggibile.
+  final String? urlProprio;
+
   final String etichetta;
   final double lato;
 
@@ -250,6 +261,16 @@ class FotoDellEsercizio extends StatelessWidget {
     final relativo = immagine;
 
     if (relativo == null || relativo.isEmpty) {
+      /*
+       * 🆕 🖼️ F5.13 — **la foto del pannello prima del catalogo**, e senza
+       * tinta: è una fotografia, non un disegno al tratto.
+       */
+      final propria = urlProprio;
+
+      if (propria != null && propria.isNotEmpty) {
+        return Miniatura(url: propria, etichetta: etichetta, lato: lato);
+      }
+
       return Miniatura(
         url: url,
         etichetta: etichetta,

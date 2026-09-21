@@ -91,6 +91,7 @@ class EsercizioInAllenamento extends EsercizioInScrittura {
     super.exerciseId,
     super.muscoli,
     super.immagine,
+    super.immagineUrl,
     super.carico,
     List<SerieInAllenamento>? serie,
   }) : super(
@@ -122,6 +123,8 @@ class EsercizioInAllenamento extends EsercizioInScrittura {
       exerciseId: campi.exerciseId,
       muscoli: campi.muscoli,
       immagine: campi.immagine,
+      // 🖼️ F5.13 — la foto del pannello arriva fino al player.
+      immagineUrl: campi.immagineUrl,
       carico: campi.carico,
       serie: [for (final s in campi.serie) SerieInAllenamento.da(s)],
     );

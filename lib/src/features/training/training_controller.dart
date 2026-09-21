@@ -119,6 +119,7 @@ class PlanExercise {
     this.targetWeight,
     this.notes,
     this.imageUrl,
+    this.immagineUrl,
     this.immagine,
     this.carico = CaricoDellEsercizio.peso,
   });
@@ -200,6 +201,22 @@ class PlanExercise {
       prescription:
           j['prescription']?.toString() ?? prescrizioneDalleSerie(serie),
       imageUrl: (j['exercise'] as Map?)?['image_url']?.toString(),
+
+      /*
+       * 🆕 🖼️ **La foto messa dal pannello su QUESTA riga** — F5.13 (A1).
+       *
+       * 📌 *«nel builder delle schede devo poter aggiungere un'immagine a ogni
+       * esercizio»*.
+       *
+       * ⚠️ **Sta al primo livello, non dentro `exercise`**: `exercise.image_url`
+       * è l'illustrazione del **catalogo** ed è la stessa per tutte le palestre.
+       * Questa è della riga — la presa esatta, l'altezza del sedile.
+       *
+       * 🚨 Il server la manda **solo quando c'è**: il ripiego sul catalogo lo
+       * facciamo qui, perché è l'app a sapere che l'illustrazione va **tinta**
+       * e una fotografia no.
+       */
+      immagineUrl: j['image_url']?.toString(),
       restSec: (j['rest_sec'] as num?)?.toInt(),
       targetWeight: (j['target_weight'] as num?)?.toDouble(),
       notes: j['notes']?.toString(),
@@ -255,6 +272,16 @@ class PlanExercise {
 
   /// L'illustrazione dell'esercizio — C23. Viene dal **catalogo**.
   final String? imageUrl;
+
+  /// 🆕 La foto che il trainer ha messo su **questa riga**, dal pannello — F5.13.
+  ///
+  /// ⚠️ È un **URL**, come [imageUrl], ma non viene dal catalogo: vale per
+  /// questo esercizio di questa scheda e basta.
+  ///
+  /// 💡 **L'ordine è**: [immagine] (scattata col telefono) → questa →
+  /// [imageUrl] / il catalogo. 🚨 E solo l'ultima va **tinta**: è un disegno al
+  /// tratto, le altre due sono fotografie.
+  final String? immagineUrl;
 
   /// La foto che ci ha messo chi ha scritto la scheda — 3b-D.3.3.
   ///

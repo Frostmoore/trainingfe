@@ -210,6 +210,7 @@ class EsercizioInScrittura with ConLeSerie {
     this.exerciseId,
     this.muscoli,
     this.immagine,
+    this.immagineUrl,
     this.carico = CaricoDellEsercizio.peso,
     List<SerieInScrittura>? serie,
   }) : nome = TextEditingController(text: nome ?? ''),
@@ -240,6 +241,7 @@ class EsercizioInScrittura with ConLeSerie {
       exerciseId: campi.exerciseId,
       muscoli: campi.muscoli,
       immagine: campi.immagine,
+      immagineUrl: campi.immagineUrl,
       carico: campi.carico,
       serie: [for (final s in campi.serie) SerieInScrittura.da(s)],
     );
@@ -262,6 +264,14 @@ class EsercizioInScrittura with ConLeSerie {
   /// Il percorso **relativo** dell'immagine (`foto/esercizi/…`).
   String? immagine;
 
+  /// 🆕 L'URL della foto messa dal **pannello** su questa riga — F5.13.
+  ///
+  /// ⚠️ **Non si tocca dall'app**: l'ha caricata chi ha scritto la scheda, e
+  /// qui si porta solo dietro. 💡 Sta in un campo a parte da [immagine]
+  /// perché quella è un file dell'archivio locale e questa è un indirizzo da
+  /// scaricare — e perché quella, scattata col telefono, **vince**.
+  String? immagineUrl;
+
   @override
   CaricoDellEsercizio carico;
 
@@ -280,6 +290,7 @@ class EsercizioInScrittura with ConLeSerie {
     exerciseId: exerciseId,
     note: note.text.trim(),
     immagine: immagine,
+    immagineUrl: immagineUrl,
     muscoli: muscoliInJson(muscoli),
   );
 
@@ -316,6 +327,13 @@ typedef CampiDellEsercizio = ({
   int? exerciseId,
   MuscoliScelti? muscoli,
   String? immagine,
+
+  /// 🆕 L'URL della foto messa dal **pannello** su questa riga — F5.13.
+  ///
+  /// ⚠️ Diversa da [immagine], che è il percorso di una foto scattata **col
+  /// telefono** e vive nell'archivio locale. 💡 Quella vince su questa: chi ha
+  /// fotografato la macchina davanti a sé sapeva cosa stava facendo.
+  String? immagineUrl,
   CaricoDellEsercizio carico,
   List<SeriePrevista> serie,
 });
@@ -332,6 +350,18 @@ CampiDellEsercizio campiDellEsercizio(Map<String, dynamic> j) {
         (dalServer?['id'] as num?)?.toInt(),
     muscoli: muscoliDaJson(j),
     immagine: j['immagine']?.toString(),
+
+    /*
+     * 🖼️ F5.13 — **la riga, non il catalogo.** `exercise.image_url` è
+     * l'illustrazione condivisa e la legge `PlanExercise.imageUrl`; questa è
+     * la foto che il trainer ha messo su *questo* esercizio di *questa*
+     * scheda.
+     *
+     * 🚨 Il server la manda **solo quando c'è**: il ripiego sul catalogo lo fa
+     * l'app, perché è l'app a sapere che l'illustrazione va **tinta** e una
+     * fotografia no.
+     */
+    immagineUrl: j['image_url']?.toString(),
     carico: CaricoDellEsercizio.da(j['carico']?.toString()),
 
     // ⚠️ Mai vuota, e mai un ramo «se e' vecchia»: ci pensa l'adattatore.

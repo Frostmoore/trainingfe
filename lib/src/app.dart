@@ -10,7 +10,6 @@ import 'features/acquisti/ui/widgets/ricontrollo_al_rientro.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
-import 'features/diary/data/trasloco_del_diario.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/privacy/liberatoria_controller.dart';
@@ -60,7 +59,11 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
     );
 
     /*
-     * ══ 📦 IL DIARIO VIENE A CASA — Parte I / I3, 02/09/2026 ═══════════════
+     * ══ 📦 DOPO L'ACCESSO — il profilo che viene a casa, e la liberatoria ═══
+     *
+     * ⛔ Qui partiva anche il **trasloco del diario** (Parte I / I3, 02/09/2026).
+     * Il 26/09/2026 il diario ha lasciato il server del tutto (A1 di
+     * `plan_blocco_A.md`): non c'è più niente da portare.
      *
      * 🚨 **Quando c'è un accesso, non al primo fotogramma.** All'avvio la
      * sessione può non esserci ancora — il token si legge dal disco, e chi apre
@@ -73,22 +76,13 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
      * vita dell'installazione**, non a ogni fotogramma.
      *
      * ⚠️ E non blocca niente: se non riesce, si riprova al prossimo accesso.
-     * `Trasloco.porta()` non solleva — torna un esito, e chi lo ignora non
-     * rompe niente.
      */
     ref.listenManual(authControllerProvider, (_, stato) {
-      if (stato.isAuthenticated) unawaited(_portaIlDiarioACasa());
+      if (stato.isAuthenticated) unawaited(_dopoLAccesso());
     }, fireImmediately: true);
   }
 
-  /// 📦 Una volta sola per installazione: ci pensa `Trasloco` a ricordarselo.
-  Future<void> _portaIlDiarioACasa() async {
-    final esito = await ref.read(traslocoProvider).porta();
-
-    if (esito == EsitoTrasloco.fatto) {
-      debugPrint('trasloco: il diario è sul telefono');
-    }
-
+  Future<void> _dopoLAccesso() async {
     /*
      * 🆕 📦 **E il profilo** — 19/09/2026: sesso, data di nascita, altezza e
      * il resto lasciano il server. Una volta sola **per persona**.

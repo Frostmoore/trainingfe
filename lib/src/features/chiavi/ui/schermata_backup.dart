@@ -14,7 +14,7 @@ import '../../../core/backup/raccolta_foto.dart';
 import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/ui/intestazione_app.dart';
-import '../../diary/data/trasloco_del_diario.dart';
+import '../../diary/data/diario_locale.dart';
 import '../../health/health_controller.dart';
 import '../../privacy/i_miei_dati.dart';
 
@@ -110,14 +110,9 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
           /*
            * 🍽️ **Il diario, con quante voci ci sono davvero** — Parte I, I3.
            *
-           * 🚨 Non è un vezzo: il trasloco dal server succede in silenzio, e in
-           * release non lascia traccia — `debugPrint` non arriva a logcat.
-           * ⛔ Senza questo numero, un trasloco fallito si scoprirebbe solo
-           * quando il diario comincia a leggersi da qui, e sembrerebbe che a
-           * perdere i dati sia stato **quel** passo.
-           *
-           * 💡 E resta utile dopo: è il posto dove si dice cosa c'è su questo
-           * telefono, e il diario adesso c'è.
+           * 💡 Nato per vedere se il trasloco dal server era andato; il trasloco
+           * non c'è più (26/09/2026, il diario ha lasciato il server), e il
+           * numero resta: è il posto dove si dice cosa c'è su questo telefono.
            */
           ref
               .watch(vociSulTelefonoProvider)

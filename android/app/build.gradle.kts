@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -76,11 +78,53 @@ android {
         versionName = flutter.versionName
     }
 
+    /*
+     * ══ 🔑 LA FIRMA DI RILASCIO — 22/09/2026 ══════════════════════════════
+     *
+     * ⛔ **Fino a oggi anche la release era firmata con la chiave di
+     * sviluppo**, quella che Android genera da solo su ogni computer: il Play
+     * Store non la accetta, e due computer diversi avrebbero prodotto due app
+     * che il telefono considera **diverse** — cioè nessun aggiornamento, solo
+     * disinstalla-e-reinstalla, con i dati locali persi.
+     *
+     * 🚨 **Il keystore non sta nel repo**, e non deve starci: chi ce l'ha può
+     * pubblicare aggiornamenti a nome nostro. Vive fuori, e il percorso arriva
+     * da `android/key.properties` (in `.gitignore` da sempre).
+     *
+     * 💡 Se il file non c'è — un altro computer, una macchina di build appena
+     * fatta — **non si fallisce**: si torna alla chiave di sviluppo, così
+     * `flutter run --release` continua a funzionare per chi sta solo provando.
+     * ⚠️ E si stampa perché: una release firmata di sviluppo senza che nessuno
+     * lo dica è il modo di caricare sul Play Store un file che verrà rifiutato,
+     * scoprendolo dopo venti minuti di upload.
+     */
+    val chiavi = Properties()
+    val fileChiavi = rootProject.file("key.properties")
+
+    if (fileChiavi.exists()) {
+        fileChiavi.inputStream().use { chiavi.load(it) }
+    } else {
+        println("⚠️  android/key.properties non c'è: la release userà la chiave di sviluppo.")
+    }
+
+    signingConfigs {
+        create("release") {
+            if (fileChiavi.exists()) {
+                keyAlias = chiavi.getProperty("keyAlias")
+                keyPassword = chiavi.getProperty("keyPassword")
+                storeFile = file(chiavi.getProperty("storeFile"))
+                storePassword = chiavi.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (fileChiavi.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

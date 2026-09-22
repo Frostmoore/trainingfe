@@ -177,6 +177,7 @@ void main() {
       WidgetTester tester, {
       required bool trainer,
       List<SlotDaDecidere> lista = due,
+      List<SlotDaDecidere> Function()? leggi,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -194,7 +195,9 @@ void main() {
                       ),
                     ),
             ),
-            slotDaDecidereProvider.overrideWith((ref) async => lista),
+            slotDaDecidereProvider.overrideWith(
+              (ref) async => leggi?.call() ?? lista,
+            ),
             trainerActionsProvider.overrideWith(
               (ref) => _AzioniFinte(client, ref, []),
             ),
@@ -238,6 +241,28 @@ void main() {
       await monta(tester, trainer: true, lista: const []);
 
       expect(find.byType(SceltaDelloSlot), findsNothing);
+    });
+
+    /// 🐛 Giro A5 8.3.3, 22/09/2026: un trainer indipendente che accetta
+    /// l'invito di una palestra è **già** trainer — niente passaggio da
+    /// ascoltare, e la domanda sugli allievi iscritti lì arrivava solo al
+    /// rientro successivo. Adesso la schermata d'invito alza il contatore.
+    testWidgets("chiesta dalla schermata d'invito, compare subito", (
+      tester,
+    ) async {
+      var aperte = <SlotDaDecidere>[];
+      await monta(tester, trainer: true, leggi: () => aperte);
+      expect(find.byType(SceltaDelloSlot), findsNothing);
+
+      // Entra in palestra: la domanda nasce sul server in quel momento.
+      aperte = due;
+      ProviderScope.containerOf(
+        tester.element(find.text('casa')),
+      ).read(richiestaSceltaDelloSlotProvider.notifier).state++;
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SceltaDelloSlot), findsOneWidget);
+      expect(find.text('Rita'), findsOneWidget);
     });
   });
 }

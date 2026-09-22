@@ -214,7 +214,7 @@ void main() {
           'chat',
           'piani',
           'esercizi',
-          // 🆕 A4, 26/09/2026: la foto sugli alimenti propri. ⚠️ Non è `alimenti`
+          // 🆕 A4, 22/09/2026: la foto sugli alimenti propri. ⚠️ Non è `alimenti`
           // (la cache di Open Food Facts): l'ha scattata chi mangia. **Ci va.**
           'alimentiMiei',
         });

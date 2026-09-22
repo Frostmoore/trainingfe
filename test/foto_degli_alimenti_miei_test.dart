@@ -3,7 +3,7 @@ import 'package:training_companion/src/core/media/tipo_foto.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/diary/data/alimento_catalogo.dart';
 
-/// 📷 **La foto sugli alimenti propri** — A4 di `plan_blocco_A.md`, 26/09/2026.
+/// 📷 **La foto sugli alimenti propri** — A4 di `plan_blocco_A.md`, 22/09/2026.
 ///
 /// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
 ///

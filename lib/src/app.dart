@@ -62,7 +62,7 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
      * ══ 📦 DOPO L'ACCESSO — il profilo che viene a casa, e la liberatoria ═══
      *
      * ⛔ Qui partiva anche il **trasloco del diario** (Parte I / I3, 02/09/2026).
-     * Il 26/09/2026 il diario ha lasciato il server del tutto (A1 di
+     * Il 22/09/2026 il diario ha lasciato il server del tutto (A1 di
      * `plan_blocco_A.md`): non c'è più niente da portare.
      *
      * 🚨 **Quando c'è un accesso, non al primo fotogramma.** All'avvio la

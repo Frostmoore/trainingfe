@@ -47,7 +47,7 @@ class AlimentoCatalogo {
   final String? codiceABarre;
   final String? immagineUrl;
 
-  /// 🆕 A4, 26/09/2026 — la foto che la persona ha messo su un alimento **suo**
+  /// 🆕 A4, 22/09/2026 — la foto che la persona ha messo su un alimento **suo**
   /// (percorso relativo, `TipoFoto.alimentiMiei`). ⚠️ Solo per gli alimenti del
   /// telefono (`id == 0`): i prodotti del catalogo hanno [immagineUrl].
   final String? fotoLocale;

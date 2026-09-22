@@ -817,7 +817,7 @@ final revisioneDiarioProvider = StateProvider<int>((ref) => 0);
 /// Quante voci del diario ci sono su questo telefono.
 ///
 /// 💡 Viveva accanto al trasloco dal server (`trasloco_del_diario.dart`, tolto il
-/// 26/09/2026): la schermata del backup lo mostra per dire cosa c'è qui.
+/// 22/09/2026): la schermata del backup lo mostra per dire cosa c'è qui.
 final vociSulTelefonoProvider = FutureProvider.autoDispose<int>(
   (ref) => ref.watch(archivioSaluteProvider).quanteVociDelDiario(),
 );

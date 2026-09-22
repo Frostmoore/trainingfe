@@ -82,7 +82,7 @@ class ConversationsScreen extends ConsumerWidget {
            * 💡 La spiegazione la trova dove la cerca: in «i miei utenti».
            */
           if ((ref.watch(authControllerProvider).user?.isTrainer ?? false) &&
-              ref.watch(authControllerProvider).user?.abbonato != false)
+              ref.watch(authControllerProvider).user?.puoFareIlTrainer != false)
             const _MandaAPiuPersone(),
           /*
            * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6: sta nella

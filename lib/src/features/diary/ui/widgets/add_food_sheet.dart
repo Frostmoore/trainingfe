@@ -52,7 +52,7 @@ class AddFoodSheet extends ConsumerStatefulWidget {
 class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
     with SingleTickerProviderStateMixin {
   /*
-   * 🚨 **Le quattro linguette, per nome** — 26/09/2026 (A4 di
+   * 🚨 **Le quattro linguette, per nome** — 22/09/2026 (A4 di
    * `plan_blocco_A.md`).
    *
    * ⛔ Qui si usavano i **numeri**, e l'ordine è cambiato due volte (G9, poi
@@ -94,7 +94,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
   AlimentoCatalogo? _scelto;
 
   /*
-   * 🆕 📷 **La foto dell'alimento tuo** — A4, 26/09/2026.
+   * 🆕 📷 **La foto dell'alimento tuo** — A4, 22/09/2026.
    *
    * ⚠️ Due campi e non uno: `_fotoToccata` dice se la persona ha fatto qualcosa
    * nel riquadro. Senza, registrare un pasto con un alimento che ha già una foto
@@ -481,7 +481,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
      * ⛔ Qui c'era un salto automatico verso «A mano» quando l'AI non c'è. Con
      * l'ordine nuovo delle linguette il foglio **si apre già su «A mano»**, e il
      * salto — rimasto col numero vecchio — mandava invece su «Foto», bloccata,
-     * chi stava scrivendo a mano. Tolto il 26/09/2026 (vedi `_linguettaAMano`).
+     * chi stava scrivendo a mano. Tolto il 22/09/2026 (vedi `_linguettaAMano`).
      * 💡 Chi tocca «Scrivi» o «Foto» senza AI vede perché non si può, e il
      * pulsante per andare ai consensi: è un'informazione, non un vicolo cieco.
      */

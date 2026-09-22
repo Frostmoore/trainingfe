@@ -20,6 +20,7 @@ class AppUser {
     this.isTrainer = false,
     this.aiAbilitata = true,
     this.abbonato = false,
+    this.puoAllenare,
     this.tier = 'free',
     this.chiPagava = ChiPaga.io,
   });
@@ -77,6 +78,7 @@ class AppUser {
      * scelta è fra due difetti diversi e si prende il meno costoso.
      */
     abbonato: json['abbonato'] as bool? ?? false,
+    puoAllenare: json['puo_allenare'] as bool?,
     tier: json['tier']?.toString() ?? 'free',
     chiPagava: ChiPaga.daStringa(json['chi_pagava']?.toString()),
     social: ((json['social'] as List?) ?? const [])
@@ -126,6 +128,20 @@ class AppUser {
   /// impianto paga il **tenant**: chi è iscritto a una palestra abbonata è
   /// coperto da quella.
   final bool abbonato;
+
+  /// 🆕 🏋️ **Può fare il trainer, adesso** — giro A6, 22/09/2026.
+  ///
+  /// ⛔ Il muro «Abbonamento da trainer scaduto» si decideva da [abbonato], che
+  /// è il contratto **della persona**. Per un trainer di palestra è falso anche
+  /// quando la palestra paga, e il muro compariva a chi lavora. Lato server è
+  /// `PianoAttivo::puoAllenare()`.
+  ///
+  /// ⚠️ `null` = un server che non manda ancora il campo: si ricade su
+  /// [abbonato], cioè su quello che l'app faceva prima (vedi [puoFareIlTrainer]).
+  final bool? puoAllenare;
+
+  /// La risposta da usare: [puoAllenare], o [abbonato] se il server è vecchio.
+  bool get puoFareIlTrainer => puoAllenare ?? abbonato;
 
   /// 🆕 **Chi paga l'abbonamento di questa persona** — 3b-AH.4.
   ///

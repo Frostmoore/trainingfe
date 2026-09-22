@@ -732,7 +732,7 @@ class ArchivioSalute extends _$ArchivioSalute {
       // v32 → v33 (19/09/2026): il profilo sta sul telefono.
       if (da < 33) await m.createTable(profiloSulTelefono);
 
-      // v33 → v34 (A4, 26/09/2026): la foto sugli alimenti propri.
+      // v33 → v34 (A4, 22/09/2026): la foto sugli alimenti propri.
       if (da < 34) await m.createTable(fotoDegliAlimentiMiei);
     },
   );
@@ -5369,7 +5369,7 @@ class ProfiloSulTelefono extends Table {
   Set<Column<Object>> get primaryKey => {utenteId};
 }
 
-/// 🆕 **La foto sugli alimenti propri** — A4 di `plan_blocco_A.md`, 26/09/2026.
+/// 🆕 **La foto sugli alimenti propri** — A4 di `plan_blocco_A.md`, 22/09/2026.
 ///
 /// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
 ///

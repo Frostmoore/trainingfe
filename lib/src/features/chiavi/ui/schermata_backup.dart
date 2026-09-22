@@ -111,7 +111,7 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
            * 🍽️ **Il diario, con quante voci ci sono davvero** — Parte I, I3.
            *
            * 💡 Nato per vedere se il trasloco dal server era andato; il trasloco
-           * non c'è più (26/09/2026, il diario ha lasciato il server), e il
+           * non c'è più (22/09/2026, il diario ha lasciato il server), e il
            * numero resta: è il posto dove si dice cosa c'è su questo telefono.
            */
           ref

@@ -39,7 +39,11 @@ class MieiUtentiScreen extends ConsumerWidget {
      * deve chiudere fuori chi ha pagato. È la stessa regola già scritta in
      * `limiti_delle_schede.dart`.
      */
-    if (ref.watch(authControllerProvider).user?.abbonato == false) {
+    /*
+     * 🐛 `puoFareIlTrainer` e non `abbonato` — giro A6, 22/09/2026: la palestra
+     * paga il lavoro del suo trainer, non il suo Plus. Vedi `AppUser.puoAllenare`.
+     */
+    if (ref.watch(authControllerProvider).user?.puoFareIlTrainer == false) {
       return const Scaffold(
         appBar: IntestazioneApp(titolo: 'I miei utenti'),
         body: AbbonamentoTrainerScaduto(),

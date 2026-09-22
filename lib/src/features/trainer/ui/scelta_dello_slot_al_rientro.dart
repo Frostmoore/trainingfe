@@ -5,6 +5,12 @@ import '../../auth/auth_controller.dart';
 import '../trainer_controller.dart';
 import 'scelta_dello_slot.dart';
 
+/// 🔔 **«Ricontrolla adesso»**: chi sa che una domanda sullo slot è appena
+/// nata — la schermata d'invito, dopo «Entro» — ne alza il valore.
+/// 💡 Un contatore e non un booleano: due richieste di fila devono essere due
+/// cambi, e l'osservatore non deve riportarlo a zero.
+final richiestaSceltaDelloSlotProvider = StateProvider<int>((ref) => 0);
+
 /// 🎟️ **La domanda sullo slot arriva da sola** — AH.1-ter.6, 18/09/2026.
 ///
 /// ══ 📌 PERCHE' SERVE UN OSSERVATORE, E NON UNA PAGINA ═════════════════════
@@ -133,6 +139,18 @@ class _SceltaDelloSlotAlRientroState
         if (adesso && prima != true) _controlla();
       },
     );
+
+    /*
+     * 🐛 **E quando qualcuno lo chiede** — 22/09/2026, A5 di
+     * `plan_blocco_A.md` (giro 8.3.3). Un trainer indipendente è **già**
+     * «trainer dentro»: accettando l'invito di una palestra il valore qui sopra
+     * resta `true`, e la domanda sugli allievi iscritti lì — che nasce proprio
+     * in quel momento — arrivava solo al rientro successivo nell'app.
+     * ⛔ Il profilo non lo dice: resta a casa sua (lo spazio non cambia nome) e
+     * i ruoli arrivano all'app ridotti a `isTrainer`. Quindi lo dice chi lo sa:
+     * la schermata d'invito, con `richiestaSceltaDelloSlotProvider`.
+     */
+    ref.listen<int>(richiestaSceltaDelloSlotProvider, (_, _) => _controlla());
 
     return widget.child;
   }

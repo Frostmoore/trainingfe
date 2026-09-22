@@ -1,4 +1,4 @@
-/// 🆕 La foto di un alimento tuo — A4 di `plan_blocco_A.md`, 26/09/2026.
+/// 🆕 La foto di un alimento tuo — A4 di `plan_blocco_A.md`, 22/09/2026.
 ///
 /// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
 ///

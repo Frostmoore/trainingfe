@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../../auth/auth_controller.dart';
+import '../../trainer/ui/scelta_dello_slot_al_rientro.dart';
 import '../branding_controller.dart';
 import '../data/invito_in_palestra.dart';
 import '../invito_controller.dart';
@@ -253,6 +254,14 @@ class _PaginaState extends ConsumerState<_Pagina> {
       // 💡 Il profilo cambia tenant: senza questo, l'app resterebbe con
       // l'utente di prima finché non si riavvia.
       await ref.read(authControllerProvider.notifier).refresh();
+
+      /*
+       * 🎟️ Un trainer che entra qui può trovarci suoi allievi già iscritti: la
+       * domanda sullo slot nasce **adesso**, e va fatta adesso — non al
+       * prossimo rientro nell'app (giro A5 8.3.3, 22/09/2026). Per chi non è
+       * trainer l'osservatore non fa niente.
+       */
+      ref.read(richiestaSceltaDelloSlotProvider.notifier).state++;
 
       if (!mounted) return;
 

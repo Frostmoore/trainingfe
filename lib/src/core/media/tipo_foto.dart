@@ -93,7 +93,7 @@ enum TipoFoto {
   alimenti(cartella: 'alimenti', permanente: false, nelBackup: false),
 
   /// 🆕 La foto che una persona mette su un alimento **suo** — A4 di
-  /// `plan_blocco_A.md`, 26/09/2026.
+  /// `plan_blocco_A.md`, 22/09/2026.
   ///
   /// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
   ///

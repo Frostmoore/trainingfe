@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/core/ui/intestazione_app.dart';
 import 'package:training_companion/src/features/onboarding/data/gym_branding.dart';
 import 'package:training_companion/src/features/onboarding/ui/widgets/marchio_in_cima.dart';
 
@@ -149,6 +150,24 @@ void main() {
     // 💡 E il nome si scrive: `/benvenuto` è l'unica schermata che si vede
     // prima di avere un account.
     expect(find.text('Training Companion'), findsOneWidget);
+  });
+
+  /// 🆕 22/09/2026 (DA-FARE 15): *«anche nell'intestazione»*. Il cerchio in
+  /// cima a ogni pagina aveva ancora il manubrio.
+  testWidgets("senza palestra anche l'intestazione ha il monogramma", (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: LogoPalestra(palestra: GymBranding.neutral)),
+      ),
+    );
+
+    expect(find.byIcon(Icons.fitness_center_rounded), findsNothing);
+
+    final segno = tester.widget<Image>(find.byType(Image));
+
+    expect((segno.image as AssetImage).assetName, 'assets/marchio/segno.png');
   });
 
   /// ⚖️ **E la palestra vera non si perde per strada.** Togliere la «T» a tutti

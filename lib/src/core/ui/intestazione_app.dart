@@ -372,7 +372,7 @@ class LogoPalestra extends StatelessWidget {
         backgroundColor: palestra.primary,
         // 💡 Senza palestra resta il cerchio con il simbolo dell'app: un buco
         // in cima alla dashboard la fa sembrare rotta, ed è il motivo per cui
-        // questo ripiego esiste. Vedi la nota gemella in `GymHeader`.
+        // questo ripiego esiste. Vedi la nota gemella in `MarchioInCima`.
         child: palestra.haPalestra
             ? Text(
                 palestra.name!.characters.first.toUpperCase(),
@@ -382,10 +382,34 @@ class LogoPalestra extends StatelessWidget {
                   fontSize: 16,
                 ),
               )
-            : const Icon(
-                Icons.fitness_center_rounded,
-                color: Colors.white,
-                size: 18,
+            /*
+             * 🆕 **Il monogramma anche qui** — 22/09/2026 (DA-FARE 15).
+             *
+             * 📌 Il committente: *«anche nell'intestazione»*. ⛔ Qui c'era
+             * ancora il manubrio di Material, tolto dalle schermate d'accesso il
+             * 15/09: l'app si presentava col suo marchio all'ingresso e con
+             * un'icona di serie su ogni pagina dopo.
+             *
+             * 💡 Lo stesso ripiego di `MarchioInCima` se l'asset non arrivasse.
+             */
+            /*
+             * ⚠️ **Niente margine, e il segno ingrandito**: in `segno.png` il
+             * disegno occupa solo il 48% del quadrato (il resto è trasparente).
+             * A 36 px, col margine della schermata d'accesso, restava un segno
+             * di 9 px — illeggibile, visto sull'emulatore. Così è circa due
+             * terzi del cerchio.
+             */
+            : Transform.scale(
+                scale: 1.35,
+                child: Image.asset(
+                  'assets/marchio/segno.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.fitness_center_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
               ),
       );
     }

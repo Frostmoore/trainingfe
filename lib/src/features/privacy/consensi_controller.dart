@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../auth/auth_controller.dart';
 
 /// Lo stato dei consensi — S9.1.
 ///
@@ -82,7 +83,32 @@ class Consensi {
   bool get recuperoDato => recupero != null;
 }
 
+/// I consensi di **questa** sessione.
+///
+/// ══ 🚨 Perche' guarda chi e' entrato ═══════════════════════════════════
+///
+/// ⛔ `FutureProvider` **tiene anche gli errori**, non solo i risultati. All'avvio
+/// l'app chiede i consensi prima ancora che ci sia un token: quella chiamata
+/// prende un 401, l'errore resta in cache, e da quel momento la schermata della
+/// privacy mostra *«Non riesco a leggere i tuoi consensi — Sessione scaduta»*
+/// **per sempre**, anche dopo un accesso riuscito e anche mentre tutto il resto
+/// dell'app funziona.
+///
+/// ⚠️ E' successo davvero il 22/09/2026, subito dopo un ripristino da file: il
+/// server aveva risposto 201 a `PUT /chat-key` e 200 a `/dashboard`, ma la
+/// privacy continuava a dire che la sessione era scaduta. Il committente:
+/// *«Quando faccio il ripristino non deve succedere che mi dica che c'e' un
+/// problema con i consensi. Follia pura»*. Aveva ragione: l'app dichiarava
+/// rotto qualcosa che era a posto.
+///
+/// 💡 Guardando **chi e' entrato** il provider si ricalcola da solo a ogni
+/// cambio di sessione — accesso, uscita, cambio di persona — e un errore preso
+/// da sloggati non sopravvive all'accesso. ⚠️ Si guarda `(stato, id)` e non
+/// l'intero `AuthState`: quello cambia anche per un `refresh()` del profilo, e
+/// rileggere i consensi a ogni giro sarebbe una chiamata in piu' per niente.
 final consensiProvider = FutureProvider<Consensi>((ref) async {
+  ref.watch(authControllerProvider.select((s) => (s.status, s.user?.id)));
+
   final data = await ref
       .watch(apiClientProvider)
       .get<Map<String, dynamic>>('/account/consents');

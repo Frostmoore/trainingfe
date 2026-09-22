@@ -1,16 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/backup/backup_controller.dart';
-import '../../../core/backup/preferenze_nel_backup.dart';
 import '../../../core/crypto/cassaforte.dart';
-import '../../../core/crypto/file_di_backup.dart';
 import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
-import '../../health/health_controller.dart';
+import 'ripristino_da_file.dart';
 
 /// Il ripristino su un dispositivo nuovo — S6.7.
 ///
@@ -106,7 +102,7 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
       // uno schermo nero che sembra un crash. Vedi
       // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
-      ref.invalidate(statoChiaviProvider);
+      _rileggiTutto();
     } on PasswordDiRecuperoSbagliata {
       _fallito('Questa password non apre il tuo account. Riprova.');
     } on Object catch (e) {
@@ -181,9 +177,9 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
   /// ⚠️ **Riscrive il pacchetto sul server con una password nuova**: chi arriva
   /// di qui è per definizione qualcuno che quella vecchia non ce l'ha più.
   Future<void> _conFile() async {
-    final scelta = await showDialog<_DatiDelFile>(
+    final scelta = await showDialog<DatiDelFile>(
       context: context,
-      builder: (_) => const _ChiediFileECodice(),
+      builder: (_) => const ChiediFileECodice(),
     );
 
     if (scelta == null) return;
@@ -193,60 +189,28 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       _errore = null;
     });
 
-    try {
-      final sodium = await ref.read(sodiumProvider.future);
-      final servizio = await ref.read(servizioChiaviProvider.future);
+    // ⚠️ La logica vive in `ripristino_da_file.dart`, ed è la stessa che usa
+    // «Backup e dati»: due copie vorrebbero dire due ripristini diversi.
+    final motivo = await eseguiIlRipristinoDaFile(ref, scelta);
 
-      final contenuto = await FileDiBackup(sodium).importaQualsiasi(
-        file: await File(scelta.percorso).readAsBytes(),
-        codice: scelta.codice,
-      );
+    if (motivo != null) {
+      _fallito(motivo);
 
-      await servizio.ripristinaDaChiave(
-        chiaveMaestra: contenuto.chiaveMaestra,
-        nuovaPassword: scelta.nuovaPassword,
-      );
-
-      /*
-       * 🚨 **L'archivio si riscrive DOPO la chiave** — N2.2.
-       *
-       * Fino alla `v6.24.0` `contenuto.archivio` non lo leggeva nessuno: si
-       * ripristinava la chat e si perdevano peso, misure e sonno, senza che
-       * niente lo dicesse.
-       *
-       * ⚠️ L'ordine conta: se l'archivio fallisse dopo che la chiave e' gia'
-       * a posto, la persona ha comunque riavuto i messaggi — che sono la cosa
-       * irrecuperabile. Al contrario avrebbe l'archivio e nessun modo di
-       * leggere la chat.
-       *
-       * 💡 Un archivio vuoto (il caso dei file `v1`) non fa niente:
-       * `ripristinaDaBackup` salta le tabelle che il file non contiene.
-       */
-      if (contenuto.archivio.isNotEmpty) {
-        await ref
-            .read(archivioSaluteProvider)
-            .ripristinaDaBackup(contenuto.archivio);
-
-        // 🚨 Anche di qua: sono due strade per lo stesso ripristino, e una
-        // sola delle due che riporta le preferenze sarebbe peggio di nessuna.
-        await PreferenzeNelBackup.ripristina(
-          contenuto.archivio[PreferenzeNelBackup.chiave],
-        );
-      }
-
-      // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
-      // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
-      // uno schermo nero che sembra un crash. Vedi
-      // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
-      ref.invalidate(statoChiaviProvider);
-    } on CodiceDiRipristinoSbagliato catch (e) {
-      _fallito(e.motivo);
-    } on FileSystemException {
-      _fallito('Non riesco a leggere quel file.');
-    } on Object catch (e) {
-      _fallito(e.toString());
+      return;
     }
+
+    // 🚨 Niente `pop()`: questa schermata è il corpo di `PortaDelleChiavi`,
+    // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto — uno
+    // schermo nero che sembra un crash. Vedi
+    // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
+    if (mounted) setState(() => _inCorso = false);
   }
+
+  /// Rilegge tutto quello che il ripristino ha toccato.
+  ///
+  /// 💡 Il perché e il cosa stanno in `rileggiTuttoDopoIlRipristino`, che
+  /// è la stessa usata da «Backup e dati».
+  void _rileggiTutto() => rileggiTuttoDopoIlRipristino(ref);
 
   /// L'ultima spiaggia: si riparte da zero.
   Future<void> _ricomincia() async {
@@ -304,7 +268,7 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
       // non una rotta spinta sopra. Chiuderla lascia un Navigator vuoto —
       // uno schermo nero che sembra un crash. Vedi
       // `SchermataPasswordDiRecupero._salva()` per il racconto per esteso.
-      ref.invalidate(statoChiaviProvider);
+      _rileggiTutto();
     } on Object catch (e) {
       _fallito(e.toString());
     }
@@ -479,105 +443,6 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Percorso del file, codice di ripristino e password nuova.
-class _DatiDelFile {
-  const _DatiDelFile({
-    required this.percorso,
-    required this.codice,
-    required this.nuovaPassword,
-  });
-
-  final String percorso;
-  final String codice;
-  final String nuovaPassword;
-}
-
-class _ChiediFileECodice extends StatefulWidget {
-  const _ChiediFileECodice();
-
-  @override
-  State<_ChiediFileECodice> createState() => _ChiediFileECodiceState();
-}
-
-class _ChiediFileECodiceState extends State<_ChiediFileECodice> {
-  final _percorso = TextEditingController();
-  final _codice = TextEditingController();
-  final _password = TextEditingController();
-
-  @override
-  void dispose() {
-    _percorso.dispose();
-    _codice.dispose();
-    _password.dispose();
-    super.dispose();
-  }
-
-  bool get _valido =>
-      _percorso.text.trim().isNotEmpty &&
-      FileDiBackup.normalizza(_codice.text).length == 24 &&
-      _password.text.length >= 8;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Ripristino da file'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _percorso,
-              decoration: const InputDecoration(
-                labelText: 'Percorso del file',
-                hintText: '/storage/…/training-companion.backup',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Gap.md),
-            TextField(
-              controller: _codice,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Codice di ripristino',
-                hintText: 'ABCD-EFGH-JKLM-NPQR-STUV-WXYZ',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Gap.md),
-            TextField(
-              controller: _password,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Nuova password di recupero',
-                helperText: 'Almeno 8 caratteri',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annulla'),
-        ),
-        FilledButton(
-          onPressed: _valido
-              ? () => Navigator.of(context).pop(
-                  _DatiDelFile(
-                    percorso: _percorso.text.trim(),
-                    codice: _codice.text,
-                    nuovaPassword: _password.text,
-                  ),
-                )
-              : null,
-          child: const Text('Ripristina'),
-        ),
-      ],
     );
   }
 }

@@ -17,6 +17,7 @@ import '../../../core/ui/intestazione_app.dart';
 import '../../diary/data/diario_locale.dart';
 import '../../health/health_controller.dart';
 import '../../privacy/i_miei_dati.dart';
+import 'ripristino_da_file.dart';
 
 /// L'esportazione del file di backup — M7.3, 18/08/2026.
 ///
@@ -224,6 +225,23 @@ class _SchermataBackupState extends ConsumerState<SchermataBackup> {
               _codice == null ? 'Crea il file' : 'Crea un file nuovo',
             ),
           ),
+
+          /*
+           * 🆕 ♻️ **Il ripristino sta anche qui** — 23/09/2026.
+           *
+           * 📌 Il committente: *«non capisco perché per ripristinare il backup
+           * devo andare sui messaggi e non su "backup e dati", non ha nessun
+           * senso, mettiamolo lì il modo di ripristinare i backup, subito sotto
+           * a "crea il backup"»*. Aveva ragione, ed è il posto giusto: chi crea
+           * un file qui, un anno dopo torna **qui** per riaprirlo.
+           *
+           * ⚠️ Prima esisteva solo dentro `SchermataRipristino`, cioè dietro
+           * alla chat, e si raggiungeva soltanto quando l'app si accorgeva da
+           * sola che la chiave mancava. Chi aveva già la chiave e voleva
+           * riprendersi peso, misure e diario **non aveva nessuna strada**.
+           */
+          const SizedBox(height: 16),
+          const _RipristinoDaFile(),
 
           /*
            * 🆕 📦 «I miei dati» — artt. 15 e 20, 19/09/2026.
@@ -960,5 +978,125 @@ class _IMieiDatiState extends ConsumerState<_IMieiDati> {
     } finally {
       if (mounted) setState(() => _inCorso = false);
     }
+  }
+}
+
+/// «Ripristina da un file», dentro Backup e dati — 23/09/2026.
+///
+/// ══ 🚨 Perché qui si chiede conferma e nell'altra schermata no ════════════
+///
+/// ⛔ Nell'altra si arriva **senza chiave**: non c'è niente da perdere, e una
+/// conferma sarebbe solo un ostacolo davanti a chi sta cercando di rientrare.
+///
+/// ⚠️ Qui invece la chiave **c'è già e funziona**. Aprire un file la sostituisce
+/// con quella del file: se il file è vecchio — per esempio di prima di un
+/// «Ricomincia» — i messaggi di adesso non si riaprono più, e non c'è modo di
+/// tornare indietro. 💡 Per questo la domanda dice *cosa succede*, non
+/// *«sei sicuro?»*: la seconda non la legge nessuno.
+class _RipristinoDaFile extends ConsumerStatefulWidget {
+  const _RipristinoDaFile();
+
+  @override
+  ConsumerState<_RipristinoDaFile> createState() => _RipristinoDaFileState();
+}
+
+class _RipristinoDaFileState extends ConsumerState<_RipristinoDaFile> {
+  bool _inCorso = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Hai già un file?', style: tema.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const Text(
+          'Rimette dentro la chiave dei messaggi e tutto quello che vive sul '
+          'telefono: peso, misure, sonno e diario. Ti servono il file e il suo '
+          'codice di ripristino.',
+        ),
+        const SizedBox(height: 12),
+        /*
+         * ⚠️ `SizedBox(width: double.infinity)` e non un pulsante nudo.
+         *
+         * ⛔ Dentro una `Column` un pulsante si stringe sul proprio testo,
+         * mentre «Crea il file» è figlio diretto della `ListView` e viene
+         * allargato da lei: i due comandi risultavano di larghezza diversa a
+         * quattro righe di distanza. 📌 Il committente se n'è accorto subito:
+         * *«perché "Ripristina da un file" è a mezza larghezza quando "crea il
+         * file" è a tutta larghezza?»*.
+         *
+         * 💡 Resta `Outlined` mentre l'altro è `Filled`: la differenza di
+         * **peso** è voluta — crearne uno è la cosa da fare, aprirne uno è la
+         * cosa da fare una volta ogni tanto. La differenza di **misura** no,
+         * quella era solo un effetto collaterale del contenitore.
+         */
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _inCorso ? null : _ripristina,
+            icon: _inCorso
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.restore_rounded),
+            label: const Text('Ripristina da un file'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _ripristina() async {
+    final messaggeria = ScaffoldMessenger.of(context);
+
+    final avanti = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aprire un file di backup?'),
+        content: const Text(
+          'La chiave di questo telefono viene sostituita con quella del file, '
+          'e peso, misure, sonno e diario vengono riscritti con quelli del '
+          'backup.\n\n'
+          'Se il file è vecchio, i messaggi ricevuti da allora non si '
+          'riaprono più.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Vai avanti'),
+          ),
+        ],
+      ),
+    );
+
+    if (avanti != true || !mounted) return;
+
+    final scelta = await showDialog<DatiDelFile>(
+      context: context,
+      builder: (_) => const ChiediFileECodice(),
+    );
+
+    if (scelta == null || !mounted) return;
+
+    setState(() => _inCorso = true);
+
+    final motivo = await eseguiIlRipristinoDaFile(ref, scelta);
+
+    if (mounted) setState(() => _inCorso = false);
+
+    messaggeria.showSnackBar(
+      SnackBar(
+        content: Text(motivo ?? 'Fatto: i tuoi dati sono tornati.'),
+      ),
+    );
   }
 }

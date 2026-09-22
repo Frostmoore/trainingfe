@@ -12,6 +12,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../acquisti/data/costo_delle_funzioni.dart';
 import '../../../acquisti/ui/modale_acquisti.dart';
 import '../../../auth/auth_controller.dart';
+import '../../../health/health_controller.dart';
 import '../../../nutrition/data/piano_alimentare.dart';
 import '../../../privacy/consensi_controller.dart';
 import '../../data/alimento_catalogo.dart';
@@ -22,6 +23,7 @@ import '../../diary_controller.dart';
 import 'campo_alimento.dart';
 import 'conferma_stima_sheet.dart';
 import 'dal_piano_tab.dart';
+import 'foto_dell_alimento_mio.dart';
 
 /// I tre modi di aggiungere qualcosa al diario — A4.2 / A4.3 / A4.4.
 ///
@@ -50,13 +52,22 @@ class AddFoodSheet extends ConsumerStatefulWidget {
 class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
     with SingleTickerProviderStateMixin {
   /*
-   * 🚨 **Quattro linguette da G9**, e la nuova sta **prima** di «A mano»: chi
-   * ha un piano lo segue, e chi lo segue non deve digitare quello che e' gia'
-   * scritto.
+   * 🚨 **Le quattro linguette, per nome** — 26/09/2026 (A4 di
+   * `plan_blocco_A.md`).
    *
-   * ⚠️ Gli indici sono usati altrove (`_tabs.animateTo(2)` dal pannello senza
-   * AI): «A mano» e' passata da 2 a **3**.
+   * ⛔ Qui si usavano i **numeri**, e l'ordine è cambiato due volte (G9, poi
+   * 3b-D.4.1 che ha messo «A mano» per prima). Due punti erano rimasti
+   * all'ordine vecchio, senza nessun errore: chi non aveva dato il consenso
+   * all'AI veniva spostato **da solo** sulla linguetta «Foto», bloccata, mentre
+   * scriveva a mano (a ogni ridisegno, per esempio chiudendo la tastiera); e
+   * dopo una stima da precisare si finiva su «A mano» invece che sulla frase.
+   * Trovato provando la foto sugli alimenti sull'emulatore.
+   *
+   * ⚠️ L'ordine qui deve essere quello delle `Tab` e del `TabBarView` qui sotto.
    */
+  static const _linguettaAMano = 0;
+  static const _linguettaScrivi = 2;
+
   late final TabController _tabs = TabController(length: 4, vsync: this);
 
   final _testo = TextEditingController();
@@ -81,6 +92,16 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
 
   /// L'alimento scelto dai suggerimenti, se se ne e' scelto uno.
   AlimentoCatalogo? _scelto;
+
+  /*
+   * 🆕 📷 **La foto dell'alimento tuo** — A4, 26/09/2026.
+   *
+   * ⚠️ Due campi e non uno: `_fotoToccata` dice se la persona ha fatto qualcosa
+   * nel riquadro. Senza, registrare un pasto con un alimento che ha già una foto
+   * — senza toccarla — la sovrascriverebbe col `null` di partenza.
+   */
+  String? _fotoMia;
+  bool _fotoToccata = false;
 
   String _unita = 'g';
   bool _inCorso = false;
@@ -211,7 +232,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
           ..text = daPrecisare
           ..selection = TextSelection.collapsed(offset: daPrecisare.length);
 
-        _tabs.animateTo(0);
+        // La frase si precisa dove si scrive: «Scrivi».
+        _tabs.animateTo(_linguettaScrivi);
 
         return;
       }
@@ -399,7 +421,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
   /// moltiplicare, e riempire i campi con numeri a caso sarebbe peggio che
   /// lasciarli vuoti.
   void _riempiDaCatalogo(AlimentoCatalogo? a) {
-    setState(() => _scelto = a);
+    setState(() {
+      _scelto = a;
+      // 🆕 A4 — scegliendo un alimento tuo, il riquadro mostra la sua foto.
+      _fotoMia = a?.eMio == true ? a!.fotoLocale : null;
+      _fotoToccata = false;
+    });
 
     if (a == null) return;
 
@@ -451,17 +478,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
     final aiOk = pianoOk && consensoOk;
 
     /*
-     * ⚠️ Se l'AI non c'è, si parte da «A mano» invece che dalla scheda
-     * bloccata: aprire il foglio su un pannello che dice «non puoi» sarebbe
-     * corretto e inutile — quello che la persona vuole fare è comunque
-     * registrare quel che ha mangiato.
+     * ⛔ Qui c'era un salto automatico verso «A mano» quando l'AI non c'è. Con
+     * l'ordine nuovo delle linguette il foglio **si apre già su «A mano»**, e il
+     * salto — rimasto col numero vecchio — mandava invece su «Foto», bloccata,
+     * chi stava scrivendo a mano. Tolto il 26/09/2026 (vedi `_linguettaAMano`).
+     * 💡 Chi tocca «Scrivi» o «Foto» senza AI vede perché non si può, e il
+     * pulsante per andare ai consensi: è un'informazione, non un vicolo cieco.
      */
-    if (!aiOk && !consensi.isLoading && _tabs.index < 2) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // ⚠️ Da G9 «A mano» e' la **quarta**: con `2` si finiva su «Dal piano».
-        if (mounted && _tabs.index < 3) _tabs.animateTo(3);
-      });
-    }
 
     return Padding(
       // Alza il foglio sopra la tastiera: senza, il campo su cui si scrive
@@ -644,8 +667,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                   onUnita: (u) => setState(() => _unita = u),
                   onScelto: _riempiDaCatalogo,
                   onQuantita: _ricalcolaDaCatalogo,
-                  onSalva: () => _esegui(
-                    () => azioni.addManual(
+                  fotoMia: _fotoMia,
+                  onFoto: (relativo) => setState(() {
+                    _fotoMia = relativo;
+                    _fotoToccata = true;
+                  }),
+                  onSalva: () => _esegui(() async {
+                    await azioni.addManual(
                       description: _descrizione.text,
                       meal: widget.meal,
                       qty: _numero(_quantita),
@@ -654,8 +682,20 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                       protein: _numero(_proteine),
                       carbs: _numero(_carboidrati),
                       fat: _numero(_grassi),
-                    ),
-                  ),
+                    );
+
+                    /*
+                     * 🆕 A4 — la foto si lega al nome **solo adesso**, a pasto
+                     * registrato: una foto scelta e poi abbandonata chiudendo il
+                     * foglio non si attacca a niente. E solo se è un alimento
+                     * tuo: un prodotto del catalogo ha la sua immagine.
+                     */
+                    if (_fotoToccata && _scelto?.eMio != false) {
+                      await ref
+                          .read(archivioSaluteProvider)
+                          .mettiFotoAllAlimentoMio(_descrizione.text, _fotoMia);
+                    }
+                  }),
                 ),
                 DalPianoTab(
                   onScelti: (alimenti) =>
@@ -667,7 +707,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(0))
+                  _SenzaPianoAi(
+                    onInserisciAMano: () => _tabs.animateTo(_linguettaAMano),
+                  )
                 else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
@@ -689,7 +731,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet>
                 // 🚨 Il piano **prima** del consenso, come sul server: se l'AI
                 // non è compresa, chiedere il consenso non serve a niente.
                 else if (!pianoOk)
-                  _SenzaPianoAi(onInserisciAMano: () => _tabs.animateTo(0))
+                  _SenzaPianoAi(
+                    onInserisciAMano: () => _tabs.animateTo(_linguettaAMano),
+                  )
                 else if (!consensoOk)
                   const _SenzaConsensoAi()
                 else
@@ -976,6 +1020,8 @@ class _Manuale extends StatelessWidget {
     required this.onScelto,
     required this.onQuantita,
     required this.onSalva,
+    required this.fotoMia,
+    required this.onFoto,
   });
 
   final TextEditingController descrizione, quantita, kcal;
@@ -989,9 +1035,19 @@ class _Manuale extends StatelessWidget {
   final VoidCallback onQuantita;
   final VoidCallback onSalva;
 
+  /// 🆕 A4 — la foto dell'alimento tuo, e cosa fare quando cambia.
+  final String? fotoMia;
+  final ValueChanged<String?> onFoto;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    /*
+     * 🆕 📷 **La foto, solo sugli alimenti tuoi** — A4. Un prodotto preso dal
+     * catalogo ha già la sua immagine (e non è tuo): lì il riquadro non c'è.
+     */
+    final alimentoMio = scelto == null || scelto!.eMio;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Gap.md),
@@ -1003,6 +1059,26 @@ class _Manuale extends StatelessWidget {
           if (scelto != null) ...[
             const SizedBox(height: Gap.sm),
             _AlimentoScelto(alimento: scelto!),
+          ],
+
+          if (alimentoMio) ...[
+            const SizedBox(height: Gap.md),
+            Row(
+              children: [
+                FotoDellAlimentoMio(relativo: fotoMia, onCambio: onFoto),
+                const SizedBox(width: Gap.md),
+                Expanded(
+                  child: Text(
+                    fotoMia == null
+                        ? 'Aggiungi una foto: la ritrovi quando lo cerchi la prossima volta.'
+                        : 'La foto di questo alimento. Toccala per cambiarla.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
 
           const SizedBox(height: Gap.md),

@@ -92,6 +92,21 @@ enum TipoFoto {
   /// quando serve spazio. Quello che serve si riscarica aprendo il prodotto.
   alimenti(cartella: 'alimenti', permanente: false, nelBackup: false),
 
+  /// 🆕 La foto che una persona mette su un alimento **suo** — A4 di
+  /// `plan_blocco_A.md`, 26/09/2026.
+  ///
+  /// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
+  ///
+  /// ── 🚨 La domanda del backup, fatta PRIMA di scrivere il resto ────────
+  ///
+  /// ⛔ **Non è `alimenti`**, anche se il nome somiglia: quella è la **cache**
+  /// delle immagini di Open Food Facts, che si riscaricano. Questa l'ha
+  /// scattata chi mangia — il piatto di sua nonna, la barretta del distributore
+  /// della palestra — e non esiste da nessun'altra parte.
+  ///
+  /// ⚠️ Quindi `permanente` **e** `nelBackup`, come quella degli esercizi.
+  alimentiMiei(cartella: 'alimenti_miei', permanente: true, nelBackup: true),
+
   /// Le foto usa e getta.
   ///
   /// 🚨 **Mai nel backup, ed è la parte che si dimentica.** Una foto effimera

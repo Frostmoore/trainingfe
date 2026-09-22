@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/storage/archivio_salute.dart';
 import '../health/health_controller.dart';
 import 'data/alimento_catalogo.dart';
 
@@ -58,9 +59,16 @@ final ricercaAlimentiProvider = FutureProvider.autoDispose
        * ⚠️ `id: 0`: non ha un id nel catalogo, e non deve averlo — nessuno lo
        * usa per rimandarlo al server.
        */
+      final archivio = ref.read(archivioSaluteProvider);
+      final scrittiDaMe = await archivio.alimentiScrittiDaMe(q);
+
+      // 🆕 A4 — la foto dei suoi, in una lettura sola per tutta la ricerca.
+      final foto = await archivio.fotoDegliAlimentiMieiPer(
+        scrittiDaMe.map((a) => a.nome),
+      );
+
       final suoi = [
-        for (final a
-            in await ref.read(archivioSaluteProvider).alimentiScrittiDaMe(q))
+        for (final a in scrittiDaMe)
           AlimentoCatalogo(
             id: 0,
             nome: a.nome,
@@ -69,6 +77,7 @@ final ricercaAlimentiProvider = FutureProvider.autoDispose
             carboidrati100: a.carboidrati100,
             grassi100: a.grassi100,
             note: 'Scritto da te',
+            fotoLocale: foto[ArchivioSalute.chiaveAlimento(a.nome)],
           ),
       ];
 

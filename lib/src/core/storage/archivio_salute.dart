@@ -55,6 +55,7 @@ part 'archivio_salute.g.dart';
     PercorsiDegliAllenamenti,
     EserciziSulTelefono,
     ProfiloSulTelefono,
+    FotoDegliAlimentiMiei,
   ],
 )
 class ArchivioSalute extends _$ArchivioSalute {
@@ -81,7 +82,7 @@ class ArchivioSalute extends _$ArchivioSalute {
   static const origineSalute = 'salute';
 
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 34;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -730,6 +731,9 @@ class ArchivioSalute extends _$ArchivioSalute {
 
       // v32 → v33 (19/09/2026): il profilo sta sul telefono.
       if (da < 33) await m.createTable(profiloSulTelefono);
+
+      // v33 → v34 (A4, 26/09/2026): la foto sugli alimenti propri.
+      if (da < 34) await m.createTable(fotoDegliAlimentiMiei);
     },
   );
 
@@ -2740,6 +2744,70 @@ class ArchivioSalute extends _$ArchivioSalute {
           grassi100: r.read<double?>('grassi100'),
         ),
     ];
+  }
+
+  // ───────────────────── 🆕 la foto sugli alimenti propri — A4 ─────────────────────
+
+  /// 🔑 **Come si riconosce un alimento tuo**: il nome, in minuscolo e senza
+  /// spazi doppi.
+  ///
+  /// 💡 È lo stesso criterio di [alimentiScrittiDaMe], che raggruppa per
+  /// `lower(descrizione)`: «Torta della nonna» e «torta  della nonna» sono lo
+  /// stesso alimento, e devono avere la stessa foto.
+  static String chiaveAlimento(String nome) =>
+      nome.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  /// La foto di un alimento tuo (percorso relativo, vedi `ArchivioFoto`), o `null`.
+  Future<String?> fotoDellAlimentoMio(String nome) async {
+    final riga = await (select(
+      fotoDegliAlimentiMiei,
+    )..where((t) => t.nome.equals(chiaveAlimento(nome)))).getSingleOrNull();
+
+    return riga?.percorso;
+  }
+
+  /// Le foto di più alimenti in una lettura sola, per chiave ([chiaveAlimento]).
+  ///
+  /// ⚠️ Una lettura e non una per alimento: serve alla ricerca, che si ripete a
+  /// ogni tasto.
+  Future<Map<String, String>> fotoDegliAlimentiMieiPer(
+    Iterable<String> nomi,
+  ) async {
+    final chiavi = nomi.map(chiaveAlimento).toSet();
+
+    if (chiavi.isEmpty) return const {};
+
+    final righe = await (select(
+      fotoDegliAlimentiMiei,
+    )..where((t) => t.nome.isIn(chiavi))).get();
+
+    return {for (final r in righe) r.nome: r.percorso};
+  }
+
+  /// Mette (o toglie, con `null`) la foto di un alimento tuo.
+  ///
+  /// ⚠️ **Si toglie il riferimento, non il file**: è la stessa regola della foto
+  /// degli esercizi. Il file resta nella cartella, e nel backup.
+  Future<void> mettiFotoAllAlimentoMio(String nome, String? percorso) async {
+    final chiave = chiaveAlimento(nome);
+
+    if (chiave.isEmpty) return;
+
+    if (percorso == null) {
+      await (delete(
+        fotoDegliAlimentiMiei,
+      )..where((t) => t.nome.equals(chiave))).go();
+
+      return;
+    }
+
+    await into(fotoDegliAlimentiMiei).insertOnConflictUpdate(
+      FotoDegliAlimentiMieiCompanion.insert(
+        nome: chiave,
+        percorso: percorso,
+        aggiornataIl: DateTime.now(),
+      ),
+    );
   }
 
   Future<List<PreferitoCibo>> preferitiDelDiario() =>
@@ -5299,4 +5367,29 @@ class ProfiloSulTelefono extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {utenteId};
+}
+
+/// 🆕 **La foto sugli alimenti propri** — A4 di `plan_blocco_A.md`, 26/09/2026.
+///
+/// 📌 Il committente, 22/09: *«foto su alimenti propri teniamola»*.
+///
+/// 💡 **Una riga per alimento, non per voce del diario**: un alimento tuo non
+/// ha una tabella sua — è una voce del diario scritta da te, riconosciuta dal
+/// nome ([ArchivioSalute.alimentiScrittiDaMe]). La foto si lega a quel nome
+/// ([ArchivioSalute.chiaveAlimento]), così vale per ogni volta che lo mangi.
+///
+/// 🚨 È nell'archivio, quindi nel backup; e il file sta in
+/// `TipoFoto.alimentiMiei`, che è nel backup anche lui.
+@DataClassName('FotoDellAlimentoMio')
+class FotoDegliAlimentiMiei extends Table {
+  /// [ArchivioSalute.chiaveAlimento] del nome.
+  TextColumn get nome => text()();
+
+  /// Il percorso relativo della foto (`foto/alimenti_miei/…`).
+  TextColumn get percorso => text()();
+
+  DateTimeColumn get aggiornataIl => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {nome};
 }

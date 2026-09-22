@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/media/archivio_foto.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/foto_locale.dart';
 import '../../catalogo_controller.dart';
 import '../../data/alimento_catalogo.dart';
 
@@ -145,7 +148,7 @@ class _Elenco extends StatelessWidget {
 
           return ListTile(
             dense: true,
-            leading: _Miniatura(url: a.immagineUrl),
+            leading: _Miniatura(url: a.immagineUrl, fotoLocale: a.fotoLocale),
             title: Text(a.titolo, maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: a.kcal100 == null
                 ? null
@@ -170,9 +173,12 @@ class _Elenco extends StatelessWidget {
 /// irraggiungibile. In tutti e tre i casi resta il quadratino con la posata, e
 /// non un rettangolo rotto in mezzo all'elenco.
 class _Miniatura extends StatelessWidget {
-  const _Miniatura({required this.url});
+  const _Miniatura({required this.url, this.fotoLocale});
 
   final String? url;
+
+  /// 🆕 A4 — la foto di un alimento **tuo**, che sta sul telefono. Vince su [url].
+  final String? fotoLocale;
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +197,24 @@ class _Miniatura extends StatelessWidget {
         color: theme.colorScheme.outline,
       ),
     );
+
+    final locale = fotoLocale;
+
+    if (locale != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: FutureBuilder<File>(
+          future: const ArchivioFoto().fileDi(locale),
+          builder: (context, esito) {
+            final file = esito.data;
+
+            if (file == null) return vuota;
+
+            return FotoLocale(file: file, width: 40, height: 40);
+          },
+        ),
+      );
+    }
 
     if (url == null || url!.isEmpty) return vuota;
 

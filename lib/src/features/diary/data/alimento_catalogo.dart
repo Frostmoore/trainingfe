@@ -19,6 +19,7 @@ class AlimentoCatalogo {
     this.codiceABarre,
     this.immagineUrl,
     this.note,
+    this.fotoLocale,
   });
 
   factory AlimentoCatalogo.fromJson(Map<String, dynamic> j) => AlimentoCatalogo(
@@ -45,6 +46,14 @@ class AlimentoCatalogo {
 
   final String? codiceABarre;
   final String? immagineUrl;
+
+  /// 🆕 A4, 26/09/2026 — la foto che la persona ha messo su un alimento **suo**
+  /// (percorso relativo, `TipoFoto.alimentiMiei`). ⚠️ Solo per gli alimenti del
+  /// telefono (`id == 0`): i prodotti del catalogo hanno [immagineUrl].
+  final String? fotoLocale;
+
+  /// È un alimento scritto da questa persona, che sta sul suo telefono.
+  bool get eMio => id == 0;
 
   /// 🚨 **La provenienza del dato, ed è l'attribuzione.**
   ///

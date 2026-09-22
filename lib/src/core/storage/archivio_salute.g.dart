@@ -11159,6 +11159,283 @@ class ProfiloSulTelefonoCompanion extends UpdateCompanion<ProfiloSalvato> {
   }
 }
 
+class $FotoDegliAlimentiMieiTable extends FotoDegliAlimentiMiei
+    with TableInfo<$FotoDegliAlimentiMieiTable, FotoDellAlimentoMio> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FotoDegliAlimentiMieiTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _nomeMeta = const VerificationMeta('nome');
+  @override
+  late final GeneratedColumn<String> nome = GeneratedColumn<String>(
+    'nome',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _percorsoMeta = const VerificationMeta(
+    'percorso',
+  );
+  @override
+  late final GeneratedColumn<String> percorso = GeneratedColumn<String>(
+    'percorso',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _aggiornataIlMeta = const VerificationMeta(
+    'aggiornataIl',
+  );
+  @override
+  late final GeneratedColumn<DateTime> aggiornataIl = GeneratedColumn<DateTime>(
+    'aggiornata_il',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [nome, percorso, aggiornataIl];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'foto_degli_alimenti_miei';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FotoDellAlimentoMio> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('nome')) {
+      context.handle(
+        _nomeMeta,
+        nome.isAcceptableOrUnknown(data['nome']!, _nomeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nomeMeta);
+    }
+    if (data.containsKey('percorso')) {
+      context.handle(
+        _percorsoMeta,
+        percorso.isAcceptableOrUnknown(data['percorso']!, _percorsoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_percorsoMeta);
+    }
+    if (data.containsKey('aggiornata_il')) {
+      context.handle(
+        _aggiornataIlMeta,
+        aggiornataIl.isAcceptableOrUnknown(
+          data['aggiornata_il']!,
+          _aggiornataIlMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_aggiornataIlMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {nome};
+  @override
+  FotoDellAlimentoMio map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FotoDellAlimentoMio(
+      nome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nome'],
+      )!,
+      percorso: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}percorso'],
+      )!,
+      aggiornataIl: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}aggiornata_il'],
+      )!,
+    );
+  }
+
+  @override
+  $FotoDegliAlimentiMieiTable createAlias(String alias) {
+    return $FotoDegliAlimentiMieiTable(attachedDatabase, alias);
+  }
+}
+
+class FotoDellAlimentoMio extends DataClass
+    implements Insertable<FotoDellAlimentoMio> {
+  /// [ArchivioSalute.chiaveAlimento] del nome.
+  final String nome;
+
+  /// Il percorso relativo della foto (`foto/alimenti_miei/…`).
+  final String percorso;
+  final DateTime aggiornataIl;
+  const FotoDellAlimentoMio({
+    required this.nome,
+    required this.percorso,
+    required this.aggiornataIl,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['nome'] = Variable<String>(nome);
+    map['percorso'] = Variable<String>(percorso);
+    map['aggiornata_il'] = Variable<DateTime>(aggiornataIl);
+    return map;
+  }
+
+  FotoDegliAlimentiMieiCompanion toCompanion(bool nullToAbsent) {
+    return FotoDegliAlimentiMieiCompanion(
+      nome: Value(nome),
+      percorso: Value(percorso),
+      aggiornataIl: Value(aggiornataIl),
+    );
+  }
+
+  factory FotoDellAlimentoMio.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FotoDellAlimentoMio(
+      nome: serializer.fromJson<String>(json['nome']),
+      percorso: serializer.fromJson<String>(json['percorso']),
+      aggiornataIl: serializer.fromJson<DateTime>(json['aggiornataIl']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'nome': serializer.toJson<String>(nome),
+      'percorso': serializer.toJson<String>(percorso),
+      'aggiornataIl': serializer.toJson<DateTime>(aggiornataIl),
+    };
+  }
+
+  FotoDellAlimentoMio copyWith({
+    String? nome,
+    String? percorso,
+    DateTime? aggiornataIl,
+  }) => FotoDellAlimentoMio(
+    nome: nome ?? this.nome,
+    percorso: percorso ?? this.percorso,
+    aggiornataIl: aggiornataIl ?? this.aggiornataIl,
+  );
+  FotoDellAlimentoMio copyWithCompanion(FotoDegliAlimentiMieiCompanion data) {
+    return FotoDellAlimentoMio(
+      nome: data.nome.present ? data.nome.value : this.nome,
+      percorso: data.percorso.present ? data.percorso.value : this.percorso,
+      aggiornataIl: data.aggiornataIl.present
+          ? data.aggiornataIl.value
+          : this.aggiornataIl,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FotoDellAlimentoMio(')
+          ..write('nome: $nome, ')
+          ..write('percorso: $percorso, ')
+          ..write('aggiornataIl: $aggiornataIl')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(nome, percorso, aggiornataIl);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FotoDellAlimentoMio &&
+          other.nome == this.nome &&
+          other.percorso == this.percorso &&
+          other.aggiornataIl == this.aggiornataIl);
+}
+
+class FotoDegliAlimentiMieiCompanion
+    extends UpdateCompanion<FotoDellAlimentoMio> {
+  final Value<String> nome;
+  final Value<String> percorso;
+  final Value<DateTime> aggiornataIl;
+  final Value<int> rowid;
+  const FotoDegliAlimentiMieiCompanion({
+    this.nome = const Value.absent(),
+    this.percorso = const Value.absent(),
+    this.aggiornataIl = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FotoDegliAlimentiMieiCompanion.insert({
+    required String nome,
+    required String percorso,
+    required DateTime aggiornataIl,
+    this.rowid = const Value.absent(),
+  }) : nome = Value(nome),
+       percorso = Value(percorso),
+       aggiornataIl = Value(aggiornataIl);
+  static Insertable<FotoDellAlimentoMio> custom({
+    Expression<String>? nome,
+    Expression<String>? percorso,
+    Expression<DateTime>? aggiornataIl,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (nome != null) 'nome': nome,
+      if (percorso != null) 'percorso': percorso,
+      if (aggiornataIl != null) 'aggiornata_il': aggiornataIl,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FotoDegliAlimentiMieiCompanion copyWith({
+    Value<String>? nome,
+    Value<String>? percorso,
+    Value<DateTime>? aggiornataIl,
+    Value<int>? rowid,
+  }) {
+    return FotoDegliAlimentiMieiCompanion(
+      nome: nome ?? this.nome,
+      percorso: percorso ?? this.percorso,
+      aggiornataIl: aggiornataIl ?? this.aggiornataIl,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (nome.present) {
+      map['nome'] = Variable<String>(nome.value);
+    }
+    if (percorso.present) {
+      map['percorso'] = Variable<String>(percorso.value);
+    }
+    if (aggiornataIl.present) {
+      map['aggiornata_il'] = Variable<DateTime>(aggiornataIl.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FotoDegliAlimentiMieiCompanion(')
+          ..write('nome: $nome, ')
+          ..write('percorso: $percorso, ')
+          ..write('aggiornataIl: $aggiornataIl, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ArchivioSalute extends GeneratedDatabase {
   _$ArchivioSalute(QueryExecutor e) : super(e);
   $ArchivioSaluteManager get managers => $ArchivioSaluteManager(this);
@@ -11198,6 +11475,8 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
       $EserciziSulTelefonoTable(this);
   late final $ProfiloSulTelefonoTable profiloSulTelefono =
       $ProfiloSulTelefonoTable(this);
+  late final $FotoDegliAlimentiMieiTable fotoDegliAlimentiMiei =
+      $FotoDegliAlimentiMieiTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11224,6 +11503,7 @@ abstract class _$ArchivioSalute extends GeneratedDatabase {
     percorsiDegliAllenamenti,
     eserciziSulTelefono,
     profiloSulTelefono,
+    fotoDegliAlimentiMiei,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -17002,6 +17282,189 @@ typedef $$ProfiloSulTelefonoTableProcessedTableManager =
       ProfiloSalvato,
       PrefetchHooks Function()
     >;
+typedef $$FotoDegliAlimentiMieiTableCreateCompanionBuilder =
+    FotoDegliAlimentiMieiCompanion Function({
+      required String nome,
+      required String percorso,
+      required DateTime aggiornataIl,
+      Value<int> rowid,
+    });
+typedef $$FotoDegliAlimentiMieiTableUpdateCompanionBuilder =
+    FotoDegliAlimentiMieiCompanion Function({
+      Value<String> nome,
+      Value<String> percorso,
+      Value<DateTime> aggiornataIl,
+      Value<int> rowid,
+    });
+
+class $$FotoDegliAlimentiMieiTableFilterComposer
+    extends Composer<_$ArchivioSalute, $FotoDegliAlimentiMieiTable> {
+  $$FotoDegliAlimentiMieiTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get percorso => $composableBuilder(
+    column: $table.percorso,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aggiornataIl => $composableBuilder(
+    column: $table.aggiornataIl,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FotoDegliAlimentiMieiTableOrderingComposer
+    extends Composer<_$ArchivioSalute, $FotoDegliAlimentiMieiTable> {
+  $$FotoDegliAlimentiMieiTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get nome => $composableBuilder(
+    column: $table.nome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get percorso => $composableBuilder(
+    column: $table.percorso,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aggiornataIl => $composableBuilder(
+    column: $table.aggiornataIl,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FotoDegliAlimentiMieiTableAnnotationComposer
+    extends Composer<_$ArchivioSalute, $FotoDegliAlimentiMieiTable> {
+  $$FotoDegliAlimentiMieiTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get nome =>
+      $composableBuilder(column: $table.nome, builder: (column) => column);
+
+  GeneratedColumn<String> get percorso =>
+      $composableBuilder(column: $table.percorso, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get aggiornataIl => $composableBuilder(
+    column: $table.aggiornataIl,
+    builder: (column) => column,
+  );
+}
+
+class $$FotoDegliAlimentiMieiTableTableManager
+    extends
+        RootTableManager<
+          _$ArchivioSalute,
+          $FotoDegliAlimentiMieiTable,
+          FotoDellAlimentoMio,
+          $$FotoDegliAlimentiMieiTableFilterComposer,
+          $$FotoDegliAlimentiMieiTableOrderingComposer,
+          $$FotoDegliAlimentiMieiTableAnnotationComposer,
+          $$FotoDegliAlimentiMieiTableCreateCompanionBuilder,
+          $$FotoDegliAlimentiMieiTableUpdateCompanionBuilder,
+          (
+            FotoDellAlimentoMio,
+            BaseReferences<
+              _$ArchivioSalute,
+              $FotoDegliAlimentiMieiTable,
+              FotoDellAlimentoMio
+            >,
+          ),
+          FotoDellAlimentoMio,
+          PrefetchHooks Function()
+        > {
+  $$FotoDegliAlimentiMieiTableTableManager(
+    _$ArchivioSalute db,
+    $FotoDegliAlimentiMieiTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FotoDegliAlimentiMieiTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$FotoDegliAlimentiMieiTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$FotoDegliAlimentiMieiTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> nome = const Value.absent(),
+                Value<String> percorso = const Value.absent(),
+                Value<DateTime> aggiornataIl = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FotoDegliAlimentiMieiCompanion(
+                nome: nome,
+                percorso: percorso,
+                aggiornataIl: aggiornataIl,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String nome,
+                required String percorso,
+                required DateTime aggiornataIl,
+                Value<int> rowid = const Value.absent(),
+              }) => FotoDegliAlimentiMieiCompanion.insert(
+                nome: nome,
+                percorso: percorso,
+                aggiornataIl: aggiornataIl,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FotoDegliAlimentiMieiTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ArchivioSalute,
+      $FotoDegliAlimentiMieiTable,
+      FotoDellAlimentoMio,
+      $$FotoDegliAlimentiMieiTableFilterComposer,
+      $$FotoDegliAlimentiMieiTableOrderingComposer,
+      $$FotoDegliAlimentiMieiTableAnnotationComposer,
+      $$FotoDegliAlimentiMieiTableCreateCompanionBuilder,
+      $$FotoDegliAlimentiMieiTableUpdateCompanionBuilder,
+      (
+        FotoDellAlimentoMio,
+        BaseReferences<
+          _$ArchivioSalute,
+          $FotoDegliAlimentiMieiTable,
+          FotoDellAlimentoMio
+        >,
+      ),
+      FotoDellAlimentoMio,
+      PrefetchHooks Function()
+    >;
 
 class $ArchivioSaluteManager {
   final _$ArchivioSalute _db;
@@ -17051,4 +17514,6 @@ class $ArchivioSaluteManager {
       $$EserciziSulTelefonoTableTableManager(_db, _db.eserciziSulTelefono);
   $$ProfiloSulTelefonoTableTableManager get profiloSulTelefono =>
       $$ProfiloSulTelefonoTableTableManager(_db, _db.profiloSulTelefono);
+  $$FotoDegliAlimentiMieiTableTableManager get fotoDegliAlimentiMiei =>
+      $$FotoDegliAlimentiMieiTableTableManager(_db, _db.fotoDegliAlimentiMiei);
 }

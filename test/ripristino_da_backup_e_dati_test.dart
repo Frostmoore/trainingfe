@@ -1,39 +1,47 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/chiavi/ui/ripristino_da_file.dart';
 
-/// ♻️ **Il ripristino si raggiunge da «Backup e dati»** — 23/09/2026.
+/// ♻️ **Il ripristino si raggiunge da «Backup e dati», e si sceglie il file** —
+/// 23/09/2026.
 ///
-/// 📌 Il committente: *«non capisco perché per ripristinare il backup devo
-/// andare sui messaggi e non su "backup e dati"»*. Prima il ripristino da file
-/// viveva solo dentro `SchermataRipristino` — dietro alla chat, e raggiungibile
-/// soltanto quando l'app si accorgeva da sola che la chiave mancava.
+/// 📌 Due richieste del committente, la stessa notte:
+/// *«non capisco perché per ripristinare il backup devo andare sui messaggi e
+/// non su "backup e dati"»* e *«fai sta voce 51 subito! È importante»*.
 ///
-/// ⛔ Chi aveva già la chiave e voleva riprendersi peso, misure e diario non
-/// aveva **nessuna** strada.
+/// ⛔ Prima il ripristino viveva solo dietro alla chat **e** chiedeva un
+/// percorso scritto a mano, in una cartella che l'app non ha il permesso di
+/// leggere: chi aveva perso tutto non ci arrivava in nessun modo.
 void main() {
   group('il dialogo che chiede file e codice', () {
-    /// 🚨 Il pulsante resta spento finché i tre campi non stanno in piedi:
-    /// un ripristino avviato con un codice monco fallisce dopo venti secondi
-    /// di argon2id, e sembra che il file sia rotto.
-    testWidgets('non si parte con i campi a metà', (tester) async {
+    /// 🚨 Il pulsante resta spento finché i tre pezzi non ci sono: un
+    /// ripristino avviato con un codice monco fallisce dopo venti secondi di
+    /// argon2id, e sembra che il file sia rotto.
+    testWidgets('non si parte senza file, codice e password', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: ChiediFileECodice())),
+        MaterialApp(
+          home: Scaffold(
+            body: ChiediFileECodice(scegli: _selettoreFinto('backup.json')),
+          ),
+        ),
       );
 
       FilledButton bottone() =>
           tester.widget<FilledButton>(find.byType(FilledButton));
 
-      expect(bottone().onPressed, isNull, reason: 'acceso a campi vuoti');
+      expect(bottone().onPressed, isNull, reason: 'acceso senza niente');
 
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Percorso del file'),
-        '/storage/emulated/0/backup.json',
-      );
-      await tester.pump();
-      expect(bottone().onPressed, isNull, reason: 'basta il percorso?');
+      // ── Il file si sceglie: niente percorsi da scrivere.
+      await tester.tap(find.text('Scegli il file'));
+      await tester.pumpAndSettle();
+
+      // 💡 Il nome compare, così si vede **quale** file si sta per aprire.
+      expect(find.text('backup.json'), findsOneWidget);
+      expect(find.text('Cambia file'), findsOneWidget);
+      expect(bottone().onPressed, isNull, reason: 'basta il file?');
 
       // ⚠️ 24 caratteri **normalizzati**: i trattini non contano.
       await tester.enterText(
@@ -57,6 +65,54 @@ void main() {
       await tester.pump();
       expect(bottone().onPressed, isNotNull);
     });
+
+    /// 🚨 **I byte, non il percorso.** È tutta la correzione della voce 51: il
+    /// ripristino non deve mai più passare dal filesystem, o torna a fallire su
+    /// qualunque file che non stia nella cartella privata dell'app.
+    testWidgets('quello che esce dal dialogo sono i byte del file', (
+      tester,
+    ) async {
+      DatiDelFile? uscito;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async => uscito = await showDialog<DatiDelFile>(
+                  context: context,
+                  builder: (_) =>
+                      ChiediFileECodice(scegli: _selettoreFinto('copia.tcb')),
+                ),
+                child: const Text('apri'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('apri'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Scegli il file'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Codice di ripristino'),
+        'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nuova password di recupero'),
+        'Password-Nuova-9',
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Ripristina'));
+      await tester.pumpAndSettle();
+
+      expect(uscito, isNotNull);
+      expect(uscito!.byte, _contenutoFinto);
+      expect(uscito!.nome, 'copia.tcb');
+    });
   });
 
   group('le due porte, una sola strada', () {
@@ -69,6 +125,10 @@ void main() {
 
     final chiavi = File(
       'lib/src/features/chiavi/ui/schermata_ripristino.dart',
+    ).readAsStringSync();
+
+    final condiviso = File(
+      'lib/src/features/chiavi/ui/ripristino_da_file.dart',
     ).readAsStringSync();
 
     test('«Backup e dati» offre il ripristino da file', () {
@@ -100,5 +160,35 @@ void main() {
         );
       }
     });
+
+    /// 🚨 **Voce 51, e non deve tornare.** L'app non ha permessi sull'archivio
+    /// condiviso: qualunque ritorno a `File(percorso).readAsBytes()` rimette il
+    /// ripristino nello stato in cui funzionava solo da una cartella che
+    /// nessuno può raggiungere dal telefono.
+    /// ⚠️ Si guarda il **codice**, non i commenti: qui sopra il difetto vecchio
+    /// è raccontato per esteso — `File(percorso).readAsBytes()` — e un controllo
+    /// ingenuo lo scambierebbe per il difetto stesso.
+    test('il file non si apre più per percorso', () {
+      final codice = _senzaCommenti(condiviso);
+
+      expect(codice, isNot(contains('readAsBytes')));
+      expect(codice, isNot(contains('Percorso del file')));
+      expect(codice, contains('pickFiles(withData: true)'));
+    });
   });
 }
+
+/// Via i commenti: restano solo le righe che il compilatore legge davvero.
+String _senzaCommenti(String sorgente) => sorgente
+    .split('\n')
+    .where((r) {
+      final t = r.trimLeft();
+
+      return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+    })
+    .join('\n');
+
+final _contenutoFinto = Uint8List.fromList([1, 2, 3, 4, 5]);
+
+SceltaDelFile _selettoreFinto(String nome) =>
+    () async => (nome: nome, byte: _contenutoFinto);

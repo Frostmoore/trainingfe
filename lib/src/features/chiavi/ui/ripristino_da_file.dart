@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,17 +30,45 @@ import '../../privacy/consensi_controller.dart';
 /// 💡 Quindi: la logica sta **qui**, una volta sola, e le due schermate la
 /// chiamano. Chi ne aggiungerà una terza non deve sapere niente.
 
-/// Quello che serve per aprire un file: dove sta, il codice, la password nuova.
+/// Il file scelto: come si chiama e cosa c'è dentro.
+typedef FileScelto = ({String nome, Uint8List byte});
+
+/// Come si sceglie un file. 💡 Iniettabile: vedi `ChiediFileECodice.scegli`.
+typedef SceltaDelFile = Future<FileScelto?> Function();
+
+/// Quello che serve per aprire un file: i **byte**, il codice, la password nuova.
+///
+/// ══ 🚨 I byte e non il percorso — 23/09/2026 ══════════════════════════════
+///
+/// ⛔ Fino alla `v18.18.0` qui c'era un `String percorso`, scritto a mano in un
+/// campo di testo, e l'app faceva `File(percorso).readAsBytes()`. ⚠️ Ma l'app
+/// non dichiara **nessun** permesso sull'archivio condiviso: un file in
+/// `Download` rispondeva **sempre** *«Non riesco a leggere quel file»*. L'unica
+/// cartella che funzionava era `/storage/emulated/0/Android/media/<pacchetto>/`,
+/// che nessun utente conosce e nessuno può raggiungere dal telefono.
+///
+/// 🚨 Il 22/09/2026 il backup del committente è stato recuperato solo spingendo
+/// il file lì con `adb push` e scrivendo il percorso con `adb shell input text`.
+/// **Senza un PC collegato non ci sarebbe arrivato** — e questa è la strada che
+/// si percorre quando si è già perso tutto, cioè quando fallire costa di più.
+///
+/// 💡 Il selettore di sistema restituisce i byte e **non passa dal filesystem**:
+/// niente percorsi da scrivere, niente permessi da chiedere, e funziona da
+/// Download, da Drive, da Telegram e da qualunque altra app.
 class DatiDelFile {
   const DatiDelFile({
-    required this.percorso,
+    required this.byte,
     required this.codice,
     required this.nuovaPassword,
+    this.nome = '',
   });
 
-  final String percorso;
+  final Uint8List byte;
   final String codice;
   final String nuovaPassword;
+
+  /// Solo per mostrarlo a schermo: il ripristino non lo guarda.
+  final String nome;
 }
 
 /// Apre il file e rimette dentro tutto. Torna `null` se è andata bene,
@@ -47,13 +76,16 @@ class DatiDelFile {
 ///
 /// 🚨 Non lancia: chi chiama è una schermata, e una schermata deve poter dire
 /// cos'è successo senza sapere quali eccezioni esistono qua sotto.
-Future<String?> eseguiIlRipristinoDaFile(WidgetRef ref, DatiDelFile scelta) async {
+Future<String?> eseguiIlRipristinoDaFile(
+  WidgetRef ref,
+  DatiDelFile scelta,
+) async {
   try {
     final sodium = await ref.read(sodiumProvider.future);
     final servizio = await ref.read(servizioChiaviProvider.future);
 
     final contenuto = await FileDiBackup(sodium).importaQualsiasi(
-      file: await File(scelta.percorso).readAsBytes(),
+      file: scelta.byte,
       codice: scelta.codice,
     );
 
@@ -92,8 +124,6 @@ Future<String?> eseguiIlRipristinoDaFile(WidgetRef ref, DatiDelFile scelta) asyn
     return null;
   } on CodiceDiRipristinoSbagliato catch (e) {
     return e.motivo;
-  } on FileSystemException {
-    return 'Non riesco a leggere quel file.';
   } on Object catch (e) {
     return e.toString();
   }
@@ -126,53 +156,100 @@ void rileggiTuttoDopoIlRipristino(WidgetRef ref) {
   ref.read(revisioneAllenamentiProvider.notifier).state++;
 }
 
-/// Chiede il file, il codice e la password nuova.
+/// Il selettore di sistema, quello vero.
 ///
-/// ⚠️ Il percorso si scrive **a mano**, ed è un difetto aperto (voce 51 del
-/// `DA-FARE`): `file_picker` è già fra le dipendenze e restituirebbe i byte,
-/// togliendo di mezzo sia il percorso sia i permessi sull'archivio condiviso.
-/// Finché non si fa, da `Download` non si riesce a leggere niente.
+/// 📌 `FilePicker.platform` e non i metodi statici: siamo fermi alla 10.x, come
+/// in `documento_scelto.dart` e `conversations_screen.dart`.
+///
+/// ⚠️ `FileType.any` e non `custom` con `['json']`: il file di backup lo si può
+/// aver salvato con qualunque nome, e un filtro che nasconde il file giusto è
+/// peggio di nessun filtro — la persona conclude che il backup non c'è più.
+Future<FileScelto?> scegliUnFileDiBackup() async {
+  final scelta = await FilePicker.platform.pickFiles(withData: true);
+  final file = scelta?.files.firstOrNull;
+  final byte = file?.bytes;
+
+  if (byte == null) return null;
+
+  return (nome: file!.name, byte: byte);
+}
+
+/// Chiede il file, il codice e la password nuova.
 class ChiediFileECodice extends StatefulWidget {
-  const ChiediFileECodice({super.key});
+  const ChiediFileECodice({super.key, this.scegli});
+
+  /// 💡 Iniettabile **solo per i test**: in app resta il selettore di sistema.
+  /// ⛔ L'alternativa era falsificare `FilePicker.platform`, che obbliga a
+  /// riscrivere tutti e dodici i parametri di `pickFiles` in una finta — e a
+  /// rincorrerli ogni volta che il pacchetto ne aggiunge uno.
+  final SceltaDelFile? scegli;
 
   @override
   State<ChiediFileECodice> createState() => _ChiediFileECodiceState();
 }
 
 class _ChiediFileECodiceState extends State<ChiediFileECodice> {
-  final _percorso = TextEditingController();
   final _codice = TextEditingController();
   final _password = TextEditingController();
 
+  FileScelto? _file;
+  bool _sceltaInCorso = false;
+
   @override
   void dispose() {
-    _percorso.dispose();
     _codice.dispose();
     _password.dispose();
     super.dispose();
   }
 
   bool get _valido =>
-      _percorso.text.trim().isNotEmpty &&
+      _file != null &&
       FileDiBackup.normalizza(_codice.text).length == 24 &&
       _password.text.length >= 8;
 
+  Future<void> _scegli() async {
+    setState(() => _sceltaInCorso = true);
+
+    try {
+      final scelto = await (widget.scegli ?? scegliUnFileDiBackup)();
+
+      if (mounted && scelto != null) setState(() => _file = scelto);
+    } finally {
+      if (mounted) setState(() => _sceltaInCorso = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
     return AlertDialog(
       title: const Text('Ripristino da file'),
       content: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _percorso,
-              decoration: const InputDecoration(
-                labelText: 'Percorso del file',
-                hintText: '/storage/…/training-companion.backup',
-              ),
-              onChanged: (_) => setState(() {}),
+            OutlinedButton.icon(
+              onPressed: _sceltaInCorso ? null : _scegli,
+              icon: _sceltaInCorso
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.folder_open_rounded),
+              label: Text(_file == null ? 'Scegli il file' : 'Cambia file'),
             ),
+            if (_file != null) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                _file!.nome,
+                style: tema.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: Gap.md),
             TextField(
               controller: _codice,
@@ -205,7 +282,8 @@ class _ChiediFileECodiceState extends State<ChiediFileECodice> {
           onPressed: _valido
               ? () => Navigator.of(context).pop(
                   DatiDelFile(
-                    percorso: _percorso.text.trim(),
+                    byte: _file!.byte,
+                    nome: _file!.nome,
                     codice: _codice.text,
                     nuovaPassword: _password.text,
                   ),

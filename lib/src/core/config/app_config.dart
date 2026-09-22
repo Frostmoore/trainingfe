@@ -127,8 +127,9 @@ class AppConfig {
         // Android: per il simulatore iOS si passa `API_BASE_URL`.
         AppEnvironment.local => 'http://10.0.2.2:8123/api/v1',
         AppEnvironment.staging => 'https://training.riccardoronconi.it/api/v1',
-        AppEnvironment.production =>
-          'https://training.riccardoronconi.it/api/v1',
+        // 🆕 22/09/2026: il dominio vero. ⚠️ `mytrainingcompanion.it` fa un 301
+        // verso questo, ma l'app non ci passa mai: qui si scrive quello finale.
+        AppEnvironment.production => 'https://trainingcompanion.it/api/v1',
       };
 
   @override

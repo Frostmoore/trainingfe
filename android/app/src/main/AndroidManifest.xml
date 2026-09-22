@@ -346,6 +346,18 @@
               prefisso — e li aprirebbe sulla schermata della palestra. La
               pagina sbagliata, senza nessun errore.
             -->
+            <!--
+              🆕 🌐 **I DOMINI VERI** — 22/09/2026.
+
+              ⛔ Fino a oggi questi filtri nominavano solo `training.riccardoronconi.it`,
+              cioè lo staging: un invito aperto sul dominio di produzione avrebbe
+              aperto il **browser**, in silenzio.
+
+              ⚠️ `mytrainingcompanion.it` c'è **anche se fa un 301**: Android
+              decide se aprire l'app guardando il link che l'utente ha toccato,
+              non dove porta. Senza, il vecchio dominio aprirebbe il browser, che
+              poi redirige — e la persona resta sul sito.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -353,6 +365,24 @@
                 <data
                     android:scheme="https"
                     android:host="training.riccardoronconi.it"
+                    android:pathPrefix="/invito-palestra"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="trainingcompanion.it"
+                    android:pathPrefix="/invito-palestra"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="mytrainingcompanion.it"
                     android:pathPrefix="/invito-palestra"/>
             </intent-filter>
             <!--
@@ -369,6 +399,18 @@
               schermata sbagliata. Con "/invito/.*" serve la barra subito dopo,
               e "-palestra" non e' una barra.
             -->
+            <!--
+              🆕 🌐 **I DOMINI VERI** — 22/09/2026.
+
+              ⛔ Fino a oggi questi filtri nominavano solo `training.riccardoronconi.it`,
+              cioè lo staging: un invito aperto sul dominio di produzione avrebbe
+              aperto il **browser**, in silenzio.
+
+              ⚠️ `mytrainingcompanion.it` c'è **anche se fa un 301**: Android
+              decide se aprire l'app guardando il link che l'utente ha toccato,
+              non dove porta. Senza, il vecchio dominio aprirebbe il browser, che
+              poi redirige — e la persona resta sul sito.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -376,6 +418,24 @@
                 <data
                     android:scheme="https"
                     android:host="training.riccardoronconi.it"
+                    android:pathPattern="/invito/.*"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="trainingcompanion.it"
+                    android:pathPattern="/invito/.*"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="mytrainingcompanion.it"
                     android:pathPattern="/invito/.*"/>
             </intent-filter>
             <!--
@@ -386,6 +446,18 @@
               registrazione); senza, il sito mostra chi ti ha invitato e il
               codice da scrivere. pathPattern con la barra, come "/invito/.*".
             -->
+            <!--
+              🆕 🌐 **I DOMINI VERI** — 22/09/2026.
+
+              ⛔ Fino a oggi questi filtri nominavano solo `training.riccardoronconi.it`,
+              cioè lo staging: un invito aperto sul dominio di produzione avrebbe
+              aperto il **browser**, in silenzio.
+
+              ⚠️ `mytrainingcompanion.it` c'è **anche se fa un 301**: Android
+              decide se aprire l'app guardando il link che l'utente ha toccato,
+              non dove porta. Senza, il vecchio dominio aprirebbe il browser, che
+              poi redirige — e la persona resta sul sito.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -395,10 +467,40 @@
                     android:host="training.riccardoronconi.it"
                     android:pathPattern="/amico/.*"/>
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="trainingcompanion.it"
+                    android:pathPattern="/amico/.*"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="mytrainingcompanion.it"
+                    android:pathPattern="/amico/.*"/>
+            </intent-filter>
             <!--
               🆕 🔗 Il link di attivazione di un'offerta — 24/09/2026. Niente
               codici sconto: le offerte si attivano da sole o da questo link.
               Senza l'app, il sito spiega cos'è e come attivarla.
+            -->
+            <!--
+              🆕 🌐 **I DOMINI VERI** — 22/09/2026.
+
+              ⛔ Fino a oggi questi filtri nominavano solo `training.riccardoronconi.it`,
+              cioè lo staging: un invito aperto sul dominio di produzione avrebbe
+              aperto il **browser**, in silenzio.
+
+              ⚠️ `mytrainingcompanion.it` c'è **anche se fa un 301**: Android
+              decide se aprire l'app guardando il link che l'utente ha toccato,
+              non dove porta. Senza, il vecchio dominio aprirebbe il browser, che
+              poi redirige — e la persona resta sul sito.
             -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
@@ -407,6 +509,24 @@
                 <data
                     android:scheme="https"
                     android:host="training.riccardoronconi.it"
+                    android:pathPattern="/promo/.*"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="trainingcompanion.it"
+                    android:pathPattern="/promo/.*"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="mytrainingcompanion.it"
                     android:pathPattern="/promo/.*"/>
             </intent-filter>
             <!--

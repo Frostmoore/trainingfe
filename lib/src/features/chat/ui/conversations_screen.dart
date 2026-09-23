@@ -36,6 +36,23 @@ class ConversationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final elenco = ref.watch(conversationsProvider);
 
+    /*
+     * 🚨 **Chi sta guardando: un allievo o chi allena?** — 23/09/2026.
+     *
+     * ⛔ Lo stato vuoto diceva a tutti *«Qui compaiono le conversazioni col
+     * tuo trainer»*, con il pulsante «Scrivi al tuo trainer» — anche a un
+     * trainer con cinque allievi, che in cima alla stessa schermata si vedeva
+     * offrire «manda una scheda a più persone». ⚠️ La schermata sapeva chi
+     * aveva davanti e nello stato vuoto se ne dimenticava.
+     *
+     * 💡 La condizione è **la stessa** che accende quel pulsante: una sola
+     * definizione di «questa persona allena», o le due si separano al primo
+     * cambiamento.
+     */
+    final allena =
+        (ref.watch(authControllerProvider).user?.isTrainer ?? false) &&
+        ref.watch(authControllerProvider).user?.puoFareIlTrainer != false;
+
     return Scaffold(
       appBar: IntestazioneApp(
         titolo: 'Messaggi',
@@ -81,9 +98,7 @@ class ConversationsScreen extends ConsumerWidget {
            *
            * 💡 La spiegazione la trova dove la cerca: in «i miei utenti».
            */
-          if ((ref.watch(authControllerProvider).user?.isTrainer ?? false) &&
-              ref.watch(authControllerProvider).user?.puoFareIlTrainer != false)
-            const _MandaAPiuPersone(),
+          if (allena) const _MandaAPiuPersone(),
           /*
            * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6: sta nella
            * riga d'identita' di [IntestazioneApp], su ogni pagina. Lasciarlo
@@ -102,7 +117,9 @@ class ConversationsScreen extends ConsumerWidget {
             ? EmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'Nessun messaggio',
-                message: 'Qui compaiono le conversazioni col tuo trainer.',
+                message: allena
+                    ? 'Qui compaiono le conversazioni con i tuoi allievi.'
+                    : 'Qui compaiono le conversazioni col tuo trainer.',
                 // 🚨 Il vuoto porta all'azione, non si limita a constatarlo.
                 // Prima diceva «se non hai un trainer chiedi in palestra» e
                 // finiva lì: chi il trainer ce l'aveva restava comunque senza
@@ -110,7 +127,9 @@ class ConversationsScreen extends ConsumerWidget {
                 action: FilledButton.icon(
                   onPressed: () => _scegliDestinatario(context, ref),
                   icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Scrivi al tuo trainer'),
+                  label: Text(
+                    allena ? 'Scrivi a un allievo' : 'Scrivi al tuo trainer',
+                  ),
                 ),
               )
             : RefreshIndicator(

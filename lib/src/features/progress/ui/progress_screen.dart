@@ -47,10 +47,22 @@ class ProgressScreen extends ConsumerWidget {
 /// in una nuova tab nella sezione allenamento»*.
 ///
 /// ⚠️ **La stessa griglia deve stare in due posti**: dentro un segmento della
-/// pagina «Allenamento» e dentro `/progressi`, che resta raggiungibile perche'
-/// ci puntano le notifiche e la scheda «Oggi». ⛔ Copiarla vorrebbe dire due
+/// pagina «Allenamento» e dentro `/progressi`. ⛔ Copiarla vorrebbe dire due
 /// griglie che divergono al primo cambiamento — ed e' successo gia' due volte
 /// in questo progetto (le due schede del peso, i due form del profilo).
+///
+/// ⛔ **Oggi a `/progressi` non ci arriva nessuno** — 23/09/2026, giro UX.
+///
+/// Qui c'era scritto che «ci puntano le notifiche e la scheda "Oggi"», e non e'
+/// piu' vero: un `grep` su tutto `lib/` trova `AppRoutes.progress` **solo**
+/// dentro `app_router.dart`, e le notifiche push non esistono ancora
+/// (`DA-FARE.md` voce 20). ⚠️ Il contenuto resta raggiungibile da
+/// «Allenamento → Foto», quindi per chi usa l'app non manca niente.
+///
+/// 💡 La rotta si tiene lo stesso: e' il bersaglio naturale della notifica che
+/// verra'. Ma si tiene **sapendolo**, non credendo che qualcuno la usi gia' —
+/// una giustificazione scaduta e' peggio di nessuna giustificazione, perche'
+/// chi la legge smette di farsi la domanda.
 ///
 /// 💡 Quello che resta in `ProgressScreen` e' solo il vestito: intestazione,
 /// pulsante, `Scaffold`.

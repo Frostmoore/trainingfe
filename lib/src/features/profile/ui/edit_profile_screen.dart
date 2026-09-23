@@ -827,10 +827,10 @@ class _SommaLeBruciate extends ConsumerWidget {
         ),
         subtitle: Text(
           somma
-              ? 'Ti muovi di piu\', puoi mangiare di piu\': l\'obiettivo '
+              ? 'Ti muovi di più, puoi mangiare di più: l\'obiettivo '
                     'cresce con le calorie che bruci.'
-              : 'Sono gia\' compresi nel fattore del tuo livello di '
-                    'attivita\': sommarli li conterebbe due volte.',
+              : 'Sono già compresi nel fattore del tuo livello di '
+                    'attività: sommarli li conterebbe due volte.',
           style: theme.textTheme.bodySmall,
         ),
         trailing: const Icon(Icons.chevron_right_rounded),

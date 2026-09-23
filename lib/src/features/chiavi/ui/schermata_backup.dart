@@ -812,11 +812,11 @@ class _RipristinoDalCloudState extends ConsumerState<_RipristinoDalCloud> {
             // ⛔ Niente asterischi: questo e' un `Text`, non markdown — li
             // stamperebbe. Il peso della parola lo porta il titolo.
             'Tutto quello che hai su questo telefono viene sostituito con '
-            'quello che c\'e\' nella copia: peso e misure, diario e pasti, '
+            'quello che c\'è nella copia: peso e misure, diario e pasti, '
             'allenamenti e serie, sonno, foto e preferenze.'
             '\n\n'
-            'Quello che hai fatto dopo il ${_giorno(quando)} andra\' perso, e '
-            'non si puo\' annullare.',
+            'Quello che hai fatto dopo il ${_giorno(quando)} andrà perso, e '
+            'non si può annullare.',
           ),
           actions: [
             TextButton(

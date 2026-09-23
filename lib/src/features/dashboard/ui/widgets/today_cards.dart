@@ -1174,8 +1174,15 @@ class _Allenamenti extends ConsumerWidget {
           // palestra: un elenco di date costringe a fare il conto a mente.
           switch (r.giorniDallUltimo) {
             null => 'Nessun allenamento registrato.',
+            // ⚠️ L'unico ramo che scrive la parola «sedute», e quindi l'unico
+            // che deve accordarla: fino al 23/09 diceva «1 sedute» il giorno
+            // del primo allenamento — cioè al primo colpo d'occhio di chi ha
+            // appena cominciato. Gli altri rami dicono il solo numero e il
+            // problema non ce l'hanno.
             0 =>
-              'Ti sei allenato oggi. ${r.ultimi30} sedute negli ultimi 30 giorni.',
+              'Ti sei allenato oggi. ${r.ultimi30} '
+                  '${r.ultimi30 == 1 ? 'seduta' : 'sedute'} '
+                  'negli ultimi 30 giorni.',
             1 =>
               'Ultimo allenamento ieri. ${r.ultimi30} negli ultimi 30 giorni.',
             final g =>

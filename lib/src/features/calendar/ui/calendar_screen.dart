@@ -130,7 +130,20 @@ class CalendarScreen extends ConsumerWidget {
                  * un giorno resta: quello vale sempre.
                  */
                 child: Text(
-                  p.days.any((g) => g.kcal != null)
+                  /*
+                   * ⚠️ **E la barra vuole anche il fabbisogno** — 23/09/2026.
+                   *
+                   * ⛔ La condizione guardava solo «c'è qualche kcal», ma la
+                   * barra si disegna `if (target != null)` (vedi `_Cella`): chi
+                   * aveva scritto nel diario **prima** di compilare il profilo
+                   * vedeva i numeri senza nessuna barra, e sotto una riga che
+                   * gliela spiegava. È il caso di chiunque provi l'app prima di
+                   * mettere peso e altezza — cioè di quasi tutti, all'inizio.
+                   *
+                   * 💡 La correzione di settembre aveva coperto il mese
+                   * **vuoto**; questa copre il mese **pieno senza obiettivo**.
+                   */
+                  p.targetKcal != null && p.days.any((g) => g.kcal != null)
                       ? 'La barra è la percentuale sul tuo fabbisogno. '
                             'Tocca un giorno per il dettaglio.'
                       : 'Tocca un giorno per vedere cosa hai registrato.',

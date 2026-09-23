@@ -69,7 +69,7 @@ enum LivelloConfidenza {
 /// restava implicita nei numeri e non era ne' visibile ne' contestabile.
 enum StatoCottura {
   crudo('crudo', 'pesata cruda'),
-  cotto('cotto', 'gia\' cotta'),
+  cotto('cotto', 'già cotta'),
   nonApplicabile('non_applicabile', ''),
 
   /// ⚠️ Non e' un ripiego: e' il segnale con cui l'app **chiede**.

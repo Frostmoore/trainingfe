@@ -23,6 +23,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../profile/corpo_controller.dart';
 import '../../../profile/data/modello_calorie.dart';
 import '../../../profile/livello_attivita.dart';
 import '../../data/storico_unificato.dart';
@@ -140,7 +141,24 @@ class _CalorieDellAllenamentoState
                   ? 'L\'hai corretta tu.'
                   : voce.kcalDalPolso != null
                   ? 'Misurate dall\'orologio.'
-                  : 'Stima calcolata dall\'allenamento, dalla durata e dal tuo peso.',
+                  : _siEMaiPesato(ref)
+                  ? 'Stima calcolata dall\'allenamento, dalla durata e dal tuo peso.'
+                  /*
+                   * ⚠️ **Senza pesate non è «il tuo peso»** — 23/09/2026.
+                   *
+                   * ⛔ La frase diceva «dal tuo peso» anche a chi non si è mai
+                   * pesato. In quel caso `_pesoDiRiferimento` ripiega su 75 kg
+                   * (`session_controller.dart`), e il numero è costruito su uno
+                   * sconosciuto — mentre la schermata «Oggi» chiede proprio il
+                   * peso perché «un numero inventato diventerebbe la tua dieta».
+                   *
+                   * 💡 Il commento qui sopra dice che si scrive da dove viene il
+                   * numero perché «quella riga cambia quanto ci si fida»: allora
+                   * deve cambiare anche quando la fonte è un ripiego, o la
+                   * fiducia se la prende senza averla meritata.
+                   */
+                  : 'Stima su un peso di riferimento: registra il tuo per un '
+                        'numero più giusto.',
               style: tema.textTheme.bodySmall?.copyWith(
                 color: tema.colorScheme.onSurfaceVariant,
               ),
@@ -228,4 +246,17 @@ class _CalorieDellAllenamentoState
       ),
     );
   }
+
+  /// C'è almeno una pesata nello storico?
+  ///
+  /// 💡 Serve solo a scegliere **la frase**, non il numero: il calcolo sta in
+  /// `session_controller.dart`, che con nessuna pesata ripiega su 75 kg.
+  ///
+  /// ⚠️ Mentre lo storico si carica si dice la frase prudente: dire «dal tuo
+  /// peso» e poi correggersi sarebbe peggio del contrario.
+  bool _siEMaiPesato(WidgetRef ref) =>
+      ref.watch(storicoCorpoProvider).valueOrNull?.any(
+        (m) => (m.pesoKg ?? 0) > 0,
+      ) ??
+      false;
 }

@@ -497,7 +497,12 @@ class _SchedaCard extends StatelessWidget {
                        * seconde sono a giorno unico o se il dato manca.
                        */
                       Text(
-                        '${scheda.exercisesCount} esercizi · '
+                        // ⚠️ Anche gli esercizi al singolare: fino al 23/09 una
+                        // scheda appena scritta diceva «1 esercizi», con il
+                        // «1 giorno» giusto accanto — il plurale era stato
+                        // curato per metà riga.
+                        '${scheda.exercisesCount} '
+                        '${scheda.exercisesCount == 1 ? 'esercizio' : 'esercizi'} · '
                         '${scheda.giorni} '
                         '${scheda.giorni == 1 ? 'giorno' : 'giorni'}',
                         style: theme.textTheme.bodySmall?.copyWith(

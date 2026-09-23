@@ -381,6 +381,23 @@ class _Blocchi extends StatelessWidget {
 /// il tono della prescrizione — niente «devi», «ti serve». Un testo che dice
 /// «devi» sotto una riga che dice «non fidarti» si contraddice da solo, e a
 /// vincere è sempre il testo più grande.
+/// 🕒 **Quando è stato scritto lo Spunto**, come si legge sotto il titolo.
+///
+/// ⛔ **Sta qui fuori, e non dentro il `build`, per un motivo solo**: il pezzo
+/// che può sbagliare in silenzio è `.toLocal()`, e un pezzo che può sbagliare
+/// in silenzio dev'essere raggiungibile da un test.
+///
+/// 🚨 Il server gira in **UTC** (`config/app.php` → `'timezone' => 'UTC'`),
+/// quindi `generated_at` arriva come `…T13:04:00+00:00`, e `DateTime.parse` di
+/// un istante con offset restituisce un `DateTime` **in UTC**. Senza
+/// `.toLocal()` questa riga scriverebbe «13:04» per un consiglio scritto alle
+/// **15:04** italiane.
+///
+/// ⚠️ Su una riga che esiste *apposta* per dire quando è stato scritto, un'ora
+/// sbagliata è peggio di nessuna ora: toglie fiducia invece di darne.
+String scrittoAlle(DateTime generatoIl) =>
+    'Scritto alle ${DateFormat('HH:mm').format(generatoIl.toLocal())}';
+
 class _Consiglio extends ConsumerStatefulWidget {
   const _Consiglio({
     required this.testo,
@@ -451,12 +468,68 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                 Icon(Icons.auto_awesome_rounded, color: sopra),
                 const SizedBox(width: Gap.sm),
                 Expanded(
-                  child: Text(
-                    'Spunto di oggi',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: sopra,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Spunto di oggi',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: sopra,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+
+                      /*
+                       * ══ 🕒 L'ORA IN CUI E' STATO SCRITTO — 23/09/2026 ══════
+                       *
+                       * 📌 Decisione del committente dopo averlo visto sul suo
+                       * telefono: *«hai ragione, deve dire di quando è»*.
+                       *
+                       * ⛔ **Il caso vero**: alle 21:29 lo Spunto diceva *«Sei
+                       * a 982 kcal con il 73% della giornata passato»* mentre
+                       * la card sopra diceva **0 / 1904 kcal**. Due numeri che
+                       * si contraddicono a distanza di un dito.
+                       *
+                       * 🚨 **E nessuno dei due era sbagliato**: il consiglio
+                       * era stato scritto nel pomeriggio, quando quei numeri
+                       * erano veri. ⚠️ Ma senza un'ora accanto, chi legge non
+                       * ha modo di saperlo, e conclude che l'app conta male —
+                       * che è la cosa peggiore che possa concludere di
+                       * un'applicazione che conta le calorie.
+                       *
+                       * 💡 **Non si rigenera da solo, ed è giusto così**: costa
+                       * un gettone, e spenderlo senza che nessuno l'abbia
+                       * chiesto sarebbe peggio. La cura non è rifarlo: è dire
+                       * di quando è, e lasciare il pulsante a chi lo vuole
+                       * aggiornare.
+                       *
+                       * ⚠️ Solo l'ora, e solo se **non** è già in corso la riga
+                       * «Consiglio del …» che compare quando è di un altro
+                       * giorno: quella la data ce l'ha già, e due date sarebbe
+                       * rumore.
+                       */
+                      /*
+                       * 🚨 **`.toLocal()`, o l'ora è sbagliata di due.**
+                       *
+                       * ⛔ Il server gira in **UTC** (`config/app.php` →
+                       * `'timezone' => 'UTC'`), quindi `generated_at` arriva
+                       * come `…T13:04:00+00:00`. ⚠️ `DateTime.parse` di un
+                       * istante con offset restituisce un `DateTime` **in
+                       * UTC**, e stamparlo così scriverebbe «13:04» per un
+                       * consiglio scritto alle 15:04 italiane.
+                       *
+                       * 💡 Su una riga che esiste **apposta** per dire quando è
+                       * stato scritto, un'ora sbagliata è peggio di nessuna
+                       * ora: toglie fiducia invece di darne.
+                       */
+                      if (widget.generatoIl != null && !widget.vecchio)
+                        Text(
+                          scrittoAlle(widget.generatoIl!),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: sopra.withValues(alpha: 0.75),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -558,7 +631,10 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                     child: Text(
                       widget.generatoIl == null
                           ? 'Questo è l\'ultimo che avevi: sto preparando quello di oggi.'
-                          : 'Consiglio del ${DateFormat('d MMMM', 'it').format(widget.generatoIl!)}: '
+                          // 🚨 `.toLocal()` anche qui — 23/09/2026: il server è
+                          //    in UTC, e un consiglio scritto dopo le 22
+                          //    italiane sarebbe datato **al giorno prima**.
+                          : 'Consiglio del ${DateFormat('d MMMM', 'it').format(widget.generatoIl!.toLocal())}: '
                                 'sto preparando quello di oggi.',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: sopra.withValues(alpha: 0.75),

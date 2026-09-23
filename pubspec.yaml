@@ -20,7 +20,28 @@ publish_to: 'none'
 #
 # ⚠️ Lo controlla `strumenti/costruisci-apk.ps1`: una versione ferma a `1.0.0`
 # o un `versionCode` che non torna **fermano la build**.
-version: 18.8.0+180800
+# 🚨 **Si alza a ogni versione, e non è cosmetica** — 23/09/2026.
+#
+# ⛔ Era ferma a `18.8.0+180800` da fine agosto mentre il codice era alla
+# `v18.30.0`: il telefono del committente dichiarava `versionName=18.8.0`, e
+# alla domanda «che versione hai?» non c'era risposta.
+#
+# 🚨 **E il numero dopo il `+` non è decorativo**: è il `versionCode`, che
+# `IdentitaApp` manda al server come `X-App-Build` a **ogni richiesta**, e su
+# cui il middleware `VersioneMinima` decide se quella copia può entrare. Con un
+# `versionCode` fermo, alzare il minimo sul server bloccherebbe **tutti
+# insieme** — compresi quelli appena aggiornati. ⚠️ E gli store rifiutano un
+# caricamento che non lo alza: il problema salterebbe fuori il giorno della
+# pubblicazione, cioè nel momento peggiore.
+#
+# 💡 **La regola**: il numero è quello del ramo (i rami si chiamano come le
+# versioni), e il `versionCode` si calcola da lì —
+# `major * 10000 + minor * 100 + patch`. `18.31.0` → `183100`.
+#
+# 🛡️ Lo tiene fermo `test/versione_allineata_test.dart`, che confronta questa
+# riga col nome del ramo: dimenticarsene fa fallire la suite, non lo scopre il
+# committente guardando il telefono.
+version: 18.31.0+183100
 
 environment:
   sdk: ^3.12.2

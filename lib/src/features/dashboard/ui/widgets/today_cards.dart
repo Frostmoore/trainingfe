@@ -767,7 +767,29 @@ class RecoveryCard extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Recupero',
+                      /*
+                       * ══ 🏷️ «SONNO», NON «RECUPERO» — 23/09/2026 ════════════
+                       *
+                       * 📌 Decisione del committente, dopo il giro sul suo
+                       * telefono: *«chiamali sonno tutti e due»*.
+                       *
+                       * ⛔ Lo stesso numero — `5h 35m` — si leggeva in tre
+                       * punti con **due nomi**: «sonno» nella testata,
+                       * «Recupero» qui, e poi la schermata in cui si arriva si
+                       * intitola «Sonno».
+                       *
+                       * 🚨 Due nomi per la stessa cosa fanno cercare la
+                       * differenza: chi legge «Recupero» sopra un numero che
+                       * altrove si chiama «sonno» si chiede quale delle due
+                       * misure stia guardando — e non c'è risposta, perché è
+                       * la stessa.
+                       *
+                       * 💡 La card continua a mostrare anche HRV e battito:
+                       * non sono un'altra cosa, sono **come si giudica quella
+                       * notte**, ed è esattamente quello che racconta
+                       * `/sonno`.
+                       */
+                      'Sonno',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

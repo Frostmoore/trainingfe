@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -471,6 +472,9 @@ class ProfileScreen extends ConsumerWidget {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
+
+          const SizedBox(height: Gap.lg),
+          const _QualeVersione(),
           const SizedBox(height: Gap.xl),
         ],
       ),
@@ -519,3 +523,48 @@ String _nomeFornitore(String id) => switch (id) {
 /// dell'intestazione, e sopra ci vanno testo e icone di sistema. 🚨 Con un
 /// colore qualunque quel testo **sparisce**, e non c'è modo di impedirlo a
 /// valle.
+
+/// 🏷️ **«Che versione hai?»** — aggiunta il 23/09/2026.
+///
+/// ⛔ **Prima non c'era risposta.** Il numero di versione esisteva solo dentro
+/// il pacchetto Android, leggibile con `adb`: per saperlo bisognava avere il
+/// telefono in mano e un cavo. 🚨 E a quel punto era pure sbagliato, perché
+/// `pubspec.yaml` era fermo a `18.8.0` da fine agosto.
+///
+/// 💡 Sta **in fondo al profilo**, dove sta la stessa riga in ogni app del
+/// mondo: non è una cosa che si cerca, è una cosa che si trova quando serve —
+/// cioè quando qualcuno dall'assistenza la chiede.
+///
+/// ⚠️ **Si mostrano tutti e due i numeri** (`18.31.0 (183100)`): quello
+/// leggibile è per la persona, quello fra parentesi è il `versionCode`, ed è
+/// **l'unico che conta** quando si guarda perché il server ha rifiutato quella
+/// copia (`VersioneMinima` confronta `X-App-Build`).
+///
+/// ⛔ Se la lettura fallisce non si scrive niente: una riga di errore in fondo
+/// al profilo preoccuperebbe per un dato che non serve a chi legge.
+class _QualeVersione extends StatelessWidget {
+  const _QualeVersione();
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+
+        if (info == null) return const SizedBox.shrink();
+
+        return Center(
+          child: Text(
+            'Versione ${info.version} (${info.buildNumber})',
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: tema.colorScheme.outline,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

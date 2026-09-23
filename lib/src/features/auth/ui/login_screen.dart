@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
 import '../../onboarding/ui/widgets/marchio_in_cima.dart';
 import '../auth_controller.dart';
+import 'gym_inactive_screen.dart';
 import 'widgets/social_buttons.dart';
 
 /// L'accesso — A2.3.
@@ -137,7 +138,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             'Email, nome utente o password non corretti.',
           ValidationException() => tradotto.message,
           NetworkException() => tradotto.message,
-          GymInactiveException() => tradotto.message,
+          /*
+           * ⚠️ **Anche qui si dice che i dati sono al sicuro** — 23/09/2026.
+           *
+           * ⛔ Prima si mostrava la sola riga del server. La rassicurazione
+           * viveva soltanto in `GymInactiveScreen`, cioè la vedeva **solo chi
+           * era già dentro** quando la palestra veniva sospesa — non chi sta
+           * provando a entrare, che è chi se lo sta chiedendo davvero.
+           *
+           * 💡 Non si manda alla schermata dedicata: quella ha un pulsante
+           * «Controlla di nuovo» che chiama `/auth/me`, e dopo un accesso
+           * fallito **non c'è nessun token** — riporterebbe al login perdendo
+           * la spiegazione. La spiegazione va dove la persona può agire.
+           */
+          GymInactiveException() =>
+            '${tradotto.message}\n\n$rassicurazionePalestraSospesa',
           RateLimitedException() => 'Troppi tentativi. Aspetta un minuto.',
           // Tutto il resto mostra il proprio messaggio: se è un guasto nostro,
           // deve sembrare un guasto nostro.

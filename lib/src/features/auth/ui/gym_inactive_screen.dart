@@ -5,6 +5,27 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/states.dart';
 import '../auth_controller.dart';
 
+/// La frase che conta, e che serve **in tutti e due i posti**.
+///
+/// ══ 🚨 Perché è una costante e non due stringhe uguali ════════════════════
+///
+/// ⛔ Il giro UX del 23/09: sospesa la palestra e rifatto l'accesso, l'app
+/// rispondeva con la sola riga del server — *«La tua palestra è sospesa.
+/// Contattala per riattivare l'accesso.»* — mentre la schermata dedicata dice
+/// anche **che i dati sono al sicuro**.
+///
+/// ⚠️ È la cosa che uno vuole sapere per prima quando si trova chiuso fuori, e
+/// la riceveva **solo chi era già dentro**: chi stava provando a entrare — cioè
+/// chi è più in ansia — no.
+///
+/// 💡 Una costante sola: due copie della stessa rassicurazione si separano alla
+/// prima riscrittura, e la versione buona resterebbe in uno dei due posti a
+/// caso.
+const rassicurazionePalestraSospesa =
+    'Il tuo account e i tuoi dati sono al sicuro: torneranno disponibili '
+    'appena la palestra riattiverà l\'abbonamento. Per informazioni, rivolgiti '
+    'direttamente a loro.';
+
 /// La palestra ha sospeso il servizio — A2.4.
 ///
 /// 🚨 **Perché è una schermata a sé e non un messaggio d'errore.**
@@ -33,9 +54,7 @@ class GymInactiveScreen extends ConsumerWidget {
                 title: 'Servizio sospeso',
                 message:
                     '${auth.message ?? 'La tua palestra ha sospeso il servizio.'}\n\n'
-                    'Il tuo account e i tuoi dati sono al sicuro: torneranno '
-                    'disponibili appena la palestra riattiverà l\'abbonamento. '
-                    'Per informazioni, rivolgiti direttamente a loro.',
+                    '$rassicurazionePalestraSospesa',
                 action: FilledButton.icon(
                   onPressed: () =>
                       ref.read(authControllerProvider.notifier).refresh(),

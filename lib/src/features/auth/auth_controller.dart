@@ -7,6 +7,7 @@ import '../../core/errors/api_exception.dart';
 import '../../core/notifications/notifiche_push.dart';
 import '../../core/providers.dart';
 import '../../core/sicurezza/blocco_biometrico.dart';
+import '../../core/stato/tutto_da_rileggere.dart';
 import '../../core/storage/local_cache.dart';
 import '../../core/storage/token_store.dart';
 import '../../core/tempo/fuso_del_dispositivo.dart';
@@ -705,7 +706,21 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
      * l'archivio, e la `ref.read` avviene **al momento della chiamata**, quindi
      * prende sempre quello corrente.
      */
-    () => ref.read(archivioSaluteProvider).svuota(),
+    /*
+     * 🚨 **E poi si dice a tutti che devono rileggere** — 23/09/2026.
+     *
+     * ⛔ Svuotare il database non basta: i provider avevano già letto, e il
+     * nuovo arrivato si trovava davanti i numeri di chi c'era prima — visto sul
+     * giro UX, «8 kcal bruciate e 363% di carico» su un archivio vuoto.
+     *
+     * ⚠️ L'ordine conta: prima si cancella, poi si fa rileggere. Al contrario
+     * i provider rileggerebbero i dati **ancora presenti** e li rimetterebbero
+     * in cache, cioè esattamente il contrario di quello che serve.
+     */
+    () async {
+      await ref.read(archivioSaluteProvider).svuota();
+      tuttoDaRileggere(ref);
+    },
 
     ref.watch(bloccoBiometricoProvider),
     ref.watch(localCacheProvider),

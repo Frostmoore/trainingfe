@@ -129,7 +129,47 @@ class DoveVannoIDati extends ConsumerWidget {
              * perde disinstallando l'app non ci trovava il diario.
              */
             'Il diario alimentare, con quello che scrivi negli alimenti',
+            /*
+             * ══ 🚨 E IL PROFILO PURE, DAL 19/09 — corretto il 23/09 ═════════
+             *
+             * ⛔ **La stessa cosa del diario, rifatta uguale.** Questa riga
+             * stava nella card «Stanno sui nostri server» e diceva *«Il
+             * profilo: sesso, età, altezza, obiettivo e peso da raggiungere»*.
+             *
+             * 🚨 È falsa dal **19 settembre**: la migrazione
+             * `via_la_tabella_dei_profili` ha **cancellato la tabella**, e
+             * `app/Models/Profile.php` non esiste più. Il profilo vive in
+             * `profilo_sul_telefono.dart`, che ricostruisce lo stesso JSON che
+             * prima mandava il server.
+             *
+             * ⚠️ **E i due documenti legali erano già giusti**: l'informativa
+             * dice *«Fino al 19 settembre 2026 stavano sui nostri server: al
+             * primo avvio dell'app aggiornata vengono copiati sul telefono e
+             * poi cancellati da noi»*, e le condizioni d'uso elencano il
+             * profilo fra le cose che *«vivono nel dispositivo»*. 🚨 A
+             * sbagliare era **l'unica delle tre che si legge dentro l'app**.
+             *
+             * 💡 La lezione, la stessa di §161: quando un dato trasloca, le
+             * schermate che lo dichiarano non si aggiornano da sole, e nessun
+             * test le guarda — perché continuano a funzionare benissimo
+             * mentendo.
+             */
+            'Il tuo profilo: sesso, età, altezza, obiettivo e peso da raggiungere',
             'Foto dei progressi',
+            /*
+             * ⚠️ **Anche le schede ricevute stanno qui** — 23/09/2026.
+             *
+             * ⛔ La card dei server diceva *«Le schede e i piani che ti assegna
+             * il trainer»*, e questa non le nominava affatto: di nuovo
+             * **sbagliata due volte** — dichiarate dove non stanno, assenti da
+             * dove stanno.
+             *
+             * 💡 `ArchivioSalute` lo dichiara nella sua storia degli schemi:
+             * *«v12 → v13: le schede del server vivono sul telefono»*, e le
+             * condizioni d'uso dicono la stessa cosa — *«un programma già
+             * consegnato resta sul dispositivo di chi lo ha ricevuto»*.
+             */
+            'Le schede e i piani che ti ha mandato il trainer',
             'Le preferenze dell\'app',
             'La chiave che apre i messaggi con il trainer',
           ],
@@ -171,8 +211,30 @@ class DoveVannoIDati extends ConsumerWidget {
               'percorso.',
           voci: [
             'Account, email e accessi',
-            'Il profilo: sesso, età, altezza, obiettivo e peso da raggiungere',
-            'Le schede e i piani che ti assegna il trainer',
+            // ⛔ Il profilo **non sta più qui** dal 19/09: vedi la nota nella
+            //    card del telefono, dove è stato spostato il 23/09.
+            /*
+             * ══ ⚠️ LE SCHEDE SONO DUE COSE DIVERSE — 23/09/2026 ═════════════
+             *
+             * ⛔ Qui c'era *«Le schede e i piani che ti assegna il trainer»*, e
+             * confondeva due strade che sul server non si somigliano affatto:
+             *
+             * | Quale | Dove sta | `member_id` |
+             * |---|---|---|
+             * | quelle che **scrivi tu** nell'app | **qui**, sul server | il tuo |
+             * | i **modelli** della palestra o del trainer | **qui**, sul server | `null` |
+             * | quelle che il trainer **ti manda** | sul **telefono** (v12 → v13) | — |
+             *
+             * 🚨 La riga di prima nominava **solo la terza**, e la metteva nel
+             * posto sbagliato: proprio l'unica delle tre che sul server non c'è.
+             *
+             * 💡 `POST /workout-plans` è la stessa rotta per il trainer e per
+             * l'iscritto (`compositore_scheda_controller.dart` lo dichiara), e
+             * `WorkoutPlanController::store()` scrive `member_id` con l'id di
+             * chi chiama: una scheda che ti scrivi da solo **è tua e sta qui**.
+             */
+            'Le schede e i piani che scrivi tu nell\'app',
+            'I modelli di scheda della palestra e del tuo trainer',
             'Acquisti e gettoni',
           ],
         ),

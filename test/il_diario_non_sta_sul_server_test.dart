@@ -75,4 +75,53 @@ void main() {
       reason: 'il diario ha lasciato il server il 22/09 (A1)',
     );
   });
+
+  /*
+   * ══ 🚨 E IL PROFILO, CHE SE N'È ANDATO PRIMA — 23/09/2026, A7.6 ═══
+   *
+   * ⛔ **Lo stesso difetto, rifatto uguale e passato inosservato più a
+   * lungo.** La card dei server elencava *«Il profilo: sesso, età, altezza,
+   * obiettivo e peso da raggiungere»*, falso dal **19 settembre**: la
+   * migrazione `via_la_tabella_dei_profili` ha cancellato la tabella e
+   * `app/Models/Profile.php` non esiste più.
+   *
+   * ⚠️ **I due documenti legali erano già giusti** — l'informativa e le
+   * condizioni d'uso dicono tutte e due che il profilo vive sul telefono. 🚨 A
+   * sbagliare era l'unica delle tre che si legge **dentro l'app**.
+   *
+   * 💡 Per questo il guardiano si allarga invece di nascerne un altro: la
+   * regola è una sola — *un dato che trasloca porta con sé le frasi che lo
+   * dichiarano* — e il prossimo che trasloca va aggiunto qui.
+   */
+  const profilo =
+      'Il tuo profilo: sesso, età, altezza, obiettivo e peso da raggiungere';
+
+  testWidgets('il profilo è fra i dati che restano sul telefono', (
+    tester,
+  ) async {
+    await disegna(tester);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dati-sul-telefono')),
+        matching: find.text(profilo),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('e NON fra quelli che stanno sui nostri server', (tester) async {
+    await disegna(tester);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dati-sul-server')),
+        matching: find.text(profilo),
+      ),
+      findsNothing,
+      reason:
+          'il profilo ha lasciato il server il 19/09: la tabella è stata '
+          'cancellata da via_la_tabella_dei_profili',
+    );
+  });
 }

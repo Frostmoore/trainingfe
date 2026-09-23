@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/backup/backup_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../profile_controller.dart';
@@ -16,6 +17,24 @@ import '../profile_controller.dart';
 /// lista scritta nell'app diventa falsa il giorno che il server cambia
 /// politica, e nessuno se ne accorge finché qualcuno non si lamenta di aver
 /// perso qualcosa che credeva salvo.
+///
+/// ══ 🚨 MA IL SERVER NON SA TUTTO — 23/09/2026, A7.6 ═══════════════════
+///
+/// ⛔ Il dialogo diceva *«I tuoi dati verranno cancellati e non sarà possibile
+/// recuperarli»*, ed era **falso per chi ha il backup su Drive**: cancellare
+/// l'account non lo tocca. `cloud.cancellaTutto()` si chiama in un posto solo
+/// — `BackupAutomatico.spegni(cancellaDalCloud: true)` — cioè quando è la
+/// persona a spegnere il backup e a chiedere di buttarlo.
+///
+/// 💡 **Ed è giusto che non lo tocchi**: quel file sta sul Drive di chi ha
+/// fatto il backup, e cancellarlo d'ufficio sarebbe peggio. Quello che era
+/// sbagliato è **non dirlo**, su una schermata che esiste per dire cosa
+/// succede.
+///
+/// ⚠️ **La riga la aggiunge l'app e non il server**, di proposito: il server
+/// non ha modo di sapere se questo telefono ha un backup acceso — è un fatto
+/// che vive solo qui. 💡 Il server elenca quello che fa **il server**; il
+/// telefono aggiunge quello che sa lui.
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
 
@@ -41,8 +60,22 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminare davvero l\'account?'),
+        /*
+         * ⛔ **Diceva «e non sarà possibile recuperarli»** — corretto il
+         * 23/09/2026 (A7.6).
+         *
+         * 🚨 Era falso per chi ha il backup su Drive: quel file **non viene
+         * toccato**. ⚠️ Su un dialogo di conferma irreversibile, una frase
+         * assoluta che non è vera è il peggio che ci possa stare — e qui lo
+         * era in modo *rassicurante al contrario*: spaventava più del dovuto
+         * chi un backup ce l'ha, e nascondeva l'unica cosa che poteva salvarlo.
+         *
+         * 💡 Adesso dice **dove** si cancella. Il resto sta nell'elenco
+         * «Resteranno», che è il posto giusto per le eccezioni.
+         */
         content: const Text(
-          'I tuoi dati verranno cancellati e non sarà possibile recuperarli.',
+          'I tuoi dati verranno cancellati dai nostri server e da questo '
+          'telefono. Leggi qui sotto che cosa resta.',
         ),
         actions: [
           TextButton(
@@ -90,8 +123,26 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           final dati = snapshot.data;
           final cancellati = ((dati?['deleted'] as List?) ?? const [])
               .cast<String>();
-          final conservati = ((dati?['kept'] as List?) ?? const [])
-              .cast<String>();
+          final conservati = <String>[
+            ...((dati?['kept'] as List?) ?? const []).cast<String>(),
+
+            /*
+             * 🚨 **Quello che il server non può sapere** — 23/09/2026, A7.6.
+             *
+             * ⚠️ Solo se il backup è **davvero acceso**: dirlo a chi non ce
+             * l'ha sarebbe rumore su una schermata che si legge per intero
+             * proprio perché fa paura.
+             *
+             * 💡 `valueOrNull` e non `requireValue`: se lo stato del backup
+             * non è ancora arrivato non si scrive niente — ⛔ far aspettare
+             * l'elenco di quello che si sta per perdere, per un'informazione
+             * in più, sarebbe il prezzo sbagliato.
+             */
+            if (ref.watch(backupAutomaticoProvider).valueOrNull?.acceso ??
+                false)
+              'Il backup su Google Drive resta tuo: se vuoi togliere anche '
+                  'quello, spegnilo da «Backup e dati» prima di continuare.',
+          ];
 
           return ListView(
             padding: const EdgeInsets.all(Gap.md),

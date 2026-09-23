@@ -231,9 +231,30 @@ class DoveVannoIDati extends ConsumerWidget {
              * 💡 `POST /workout-plans` è la stessa rotta per il trainer e per
              * l'iscritto (`compositore_scheda_controller.dart` lo dichiara), e
              * `WorkoutPlanController::store()` scrive `member_id` con l'id di
-             * chi chiama: una scheda che ti scrivi da solo **è tua e sta qui**.
+             * chi chiama.
+             *
+             * ══ 🔴 E QUI AVEVO SBAGLIATO IO, LO STESSO GIORNO ═══════════════
+             *
+             * ⛔ Avevo aggiunto *«Le schede e i piani che **scrivi tu**
+             * nell'app»*, deducendolo da quella riga di `store()` **senza
+             * guardare chi può arrivarci**. Il committente se n'è accorto
+             * subito: *«se io utente scrivo una scheda dall'app, questa va a
+             * finire sul server? Non deve succedere questa cosa»*.
+             *
+             * ✅ **E infatti non succede**: un iscritto che scrive una scheda
+             * la salva in locale (`PlanActions.create()` — *«queste tre
+             * chiamate andavano al server, adesso scrivono nell'archivio»*), e
+             * anche quella che importa (`SalvaLaBozza`, D9-bis). Il
+             * compositore che scrive di là sta dietro `if (isTrainer)`.
+             *
+             * 🚨 Dal 23/09 `store()` **rifiuta chi non allena**, così non
+             * potrà succedere nemmeno per sbaglio: la porta era aperta e la
+             * regola vecchia (C2/D1) era ancora scritta nella rotta.
+             *
+             * 💡 **Resta solo quella del trainer, e resta perché è vera**: i
+             * suoi modelli stanno sul server, ed è da lì che li manda. Per un
+             * iscritto questa riga non dice niente di suo — ed è il punto.
              */
-            'Le schede e i piani che scrivi tu nell\'app',
             'I modelli di scheda della palestra e del tuo trainer',
             'Acquisti e gettoni',
           ],

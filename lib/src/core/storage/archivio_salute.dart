@@ -3226,51 +3226,89 @@ class ArchivioSalute extends _$ArchivioSalute {
   /// ⚠️ Va agganciato al logout **e** alla cancellazione dell'account (S9.3).
   /// Dimenticarlo significa lasciare i dati sanitari di una persona sul
   /// telefono dopo che ha chiesto di sparire.
+  /// Svuota **tutto** l'archivio di questo telefono.
+  ///
+  /// ══ 🚨 QUANDO GIRA, E PERCHÉ NON PUÒ DIMENTICARE NIENTE ═════════════════
+  ///
+  /// Due momenti soli, ed entrambi non ammettono residui:
+  ///
+  /// · **entra una persona diversa** su questo telefono (`_puliziaSeCambiaPersona`);
+  /// · **si cancella l'account** (`forgetSession()`).
+  ///
+  /// ⛔ Nel primo caso un residuo è il dato di qualcun altro messo sotto gli
+  /// occhi di chi arriva; nel secondo è una promessa scritta e non mantenuta —
+  /// la schermata «Elimina account» elenca per nome *«il diario alimentare e i
+  /// preferiti»* e *«i consigli ricevuti»*.
+  ///
+  /// ══ ⚠️ PERCHÉ SI ENUMERA E NON SI ELENCA — 23/09/2026 ═══════════════════
+  ///
+  /// ⛔ Qui c'era un **elenco scritto a mano**, e si è rotto **due volte**:
+  ///
+  /// · il 25/08 mancavano le tabelle degli allenamenti (FASE 11), arrivate dopo;
+  /// · il 23/09 il giro UX ha trovato che ne mancavano **undici su ventidue**,
+  ///   fra cui `vociDiario` — che vive solo sul telefono dal 22/09 (A1) — i
+  ///   `preferitiCibo`, il `profiloSulTelefono`, i `documentiImportati`, i
+  ///   `consigliDelGiorno`, le `fotoDegliAlimentiMiei` e i
+  ///   **`percorsiDegliAllenamenti`**, cioè le tracce GPS delle uscite
+  ///   all'aperto: il dato più sensibile che l'app tenga, e quello che la
+  ///   schermata della privacy mette per primo.
+  ///
+  /// 🚨 Trovato con le prove, non a occhio: su un emulatore dove era entrato un
+  /// altro account, `sqlite_sequence` diceva 16 sedute e 183 serie cancellate,
+  /// e le nove voci di diario di quella persona erano ancora lì.
+  ///
+  /// 💡 **La correzione non è aggiungere le righe mancanti**: sarebbe la terza
+  /// volta che le si aggiunge dopo. Si enumerano `allTables`, come fa già
+  /// `esportaPerBackup()` — così una tabella nuova è coperta **il giorno che
+  /// nasce**, senza che nessuno debba ricordarsi di tornare qui.
+  ///
+  /// ⚠️ **I FILE delle foto vanno cancellati a parte.** Qui spariscono solo le
+  /// righe. Le immagini sono file su disco, e una `DELETE` sulla tabella li
+  /// lascerebbe lì senza più niente che ne ricordi l'esistenza — il peggiore
+  /// dei due esiti, perché occupano spazio e contengono il corpo di una persona
+  /// che ha chiesto di sparire. Se ne occupa `AzioniFoto.cancellaTutto()`, che
+  /// passa di qui **dopo** aver cancellato i file. È la stessa avvertenza che il
+  /// backend ha su `Media::delete()` in `AccountEraser::cancellaFoto()`.
   Future<void> svuota() async {
-    /*
-     * ⚠️ **I FILE delle foto vanno cancellati a parte.**
-     *
-     * Qui spariscono solo le righe. Le immagini sono file su disco, e una
-     * `DELETE` sulla tabella li lascerebbe li' senza piu' niente che ne ricordi
-     * l'esistenza — il peggiore dei due esiti, perche' occupano spazio e
-     * contengono il corpo di una persona che ha chiesto di sparire.
-     *
-     * Se ne occupa `AzioniFoto.cancellaTutto()`, che passa di qui **dopo** aver
-     * cancellato i file. E' la stessa avvertenza che il backend aveva su
-     * `Media::delete()` in `AccountEraser::cancellaFoto()`.
-     */
     await batch((b) {
-      b.deleteAll(lettureSalute);
-      b.deleteAll(campioniSonno);
-      b.deleteAll(misureCorpo);
-      b.deleteAll(fotoProgressi);
-      b.deleteAll(schedeSulTelefono);
-      b.deleteAll(pianiRicevuti);
+      for (final tabella in allTables) {
+        b.deleteWhere(tabella, (_) => const Constant(true));
+      }
+    });
+  }
 
-      /*
-       * ══ 🚨 ANCHE GLI ALLENAMENTI — corretto il 25/08/2026 ═══════════════
-       *
-       * ⛔ Queste quattro righe **mancavano**, e non è un dettaglio: `svuota()`
-       * gira quando entra un'altra persona su questo telefono e quando si
-       * cancella l'account. Chi arrivava dopo si trovava lo storico completo di
-       * chi c'era prima — quando si allenava, per quanto, con che carichi.
-       *
-       * ⚠️ La causa è quella già vista due volte ieri: **un elenco scritto a
-       * mano che deve contenere tutto**. Le tabelle di FASE 11 sono arrivate
-       * dopo, e nessuno è tornato ad aggiungerle qui. Chi ne crea una nuova
-       * deve passare **anche** di qui — a differenza del backup, che le enumera
-       * da solo.
-       */
+  /// Cancella **i soli dati di salute**, quelli che il dialogo promette.
+  ///
+  /// ══ 🚨 PERCHÉ NON È `svuota()` — 23/09/2026 ═════════════════════════════
+  ///
+  /// 📌 `ConnessioneSalute._confermaCancellazione` dice per esteso: *«Sonno,
+  /// HRV, battito, calorie e allenamenti salvati su questo telefono vengono
+  /// cancellati»*. ⛔ Non nomina il diario alimentare, i preferiti, il profilo,
+  /// le schede né i documenti importati — e chi legge quella frase non si
+  /// aspetta di perderli.
+  ///
+  /// ⚠️ Quando `svuota()` è passata a enumerare `allTables` (23/09), farla
+  /// chiamare anche da qui avrebbe cancellato **tutto** dietro una frase che
+  /// promette una parte: un guasto peggiore di quello che stavamo correggendo,
+  /// perché prodotto da una correzione.
+  ///
+  /// 💡 Qui un elenco a mano **è giusto**: non deve «contenere tutto», deve
+  /// contenere **esattamente quello che la frase nomina**. Se un giorno la
+  /// frase cambia, cambia anche questo elenco — e `svuota_non_dimentica_niente_test`
+  /// tiene ferma l'altra metà, quella che invece non può dimenticare niente.
+  ///
+  /// 🗺️ I **percorsi** ci sono: una traccia GPS è parte dell'allenamento a cui
+  /// appartiene, e lasciarla dopo aver cancellato la seduta significherebbe
+  /// tenere il dato più sensibile proprio mentre si promette di liberarsene.
+  Future<void> svuotaISoliDatiDiSalute() async {
+    await batch((b) {
+      b.deleteAll(campioniSonno);
+      b.deleteAll(lettureSalute);
+      b.deleteAll(bruciateDichiarate);
       b.deleteAll(seduteAllenamento);
       b.deleteAll(serieDelleSedute);
-      b.deleteAll(bruciateDichiarate);
       b.deleteAll(allenamentiDaOrologio);
-      /*
-       * ⚠️ **Anche i rifiutati.** Sono una decisione di **questa** persona: chi
-       * arriva dopo su questo telefono non deve ereditare i piani che qualcun
-       * altro aveva buttato — se ne riceve uno, deve vederlo.
-       */
-      b.deleteAll(contenutiRifiutati);
+      b.deleteAll(percorsiDegliAllenamenti);
     });
   }
 

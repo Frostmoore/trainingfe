@@ -473,15 +473,21 @@ class HealthController extends StateNotifier<StatoSalute> {
   /// letture e sonno, e non dice se gli **allenamenti** sono cambiati.
   void _diCheCiSonoAllenamentiNuovi() => _segnalaAllenamenti();
 
-  /// Cancella tutto quello che c'è sul telefono.
+  /// Cancella i dati di salute che stanno su questo telefono.
   ///
   /// 🚨 Con i dati in locale il server non può cancellarli per conto di
   /// nessuno: **questo è l'unico modo che una persona ha di liberarsene** senza
   /// disinstallare l'app.
+  ///
+  /// ⚠️ **`svuotaISoliDatiDiSalute()` e non `svuota()`** — 23/09/2026. Il
+  /// dialogo che porta qui nomina *«sonno, HRV, battito, calorie e
+  /// allenamenti»*: non il diario, non i preferiti, non il profilo. ⛔ Da
+  /// quando `svuota()` enumera tutte le tabelle, chiamarla da qui vorrebbe dire
+  /// cancellare molto più di quello che la frase promette.
   Future<void> cancellaTutto() async {
     state = state.copyWith(inCorso: true, azzeraErrore: true);
 
-    await _archivio.svuota();
+    await _archivio.svuotaISoliDatiDiSalute();
 
     state = state.copyWith(inCorso: false, ultimaSincronizzazione: null);
   }

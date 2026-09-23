@@ -197,12 +197,44 @@ class _Linea extends StatelessWidget {
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
           rightTitles: const AxisTitles(),
+          /*
+           * ══ 🐛 LE ETICHETTE SI ACCAVALLAVANO — 23/09/2026 ═════════════════
+           *
+           * ⛔ Sul telefono del committente il grafico dell'HRV scriveva **30 e
+           * 28 uno sopra l'altro**, e quello del battito **82 e 80**: due
+           * numeri a due unità di distanza, che su questa scala sono un paio di
+           * pixel.
+           *
+           * 🚨 **La causa**: `fl_chart` disegna le etichette a intervalli suoi
+           * **più due ai bordi dell'asse** (`minY` e `maxY`). Col margine del
+           * 10% qui sotto, quella del bordo cade a ridosso della prima della
+           * griglia — e si sovrappongono.
+           *
+           * ⚠️ **La stessa trappola era già stata disinnescata sull'asse
+           * orizzontale**, due righe più giù: *«Non una data per punto: con
+           * trenta giorni si sovrappongono»*. Sul verticale ci si era affidati
+           * al comportamento di serie. 💡 Un asse non è più furbo dell'altro.
+           *
+           * ✅ Il rimedio: un passo esplicito (un quarto dell'altezza) e i due
+           * bordi zittiti. Restano **tre** etichette, distanti per costruzione
+           * e non per fortuna — qualunque siano i dati.
+           */
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 34,
-              getTitlesWidget: (v, meta) =>
-                  Text(v.round().toString(), style: theme.textTheme.labelSmall),
+              interval:
+                  ((massimo + margine) - (minimo - margine)).abs() / 4,
+              getTitlesWidget: (v, meta) {
+                if (v <= meta.min || v >= meta.max) {
+                  return const SizedBox.shrink();
+                }
+
+                return Text(
+                  v.round().toString(),
+                  style: theme.textTheme.labelSmall,
+                );
+              },
             ),
           ),
           bottomTitles: AxisTitles(

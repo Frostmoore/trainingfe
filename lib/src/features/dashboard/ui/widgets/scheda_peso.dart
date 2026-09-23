@@ -252,7 +252,7 @@ class _Grafico extends ConsumerWidget {
       maxY: massimo,
       gridData: const FlGridData(show: true, drawVerticalLine: false),
       borderData: FlBorderData(show: false),
-      titlesData: _titoli(s.labels),
+      titlesData: _titoli(s.labels, minimo: minimo, massimo: massimo),
 
       /*
        * 🎯 **La linea dell'obiettivo** — 3b-O.6+8.4.
@@ -302,7 +302,11 @@ class _Grafico extends ConsumerWidget {
     );
   }
 
-  FlTitlesData _titoli(List<String> etichette) => FlTitlesData(
+  FlTitlesData _titoli(
+    List<String> etichette, {
+    required double minimo,
+    required double massimo,
+  }) => FlTitlesData(
     topTitles: const AxisTitles(),
     rightTitles: const AxisTitles(),
 
@@ -315,15 +319,39 @@ class _Grafico extends ConsumerWidget {
      * ⚠️ Di serie `fl_chart` scrive il valore grezzo, e i limiti calcolati
      * portano numeri come `97.90000000000001`: un'etichetta lunga il doppio,
      * che si accavalla con quella sopra e sotto.
+     *
+     * ══ 🐛 E SI ACCAVALLAVANO LO STESSO — 23/09/2026 ════════════════════════
+     *
+     * ⛔ Accorciare il numero non bastava: sul telefono del committente l'asse
+     * scriveva **100.6 e 100.0 uno sopra l'altro**. Il difetto non era la
+     * lunghezza dell'etichetta ma la **distanza** fra due etichette.
+     *
+     * 🚨 `fl_chart` ne disegna a intervalli suoi **più due ai bordi**
+     * (`minY` e `maxY`): col margine del 15% qui sopra, quella del bordo cade
+     * a ridosso della prima della griglia.
+     *
+     * ⚠️ Identico a `grafico_metrica.dart`, e in tutti e due i file **l'asse
+     * orizzontale la trappola ce l'aveva già scritta** (*«con trenta punti si
+     * sovrapporrebbero»*). 💡 Si era guardato un asse solo.
+     *
+     * ✅ Passo esplicito e bordi zittiti: tre etichette, distanti per
+     * costruzione.
      */
     leftTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: true,
         reservedSize: 42,
-        getTitlesWidget: (valore, meta) => Text(
-          valore.toStringAsFixed(1),
-          style: const TextStyle(fontSize: 10),
-        ),
+        interval: (massimo - minimo).abs() / 4,
+        getTitlesWidget: (valore, meta) {
+          if (valore <= meta.min || valore >= meta.max) {
+            return const SizedBox.shrink();
+          }
+
+          return Text(
+            valore.toStringAsFixed(1),
+            style: const TextStyle(fontSize: 10),
+          );
+        },
       ),
     ),
 

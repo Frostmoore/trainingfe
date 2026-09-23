@@ -107,11 +107,25 @@ class SleepNight {
   final String? disclaimer;
   final List<SleepBlock> hypnogram;
 
+  /// Quanto si è dormito, **scritto come lo scrive il resto dell'app**.
+  ///
+  /// ⛔ **Diceva `5h 35`, senza la «m»** — corretto il 23/09/2026, dal giro sul
+  /// telefono del committente. La dashboard scriveva `5h 35m` nella testata e
+  /// nella card «Recupero»; si toccava quella card, si arrivava qui, e lo
+  /// stesso numero perdeva l'unità.
+  ///
+  /// 🚨 **Un'unità che compare e sparisce fa dubitare del numero, non del
+  /// carattere**: chi legge `5h 35` dopo aver letto `5h 35m` si chiede per un
+  /// istante se sta guardando la stessa cosa.
+  ///
+  /// 💡 La forma è quella di `today_cards.dart` e di `_Pisolini._durata`: i
+  /// minuti sotto l'ora si scrivono da soli (`54m`), perché `0h 54` è un modo
+  /// complicato di dire poco meno di un'ora.
   String get durata {
     final h = asleepMinutes ~/ 60;
     final m = asleepMinutes % 60;
 
-    return '${h}h ${m.toString().padLeft(2, '0')}';
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
   }
 }
 

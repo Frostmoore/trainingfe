@@ -383,20 +383,54 @@ class _Blocchi extends StatelessWidget {
 /// vincere è sempre il testo più grande.
 /// 🕒 **Quando è stato scritto lo Spunto**, come si legge sotto il titolo.
 ///
-/// ⛔ **Sta qui fuori, e non dentro il `build`, per un motivo solo**: il pezzo
-/// che può sbagliare in silenzio è `.toLocal()`, e un pezzo che può sbagliare
-/// in silenzio dev'essere raggiungibile da un test.
+/// ══ 🚨 L'ORA DA SOLA NON BASTA — 23/09/2026, seconda correzione ═════════════
 ///
-/// 🚨 Il server gira in **UTC** (`config/app.php` → `'timezone' => 'UTC'`),
-/// quindi `generated_at` arriva come `…T13:04:00+00:00`, e `DateTime.parse` di
-/// un istante con offset restituisce un `DateTime` **in UTC**. Senza
-/// `.toLocal()` questa riga scriverebbe «13:04» per un consiglio scritto alle
-/// **15:04** italiane.
+/// ⛔ **La prima versione scriveva solo l'ora**, perché si dava per buono che
+/// un consiglio mostrato fosse di oggi. 🔍 Il committente, guardando la sua
+/// dashboard: *«il consiglio non può essere stato scritto oggi alle 15 e
+/// qualcosa, era ieri che avevo segnato gli alimenti, oggi non l'ho fatto»*.
 ///
-/// ⚠️ Su una riga che esiste *apposta* per dire quando è stato scritto, un'ora
-/// sbagliata è peggio di nessuna ora: toglie fiducia invece di darne.
-String scrittoAlle(DateTime generatoIl) =>
-    'Scritto alle ${DateFormat('HH:mm').format(generatoIl.toLocal())}';
+/// 🚨 Aveva ragione, e l'ora da sola **peggiorava** le cose: «Scritto alle
+/// 15:04» sopra un consiglio di ieri è una data falsa scritta da noi, mentre
+/// prima c'era solo un silenzio.
+///
+/// 💡 Perché succede: quando non c'è niente di nuovo, `chiediIlConsiglio`
+/// ripiega su `archivio.ultimoConsiglio()` — ed è **giusto** (*«niente di
+/// nuovo, ma il consiglio di stamattina c'è»*). ⛔ Quel consiglio però può
+/// essere di ieri, e nessuno lo diceva.
+///
+/// ── ⚠️ `.toLocal()` è una rete, non una correzione ────────────────────────
+///
+/// `chiediIlConsiglio` **localizza già** `generated_at` quando lo legge dalla
+/// risposta, quindi qui arriva un orario locale e questa chiamata non cambia
+/// niente. 🚨 Resta perché il server gira in **UTC**
+/// (`trainingbe/config/app.php` → `'timezone' => 'UTC'`): il giorno che un
+/// istante grezzo arrivasse fin qui, senza questa riga si leggerebbe «13:04»
+/// per un consiglio delle **15:04**. ⛔ Su una riga che esiste *apposta* per
+/// dire quando una cosa è stata scritta, un'ora sbagliata è peggio di nessuna
+/// ora.
+///
+/// [adesso] serve **solo ai test**, per non dipendere dal giorno in cui girano.
+String scrittoAlle(DateTime generatoIl, {DateTime? adesso}) {
+  final quando = generatoIl.toLocal();
+  final ora = DateFormat('HH:mm').format(quando);
+
+  final oggi = (adesso ?? DateTime.now()).toLocal();
+  final giorni = DateTime(oggi.year, oggi.month, oggi.day)
+      .difference(DateTime(quando.year, quando.month, quando.day))
+      .inDays;
+
+  /*
+   * ⚠️ **`giorni <= 0` e non `== 0`**: se l'orologio del telefono è indietro
+   * di qualche minuto rispetto al server, un consiglio appena nato risulta di
+   * «domani». 🚨 Scrivere «Scritto domani alle 15:04» sarebbe il tipo di
+   * assurdità che fa chiudere l'app.
+   */
+  if (giorni <= 0) return 'Scritto alle $ora';
+  if (giorni == 1) return 'Scritto ieri alle $ora';
+
+  return 'Scritto il ${DateFormat('d MMMM', 'it').format(quando)} alle $ora';
+}
 
 class _Consiglio extends ConsumerStatefulWidget {
   const _Consiglio({
@@ -503,26 +537,19 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                        * di quando è, e lasciare il pulsante a chi lo vuole
                        * aggiornare.
                        *
-                       * ⚠️ Solo l'ora, e solo se **non** è già in corso la riga
-                       * «Consiglio del …» che compare quando è di un altro
-                       * giorno: quella la data ce l'ha già, e due date sarebbe
-                       * rumore.
-                       */
-                      /*
-                       * 🚨 **`.toLocal()`, o l'ora è sbagliata di due.**
+                       * ⚠️ **La riga si mostra SEMPRE che ci sia una data.**
                        *
-                       * ⛔ Il server gira in **UTC** (`config/app.php` →
-                       * `'timezone' => 'UTC'`), quindi `generated_at` arriva
-                       * come `…T13:04:00+00:00`. ⚠️ `DateTime.parse` di un
-                       * istante con offset restituisce un `DateTime` **in
-                       * UTC**, e stamparlo così scriverebbe «13:04» per un
-                       * consiglio scritto alle 15:04 italiane.
+                       * ⛔ Prima la si saltava quando lo stato era
+                       * «vecchio», perché la riga «Consiglio del …» qui sotto
+                       * la data ce l'aveva. 🚨 Ma quella riga compare
+                       * **solo** per il ripiego locale, e il caso che ha fregato
+                       * il committente — il consiglio di **ieri** ripescato da
+                       * `ultimoConsiglio()` — arriva qui marcato **fresco**.
                        *
-                       * 💡 Su una riga che esiste **apposta** per dire quando è
-                       * stato scritto, un'ora sbagliata è peggio di nessuna
-                       * ora: toglie fiducia invece di darne.
+                       * 💡 Adesso la data sta in un posto solo, e ci sta
+                       * sempre.
                        */
-                      if (widget.generatoIl != null && !widget.vecchio)
+                      if (widget.generatoIl != null)
                         Text(
                           scrittoAlle(widget.generatoIl!),
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -629,13 +656,19 @@ class _ConsiglioState extends ConsumerState<_Consiglio> {
                   const SizedBox(width: Gap.xs),
                   Expanded(
                     child: Text(
-                      widget.generatoIl == null
-                          ? 'Questo è l\'ultimo che avevi: sto preparando quello di oggi.'
-                          // 🚨 `.toLocal()` anche qui — 23/09/2026: il server è
-                          //    in UTC, e un consiglio scritto dopo le 22
-                          //    italiane sarebbe datato **al giorno prima**.
-                          : 'Consiglio del ${DateFormat('d MMMM', 'it').format(widget.generatoIl!.toLocal())}: '
-                                'sto preparando quello di oggi.',
+                      /*
+                       * ⛔ **Niente data qui dentro** — 23/09/2026.
+                       *
+                       * Diceva «Consiglio del 22 settembre: sto preparando
+                       * quello di oggi». ⚠️ Adesso la data sta **sopra**, nella
+                       * riga «Scritto …», e ci sta in **tutti** i casi — non
+                       * solo in questo. 💡 Due date nella stessa card sono due
+                       * cose da confrontare invece di una da leggere.
+                       *
+                       * 💡 Quel che resta è l'unica cosa che questa riga sa e
+                       * l'altra no: che **ne sta arrivando uno nuovo**.
+                       */
+                      'Questo è l\'ultimo che avevi: sto preparando quello di oggi.',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: sopra.withValues(alpha: 0.75),
                         fontStyle: FontStyle.italic,

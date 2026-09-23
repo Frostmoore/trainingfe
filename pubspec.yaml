@@ -36,12 +36,12 @@ publish_to: 'none'
 #
 # 💡 **La regola**: il numero è quello del ramo (i rami si chiamano come le
 # versioni), e il `versionCode` si calcola da lì —
-# `major * 10000 + minor * 100 + patch`. `18.31.0` → `183100`.
+# `major * 10000 + minor * 100 + patch`. `18.32.0` → `183200`.
 #
 # 🛡️ Lo tiene fermo `test/versione_allineata_test.dart`, che confronta questa
 # riga col nome del ramo: dimenticarsene fa fallire la suite, non lo scopre il
 # committente guardando il telefono.
-version: 18.31.0+183100
+version: 18.32.0+183200
 
 environment:
   sdk: ^3.12.2

@@ -495,18 +495,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     PasswordMeter(forza: _forza),
                     const SizedBox(height: Gap.md),
 
-                    // 🆕 🤝 P8 — facoltativo: chi non ha un amico che l'ha invitato lo lascia vuoto.
-                    TextFormField(
-                      controller: _codiceAmico,
-                      textCapitalization: TextCapitalization.characters,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Codice amico (facoltativo)',
-                        prefixIcon: Icon(Icons.group_add_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: Gap.md),
-
                     TextFormField(
                       controller: _conferma,
                       obscureText: _nascondi,
@@ -535,6 +523,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             : 'Le due password non coincidono.';
                       },
                       onFieldSubmitted: (_) => _registrati(),
+                    ),
+
+                    const SizedBox(height: Gap.md),
+
+                    /*
+                     * ⚠️ **Dopo le due password, non in mezzo** — 23/09/2026.
+                     *
+                     * ⛔ Questo campo stava fra «Password» e «Ripeti la
+                     * password», e spezzava una coppia: chi compila vede un
+                     * campo estraneo fra i due, e per un attimo crede che
+                     * «Ripeti» si riferisca al codice amico.
+                     *
+                     * 💡 È anche l'unico facoltativo del modulo: in fondo
+                     * è dove chi non ce l'ha lo salta senza pensarci.
+                     */
+                    TextFormField(
+                      controller: _codiceAmico,
+                      textCapitalization: TextCapitalization.characters,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Codice amico (facoltativo)',
+                        prefixIcon: Icon(Icons.group_add_outlined),
+                      ),
                     ),
 
                     if (_errore != null) ...[

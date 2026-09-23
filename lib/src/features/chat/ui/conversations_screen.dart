@@ -1262,14 +1262,14 @@ class _SceltaPiano extends ConsumerWidget {
         ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(Gap.lg),
-          child: Text('Non riesco a leggere i piani.\n$e'),
+          child: Text('Non riesco a leggere i consigli.\n$e'),
         ),
         data: (List<Map<String, dynamic>> elenco) => elenco.isEmpty
             ? const Padding(
                 padding: EdgeInsets.all(Gap.lg),
                 child: Text(
-                  'Non hai ancora scritto nessun piano. Vai nel profilo, '
-                  '«I miei piani alimentari», e poi da qui lo mandi.',
+                  'Non hai ancora scritto nessun consiglio. Vai nel profilo, '
+                  '«I miei consigli alimentari», e poi da qui li mandi.',
                 ),
               )
             : ListView.builder(
@@ -1281,7 +1281,7 @@ class _SceltaPiano extends ConsumerWidget {
 
                   return ListTile(
                     leading: const Icon(Icons.restaurant_menu_outlined),
-                    title: Text(p['name']?.toString() ?? 'Piano'),
+                    title: Text(p['name']?.toString() ?? 'Consigli'),
                     subtitle: Text(giorni == 1 ? '1 giorno' : '$giorni giorni'),
                     onTap: () => Navigator.of(context).pop(p),
                   );

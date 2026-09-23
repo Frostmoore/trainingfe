@@ -193,7 +193,7 @@ class ProfileScreen extends ConsumerWidget {
                    */
                   ListTile(
                     leading: const Icon(Icons.restaurant_menu_outlined),
-                    title: const Text('I miei piani alimentari'),
+                    title: const Text('I miei consigli alimentari'),
                     subtitle: const Text(
                       'Scrivili qui, poi mandali dalla chat',
                     ),

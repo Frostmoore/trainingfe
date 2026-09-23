@@ -35,16 +35,30 @@ class MieiPianiScreen extends ConsumerWidget {
        * alimentari**», e il vuoto diceva «**Nessun consiglio**». ⚠️ Chi tocca
        * una voce e ne trova un'altra si chiede se ha sbagliato strada.
        *
-       * 💡 Vince **piano alimentare**, che è la parola usata dappertutto
-       * altrove — «Ho un piano su PDF», «Importa un piano», «Nessun piano» — e
-       * che è anche quella scritta nella rotta.
+       * ⛔ **Vinceva «piano alimentare», e il 23/09/2026 ha perso.**
+       *
+       * 📌 Il committente: *«cambia tutte le occorrenze di piano alimentare
+       * in consigli alimentari: ancora non esiste il nutrizionista, quindi non
+       * possiamo fornire piani alimentari»*.
+       *
+       * 🚨 E non è una preferenza di stile: un piano alimentare lo redige un
+       * biologo nutrizionista, un dietista o un medico. ⚠️ **Questa schermata lo
+       * diceva già** — il riquadro nel compositore recita *«un piano alimentare
+       * vero lo può fare solo un biologo nutrizionista…»* — e intanto si
+       * intitolava «I miei piani alimentari»: l'avvertenza e l'insegna dicevano
+       * il contrario.
+       *
+       * ⚠️ **Resta «piano» dove il piano c'è davvero**: il PDF che l'allievo
+       * importa è stato scritto da un professionista, e la schermata
+       * dell'import fa dichiarare chi l'ha firmato. Chiamarlo «consigli»
+       * sarebbe falso al contrario, e indebolirebbe una frase che serve.
        */
-      appBar: const IntestazioneApp(titolo: 'I miei piani alimentari'),
+      appBar: const IntestazioneApp(titolo: 'I miei consigli alimentari'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.compositorePiano),
         icon: const Icon(Icons.add),
-        // ⚠️ Singolare: il pulsante ne crea **uno**.
-        label: const Text('Nuovo piano'),
+        // ⚠️ Plurale: «consigli» non ha un singolare che regga da solo qui.
+        label: const Text('Nuovi consigli'),
       ),
       body: stato.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -55,9 +69,9 @@ class MieiPianiScreen extends ConsumerWidget {
         data: (piani) => piani.isEmpty
             ? const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
-                title: 'Nessun piano',
+                title: 'Nessun consiglio',
                 message:
-                    'Scrivine uno: potrai mandarlo a un allievo dalla chat.',
+                    'Scrivine: potrai mandarli a un allievo dalla chat.',
               )
             : RefreshIndicator(
                 onRefresh: () => aggiornaTutto(

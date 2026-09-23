@@ -89,6 +89,39 @@ class _SchermataAmicoState extends ConsumerState<SchermataAmico> {
                 textAlign: TextAlign.center,
                 style: tema.textTheme.titleMedium,
               ),
+              const SizedBox(height: Gap.md),
+
+              /*
+               * ⚠️ **Si dice cosa succede premendo** — 23/09/2026, giro UX.
+               *
+               * ⛔ Qui c'era il titolo, il codice e il pulsante: si chiedeva di
+               * **collegare il proprio account a quello di un'altra persona**
+               * senza dire cosa comporti, cosa se ne ricavi, né che è
+               * irreversibile.
+               *
+               * 🚨 E le due regole vere non erano scritte da nessuna parte:
+               * `AmicoController` le dichiara — *«una volta sola, e solo nei
+               * primi 7 giorni»* — ma chi è iscritto da mesi lo scopriva
+               * **premendo**, e si prendeva un rifiuto al posto di una
+               * spiegazione.
+               *
+               * 💡 La frase sull'offerta è **la stessa** di «Porta un amico»:
+               * le due facce dello stesso patto devono raccontarlo uguale.
+               */
+              Text(
+                'Collegandoti dici che è stato lui a portarti. Se c\'è '
+                'un\'offerta per chi porta un amico, arriva da sola.',
+                textAlign: TextAlign.center,
+                style: tema.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Si può fare una volta sola, entro 7 giorni dall\'iscrizione.',
+                textAlign: TextAlign.center,
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: Gap.lg),
               if (_esito != null) ...[
                 Text(_esito!, textAlign: TextAlign.center),

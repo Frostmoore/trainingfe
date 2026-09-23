@@ -886,15 +886,39 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 error: e,
                 onRetry: () => ref.invalidate(threadProvider(widget.id)),
               ),
-              data: (elenco) => ListView.builder(
-                controller: _scroll,
-                padding: const EdgeInsets.all(Gap.md),
-                itemCount: elenco.length,
-                itemBuilder: (context, index) {
-                  final m = elenco[index];
-                  final contenuto = m.contenuto;
+              /*
+               * ⚠️ **Una conversazione nuova non è uno schermo bianco** —
+               * 23/09/2026, dal giro UX.
+               *
+               * ⛔ Con zero messaggi qui c'era una `ListView` vuota: mezzo
+               * schermo di niente sopra la casella di scrittura. Ogni altro
+               * vuoto dell'app spiega qualcosa; questo taceva.
+               *
+               * 💡 E tace nel momento in cui varrebbe di più parlare: si è
+               * appena creata la password di recupero, si sta scrivendo al
+               * proprio trainer per la prima volta, e la domanda che uno ha in
+               * testa è **chi leggerà questa roba**. La risposta è la promessa
+               * più forte che l'app abbia, e stava scritta ovunque tranne che
+               * qui.
+               */
+              data: (elenco) => elenco.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'Nessun messaggio, per ora',
+                      message:
+                          'Quello che vi scrivete lo leggete solo voi due: la '
+                          'chiave sta sui vostri telefoni, non sui nostri '
+                          'server.',
+                    )
+                  : ListView.builder(
+                      controller: _scroll,
+                      padding: const EdgeInsets.all(Gap.md),
+                      itemCount: elenco.length,
+                      itemBuilder: (context, index) {
+                        final m = elenco[index];
+                        final contenuto = m.contenuto;
 
-                  /*
+                        /*
                    * 🆕 N16 — l'usa e getta viene **prima di tutto il resto**.
                    *
                    * 🚨 Non e' un tipo di contenuto: e' un modo di consegnarlo.
@@ -903,33 +927,36 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                    * che nessuno l'abbia aperta e' esattamente cio' che la
                    * funzione impedisce.
                    */
-                  if (m.spenta) {
-                    return UsaEGettaSpenta(
-                      messaggio: m,
-                      mio: m.senderId == mioId,
-                    );
-                  }
+                        if (m.spenta) {
+                          return UsaEGettaSpenta(
+                            messaggio: m,
+                            mio: m.senderId == mioId,
+                          );
+                        }
 
-                  if (m.usaEGetta && contenuto != null) {
-                    return UsaEGettaCoperta(
-                      messaggio: m,
-                      contenuto: contenuto,
-                      mio: m.senderId == mioId,
-                      conversationId: widget.id,
-                    );
-                  }
+                        if (m.usaEGetta && contenuto != null) {
+                          return UsaEGettaCoperta(
+                            messaggio: m,
+                            contenuto: contenuto,
+                            mio: m.senderId == mioId,
+                            conversationId: widget.id,
+                          );
+                        }
 
-                  // 🚨 S7 — una scheda si disegna come una scheda, non come una
-                  // nuvoletta con dentro un titolo: ha un pulsante, e quel
-                  // pulsante è tutto il punto della fase.
-                  if (contenuto is ContenutoScheda) {
-                    return _SchedaInChat(messaggio: m, contenuto: contenuto);
-                  }
+                        // 🚨 S7 — una scheda si disegna come una scheda, non come una
+                        // nuvoletta con dentro un titolo: ha un pulsante, e quel
+                        // pulsante è tutto il punto della fase.
+                        if (contenuto is ContenutoScheda) {
+                          return _SchedaInChat(
+                            messaggio: m,
+                            contenuto: contenuto,
+                          );
+                        }
 
-                  // 🆕 N13.4 — una foto si disegna come una foto. La busta
-                  // porta solo il riferimento e la chiave: i byte se li va a
-                  // prendere il riquadro, una volta sola.
-                  /*
+                        // 🆕 N13.4 — una foto si disegna come una foto. La busta
+                        // porta solo il riferimento e la chiave: i byte se li va a
+                        // prendere il riquadro, una volta sola.
+                        /*
                    * 🆕 N19.3 — i consigli alimentari si disegnano come un
                    * elenco, non come una nuvoletta con dentro un titolo.
                    *
@@ -938,30 +965,33 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                    * sarebbe la cosa sbagliata proprio dove abbiamo appena
                    * lavorato per distinguerli.
                    */
-                  if (contenuto is ContenutoConsigliAlimentari) {
-                    return _ConsigliInChat(messaggio: m, contenuto: contenuto);
-                  }
+                        if (contenuto is ContenutoConsigliAlimentari) {
+                          return _ConsigliInChat(
+                            messaggio: m,
+                            contenuto: contenuto,
+                          );
+                        }
 
-                  // 🆕 N21.3 — un documento non si disegna: si apre.
-                  if (contenuto is ContenutoDocumento) {
-                    return DocumentoInChat(
-                      messaggio: m,
-                      contenuto: contenuto,
-                      mio: m.senderId == mioId,
-                    );
-                  }
+                        // 🆕 N21.3 — un documento non si disegna: si apre.
+                        if (contenuto is ContenutoDocumento) {
+                          return DocumentoInChat(
+                            messaggio: m,
+                            contenuto: contenuto,
+                            mio: m.senderId == mioId,
+                          );
+                        }
 
-                  if (contenuto is ContenutoFoto) {
-                    return FotoInChat(
-                      messaggio: m,
-                      contenuto: contenuto,
-                      mio: m.senderId == mioId,
-                    );
-                  }
+                        if (contenuto is ContenutoFoto) {
+                          return FotoInChat(
+                            messaggio: m,
+                            contenuto: contenuto,
+                            mio: m.senderId == mioId,
+                          );
+                        }
 
-                  return _Bolla(messaggio: m, mio: m.senderId == mioId);
-                },
-              ),
+                        return _Bolla(messaggio: m, mio: m.senderId == mioId);
+                      },
+                    ),
             ),
           ),
 

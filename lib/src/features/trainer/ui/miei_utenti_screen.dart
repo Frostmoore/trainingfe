@@ -173,7 +173,27 @@ class _Elenco extends ConsumerWidget {
               ),
             )
           else
-            ...dati.utenti.map((u) => _Riga(utente: u)),
+            /*
+             * ══ 🆕 DUE GRUPPI, PERCHÉ SONO DUE COSE — 23/09/2026 ═══════════
+             *
+             * ⛔ Il giro UX ha trovato **«15 posti liberi su 15» sopra un
+             * elenco di cinque persone**. Tutti e due i numeri erano giusti e
+             * insieme si contraddicevano: il banner conta gli **allievi suoi**
+             * (zero), l'elenco mostrava anche **gli iscritti della palestra**
+             * dove allena (cinque). Due scopi impilati senza dirlo.
+             *
+             * ⚠️ Chi legge non può ricomporli: o crede rotto il contatore, o
+             * crede di poter invitare quindici persone oltre a quelle che già
+             * vede.
+             *
+             * 💡 Il dato per distinguerli c'era già — `UtenteSeguito.suo`, dal
+             * 16/09 — e serviva solo a nascondere un pulsante. Qui diventa
+             * quello che è: la linea fra «i tuoi» e «quelli della palestra».
+             *
+             * 📌 Un gruppo solo resta **senza intestazione**: etichettare
+             * quando non c'è niente da distinguere aggiunge rumore.
+             */
+            ..._aGruppi(context, dati.utenti),
 
           /*
            * 🆕 ⛔ **E chi non può avere allievi suoi non vede nemmeno il
@@ -243,6 +263,73 @@ class _Elenco extends ConsumerWidget {
       );
     }
   }
+
+  /// Le persone divise fra **i tuoi allievi** e **gli iscritti della palestra**.
+  ///
+  /// ⚠️ Con un gruppo solo non si mette nessuna intestazione: chi ha soltanto
+  /// allievi suoi, o soltanto iscritti della palestra, non ha niente da
+  /// distinguere e un titolo sarebbe rumore.
+  List<Widget> _aGruppi(BuildContext context, List<UtenteSeguito> utenti) {
+    final suoi = utenti.where((u) => u.suo).toList();
+    final dallaPalestra = utenti.where((u) => !u.suo).toList();
+
+    /*
+     * 🚨 **La regola non è «ci sono due tipi»**, ed è l'errore che ho fatto
+     * scrivendo questa funzione la prima volta.
+     *
+     * ⛔ Il caso trovato sul giro era **zero allievi suoi e cinque iscritti
+     * della palestra**: con la regola «etichetta solo se ci sono entrambi»
+     * quel caso resta senza intestazione, e il contatore continua a dire
+     * «15 posti liberi su 15» sopra cinque facce.
+     *
+     * 💡 Quello che conta è: **c'è gente che non occupa i posti, mentre i posti
+     * sono a schermo?** Allora va detto. Se invece il banner non c'è — un
+     * trainer di sola palestra non ha posti suoi — non c'è niente da
+     * riconciliare, e l'etichetta sarebbe rumore.
+     */
+    final serveDistinguere =
+        dallaPalestra.isNotEmpty && (suoi.isNotEmpty || dati.posti.allieviPropri);
+
+    if (!serveDistinguere) {
+      return utenti.map((u) => _Riga(utente: u)).toList();
+    }
+
+    final tema = Theme.of(context);
+
+    return [
+      if (suoi.isNotEmpty) ...[
+        _Titolo(testo: 'I tuoi allievi', tema: tema),
+        ...suoi.map((u) => _Riga(utente: u)),
+        const SizedBox(height: Gap.md),
+      ],
+      _Titolo(testo: 'Gli iscritti della palestra', tema: tema),
+      Padding(
+        padding: const EdgeInsets.only(bottom: Gap.sm),
+        child: Text(
+          // 🚨 È la riga che scioglie la contraddizione col contatore sopra.
+          'Non occupano i posti del tuo piano: li paga la palestra.',
+          style: tema.textTheme.bodySmall?.copyWith(
+            color: tema.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      ...dallaPalestra.map((u) => _Riga(utente: u)),
+    ];
+  }
+}
+
+/// L'intestazione di un gruppo dell'elenco.
+class _Titolo extends StatelessWidget {
+  const _Titolo({required this.testo, required this.tema});
+
+  final String testo;
+  final ThemeData tema;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.sm),
+    child: Text(testo, style: tema.textTheme.titleSmall),
+  );
 }
 
 /// I posti del piano, in cima.

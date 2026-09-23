@@ -52,6 +52,8 @@ enum PercheLaChiave {
     'Quello che scrivi viene chiuso a chiave sul tuo telefono e riaperto solo '
         'su quello di chi lo riceve. Nessun altro può leggerlo: né la '
         'palestra, né noi.',
+    'I tuoi messaggi sono chiusi a chiave. Per riaprirli su questo telefono '
+        'serve la password di recupero che avevi creato.',
   ),
 
   documenti(
@@ -59,18 +61,30 @@ enum PercheLaChiave {
     'Quello che carichi viene chiuso a chiave sul tuo telefono, e da lì non '
         'esce in chiaro. Serve una password che lo riapra: senza, non '
         'potremmo custodirlo senza poterlo leggere.',
+    'I tuoi documenti sono chiusi a chiave. Per riaprirli su questo telefono '
+        'serve la password di recupero che avevi creato.',
   ),
 
   schede(
     'Le tue schede sono cifrate',
     'Le schede e i piani che ricevi o che scrivi vengono chiusi a chiave sul '
         'tuo telefono. Nessun altro può leggerli: né la tua palestra, né noi.',
+    'Le tue schede sono chiuse a chiave. Per riaprirle su questo telefono '
+        'serve la password di recupero che avevi creato.',
   );
 
-  const PercheLaChiave(this.titolo, this.spiegazione);
+  const PercheLaChiave(this.titolo, this.spiegazione, this.riapertura);
 
   final String titolo;
   final String spiegazione;
+
+  /// La stessa cosa detta a chi la chiave **ce l'aveva già** e deve riaprirla.
+  ///
+  /// ⛔ Serve una frase a parte e non basta `spiegazione`: quella è scritta
+  /// per chi la chiave la sta **creando** («quello che scrivi viene chiuso a
+  /// chiave…») e in un ripristino suonerebbe come una promessa invece che
+  /// come un'istruzione.
+  final String riapertura;
 }
 
 class _SchermataPasswordDiRecuperoState

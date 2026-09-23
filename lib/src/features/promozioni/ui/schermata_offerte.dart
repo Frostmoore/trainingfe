@@ -133,10 +133,7 @@ class _SchermataOfferteState extends ConsumerState<SchermataOfferte> {
             const SizedBox(height: Gap.sm),
             offerte.when(
               data: (elenco) => elenco.isEmpty
-                  ? Text(
-                      'In questo momento non ci sono offerte per te.',
-                      style: tema.textTheme.bodyMedium,
-                    )
+                  ? const _NessunaOfferta()
                   : Column(
                       children: [
                         for (final o in elenco)
@@ -219,6 +216,52 @@ class _SchedaOfferta extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Lo stato vuoto delle offerte — 23/09/2026, dal giro UX.
+///
+/// ⛔ **Prima era una riga sola**: *«In questo momento non ci sono offerte per
+/// te»*, sotto un titolo, con duemila pixel di bianco sotto. ⚠️ Non è solo
+/// spoglia: non dice **cosa sia** un'offerta né **come** ne arrivino, e chi apre
+/// questa voce lo fa proprio per scoprirlo. Una schermata che risponde «no» a
+/// una domanda che non ha spiegato sembra rotta.
+///
+/// 💡 Stessa forma degli altri vuoti dell'app (icona, titolo, una frase che
+/// dice cosa fare): vedi `_Vuoto` nel catalogo e in «Esercizi». ⚠️ Non è un
+/// componente condiviso perché non ne esiste uno — ogni schermata ha il suo, ed
+/// è debito noto, non una scelta.
+class _NessunaOfferta extends StatelessWidget {
+  const _NessunaOfferta();
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Icon(
+            Icons.card_giftcard_outlined,
+            size: 48,
+            color: tema.colorScheme.outline,
+          ),
+          const SizedBox(height: 12),
+          Text('Nessuna offerta, per ora', style: tema.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(
+            'Le offerte arrivano da sole: quando porti un amico, quando la tua '
+            'palestra ne prepara una, o quando ne facciamo una per tutti. '
+            'Non c\'è niente da cercare.',
+            textAlign: TextAlign.center,
+            style: tema.textTheme.bodyMedium?.copyWith(
+              color: tema.colorScheme.outline,
+            ),
+          ),
+        ],
       ),
     );
   }

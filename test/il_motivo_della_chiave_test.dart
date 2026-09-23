@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/chiavi/ui/schermata_password_di_recupero.dart';
+import 'package:training_companion/src/features/chiavi/ui/schermata_ripristino.dart';
 
 import 'aiuto/intestazione.dart';
 
@@ -63,6 +64,44 @@ void main() {
     expect(find.text('I tuoi messaggi sono cifrati'), findsNothing);
   });
 
+  /// ♻️ **E lo dice anche a chi la chiave ce l'aveva già** — 23/09/2026.
+  ///
+  /// ⛔ Il motivo arrivava **solo** alla schermata che crea la chiave. Chi
+  /// reinstallava l'app e toccava «Importa da PDF o foto» si sentiva rispondere
+  /// *«I tuoi messaggi sono chiusi a chiave»*: trovato nel giro UX del 23/09,
+  /// premendo quel pulsante con l'account appena rientrato.
+  ///
+  /// 💡 È lo **stesso difetto** che questo file difende dal 14/09, sull'altra
+  /// metà della porta: una delle due schermate era stata sistemata e l'altra no.
+  Future<void> disegnaIlRipristino(
+    WidgetTester tester,
+    PercheLaChiave perche,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: await intestazioneFinta(),
+        child: MaterialApp(home: SchermataRipristino(perche: perche)),
+      ),
+    );
+
+    await tester.pump();
+  }
+
+  testWidgets('anche il ripristino dalle schede non parla di messaggi', (
+    tester,
+  ) async {
+    await disegnaIlRipristino(tester, PercheLaChiave.schede);
+
+    expect(find.text(PercheLaChiave.schede.riapertura), findsOneWidget);
+    expect(find.text(PercheLaChiave.messaggi.riapertura), findsNothing);
+  });
+
+  testWidgets('e di serie il ripristino parla di messaggi', (tester) async {
+    await disegnaIlRipristino(tester, PercheLaChiave.messaggi);
+
+    expect(find.text(PercheLaChiave.messaggi.riapertura), findsOneWidget);
+  });
+
   /// ⚠️ **Ogni motivo deve avere due testi veri.** Un valore aggiunto in fretta
   /// con la stringa vuota darebbe una schermata senza titolo, e nessun errore.
   test('nessun motivo ha testi vuoti', () {
@@ -73,6 +112,7 @@ void main() {
         isNotEmpty,
         reason: 'spiegazione di ${p.name}',
       );
+      expect(p.riapertura.trim(), isNotEmpty, reason: 'riapertura di ${p.name}');
     }
   });
 }

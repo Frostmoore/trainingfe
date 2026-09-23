@@ -85,6 +85,7 @@ class DoveVannoIDati extends ConsumerWidget {
          * · `DashboardService::corpo()` → `body` è **solo** il peso obiettivo
          */
         const _Card(
+          key: Key('dati-sul-telefono'),
           icona: Icons.phone_android_rounded,
           titolo: 'Restano su questo telefono',
           sottotitolo:
@@ -109,6 +110,25 @@ class DoveVannoIDati extends ConsumerWidget {
             'Calorie bruciate con l\'attività',
             'Allenamenti, sedute, serie e ripetizioni',
             'Peso e misure che registri',
+            /*
+             * ══ 🚨 IL DIARIO STA QUI, E FINO AL 23/09 DICEVAMO IL CONTRARIO
+             *
+             * ⛔ Questa riga stava nella card **«Stanno sui nostri server»**,
+             * ed è diventata falsa il 22/09 con A1: la migrazione
+             * `il_diario_lascia_il_server` ha tolto le tabelle, e il backend
+             * ha un guardiano che lo impedisce di rifarlo
+             * (`tests/Feature/Nutrition/IlDiarioNonStaSulServerTest.php`).
+             *
+             * ⚠️ Nessuno ha riletto **questa** schermata quando il codice è
+             * cambiato, e per un giorno l'app ha dichiarato di mandare sui
+             * nostri server un dato che non manda più — nel punto esatto in
+             * cui si promette trasparenza. 🔍 Trovato nel giro UX del 23/09.
+             *
+             * 💡 Era sbagliata **due volte**: dichiarata dove non sta, e
+             * assente da dove sta. Chi leggeva questa card per sapere cosa
+             * perde disinstallando l'app non ci trovava il diario.
+             */
+            'Il diario alimentare, con quello che scrivi negli alimenti',
             'Foto dei progressi',
             'Le preferenze dell\'app',
             'La chiave che apre i messaggi con il trainer',
@@ -142,6 +162,7 @@ class DoveVannoIDati extends ConsumerWidget {
          * prima di aggiungere `nonce` ed `envelope_version`.
          */
         const _Card(
+          key: Key('dati-sul-server'),
           icona: Icons.cloud_outlined,
           titolo: 'Stanno sui nostri server',
           sottotitolo:
@@ -151,7 +172,6 @@ class DoveVannoIDati extends ConsumerWidget {
           voci: [
             'Account, email e accessi',
             'Il profilo: sesso, età, altezza, obiettivo e peso da raggiungere',
-            'Il diario alimentare, con quello che scrivi negli alimenti',
             'Le schede e i piani che ti assegna il trainer',
             'Acquisti e gettoni',
           ],
@@ -350,6 +370,7 @@ class DoveVannoIDati extends ConsumerWidget {
 
 class _Card extends StatelessWidget {
   const _Card({
+    super.key,
     required this.icona,
     required this.titolo,
     required this.sottotitolo,

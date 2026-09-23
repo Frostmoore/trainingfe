@@ -57,7 +57,7 @@ class PortaDelleChiavi extends ConsumerWidget {
           data: (stato) => switch (stato) {
             StatoChiavi.pronto => child,
             StatoChiavi.daCreare => SchermataPasswordDiRecupero(perche: perche),
-            StatoChiavi.daRipristinare => const SchermataRipristino(),
+            StatoChiavi.daRipristinare => SchermataRipristino(perche: perche),
           },
         );
   }

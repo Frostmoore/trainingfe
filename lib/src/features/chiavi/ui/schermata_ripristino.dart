@@ -7,6 +7,7 @@ import '../../../core/crypto/providers_crypto.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import 'ripristino_da_file.dart';
+import 'schermata_password_di_recupero.dart';
 
 /// Il ripristino su un dispositivo nuovo — S6.7.
 ///
@@ -37,7 +38,19 @@ import 'ripristino_da_file.dart';
 /// giorni; **non** per peso, diario e storico, che valgono anni. Quelli però li
 /// porta il ripristino di sistema, che è già avvenuto prima di arrivare qui.
 class SchermataRipristino extends ConsumerStatefulWidget {
-  const SchermataRipristino({super.key});
+  const SchermataRipristino({super.key, this.perche = PercheLaChiave.messaggi});
+
+  /// Perche' la chiave serve **qui**, cioè da dove si è arrivati.
+  ///
+  /// ⛔ Fino al 23/09/2026 questa schermata parlava sempre di **messaggi**.
+  /// ⚠️ Il motivo veniva passato solo alla schermata che *crea* la chiave, e
+  /// chi reinstallava l'app e provava a importare una scheda si sentiva
+  /// rispondere *«I tuoi messaggi sono chiusi a chiave»* — trovato nel giro
+  /// UX premendo «Importa da PDF o foto».
+  ///
+  /// 💡 Di serie resta `messaggi`: è la porta più frequentata, ed è la stessa
+  /// regola già scritta per `SchermataPasswordDiRecupero`.
+  final PercheLaChiave perche;
 
   @override
   ConsumerState<SchermataRipristino> createState() =>
@@ -376,8 +389,7 @@ class _SchermataRipristinoState extends ConsumerState<SchermataRipristino> {
           ),
           const SizedBox(height: Gap.sm),
           Text(
-            'I tuoi messaggi sono chiusi a chiave. Per riaprirli su questo '
-            'telefono serve la password di recupero che avevi creato.',
+            widget.perche.riapertura,
             style: testo.bodyMedium,
           ),
           const SizedBox(height: Gap.lg),

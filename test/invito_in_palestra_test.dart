@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/errors/api_exception.dart';
+import 'package:training_companion/src/features/auth/auth_controller.dart';
 import 'package:training_companion/src/features/onboarding/data/invito_in_palestra.dart';
 import 'package:training_companion/src/features/onboarding/invito_controller.dart';
-import 'package:training_companion/src/features/auth/auth_controller.dart';
 import 'package:training_companion/src/features/onboarding/ui/schermata_invito.dart';
 
 /// 🎯 La pagina che si apre toccando un link d'invito — 3b-V.

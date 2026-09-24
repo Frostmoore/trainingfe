@@ -114,6 +114,21 @@ void main() {
     return jsonDecode(riga.scheda) as Map<String, dynamic>;
   }
 
+  /// Il primo esercizio del primo giorno di una scheda salvata.
+  ///
+  /// ⚠️ **Esiste per tipizzare i passaggi**, non per accorciare: `List.first`
+  /// restituisce `dynamic`, e concatenarci sopra `['exercises'].first` fa
+  /// perdere all'analisi ogni tipo. 🚨 Non è pignoleria: su un `dynamic` un
+  /// nome di chiave sbagliato non lo dice **nessuno** — né l'analisi né il
+  /// compilatore — e il test fallisce con un `null` da qualche parte, lontano
+  /// dalla riga che l'ha causato.
+  Future<Map<String, dynamic>> primoEsercizio(int id) async {
+    final scheda = await rileggi(id);
+    final giorno = (scheda['days'] as List).first as Map<String, dynamic>;
+
+    return (giorno['exercises'] as List).first as Map<String, dynamic>;
+  }
+
   /// 🚨 **Il difetto che si è visto solo guardando il telefono.**
   ///
   /// ⛔ Le schede sono scese dal server **una volta sola** (3b-B.17): la copia
@@ -136,9 +151,7 @@ void main() {
       nomi: {17: 'Panca piana'},
     );
 
-    final dentro =
-        ((await rileggi(id))['days'] as List).first['exercises'].first
-            as Map<String, dynamic>;
+    final dentro = await primoEsercizio(id);
 
     expect(dentro['exercise_id'], 17);
     expect(dentro['name'], 'Panca piana');
@@ -212,9 +225,7 @@ void main() {
 
     await archivio.applicaLeRiconciliazioni({900: 17}, nomi: {17: 'Nuovo'});
 
-    final riga =
-        (((await rileggi(id))['days'] as List).first as Map)['exercises'].first
-            as Map;
+    final riga = await primoEsercizio(id);
 
     expect(riga['id'], 55, reason: 'La riga non si tocca.');
     expect((riga['exercise'] as Map)['id'], 17);
@@ -246,9 +257,8 @@ void main() {
     );
 
     final alt =
-        (((await rileggi(id))['days'] as List).first['exercises'].first
-                as Map)['alternatives']
-            .first;
+        ((await primoEsercizio(id))['alternatives'] as List).first
+            as Map<String, dynamic>;
 
     expect(alt['exercise_id'], 17);
     expect(alt['name'], 'Panca piana');
@@ -270,7 +280,7 @@ void main() {
     await archivio.applicaLeRiconciliazioni({900: 17});
 
     final dentro =
-        ((await rileggi(id))['days'] as List).first['exercises'].first as Map;
+        await primoEsercizio(id);
 
     expect(dentro['exercise_id'], 17);
     expect(dentro['name'], 'Panca Piana (Bilanciere)');
@@ -301,8 +311,7 @@ void main() {
     await archivio.applicaLeRiconciliazioni({900: 17}, nomi: {17: 'Nuovo'});
 
     final dentro =
-        ((await rileggi(buona))['days'] as List).first['exercises'].first
-            as Map;
+        await primoEsercizio(buona);
 
     expect(dentro['exercise_id'], 17);
   });

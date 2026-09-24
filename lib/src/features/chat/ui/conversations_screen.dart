@@ -24,6 +24,7 @@ import '../../trainer/ui/scelta_degli_allievi.dart';
 import '../../training/schede_ricevute_controller.dart';
 import '../chat_controller.dart';
 import '../data/permesso_negato.dart';
+import 'trova_una_persona.dart';
 import 'widgets/documento_in_chat.dart';
 import 'widgets/foto_in_chat.dart';
 import 'widgets/usa_e_getta.dart';
@@ -72,6 +73,28 @@ class ConversationsScreen extends ConsumerWidget {
             icon: const Icon(Icons.travel_explore_rounded),
             tooltip: 'Trova una palestra o un trainer',
             onPressed: () => context.push(AppRoutes.catalogo),
+          ),
+
+          /*
+           * 🆕 🔎 **Trova una persona col nome utente** — blocco B3, 24/09.
+           *
+           * 📌 Il committente: *«bisognerà inventarsi un sistema di username
+           * per poter scrivere a chiunque»*, e sull'interruttore *«va messo un
+           * toggle nella finestra della chat, in modo che non sia troppo
+           * invasivo»*.
+           *
+           * 💡 **Accanto al catalogo e non al suo posto**: il catalogo
+           * risponde a *«chi c'è vicino a me?»*, questo a *«dov'è finita
+           * quella persona?»*. Due domande diverse, due porte.
+           *
+           * ⚠️ Dentro la scheda c'è anche l'interruttore «fatti trovare»: è
+           * la stessa cosa vista dall'altro lato, e chi cerca è la persona che
+           * in quel momento capisce cosa vuol dire essere cercabile.
+           */
+          IconButton(
+            icon: const Icon(Icons.person_search_outlined),
+            tooltip: 'Trova una persona col nome utente',
+            onPressed: () => _trovaUnaPersona(context, ref),
           ),
 
           /*
@@ -358,6 +381,26 @@ Future<void> _scegliDestinatario(BuildContext context, WidgetRef ref) async {
       );
     }
   }
+}
+
+/// 🔎 Apre la scheda «trova una persona», e se ne nasce una conversazione la
+/// mostra — blocco B3, 24/09/2026.
+///
+/// ⚠️ Il filo che nasce è **di presentazione**: tre messaggi, il limite che
+/// c'era già. 💡 Da lì chi allena può mandare un invito in chat, che è la
+/// strada «da app a app» — esisteva già **tranne** il modo di trovarsi.
+Future<void> _trovaUnaPersona(BuildContext context, WidgetRef ref) async {
+  final id = await TrovaUnaPersona.mostra(context);
+
+  if (id == null || !context.mounted) return;
+
+  ref.invalidate(conversationsProvider);
+
+  await Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => ThreadScreen(id: id, titolo: 'Messaggi'),
+    ),
+  );
 }
 
 /// Il filo — A7.2 / A7.3.

@@ -41,6 +41,7 @@ import '../../features/promozioni/ui/schermata_porta_un_amico.dart';
 import '../../features/promozioni/ui/schermata_promo.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
+import '../../features/trainer/ui/inviti_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
 import '../../features/training/ui/allenamento_orologio_screen.dart';
 import '../../features/training/ui/compositore_scheda.dart';
@@ -118,6 +119,13 @@ class AppRoutes {
   /// Una scheda in più la trasformerebbe in un pannello di gestione con dentro
   /// anche il diario, che è il contrario di come questa app viene usata.
   static const mieiUtenti = '/profilo/i-miei-utenti';
+
+  /// 🆕 📨 **Gli inviti ancora in piedi** — blocco B1, 24/09/2026.
+  ///
+  /// ⚠️ **Sotto «I miei utenti»**, non accanto: si arriva qui dalla schermata
+  /// degli allievi, perché invitare è un gesto che si fa **guardando chi si ha
+  /// già** — e i posti liberi sono gli stessi in tutte e due le pagine.
+  static const invitiDelTrainer = '/profilo/i-miei-utenti/inviti';
 
   /*
    * ── 🔗 L'invito di una palestra — 3b-V ────────────────────────────────
@@ -653,6 +661,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.mieiUtenti,
         builder: (_, _) => const PortaDelleChiavi(child: MieiUtentiScreen()),
+      ),
+
+      /*
+       * 🆕 📨 **Gli inviti in sospeso** — blocco B1, 24/09/2026.
+       *
+       * 🚨 **Dentro `PortaDelleChiavi` come «I miei utenti»**, e per la stessa
+       * ragione scritta lì sopra: da qui si invita qualcuno, e chi arriva senza
+       * chiave si troverebbe a mandare un invito, ricevere la persona, e
+       * scoprire solo aprendo la chat che non può scriverle.
+       */
+      GoRoute(
+        path: AppRoutes.invitiDelTrainer,
+        builder: (_, _) => const PortaDelleChiavi(child: InvitiScreen()),
       ),
 
       /*

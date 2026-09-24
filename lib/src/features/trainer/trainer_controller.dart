@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
+import 'data/invito_in_sospeso.dart';
 import 'data/utente_seguito.dart';
 
 /// «I miei utenti» — F5.1 e F6 della Parte B.
@@ -36,6 +37,33 @@ final mieiUtentiProvider = FutureProvider<MieiUtenti>((ref) async {
   );
 });
 
+/// 🆕 📨 **Gli inviti ancora in piedi** — blocco B1, 24/09/2026.
+///
+/// ⛔ **Prima non esisteva nessuna schermata che li mostrasse**, e nemmeno una
+/// rotta che li restituisse: un invito creato dall'app spariva nel momento in
+/// cui il link finiva negli appunti.
+///
+/// 🚨 E ogni invito in sospeso **tiene un posto del piano** finché non scade:
+/// senza elenco non c'era modo di liberarlo, e un tocco distratto costava un
+/// posto per sette giorni.
+final invitiProvider = FutureProvider<InvitiEPosti>((ref) async {
+  final api = ref.watch(apiClientProvider);
+
+  final risposta = await api.get<Map<String, dynamic>>(
+    '/trainer/invites',
+    unwrap: false,
+  );
+
+  return InvitiEPosti(
+    inviti: (risposta['data'] as List? ?? const [])
+        .map((e) => InvitoInSospeso.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(growable: false),
+    posti: PostiDegliInviti.fromJson(
+      ((risposta['meta'] as Map?) ?? const {}).cast<String, dynamic>(),
+    ),
+  );
+});
+
 final trainerActionsProvider = Provider(
   (ref) => TrainerActions(ref.watch(apiClientProvider), ref),
 );
@@ -46,13 +74,21 @@ class TrainerActions {
   final ApiClient _api;
   final Ref _ref;
 
-  /// Crea un invito monouso e restituisce il link da condividere.
+  /// Crea un invito monouso.
   ///
   /// 🚨 **Il link arriva dal server**, non si compone qui: il giorno in cui
   /// cambia il dominio, un link costruito nell'app resterebbe sbagliato finché
   /// non esce una versione nuova sugli store — e nel frattempo ogni invito
   /// mandato punterebbe da nessuna parte.
-  Future<String> invita({String? email}) async {
+  ///
+  /// ══ 🆕 E ADESSO TORNA ANCHE L'ESITO DELLA MAIL — B1, 24/09/2026 ═══════════
+  ///
+  /// ⚠️ **Prima tornava solo `String`**, il link. Con l'email di mezzo non
+  /// bastava più: l'invio può fallire — e quando fallisce l'invito **resta
+  /// valido di proposito**, perché il link c'è. 💡 Chi ha scritto un indirizzo
+  /// deve poter leggere *«mandata»* solo quando è vero, e altrimenti sapere che
+  /// il link va passato a mano.
+  Future<InvitoCreato> invita({String? email}) async {
     final dati = await _api.post<Map<String, dynamic>>(
       '/trainer/invites',
       body: {
@@ -60,9 +96,44 @@ class TrainerActions {
       },
     );
 
-    _ref.invalidate(mieiUtentiProvider);
+    _ref
+      ..invalidate(mieiUtentiProvider)
+      ..invalidate(invitiProvider);
 
-    return dati['url']?.toString() ?? '';
+    return InvitoCreato.fromJson(dati);
+  }
+
+  /// 🆕 🚫 **Revoca un invito, e restituisce il posto.**
+  ///
+  /// 🚨 È il motivo per cui il committente l'ha chiesta: un invito valido
+  /// **tiene un posto del piano** finché non scade. ⛔ Senza revoca, un link
+  /// mandato alla persona sbagliata costa un posto per sette giorni.
+  Future<void> revocaInvito(int id) async {
+    await _api.delete('/trainer/invites/$id');
+
+    _ref
+      ..invalidate(invitiProvider)
+      ..invalidate(mieiUtentiProvider);
+  }
+
+  /// 🆕 📧 **Rimanda per email un invito già creato.**
+  ///
+  /// ⚠️ Senza questa, un invito finito nello spam si poteva solo revocare e
+  /// rifare — e rifarlo **consuma un altro posto** finché il primo non scade.
+  ///
+  /// 💡 `email` facoltativa: se manca, il server usa quella con cui l'invito era
+  /// nato.
+  Future<bool> rimandaInvito(int id, {String? email}) async {
+    final dati = await _api.post<Map<String, dynamic>>(
+      '/trainer/invites/$id/email',
+      body: {
+        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      },
+    );
+
+    _ref.invalidate(invitiProvider);
+
+    return dati['email_inviata'] as bool? ?? false;
   }
 
   /// Sospende o riattiva il rapporto — D5.

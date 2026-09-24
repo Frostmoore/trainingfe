@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
@@ -12,6 +13,7 @@ import '../../auth/auth_controller.dart';
 import '../data/utente_seguito.dart';
 import '../trainer_controller.dart';
 import 'abbonamento_scaduto.dart';
+import 'invita_qualcuno.dart';
 import 'scelta_del_piano.dart';
 
 /// «I miei utenti» — F5.1 e F6 della Parte B.
@@ -209,10 +211,24 @@ class _Elenco extends ConsumerWidget {
               // dopo aver compilato un modulo fa sembrare rotto un vincolo
               // commerciale.
               onPressed: dati.posti.puoInvitare
-                  ? () => _invita(context, ref)
+                  ? () => InvitaQualcuno.mostra(context)
                   : null,
               icon: const Icon(Icons.person_add_alt_1_rounded),
               label: const Text('Invita una persona'),
+            ),
+
+            /*
+             * 🆕 📨 **E da qui si arriva agli inviti in sospeso** — B1, 24/09.
+             *
+             * ⛔ Prima il link finiva negli appunti e l'invito **spariva**: non
+             * si rivedeva, non si ricopiava, non si revocava. ⚠️ E intanto
+             * teneva occupato un posto del piano per sette giorni.
+             */
+            const SizedBox(height: Gap.sm),
+            TextButton.icon(
+              onPressed: () => context.push(AppRoutes.invitiDelTrainer),
+              icon: const Icon(Icons.mail_outline, size: 18),
+              label: const Text('Inviti in sospeso'),
             ),
           ],
 
@@ -240,28 +256,6 @@ class _Elenco extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _invita(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      final link = await ref.read(trainerActionsProvider).invita();
-
-      await Clipboard.setData(ClipboardData(text: link));
-
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Link copiato. Vale una volta sola e scade fra 7 giorni.',
-          ),
-        ),
-      );
-    } on Object catch (errore) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(ApiClient.unwrapError(errore).message)),
-      );
-    }
   }
 
   /// Le persone divise fra **i tuoi allievi** e **gli iscritti della palestra**.

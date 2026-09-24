@@ -1,3 +1,26 @@
+/// 🆕 🏷️ **Con che cappello si entra** — blocco B2, 24/09/2026.
+///
+/// ⚠️ Le due voci sono quelle che il server accetta, e **nessun'altra**: un
+/// invito a comandare regalerebbe a chi lo riceve l'abbonamento della palestra.
+enum RuoloInvitato {
+  iscritto('iscritto', 'Iscritto'),
+  trainer('trainer', 'Trainer');
+
+  const RuoloInvitato(this.valore, this.etichetta);
+
+  /// Come lo scrive il server. ⚠️ `iscritto`, non `member`: il resto dell'API
+  /// parla inglese, ma questo valore finisce **a schermo** accanto a «trainer».
+  final String valore;
+
+  final String etichetta;
+
+  static RuoloInvitato? daStringa(String? valore) => switch (valore) {
+    'trainer' => RuoloInvitato.trainer,
+    'iscritto' => RuoloInvitato.iscritto,
+    _ => null,
+  };
+}
+
 /// 📨 **Un invito ancora in piedi** — blocco B1, 24/09/2026.
 ///
 /// ══ 🚨 PERCHE' QUESTA CLASSE NON ESISTEVA ════════════════════════════════════
@@ -17,6 +40,7 @@ class InvitoInSospeso {
     this.email,
     this.emailInviataIl,
     this.creatoIl,
+    this.ruolo,
   });
 
   factory InvitoInSospeso.fromJson(Map<String, dynamic> json) =>
@@ -33,6 +57,7 @@ class InvitoInSospeso {
         scadeIl:
             DateTime.tryParse(json['scade_il']?.toString() ?? '')?.toLocal() ??
             DateTime.now(),
+        ruolo: RuoloInvitato.daStringa(json['ruolo']?.toString()),
       );
 
   final int id;
@@ -51,6 +76,16 @@ class InvitoInSospeso {
 
   final DateTime? creatoIl;
   final DateTime scadeIl;
+
+  /// 🆕 🏷️ Con che cappello entra chi lo riscatta — B2, 24/09/2026.
+  ///
+  /// ⚠️ `null` per gli inviti di un trainer, che hanno una specie sola.
+  ///
+  /// 🚨 **Non è decorazione**: nello stesso elenco di una palestra ci sono
+  /// inviti che consumano posti **diversi**. ⛔ Senza, chi revoca per liberare
+  /// un posto iscritto può revocarne uno trainer e vedere muoversi il contatore
+  /// sbagliato.
+  final RuoloInvitato? ruolo;
 
   bool get mandatoPerEmail => emailInviataIl != null;
 
@@ -89,10 +124,25 @@ class PostiDegliInviti {
 
 /// L'elenco e i posti, insieme.
 class InvitiEPosti {
-  const InvitiEPosti({required this.inviti, required this.posti});
+  const InvitiEPosti({
+    required this.inviti,
+    required this.posti,
+    this.postiTrainer,
+  });
 
   final List<InvitoInSospeso> inviti;
+
+  /// I posti per le persone che si allenano. Per un trainer sono **i suoi
+  /// allievi**, per una palestra **i suoi iscritti**.
   final PostiDegliInviti posti;
+
+  /// 🆕 🏋️ I posti trainer — **solo una palestra ne ha**, B2, 24/09/2026.
+  ///
+  /// 🚨 È un limite **a parte** (`plans.max_trainers`), e `null` quando chi
+  /// guarda è un trainer. ⛔ Sommarlo all'altro direbbe «restano 4» a una
+  /// palestra che ha finito i posti trainer e ne ha quattro per gli iscritti:
+  /// un numero vero che risponde alla domanda sbagliata.
+  final PostiDegliInviti? postiTrainer;
 }
 
 /// Cosa è successo creando un invito.
@@ -107,6 +157,7 @@ class InvitoCreato {
     required this.url,
     required this.emailInviata,
     this.email,
+    this.ruolo,
   });
 
   factory InvitoCreato.fromJson(Map<String, dynamic> json) => InvitoCreato(
@@ -114,10 +165,39 @@ class InvitoCreato {
     url: json['url']?.toString() ?? '',
     email: json['email']?.toString(),
     emailInviata: json['email_inviata'] as bool? ?? false,
+    ruolo: RuoloInvitato.daStringa(json['ruolo']?.toString()),
   );
 
   final int id;
   final String url;
   final String? email;
   final bool emailInviata;
+
+  /// 🆕 Con che cappello entrerà chi lo riscatta. `null` per un trainer.
+  final RuoloInvitato? ruolo;
+}
+
+/// 🆕 🚪 **Chi sta invitando** — blocco B2, 24/09/2026.
+///
+/// ══ 🔑 PERCHE' UN ENUM E NON DUE SCHERMATE ═════════════════════════
+///
+/// ⛔ La pagina degli inviti di una palestra fa **le stesse quattro cose** di
+/// quella di un trainer: crea, copia, rimanda, revoca. Riscriverla vorrebbe dire
+/// due schermate da tenere allineate per sempre — ed è la lezione tornata tre
+/// volte in due giorni: *una regola che serve in due posti non va scritta in
+/// nessuno dei due*.
+///
+/// 💡 Quindi cambia **solo l'indirizzo delle rotte**, e sta qui.
+enum ChiInvita {
+  trainer('/trainer/invites', 'Inviti in sospeso'),
+  palestra('/gym/invites', 'Inviti della palestra');
+
+  const ChiInvita(this.rotta, this.titolo);
+
+  final String rotta;
+  final String titolo;
+
+  /// ⚠️ Solo una palestra sceglie **che specie** di persona invitare, e solo
+  /// lei ha due contatori: è l'unica differenza vera fra i due casi.
+  bool get sceglieIlRuolo => this == ChiInvita.palestra;
 }

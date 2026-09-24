@@ -158,6 +158,36 @@ class ProfileScreen extends ConsumerWidget {
                  * indipendente: per l'app sono la stessa cosa — gente che segue
                  * altre persone — e la differenza la fa il server.
                  */
+                /*
+                 * 🆕 🏋️ **«Inviti della palestra» — blocco B2, 24/09/2026.**
+                 *
+                 * 📌 Il committente, 23/09: *«trainer e palestre possono
+                 * proprio fare gli inviti direttamente dall'app»*. Questa è la
+                 * metà della palestra.
+                 *
+                 * ⚠️ **Sta FUORI dal blocco di chi allena**, e non è una
+                 * sfumatura: chi gestisce una palestra può non allenare nessuno
+                 * — è un cappello diverso, non un grado in più. ⛔ Dentro
+                 * quell'`if` la voce sparirebbe proprio al gestore che non
+                 * segue allievi, cioè al caso più comune.
+                 *
+                 * 💡 E chi ha **tutti e due** i cappelli le vede tutte e due,
+                 * che è esattamente quello che deve succedere: sono due elenchi
+                 * di inviti diversi, su due piani diversi.
+                 */
+                if (utente?.gestisceUnaPalestra ?? false) ...[
+                  ListTile(
+                    leading: const Icon(Icons.mail_outline),
+                    title: const Text('Inviti della palestra'),
+                    subtitle: const Text(
+                      'Invita iscritti e trainer, e vedi i posti che restano',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.invitiDellaPalestra),
+                  ),
+                  const Divider(height: 1),
+                ],
+
                 if (utente?.isTrainer ?? false) ...[
                   /*
                    * ⛔ **Scaduta, la voce NON sparisce** — 3b-U.3.1.

@@ -46,21 +46,45 @@ final mieiUtentiProvider = FutureProvider<MieiUtenti>((ref) async {
 /// 🚨 E ogni invito in sospeso **tiene un posto del piano** finché non scade:
 /// senza elenco non c'era modo di liberarlo, e un tocco distratto costava un
 /// posto per sette giorni.
-final invitiProvider = FutureProvider<InvitiEPosti>((ref) async {
+/// 🆕 🏋️ **Una famiglia, e non due provider** — blocco B2, 24/09/2026.
+///
+/// ⛔ Gli inviti di una palestra hanno le stesse quattro azioni di quelli di un
+/// trainer: un secondo provider vorrebbe dire la stessa logica in due posti, e
+/// due posti divergono. 💡 Cambia **solo la rotta**, e la porta [ChiInvita].
+///
+/// ⚠️ **I due contatori arrivano in forme diverse**, e è di proposito: un
+/// trainer ha un limite solo, una palestra ne ha **due** — iscritti e trainer
+/// — e il server li manda annidati. 🚨 Appiattirli qui vorrebbe dire
+/// dimenticare quale dei due sta finendo.
+final invitiProvider = FutureProvider.family<InvitiEPosti, ChiInvita>((
+  ref,
+  chi,
+) async {
   final api = ref.watch(apiClientProvider);
 
   final risposta = await api.get<Map<String, dynamic>>(
-    '/trainer/invites',
+    chi.rotta,
     unwrap: false,
   );
 
+  final meta = ((risposta['meta'] as Map?) ?? const {}).cast<String, dynamic>();
+
   return InvitiEPosti(
     inviti: (risposta['data'] as List? ?? const [])
-        .map((e) => InvitoInSospeso.fromJson((e as Map).cast<String, dynamic>()))
+        .map(
+          (e) => InvitoInSospeso.fromJson((e as Map).cast<String, dynamic>()),
+        )
         .toList(growable: false),
     posti: PostiDegliInviti.fromJson(
-      ((risposta['meta'] as Map?) ?? const {}).cast<String, dynamic>(),
+      chi.sceglieIlRuolo
+          ? ((meta['iscritti'] as Map?) ?? const {}).cast<String, dynamic>()
+          : meta,
     ),
+    postiTrainer: chi.sceglieIlRuolo
+        ? PostiDegliInviti.fromJson(
+            ((meta['trainer'] as Map?) ?? const {}).cast<String, dynamic>(),
+          )
+        : null,
   );
 });
 
@@ -88,17 +112,29 @@ class TrainerActions {
   /// valido di proposito**, perché il link c'è. 💡 Chi ha scritto un indirizzo
   /// deve poter leggere *«mandata»* solo quando è vero, e altrimenti sapere che
   /// il link va passato a mano.
-  Future<InvitoCreato> invita({String? email}) async {
+  Future<InvitoCreato> invita({
+    String? email,
+    ChiInvita chi = ChiInvita.trainer,
+    RuoloInvitato? ruolo,
+  }) async {
     final dati = await _api.post<Map<String, dynamic>>(
-      '/trainer/invites',
+      chi.rotta,
       body: {
         if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+
+        /*
+         * ⚠️ **Il ruolo si manda solo se lo si sceglie davvero**: le rotte
+         * del trainer non lo conoscono, e un campo di troppo in una
+         * validazione stretta è un 422 su una cosa che nessuno ha chiesto.
+         */
+        if (chi.sceglieIlRuolo)
+          'ruolo': (ruolo ?? RuoloInvitato.iscritto).valore,
       },
     );
 
     _ref
       ..invalidate(mieiUtentiProvider)
-      ..invalidate(invitiProvider);
+      ..invalidate(invitiProvider(chi));
 
     return InvitoCreato.fromJson(dati);
   }
@@ -108,11 +144,11 @@ class TrainerActions {
   /// 🚨 È il motivo per cui il committente l'ha chiesta: un invito valido
   /// **tiene un posto del piano** finché non scade. ⛔ Senza revoca, un link
   /// mandato alla persona sbagliata costa un posto per sette giorni.
-  Future<void> revocaInvito(int id) async {
-    await _api.delete('/trainer/invites/$id');
+  Future<void> revocaInvito(int id, {ChiInvita chi = ChiInvita.trainer}) async {
+    await _api.delete('${chi.rotta}/$id');
 
     _ref
-      ..invalidate(invitiProvider)
+      ..invalidate(invitiProvider(chi))
       ..invalidate(mieiUtentiProvider);
   }
 
@@ -123,15 +159,19 @@ class TrainerActions {
   ///
   /// 💡 `email` facoltativa: se manca, il server usa quella con cui l'invito era
   /// nato.
-  Future<bool> rimandaInvito(int id, {String? email}) async {
+  Future<bool> rimandaInvito(
+    int id, {
+    String? email,
+    ChiInvita chi = ChiInvita.trainer,
+  }) async {
     final dati = await _api.post<Map<String, dynamic>>(
-      '/trainer/invites/$id/email',
+      '${chi.rotta}/$id/email',
       body: {
         if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
       },
     );
 
-    _ref.invalidate(invitiProvider);
+    _ref.invalidate(invitiProvider(chi));
 
     return dati['email_inviata'] as bool? ?? false;
   }

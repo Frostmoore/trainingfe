@@ -89,7 +89,7 @@ void main() {
           //    configurazione, che senza `bootstrap()` lanciano apposta.
           ...await intestazioneFinta(),
           invitiProvider.overrideWith(
-            (ref) async => InvitiEPosti(inviti: lista, posti: posti),
+            (ref, chi) async => InvitiEPosti(inviti: lista, posti: posti),
           ),
           trainerActionsProvider.overrideWith((ref) => azioni),
         ],
@@ -134,10 +134,7 @@ void main() {
     ) async {
       await apri(tester, [invito()]);
 
-      expect(
-        find.textContaining('Posti liberi: 9 su 10'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Posti liberi: 9 su 10'), findsOneWidget);
       expect(
         find.textContaining('Contano anche gli inviti in sospeso'),
         findsOneWidget,
@@ -165,7 +162,10 @@ void main() {
       await tester.tap(find.text('Revoca'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('il posto che occupava torna'), findsOneWidget);
+      expect(
+        find.textContaining('il posto che occupava torna'),
+        findsOneWidget,
+      );
       expect(azioni.revocati, isEmpty, reason: 'Ha revocato senza conferma.');
 
       await tester.tap(find.widgetWithText(FilledButton, 'Revoca'));
@@ -326,7 +326,11 @@ class _AzioniFinte extends TrainerActions {
   bool mailParte = true;
 
   @override
-  Future<InvitoCreato> invita({String? email}) async {
+  Future<InvitoCreato> invita({
+    String? email,
+    ChiInvita chi = ChiInvita.trainer,
+    RuoloInvitato? ruolo,
+  }) async {
     creati.add(email);
 
     return InvitoCreato(
@@ -338,10 +342,17 @@ class _AzioniFinte extends TrainerActions {
   }
 
   @override
-  Future<void> revocaInvito(int id) async => revocati.add(id);
+  Future<void> revocaInvito(
+    int id, {
+    ChiInvita chi = ChiInvita.trainer,
+  }) async => revocati.add(id);
 
   @override
-  Future<bool> rimandaInvito(int id, {String? email}) async {
+  Future<bool> rimandaInvito(
+    int id, {
+    String? email,
+    ChiInvita chi = ChiInvita.trainer,
+  }) async {
     rimandati.add((id, email));
 
     return mailParte;

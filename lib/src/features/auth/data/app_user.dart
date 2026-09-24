@@ -18,6 +18,7 @@ class AppUser {
     this.passwordIsSet = true,
     this.social = const [],
     this.isTrainer = false,
+    this.gestisceUnaPalestra = false,
     this.aiAbilitata = true,
     this.abbonato = false,
     this.puoAllenare,
@@ -39,6 +40,25 @@ class AppUser {
     // «i miei utenti», cioè l'unica cosa per cui usa questa applicazione.
     isTrainer: ((json['roles'] as List?) ?? const []).any(
       (r) => r == 'trainer' || r == 'free_trainer',
+    ),
+
+    /*
+     * 🆕 🏋️ **Chi comanda in una palestra** — blocco B2, 24/09/2026.
+     *
+     * 💡 Si ricava da `roles`, come `isTrainer`: nessun campo nuovo da
+     * aggiungere al server, nessuna versione di backend da aspettare.
+     *
+     * ⚠️ **Non e' «allena»**: un gestore puo' non allenare nessuno, e un
+     * trainer di palestra non gestisce niente. Sono due cappelli diversi, e
+     * l'unica cosa che questo campo decide è se disegnare la voce «Inviti
+     * della palestra».
+     *
+     * 🚨 E resta **informativo**: il cancello vero è il 403 di
+     * `InvitiDellaPalestraController`, che risponde anche a un'app che
+     * ignorasse questo valore. Un client non decide mai i permessi.
+     */
+    gestisceUnaPalestra: ((json['roles'] as List?) ?? const []).contains(
+      'gym_admin',
     ),
 
     /*
@@ -109,6 +129,12 @@ class AppUser {
   /// errore: un pulsante rotto fa sembrare rotta tutta l'applicazione, non solo
   /// se stesso.
   final bool isTrainer;
+
+  /// 🆕 🏋️ Comanda in una palestra (`gym_admin`) — B2, 24/09/2026.
+  ///
+  /// ⚠️ Diverso da [isTrainer]: sono due cappelli, e una persona puo'
+  /// averne uno, l'altro, o tutti e due.
+  final bool gestisceUnaPalestra;
 
   /// Se il piano di questa persona comprende le funzioni con l'AI — F4.
   ///

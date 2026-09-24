@@ -30,17 +30,31 @@ import 'invita_qualcuno.dart';
 ///
 /// 💡 È la gemella della pagina del pannello (`InvitoDelTrainerResource`), e fa
 /// le stesse tre cose: **copia**, **rimanda**, **revoca**.
+///
+/// ══ 🆕 E DAL 24/09 SERVE ANCHE ALLE PALESTRE — blocco B2 ════════════════════
+///
+/// ⛔ **La pagina è una sola**, con [ChiInvita] a dire da quali rotte legge.
+/// Riscriverla per la palestra vorrebbe dire due schermate che fanno le stesse
+/// quattro cose e che divergono al primo ritocco — la lezione tornata tre volte
+/// in due giorni: *una regola che serve in due posti non va scritta in nessuno
+/// dei due*.
+///
+/// ⚠️ **Le differenze vere sono due**, e sono di prodotto: una palestra sceglie
+/// se invitare un **iscritto** o un **trainer**, e ha **due contatori** invece
+/// di uno, perché sono due limiti diversi del piano.
 class InvitiScreen extends ConsumerWidget {
-  const InvitiScreen({super.key});
+  const InvitiScreen({this.chi = ChiInvita.trainer, super.key});
+
+  final ChiInvita chi;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stato = ref.watch(invitiProvider);
+    final stato = ref.watch(invitiProvider(chi));
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Inviti in sospeso'),
+      appBar: IntestazioneApp(titolo: chi.titolo),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => InvitaQualcuno.mostra(context),
+        onPressed: () => InvitaQualcuno.mostra(context, chi: chi),
         icon: const Icon(Icons.person_add_alt),
         label: const Text('Invita'),
       ),
@@ -48,11 +62,14 @@ class InvitiScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           error: ApiClient.unwrapError(e),
-          onRetry: () => ref.invalidate(invitiProvider),
+          onRetry: () => ref.invalidate(invitiProvider(chi)),
         ),
         data: (dati) => RefreshIndicator(
-          onRefresh: () =>
-              aggiornaTutto(context, ref, () => ref.invalidate(invitiProvider)),
+          onRefresh: () => aggiornaTutto(
+            context,
+            ref,
+            () => ref.invalidate(invitiProvider(chi)),
+          ),
           child: dati.inviti.isEmpty
               /*
                * ⚠️ **Il vuoto resta scorrevole**: `ListView` e non `Center`, o
@@ -75,9 +92,26 @@ class InvitiScreen extends ConsumerWidget {
               : ListView(
                   padding: const EdgeInsets.all(Gap.lg),
                   children: [
-                    _Posti(posti: dati.posti),
+                    _Posti(
+                      posti: dati.posti,
+                      etichetta: chi.sceglieIlRuolo ? 'Iscritti' : null,
+                    ),
+
+                    /*
+                     * 🚨 **Due contatori, non uno sommato.** I posti iscritti e
+                     * i posti trainer sono limiti diversi del piano: un totale
+                     * unico direbbe «restano 4» a una palestra che ha finito i
+                     * posti trainer — un numero vero che risponde alla domanda
+                     * sbagliata.
+                     */
+                    if (dati.postiTrainer != null) ...[
+                      const SizedBox(height: Gap.sm),
+                      _Posti(posti: dati.postiTrainer!, etichetta: 'Trainer'),
+                    ],
                     const SizedBox(height: Gap.lg),
-                    for (final invito in dati.inviti) _Riga(invito: invito),
+
+                    for (final invito in dati.inviti)
+                      _Riga(invito: invito, chi: chi),
                   ],
                 ),
         ),
@@ -91,27 +125,37 @@ class InvitiScreen extends ConsumerWidget {
 /// 💡 Sta **sopra l'elenco** perché è la ragione per cui si guarda questa
 /// pagina: non «quanti inviti ho mandato», ma «quanti posti mi restano».
 class _Posti extends StatelessWidget {
-  const _Posti({required this.posti});
+  const _Posti({required this.posti, this.etichetta});
 
   final PostiDegliInviti posti;
+
+  /// 🆕 Quali posti sono — B2. `null` quando ce n'è **una specie sola**:
+  /// scrivere «Allievi» a un trainer che ha un limite solo è una parola in più
+  /// che non distingue niente.
+  final String? etichetta;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final rimasti = posti.rimasti;
+    final nome = etichetta == null ? '' : '$etichetta · ';
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Gap.lg),
         child: Row(
           children: [
-            const Icon(Icons.event_seat_outlined),
+            Icon(
+              etichetta == 'Trainer'
+                  ? Icons.sports_outlined
+                  : Icons.event_seat_outlined,
+            ),
             const SizedBox(width: Gap.md),
             Expanded(
               child: Text(
                 posti.totali == null
-                    ? 'Il tuo piano non mette limiti.'
-                    : 'Posti liberi: ${rimasti ?? 0} su ${posti.totali}. '
+                    ? '${nome}Il tuo piano non mette limiti.'
+                    : '${nome}Posti liberi: ${rimasti ?? 0} su ${posti.totali}. '
                           'Contano anche gli inviti in sospeso.',
                 style: tema.textTheme.bodyMedium,
               ),
@@ -124,9 +168,12 @@ class _Posti extends StatelessWidget {
 }
 
 class _Riga extends ConsumerStatefulWidget {
-  const _Riga({required this.invito});
+  const _Riga({required this.invito, required this.chi});
 
   final InvitoInSospeso invito;
+
+  /// 🆕 Da quali rotte revocare e rimandare — B2, 24/09/2026.
+  final ChiInvita chi;
 
   @override
   ConsumerState<_Riga> createState() => _RigaState();
@@ -182,7 +229,20 @@ class _RigaState extends ConsumerState<_Riga> {
              */
             Text(
               [
-                if (invito.mandatoPerEmail) 'Mandata per email' else 'Non mandata',
+                /*
+                 * 🆕 🏷️ **Il ruolo per primo** — B2, 24/09/2026.
+                 *
+                 * 🚨 In una palestra lo stesso elenco tiene inviti che
+                 * consumano **posti diversi**: chi revoca per liberare un posto
+                 * iscritto deve vedere da qui che quello è un trainer, prima di
+                 * toccarlo — non dopo, guardando il contatore sbagliato
+                 * muoversi.
+                 */
+                if (invito.ruolo != null) invito.ruolo!.etichetta,
+                if (invito.mandatoPerEmail)
+                  'Mandata per email'
+                else
+                  'Non mandata',
                 'scade fra ${invito.giorniRimasti} '
                     '${invito.giorniRimasti == 1 ? 'giorno' : 'giorni'}',
               ].join(' · '),
@@ -227,9 +287,9 @@ class _RigaState extends ConsumerState<_Riga> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link copiato.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copiato.')));
   }
 
   /// Rimanda la mail. Se l'invito non ha un indirizzo, prima lo si chiede.
@@ -253,7 +313,7 @@ class _RigaState extends ConsumerState<_Riga> {
     try {
       final partita = await ref
           .read(trainerActionsProvider)
-          .rimandaInvito(widget.invito.id, email: indirizzo);
+          .rimandaInvito(widget.invito.id, email: indirizzo, chi: widget.chi);
 
       messenger.showSnackBar(
         SnackBar(
@@ -334,10 +394,14 @@ class _RigaState extends ConsumerState<_Riga> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      await ref.read(trainerActionsProvider).revocaInvito(widget.invito.id);
+      await ref
+          .read(trainerActionsProvider)
+          .revocaInvito(widget.invito.id, chi: widget.chi);
 
       messenger.showSnackBar(
-        const SnackBar(content: Text('Invito revocato: il posto è di nuovo libero.')),
+        const SnackBar(
+          content: Text('Invito revocato: il posto è di nuovo libero.'),
+        ),
       );
     } on Object catch (errore) {
       if (mounted) setState(() => _inCorso = false);

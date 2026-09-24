@@ -41,6 +41,7 @@ import '../../features/promozioni/ui/schermata_porta_un_amico.dart';
 import '../../features/promozioni/ui/schermata_promo.dart';
 import '../../features/scoperta/ui/catalogo_screen.dart';
 import '../../features/sleep/ui/sleep_screen.dart';
+import '../../features/trainer/data/invito_in_sospeso.dart';
 import '../../features/trainer/ui/inviti_screen.dart';
 import '../../features/trainer/ui/miei_utenti_screen.dart';
 import '../../features/training/ui/allenamento_orologio_screen.dart';
@@ -126,6 +127,16 @@ class AppRoutes {
   /// degli allievi, perché invitare è un gesto che si fa **guardando chi si ha
   /// già** — e i posti liberi sono gli stessi in tutte e due le pagine.
   static const invitiDelTrainer = '/profilo/i-miei-utenti/inviti';
+
+  /// 🆕 🏋️ **Gli inviti di una palestra** — blocco B2, 24/09/2026.
+  ///
+  /// ⚠️ **Non è sotto «I miei utenti»** come la gemella, ed è voluto: chi
+  /// gestisce una palestra può non allenare nessuno, e quella pagina lì non ce
+  /// l'ha. Si arriva dal profilo, dove sta il suo cappello.
+  ///
+  /// 💡 La schermata è **la stessa** della rotta qui sopra: cambia solo
+  /// `ChiInvita`, e quindi le rotte da cui legge.
+  static const invitiDellaPalestra = '/profilo/palestra/inviti';
 
   /*
    * ── 🔗 L'invito di una palestra — 3b-V ────────────────────────────────
@@ -674,6 +685,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.invitiDelTrainer,
         builder: (_, _) => const PortaDelleChiavi(child: InvitiScreen()),
+      ),
+
+      /*
+       * 🆕 🏋️ **La gemella della palestra** — B2, 24/09/2026.
+       *
+       * 🚨 **Dentro `PortaDelleChiavi` come l'altra**, e per la stessa
+       * ragione: da qui si invita qualcuno, e chi arriva senza chiave manderebbe
+       * un invito, riceverebbe la persona, e scoprirebbe solo aprendo la chat di
+       * non poterle scrivere.
+       */
+      GoRoute(
+        path: AppRoutes.invitiDellaPalestra,
+        builder: (_, _) => const PortaDelleChiavi(
+          child: InvitiScreen(chi: ChiInvita.palestra),
+        ),
       ),
 
       /*

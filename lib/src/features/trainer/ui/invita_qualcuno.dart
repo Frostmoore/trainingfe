@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/invito_in_sospeso.dart';
 import '../trainer_controller.dart';
 
 /// 📨 **«Invita una persona»: copio il link, o lo mando io** — B1, 24/09/2026.
@@ -26,17 +27,24 @@ import '../trainer_controller.dart';
 /// ⚠️ **L'API lo permetteva già dal 22/09** (`email` su `POST /trainer/invites`):
 /// era l'app a non usarlo.
 class InvitaQualcuno extends ConsumerStatefulWidget {
-  const InvitaQualcuno({super.key});
+  const InvitaQualcuno({this.chi = ChiInvita.trainer, super.key});
+
+  /// 🆕 Chi sta invitando — B2, 24/09/2026: decide **la rotta** e se compare la
+  /// scelta fra iscritto e trainer.
+  final ChiInvita chi;
 
   /// Apre la scheda. Torna `true` se un invito è stato creato davvero.
-  static Future<bool> mostra(BuildContext context) async {
+  static Future<bool> mostra(
+    BuildContext context, {
+    ChiInvita chi = ChiInvita.trainer,
+  }) async {
     final fatto = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const Padding(
-        padding: EdgeInsets.only(bottom: Gap.lg),
-        child: InvitaQualcuno(),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.only(bottom: Gap.lg),
+        child: InvitaQualcuno(chi: chi),
       ),
     );
 
@@ -50,6 +58,12 @@ class InvitaQualcuno extends ConsumerStatefulWidget {
 class _InvitaQualcunoState extends ConsumerState<InvitaQualcuno> {
   final _email = TextEditingController();
   bool _inCorso = false;
+
+  /// 🆕 Con che cappello entra chi riceve l'invito — B2.
+  ///
+  /// 💡 **Di serie «iscritto»**, che è il caso di gran lunga più frequente: una
+  /// palestra invita trainer una volta ogni tanto e iscritti tutti i giorni.
+  RuoloInvitato _ruolo = RuoloInvitato.iscritto;
 
   @override
   void dispose() {
@@ -88,13 +102,45 @@ class _InvitaQualcunoState extends ConsumerState<InvitaQualcuno> {
            */
           Text(
             'L\'invito vale una volta sola e scade fra 7 giorni. '
-            'Finché è in piedi tiene occupato un posto del tuo piano: '
-            'se sbagli, puoi revocarlo da «Inviti in sospeso».',
+            'Finché è in piedi tiene occupato un posto del '
+            '${widget.chi.sceglieIlRuolo ? 'vostro' : 'tuo'} piano: se sbagli, '
+            'puoi revocarlo da «${widget.chi.titolo}».',
             style: tema.textTheme.bodyMedium?.copyWith(
               color: tema.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: Gap.lg),
+
+          /*
+           * 🆕 🏷️ **Iscritto o trainer** — B2, 24/09/2026, e **solo per una
+           * palestra**: un trainer indipendente ha una specie sola di allievo.
+           *
+           * 🚨 Sta **prima dell'email** perché decide **quale posto** si sta
+           * per consumare: sceglierlo dopo aver scritto l'indirizzo vorrebbe
+           * dire tornare indietro quando il limite che salta non è quello che
+           * si stava guardando.
+           */
+          if (widget.chi.sceglieIlRuolo) ...[
+            SegmentedButton<RuoloInvitato>(
+              segments: const [
+                ButtonSegment(
+                  value: RuoloInvitato.iscritto,
+                  icon: Icon(Icons.person_outline),
+                  label: Text('Iscritto'),
+                ),
+                ButtonSegment(
+                  value: RuoloInvitato.trainer,
+                  icon: Icon(Icons.sports_outlined),
+                  label: Text('Trainer'),
+                ),
+              ],
+              selected: {_ruolo},
+              onSelectionChanged: _inCorso
+                  ? null
+                  : (scelta) => setState(() => _ruolo = scelta.first),
+            ),
+            const SizedBox(height: Gap.lg),
+          ],
 
           TextField(
             controller: _email,
@@ -138,7 +184,9 @@ class _InvitaQualcunoState extends ConsumerState<InvitaQualcuno> {
        */
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Scrivi l\'email, oppure scegli «Crea e copia il link».'),
+          content: Text(
+            'Scrivi l\'email, oppure scegli «Crea e copia il link».',
+          ),
         ),
       );
 
@@ -153,7 +201,11 @@ class _InvitaQualcunoState extends ConsumerState<InvitaQualcuno> {
     try {
       final invito = await ref
           .read(trainerActionsProvider)
-          .invita(email: manda ? indirizzo : null);
+          .invita(
+            email: manda ? indirizzo : null,
+            chi: widget.chi,
+            ruolo: _ruolo,
+          );
 
       /*
        * 🚨 **Il link finisce negli appunti in tutti e due i casi.** Anche
@@ -167,19 +219,18 @@ class _InvitaQualcunoState extends ConsumerState<InvitaQualcuno> {
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            switch ((manda, invito.emailInviata)) {
-              (true, true) => 'Mandata a $indirizzo. Il link è anche negli appunti.',
-              /*
+          content: Text(switch ((manda, invito.emailInviata)) {
+            (true, true) =>
+              'Mandata a $indirizzo. Il link è anche negli appunti.',
+            /*
                * ⚠️ **Non si mente quando l'invio fallisce.** L'invito resta
                * valido di proposito — il link c'è — ma dire «mandata» farebbe
                * aspettare una mail che non arriverà mai.
                */
-              (true, false) =>
-                'Invito creato, ma la mail non è partita: il link è negli appunti.',
-              _ => 'Link copiato. Vale una volta sola e scade fra 7 giorni.',
-            },
-          ),
+            (true, false) =>
+              'Invito creato, ma la mail non è partita: il link è negli appunti.',
+            _ => 'Link copiato. Vale una volta sola e scade fra 7 giorni.',
+          }),
         ),
       );
     } on Object catch (errore) {

@@ -10,6 +10,7 @@ import 'features/acquisti/ui/widgets/ricontrollo_al_rientro.dart';
 import 'features/aggiornamento/aggiornamento_controller.dart';
 import 'features/aggiornamento/ui/schermata_aggiorna.dart';
 import 'features/auth/auth_controller.dart';
+import 'features/avvisi/ui/avviso_all_apertura.dart';
 import 'features/onboarding/branding_controller.dart';
 import 'features/onboarding/riferimento_dell_installazione.dart';
 import 'features/privacy/liberatoria_controller.dart';
@@ -264,11 +265,24 @@ class _TrainingCompanionAppState extends ConsumerState<TrainingCompanionApp> {
          * nasce **fuori** da questo telefono — un allievo che entra in palestra
          * — e il trainer può ritrovarsela su qualunque schermata.
          */
+        /*
+         * 🆕 📣 **E gli avvisi della piattaforma, allo stesso piano** —
+         * blocco B4, 24/09/2026.
+         *
+         * ⛔ **All'apertura e ai rientri**, mai sopra quello che si sta
+         * facendo: mai sul player di un allenamento, mai dentro la chat, mai
+         * durante una registrazione.
+         *
+         * ⚠️ **Sotto la schermata di aggiornamento obbligatorio**, come gli
+         * altri due: a chi deve aggiornare l'app non si chiede niente.
+         */
         return daAggiornare
             ? const SchermataAggiorna()
             : RicontrolloAlRientro(
                 child: SceltaDelloSlotAlRientro(
-                  child: figlio ?? const SizedBox.shrink(),
+                  child: AvvisoAllApertura(
+                    child: figlio ?? const SizedBox.shrink(),
+                  ),
                 ),
               );
       },

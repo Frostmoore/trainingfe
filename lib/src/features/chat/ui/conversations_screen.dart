@@ -76,24 +76,28 @@ class ConversationsScreen extends ConsumerWidget {
           ),
 
           /*
-           * 🆕 🔎 **Trova una persona col nome utente** — blocco B3, 24/09.
+           * 🆕 🔎 **«Trova qualcuno»** — B3 (24/09), allargata lo stesso
+           * giorno con le schede pubbliche.
            *
            * 📌 Il committente: *«bisognerà inventarsi un sistema di username
            * per poter scrivere a chiunque»*, e sull'interruttore *«va messo un
            * toggle nella finestra della chat, in modo che non sia troppo
-           * invasivo»*.
+           * invasivo»*. Poi, sul catalogo: *«per il momento mettiamole
+           * semplicemente che si mostrano tutte nella ricerca della chat, con
+           * un criterio di vicinanza»*.
            *
-           * 💡 **Accanto al catalogo e non al suo posto**: il catalogo
-           * risponde a *«chi c'è vicino a me?»*, questo a *«dov'è finita
-           * quella persona?»*. Due domande diverse, due porte.
+           * 💡 **Adesso questa scheda risponde a tutte e due le domande**:
+           * *«dov'è finita quella persona?»* col nome utente, e *«chi c'è
+           * vicino a me?»* con le schede pubbliche, che si vedono **appena
+           * apri** senza cercare niente.
            *
-           * ⚠️ Dentro la scheda c'è anche l'interruttore «fatti trovare»: è
-           * la stessa cosa vista dall'altro lato, e chi cerca è la persona che
-           * in quel momento capisce cosa vuol dire essere cercabile.
+           * ⚠️ Dentro c'è anche l'interruttore «fatti trovare»: è la stessa
+           * cosa vista dall'altro lato, e chi cerca è la persona che in quel
+           * momento capisce cosa vuol dire essere cercabile.
            */
           IconButton(
             icon: const Icon(Icons.person_search_outlined),
-            tooltip: 'Trova una persona col nome utente',
+            tooltip: 'Trova qualcuno',
             onPressed: () => _trovaUnaPersona(context, ref),
           ),
 

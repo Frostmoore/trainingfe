@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/features/account/data/nome_pubblico.dart';
 import 'package:training_companion/src/features/account/nome_pubblico_controller.dart';
 import 'package:training_companion/src/features/chat/ui/trova_una_persona.dart';
+import 'package:training_companion/src/features/scoperta/catalogo_controller.dart';
+import 'package:training_companion/src/features/scoperta/data/scheda_catalogo.dart';
 
 /// 🔎 **«Trova una persona»** — blocco B3, 24/09/2026.
 ///
@@ -18,10 +20,21 @@ import 'package:training_companion/src/features/chat/ui/trova_una_persona.dart';
 /// (`ChiPossoCercare`): qui si prova che l'app non lo aggiri e non lo racconti
 /// male.
 void main() {
+  final apertiDalCatalogo = <int>[];
+
+  /// Con quali testi è stato interrogato il catalogo, in ordine.
+  final catalogatiCon = <String>[];
+
+  setUp(() {
+    apertiDalCatalogo.clear();
+    catalogatiCon.clear();
+  });
+
   Future<_AzioniFinte> apri(
     WidgetTester tester, {
     NomePubblico mio = const NomePubblico(username: 'io', trovabile: false),
     List<PersonaTrovata> trovati = const [],
+    List<SchedaCatalogo> schede = const [],
   }) async {
     final azioni = _AzioniFinte(trovati);
 
@@ -30,6 +43,26 @@ void main() {
         overrides: [
           nomePubblicoProvider.overrideWith((ref) async => mio),
           nomePubblicoActionsProvider.overrideWith((ref) => azioni),
+
+          /*
+           * ⚠️ **Il catalogo va finto anche quando il test parla d'altro.**
+           * ⛔ Senza, la scheda chiama davvero la rete: il test passerebbe
+           * lo stesso — l'errore è gestito — ma passerebbe **per il motivo
+           * sbagliato**, e nessuno se ne accorgerebbe finche' un giorno la
+           * chiamata riesce.
+           */
+          catalogoProvider.overrideWith((ref, testo) async {
+            catalogatiCon.add(testo);
+
+            return schede;
+          }),
+          apriDalCatalogoProvider.overrideWith(
+            (ref) => (int profiloId) async {
+              apertiDalCatalogo.add(profiloId);
+
+              return (id: 900 + profiloId, restanti: 3, nome: 'Palestra');
+            },
+          ),
         ],
         child: MaterialApp(
           home: Scaffold(
@@ -104,7 +137,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining('Gli iscritti li trovano soltanto i loro trainer'),
+        find.textContaining('gli iscritti soltanto i loro trainer'),
         findsOneWidget,
       );
     });
@@ -171,6 +204,160 @@ void main() {
       expect(azioni.scrittiA, [7]);
     });
   });
+
+  // ── 🏋️ Le schede pubbliche, dal 24/09 ─────────────────────────────────────
+
+  group('le palestre e i trainer nella stessa scheda', () {
+    SchedaCatalogo scheda({
+      int id = 1,
+      String titolo = 'Palestra Olimpo',
+      String tipo = 'palestra',
+      String? comune = 'Bologna (BO)',
+      double? km = 2.4,
+      bool contattabile = true,
+      bool sponsorizzato = false,
+    }) => SchedaCatalogo(
+      id: id,
+      titolo: titolo,
+      tipo: tipo,
+      sponsorizzato: sponsorizzato,
+      contattabile: contattabile,
+      comune: comune,
+      distanzaKm: km,
+    );
+
+    /// 📌 Il committente, 24/09: *«mettiamole semplicemente che si mostrano
+    /// tutte nella ricerca della chat, con un criterio di vicinanza»*.
+    ///
+    /// 🚨 **Si vedono senza cercare niente**: è tutto il punto della richiesta.
+    /// ⛔ Una schermata che si apre vuota e pretende che tu sappia già cosa
+    /// scrivere non risponde alla domanda «chi c'è vicino a me?».
+    testWidgets('si vedono appena si apre, senza aver cercato', (tester) async {
+      await apri(tester, schede: [scheda()]);
+
+      expect(find.text('Palestra Olimpo'), findsOneWidget);
+      expect(find.textContaining('PALESTRE E TRAINER VICINO A TE'), findsOneWidget);
+    });
+
+    /// 💡 La distanza si scrive solo quando si sa: `null` non è zero.
+    testWidgets('dice che cos\'è, dov\'è e quanto è lontana', (tester) async {
+      await apri(tester, schede: [scheda()]);
+
+      expect(find.text('Palestra · Bologna (BO) · 2,4 km'), findsOneWidget);
+    });
+
+    testWidgets('senza distanza non scrive «0 km»', (tester) async {
+      await apri(tester, schede: [scheda(km: null)]);
+
+      expect(find.text('Palestra · Bologna (BO)'), findsOneWidget);
+      expect(find.textContaining('0 km'), findsNothing);
+    });
+
+    /// 🚨 **L'ordine è quello del server**, che sa le distanze: l'app non
+    /// riordina niente. ⛔ Un secondo ordinamento qui sarebbe una regola
+    /// scritta due volte, e quella dell'app non conoscerebbe le coordinate.
+    testWidgets('le mostra nell\'ordine in cui arrivano', (tester) async {
+      await apri(
+        tester,
+        schede: [
+          scheda(id: 1, titolo: 'Vicina', km: 0.5),
+          scheda(id: 2, titolo: 'Lontana', km: 30),
+        ],
+      );
+
+      /*
+       * ⚠️ **Si guarda chi sta più in alto, non la struttura dei widget.**
+       * ⛔ Frugare dentro i `ListTile` per estrarne il titolo lega il test
+       * all'impaginazione: cambiarla lo romperebbe senza che sia cambiato
+       * niente di quello che il test dice.
+       */
+      final vicina = tester.getTopLeft(find.text('Vicina')).dy;
+      final lontana = tester.getTopLeft(find.text('Lontana')).dy;
+
+      expect(vicina, lessThan(lontana));
+    });
+
+    /// 🚨 Si manda **l'id della scheda**, non quello di una persona: chi sia il
+    /// destinatario lo decide il server.
+    testWidgets('toccandone una si apre il filo con quella scheda', (
+      tester,
+    ) async {
+      await apri(tester, schede: [scheda(id: 7)]);
+
+      await tester.tap(find.text('Palestra Olimpo'));
+      await tester.pumpAndSettle();
+
+      expect(apertiDalCatalogo, [7]);
+    });
+
+    /// ⛔ **Una scheda senza nessuno dietro lo dice prima**, non dopo aver
+    /// fatto scrivere un messaggio che non arriverebbe da nessuna parte.
+    testWidgets('una scheda non contattabile non apre niente', (tester) async {
+      await apri(tester, schede: [scheda(contattabile: false)]);
+
+      await tester.tap(find.text('Palestra Olimpo'));
+      await tester.pumpAndSettle();
+
+      expect(apertiDalCatalogo, isEmpty);
+      expect(find.textContaining('non ha nessuno a cui scrivere'), findsOneWidget);
+    });
+
+    /// 🚨 **Lo sponsorizzato si etichetta, mai si mimetizza.**
+    ///
+    /// ⏳ Oggi non ce ne sono — le campagne sono spente dal 23/09 — ma
+    /// l'etichetta c'è già: presentare a pagamento qualcosa che sembra un
+    /// risultato di ricerca è pubblicità occulta, e il giorno che le campagne
+    /// tornano nessuno deve **ricordarsi** di aggiungerla.
+    testWidgets('una scheda sponsorizzata lo dichiara', (tester) async {
+      await apri(tester, schede: [scheda(sponsorizzato: true)]);
+
+      expect(find.text('Sponsorizzata'), findsOneWidget);
+    });
+
+    /// 🔍 **Lo stesso campo cerca tutte e due le cose.**
+    ///
+    /// 💡 Chi scrive «Olimpo» non sta pensando «sto cercando un nome utente
+    /// oppure una palestra?»: sta cercando Olimpo.
+    testWidgets('cercando si filtrano anche le schede', (tester) async {
+      await apri(tester, schede: [scheda()]);
+
+      await tester.enterText(find.byType(TextField), 'olimpo');
+      await tester.tap(find.widgetWithText(FilledButton, 'Cerca'));
+      await tester.pumpAndSettle();
+
+      expect(catalogatiCon, ['', 'olimpo']);
+    });
+
+    /// ⚠️ **Il nome utente vuole tre lettere, le schede no.**
+    ///
+    /// ⛔ Fermare tutto sotto le tre lettere vorrebbe dire non rispondere a chi
+    /// cerca una palestra che si chiama «Up», per una regola che riguarda
+    /// un'altra cosa.
+    testWidgets('con due lettere filtra le schede ma non cerca persone', (
+      tester,
+    ) async {
+      final azioni = await apri(tester, schede: [scheda()]);
+
+      await tester.enterText(find.byType(TextField), 'up');
+      await tester.tap(find.widgetWithText(FilledButton, 'Cerca'));
+      await tester.pumpAndSettle();
+
+      expect(catalogatiCon, ['', 'up']);
+      expect(azioni.cercati, isEmpty);
+    });
+
+    testWidgets('quando non ce ne sono, lo dice invece di restare vuota', (
+      tester,
+    ) async {
+      await apri(tester);
+
+      expect(
+        find.textContaining('Ancora nessuna palestra o trainer'),
+        findsOneWidget,
+      );
+    });
+  });
+
 }
 
 class _AzioniFinte implements NomePubblicoActions {

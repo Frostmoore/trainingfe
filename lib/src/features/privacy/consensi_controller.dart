@@ -16,6 +16,8 @@ class Consensi {
     this.aiPresaDAtto,
     this.recupero,
     this.consiglioAutomatico = true,
+    this.nienteOfferte = false,
+    this.nienteOfferteDal,
     this.chiestiIl,
   });
 
@@ -25,6 +27,19 @@ class Consensi {
     aiPresaDAtto: DateTime.tryParse(j['ai_disclaimer']?.toString() ?? ''),
     recupero: DateTime.tryParse(j['sleep_ai']?.toString() ?? ''),
     consiglioAutomatico: j['consiglio_automatico'] as bool? ?? true,
+
+    /*
+     * 🆕 🔕 **«Non mandarmi offerte»** — voce 43, 25/09/2026.
+     *
+     * ⚠️ **`false` di ripiego, ed è il verso giusto**: un server vecchio non
+     * manda questo campo, e leggerlo come «si è opposto» spegnerebbe le
+     * promozioni a chi non ha chiesto niente. 💡 È un opt-out: l'assenza di
+     * risposta vuol dire «non l'ha detto», non «l'ha detto».
+     */
+    nienteOfferte: j['niente_offerte'] as bool? ?? false,
+    nienteOfferteDal: DateTime.tryParse(
+      j['niente_offerte_dal']?.toString() ?? '',
+    ),
     chiestiIl: DateTime.tryParse(j['chiesti_il']?.toString() ?? ''),
   );
 
@@ -57,6 +72,14 @@ class Consensi {
   /// 💡 **Preferenza, non consenso**: un booleano, non una data. Di una
   /// preferenza non serve sapere *quando* è stata cambiata, di un consenso sì.
   final bool consiglioAutomatico;
+
+  /// 🆕 🔕 Si è opposto alle comunicazioni commerciali — voce 43.
+  ///
+  /// ⚠️ **Opt-out, non consenso**: di serie è `false` e le offerte arrivano.
+  final bool nienteOfferte;
+
+  /// Da quando vale l'opposizione. `null` quando le offerte sono accese.
+  final DateTime? nienteOfferteDal;
 
   /// Quando la schermata dei consensi e' stata **mostrata** — FASE 2-bis.
   ///

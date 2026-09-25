@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../health/ui/widgets/connessione_salute.dart';
@@ -96,6 +97,33 @@ class SchermataConsensi extends ConsumerWidget {
 
             _InterruttoreConsiglio(acceso: dati.consiglioAutomatico),
 
+            /*
+             * 🆕 🔕 **«Non mandarmi offerte»** — voce 43, DPIA R16, 25/09/2026.
+             *
+             * ══ ⚠️ SEPARATO, E NON PER ESTETICA ════════════════════════
+             *
+             * 🚨 L'art. 21(4) vuole che il diritto di opporsi al marketing sia
+             * presentato **«chiaramente e separatamente»** da ogni altra
+             * informazione. ⛔ Infilarlo fra i consensi lo renderebbe uno dei
+             * tanti interruttori — che è esattamente ciò che la norma vieta.
+             *
+             * ⚠️ **E non è un consenso**: di serie le offerte arrivano, e chi
+             * non le vuole lo dice. Per questo è scritto al contrario degli
+             * altri («non mandarmi» invece di «acconsento»): l'interruttore
+             * acceso vuol dire **meno** roba, e va detto a parole.
+             */
+            const Divider(height: Gap.xl),
+            Text(
+              'Le offerte',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: Gap.sm),
+
+            _InterruttoreOfferte(
+              spente: dati.nienteOfferte,
+              dal: dati.nienteOfferteDal,
+            ),
+
             const SizedBox(height: Gap.lg),
             Text(
               // ⚠️ Art. 7(3), terzo periodo: la revoca non ha effetto
@@ -185,6 +213,113 @@ class _InterruttoreConsiglioState
               'resta quello dell\'ultima volta e lo aggiorni tu quando vuoi.',
               style: testo.bodyMedium,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 🔕 L'interruttore «non mandarmi offerte» — voce 43, DPIA R16, 25/09/2026.
+///
+/// ══ 🚨 COSA SPEGNE, E COSA NO ══════════════════════════════════
+///
+/// ⚠️ **Va detto a schermo**, non solo nel codice: un interruttore che spegne
+/// più di quanto dice è una trappola, e uno che spegne meno è una bugia.
+/// ⛔ Non tocca gli avvisi di servizio, le notifiche dei messaggi e le email di
+/// sistema — e la persona deve poterlo leggere **prima** di toccarlo.
+///
+/// 💡 **Le promozioni continuano ad arrivare**: quello che si spegne è
+/// l'annuncio. Chi riceve un regalo lo trova comunque nel saldo.
+class _InterruttoreOfferte extends ConsumerStatefulWidget {
+  const _InterruttoreOfferte({required this.spente, this.dal});
+
+  final bool spente;
+  final DateTime? dal;
+
+  @override
+  ConsumerState<_InterruttoreOfferte> createState() =>
+      _InterruttoreOfferteState();
+}
+
+class _InterruttoreOfferteState extends ConsumerState<_InterruttoreOfferte> {
+  bool _inCorso = false;
+
+  Future<void> _cambia(bool spente) async {
+    setState(() => _inCorso = true);
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(cambiaConsensoProvider)('niente_offerte', spente);
+    } on Object catch (errore) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(ApiClient.unwrapError(errore).message)),
+      );
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final testo = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Gap.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Non mandarmi offerte',
+                    style: testo.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: widget.spente,
+                  onChanged: _inCorso ? null : _cambia,
+                ),
+              ],
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              'Acceso, non ricevi più annunci di promozioni né messaggi che '
+              'propongono un acquisto.',
+              style: testo.bodyMedium,
+            ),
+            const SizedBox(height: Gap.sm),
+
+            /*
+             * ⚠️ **Il confine, scritto a schermo.** ⛔ Chi spegne la
+             * pubblicità non deve temere di perdere l'avviso che il suo
+             * abbonamento sta per scadere: se non gliel'ho detto qui, lo
+             * scoprirà non ricevendolo.
+             */
+            Text(
+              'Restano gli avvisi di servizio, le notifiche dei messaggi e le '
+              'email necessarie (password, inviti, ricevute). E se ricevi una '
+              'promozione, la trovi comunque nel tuo saldo: quello che si '
+              'spegne è l’annuncio.',
+              style: testo.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+
+            if (widget.spente && widget.dal != null) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Scelto il ${widget.dal!.day}/${widget.dal!.month}/${widget.dal!.year}.',
+                style: testo.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),

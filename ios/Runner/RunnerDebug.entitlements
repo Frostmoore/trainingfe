@@ -36,5 +36,20 @@
 	     `aps-environment: production` — la firma fallirebbe. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- 🍎 **Accedi con Apple** — voce 25, 26/09/2026.
+
+	     🚨 Senza questa chiave la finestra di sistema **non si apre** e l errore
+	     non nomina l entitlement: si finisce a cercare il difetto nel codice
+	     Flutter, dove non c e.
+
+	     ⚖️ **Apple lo pretende**: un app che offre altri accessi social su iOS
+	     deve offrire anche Accedi con Apple, o la revisione la respinge.
+
+	     ⚠️ E il file da solo non basta: la capability va accesa anche sull App
+	     ID nel portale Apple, come per le notifiche push. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

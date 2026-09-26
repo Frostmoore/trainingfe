@@ -17,6 +17,8 @@ import 'src/core/providers.dart';
 import 'src/core/storage/local_cache.dart';
 import 'src/features/aggiornamento/aggiornamento_controller.dart';
 import 'src/features/auth/auth_controller.dart';
+import 'src/features/auth/data/accesso_social_vero.dart';
+import 'src/features/auth/data/social_sign_in.dart';
 
 /// L'avvio — A1.1.
 ///
@@ -75,6 +77,22 @@ Future<void> main() async {
         appConfigProvider.overrideWithValue(config),
         localCacheProvider.overrideWithValue(cache),
       ],
+    );
+
+    /*
+     * 🆕 🔑 **L'accesso con Google e Apple** — voce 25, 26/09/2026.
+     *
+     * 💡 Qui si sostituisce il segnaposto con l'implementazione vera. ⚠️ Non
+     * fa **nessuna** chiamata di rete e non apre niente: costruisce soltanto
+     * l'oggetto, e il primo contatto col fornitore avviene quando qualcuno
+     * tocca il pulsante.
+     *
+     * 🔑 Chi decide se i pulsanti compaiono resta il **server**
+     * (`GymBranding.social`, che legge `configured()`): finché le variabili
+     * d'ambiente non ci sono, questa riga non ha alcun effetto visibile.
+     */
+    SocialSignIn.instance = AccessoSocialVero(
+      serverClientId: config.googleServerClientId,
     );
 
     /*

@@ -5,6 +5,7 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../onboarding/branding_controller.dart';
 import '../../auth_controller.dart';
+import '../../data/accesso_social_vero.dart';
 import '../../data/social_sign_in.dart';
 
 /// «Accedi con Google» / «Accedi con Apple» — C17.
@@ -69,8 +70,27 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
     final theme = Theme.of(context);
     final palestra = ref.watch(brandingControllerProvider).branding;
 
+    /*
+     * 🆕 ⚖️ **Due condizioni, non una** — voce 25, 26/09/2026.
+     *
+     * 1. il **server** deve dichiarare il fornitore (`palestra.supporta`);
+     * 2. la **piattaforma** deve saperlo fare davvero.
+     *
+     * 🚨 La seconda serviva e non c'era. 📌 Il committente, 26/09: *«Apple solo
+     * su iOS»*. ⛔ Ma il server dichiara i fornitori **una volta per tutti**,
+     * senza sapere da che telefono arriva la richiesta: con Apple acceso lato
+     * server, il pulsante sarebbe comparso **anche su Android**, dove l'accesso
+     * nativo con Apple non esiste. 💡 Un pulsante che non può funzionare è
+     * peggio di un pulsante assente.
+     */
     final disponibili = SocialProviderId.tutti
         .where(palestra.supporta)
+        .where(
+          (p) => fornitoreUsabileQui(
+            p,
+            sistemaApple: AccessoSocialVero.supportaApple,
+          ),
+        )
         .toList(growable: false);
 
     if (disponibili.isEmpty) return const SizedBox.shrink();

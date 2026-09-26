@@ -36,6 +36,28 @@ class SocialProviderId {
   };
 }
 
+/// 🆕 ⚖️ **Questo fornitore si può usare su questa piattaforma?** — voce 25,
+/// 26/09/2026.
+///
+/// 🚨 È una domanda **diversa** da «il server lo offre?», e vanno poste tutte e
+/// due. Il server dichiara i fornitori **una volta per tutti**, senza sapere da
+/// che dispositivo arriva la richiesta.
+///
+/// 📌 Il committente, 26/09: *«Apple solo su iOS»*. ⛔ L'accesso con Apple
+/// **nativo** esiste solo sui sistemi Apple: su Android servirebbe un flusso
+/// web con un Services ID e un indirizzo di ritorno sul server. ⚖️ E Apple
+/// obbliga a offrirlo solo **dove offri altri accessi social su iOS**.
+///
+/// 💡 **Pura, con la piattaforma passata da fuori**: la regola si prova senza
+/// un dispositivo, e chi la legge vede la decisione invece di un `Platform.is…`
+/// sparso in mezzo alla schermata.
+bool fornitoreUsabileQui(String provider, {required bool sistemaApple}) =>
+    switch (provider) {
+      SocialProviderId.apple => sistemaApple,
+      SocialProviderId.google => true,
+      _ => false,
+    };
+
 /// Il token restituito dal sistema operativo, pronto da mandare al server.
 class SocialCredential {
   const SocialCredential({required this.provider, required this.idToken});

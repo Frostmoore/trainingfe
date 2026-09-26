@@ -101,6 +101,27 @@ class ValidationException extends ApiException {
   String? forField(String field) => errors[field]?.firstOrNull;
 }
 
+/// 🆕 422 con `code: consents_required` — **è un primo accesso** — voce 25,
+/// 26/09/2026.
+///
+/// ══ 🚨 PERCHE' UNA CLASSE SUA E NON UN `ValidationException` ═══════════════
+///
+/// ⚠️ Tecnicamente è un 422 come gli altri, ma **non è un errore della
+/// persona**: non ha sbagliato a compilare niente. 🔑 È il server che dice una
+/// cosa che nessuno sapeva ancora — *«questo è un primo accesso, quindi
+/// un'iscrizione»* — e che si scopre **solo** dopo aver parlato col fornitore.
+///
+/// ⛔ Mostrarlo come un errore rosso sotto un pulsante sarebbe sbagliato due
+/// volte: accuserebbe chi non ha colpa, e lascerebbe la persona ferma senza
+/// dirle come andare avanti.
+///
+/// 💡 Chi la prende deve **chiedere le due dichiarazioni e riprovare**, non
+/// mostrare un messaggio. È l'unico caso in cui un 422 è un passaggio previsto
+/// del giro e non una fine.
+class ConsensiRichiestiException extends ApiException {
+  const ConsensiRichiestiException(super.message);
+}
+
 /// 429 sulla quota AI della palestra.
 ///
 /// 🚨 Diverso da `RateLimitedException`: **non si sblocca riprovando**. L'app

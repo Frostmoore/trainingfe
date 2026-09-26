@@ -414,6 +414,25 @@ class ApiClient {
         );
 
       case 422:
+        /*
+         * 🆕 🔑 **Un 422 che non è colpa di nessuno** — voce 25, 26/09/2026.
+         *
+         * ⚠️ `consents_required` non dice «hai sbagliato a compilare»: dice
+         * «questo è un **primo** accesso, quindi un'iscrizione, e servono le
+         * due dichiarazioni». ⛔ Si scopre solo dopo aver parlato col
+         * fornitore, perché prima nessuno sa se quella persona esiste già.
+         *
+         * 💡 Ha una classe sua perché chi la riceve deve **chiedere e
+         * riprovare**, non mostrare un errore rosso.
+         */
+        if (code == 'consents_required') {
+          return ConsensiRichiestiException(
+            message ??
+                'Per iscriverti devi dichiarare di essere maggiorenne e '
+                    'accettare le condizioni.',
+          );
+        }
+
         return ValidationException(
           message ?? 'Controlla i dati inseriti.',
           _parseErrors(body['errors']),

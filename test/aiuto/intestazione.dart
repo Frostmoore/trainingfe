@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:training_companion/src/core/config/app_config.dart';
 import 'package:training_companion/src/core/providers.dart';
 import 'package:training_companion/src/core/storage/local_cache.dart';
+import 'package:training_companion/src/features/auth/data/fornitori_social.dart';
 import 'package:training_companion/src/features/dashboard/gettoni_controller.dart';
 
 /// Quello che serve a far costruire [IntestazioneApp] in un test di widget —
@@ -58,5 +59,25 @@ Future<List<Override>> intestazioneFinta() async {
      * esattamente ciò che si vuole in un test di un'altra pagina.
      */
     gettoniProvider.overrideWith((ref) => Completer<Gettoni>().future),
+
+    /*
+     * 🆕 🚨 **E nemmeno i fornitori dell'accesso social** — voce 25, 26/09/2026.
+     *
+     * ⚠️ Stessa trappola del saldo qui sopra, e si è ripresentata identica il
+     * giorno che `SocialButtons` è finito sulla schermata di **benvenuto**:
+     * `fornitoriSocialProvider` fa `GET /auth/fornitori`, e in un test quella
+     * chiamata lascia in piedi il timer di scadenza di dio.
+     *
+     * 🚨 Il test che è saltato — `palestra_sospesa_all_accesso_test` — non
+     * c'entrava niente con l'accesso social: falliva con `!timersPending`, un
+     * errore che non nomina né la rete né i pulsanti.
+     *
+     * 💡 Qui si restituisce una **lista vuota** e non un future appeso: i
+     * pulsanti non si disegnano, che è quello che serve in un test di
+     * un'altra pagina, e non resta niente in sospeso.
+     * ⛔ Un test che voglia **vedere** i pulsanti deve sovrascrivere questo
+     * provider da sé, dopo `intestazioneFinta()`.
+     */
+    fornitoriSocialProvider.overrideWith((ref) async => const <String>[]),
   ];
 }

@@ -400,8 +400,20 @@ class AuthController extends StateNotifier<AuthState> {
     String provider, {
     bool maggiorenne = false,
     bool condizioniAccettate = false,
+
+    /// 🆕 🔁 **Un token già ottenuto, da riusare** — voce 25, 26/09/2026.
+    ///
+    /// 🚨 Serve al **secondo** tentativo, quello dopo le dichiarazioni: al
+    /// primo accesso il server risponde `consents_required`, l'app chiede le
+    /// due caselle e richiama questo metodo.
+    ///
+    /// ⛔ Senza, il secondo tentativo riaprirebbe la finestra di Google e la
+    /// persona si troverebbe a scegliere l'account **due volte** per una cosa
+    /// sola — e sembrerebbe che il primo tentativo non fosse riuscito.
+    SocialCredential? credenzialeGiaOttenuta,
   }) async {
-    final credenziale = await SocialSignIn.instance.accedi(provider);
+    final credenziale =
+        credenzialeGiaOttenuta ?? await SocialSignIn.instance.accedi(provider);
 
     if (credenziale == null) return false;
 

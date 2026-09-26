@@ -214,6 +214,64 @@ void main() {
       expect(tradotto, isNot(isA<GymInactiveException>()));
     });
 
+    /// 🆕 ⚖️ **Un 422 che non è colpa di nessuno** — voce 25, 26/09/2026.
+    ///
+    /// 🚨 `consents_required` non dice «hai sbagliato a compilare»: dice
+    /// «questo è un **primo** accesso, quindi un'iscrizione, e servono le due
+    /// dichiarazioni». ⛔ Si scopre solo dopo aver parlato con Google o Apple,
+    /// perché prima nessuno sa se quella persona esiste già.
+    ///
+    /// ⛔ Se finisse fra i `ValidationException` verrebbe mostrato come un
+    /// errore rosso sotto il pulsante, e la persona resterebbe ferma senza
+    /// sapere come andare avanti — invece di vedersi chiedere le due caselle.
+    test('🎯 422 `consents_required` ha una classe sua', () async {
+      adapter.onPost(
+        '/auth/social',
+        (s) => s.reply(422, {
+          'code': 'consents_required',
+          'message':
+              'Per iscriverti devi dichiarare di essere maggiorenne e '
+              'accettare le condizioni.',
+          'errors': {
+            'age_confirmed': ['Devi dichiarare di essere maggiorenne.'],
+          },
+        }),
+        data: null,
+      );
+
+      final tradotto = ApiClient.unwrapError(
+        await _cattura(() => client.post<dynamic>('/auth/social')),
+      );
+
+      expect(tradotto, isA<ConsensiRichiestiException>());
+      expect(tradotto, isNot(isA<ValidationException>()));
+    });
+
+    /// ⚠️ E gli altri 422 restano quello che erano: un modulo compilato male
+    /// deve continuare a mettere gli errori **sotto la casella giusta**.
+    test('⚠️ gli altri 422 restano errori di validazione', () async {
+      adapter.onPost(
+        '/auth/register',
+        (s) => s.reply(422, {
+          'message': 'Controlla i dati inseriti.',
+          'errors': {
+            'email': ['già registrata'],
+          },
+        }),
+        data: null,
+      );
+
+      final tradotto = ApiClient.unwrapError(
+        await _cattura(() => client.post<dynamic>('/auth/register')),
+      );
+
+      expect(tradotto, isA<ValidationException>());
+      expect(
+        (tradotto as ValidationException).forField('email'),
+        'già registrata',
+      );
+    });
+
     /// ⚠️ **Il codice arriva in `error` oltre che in `code`**, e tutti e due
     /// devono funzionare: i 402 dei gettoni usano `error`, i 403 usano `code`.
     /// 🚨 Il server li manda entrambi apposta; questo test dice che non è per

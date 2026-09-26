@@ -40,6 +40,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/ui/widgets/social_buttons.dart';
 import '../branding_controller.dart';
 import 'widgets/marchio_in_cima.dart';
 
@@ -161,6 +162,29 @@ class _SchermataBenvenutoState extends ConsumerState<SchermataBenvenuto> {
                     ),
                     child: const Text('Accedi'),
                   ),
+
+                  /*
+                   * 🆕 🔑 **«Continua con Google» sta QUI** — voce 25, 26/09/2026.
+                   *
+                   * 📌 Il committente: *«i tasti accedi con google e accedi con
+                   * appleid devono stare prima di cliccare su accedi»*.
+                   *
+                   * 🔑 Ed è la posizione giusta anche per una ragione che non è
+                   * di gusto: entrare con Google **non è né registrarsi né
+                   * accedere** — è una terza porta che fa la cosa giusta da sola
+                   * (collega l'account se esiste, lo crea se non esiste).
+                   * ⛔ Nasconderla dentro «Accedi» la mostrerebbe solo a chi ha
+                   * già scelto di essere uno che rientra.
+                   *
+                   * ⚠️ **Niente caselle dei consensi qui**: su questa schermata
+                   * nessuno sa ancora se la persona si iscrive o rientra. Se il
+                   * server dice che è un primo accesso, `SocialButtons` apre le
+                   * due dichiarazioni e riprova (vedi `le_dichiarazioni.dart`).
+                   *
+                   * 💡 Se il server non dichiara nessun fornitore, qui non
+                   * compare niente — nemmeno il «oppure».
+                   */
+                  const SocialButtons(),
 
                   const SizedBox(height: Gap.lg),
 

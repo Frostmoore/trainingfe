@@ -18,5 +18,23 @@
 	     richiesta di revisione ad Apple per dati che non tocchiamo. -->
 	<key>com.apple.developer.healthkit.access</key>
 	<array/>
+	<!-- 🔔 Le notifiche push, lato sviluppo — voce 26, 26/09/2026.
+
+	     ⚠️ `development` vuol dire **APNs sandbox**: e' l'ambiente in cui
+	     finisce ogni build installata da Xcode o con `flutter run`. E' con
+	     questa che si prova sull'iPhone vero (passo 26.7).
+
+	     🚨 **Questo file era MORTO fino al 26/09**: esisteva, ma nessuna
+	     configurazione lo referenziava — tutte e tre puntavano a
+	     `Runner.entitlements`. ⛔ Fidarsi del nome avrebbe voluto dire
+	     scrivere qui `development` e ritrovarsi la build di sviluppo che
+	     chiede ad Apple l'ambiente di **produzione**. Ora Debug e Profile
+	     puntano davvero qui (project.pbxproj, righe 385 e 565).
+
+	     💡 Perche' anche **Profile**: anche quella build si firma con un
+	     profilo di sviluppo, e un profilo di sviluppo non ammette
+	     `aps-environment: production` — la firma fallirebbe. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

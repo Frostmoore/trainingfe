@@ -87,5 +87,23 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- 🔔 Le notifiche push — voce 26, 26/09/2026.
+
+		     `remote-notification` permette al sistema di **svegliare l'app**
+		     quando arriva una notifica con l'app non in primo piano.
+
+		     ⚠️ Serve alle notifiche **silenziose** (`content-available`) e a
+		     far arrivare i `data` che dicono dove portare il tocco. ⛔ Senza,
+		     la notifica si vede lo stesso ma il carico utile puo' non essere
+		     consegnato, e il tocco non sa piu' dove andare — cioe' lo stesso
+		     difetto gia' visto su Android il 26/09 (atlante app §182.2), ma
+		     per una causa completamente diversa.
+
+		     🔑 Va **insieme** ad `aps-environment` negli entitlements: questa
+		     chiave da sola non fa registrare l'app ad APNs. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
 	</dict>
 </plist>

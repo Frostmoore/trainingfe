@@ -18,5 +18,23 @@
 	     richiesta di revisione ad Apple per dati che non tocchiamo. -->
 	<key>com.apple.developer.healthkit.access</key>
 	<array/>
+	<!-- 🔔 Le notifiche push — voce 26, 26/09/2026.
+
+	     🚨 **Senza questa chiave iOS non consegna niente, e non dice perche'.**
+	     L'app parte, chiede il permesso, l'utente lo da', e il token non
+	     arriva mai. E' la stessa forma di difetto di HealthKit qui sopra:
+	     nessun errore, nessun dato.
+
+	     ⚠️ **`production` e' giusto SOLO qui.** Questo file e' agganciato alla
+	     sola configurazione **Release** (vedi CODE_SIGN_ENTITLEMENTS nel
+	     project.pbxproj): Debug e Profile usano `RunnerDebug.entitlements`,
+	     che dichiara `development`.
+
+	     ⛔ Non metterlo in tutte e tre: un profilo di provisioning di
+	     **sviluppo** non ammette `aps-environment: production`, e la firma
+	     fallisce. Al contrario, una build di rilascio con `development`
+	     verrebbe firmata e le notifiche non arriverebbero dall'App Store. -->
+	<key>aps-environment</key>
+	<string>production</string>
 </dict>
 </plist>

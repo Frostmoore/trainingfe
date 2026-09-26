@@ -45,22 +45,26 @@ void main() {
     });
   });
 
-  group('palestra sospesa', () {
-    test('porta alla schermata dedicata e ce la tiene', () {
-      expect(dove(AuthStatus.gymInactive), AppRoutes.gymInactive);
-      expect(
-        dove(AuthStatus.gymInactive, posizione: AppRoutes.gymInactive),
-        isNull,
-      );
-    });
-
-    /// 🚨 Viene prima del blocco e prima della palestra: chi è in questo stato
-    /// ha le credenziali giuste e non può farci niente.
-    test('vince anche su una posizione qualsiasi', () {
-      expect(
-        dove(AuthStatus.gymInactive, posizione: AppRoutes.diary),
-        AppRoutes.gymInactive,
-      );
+  /// 🆕 ⛔ **Qui c'era il gruppo «palestra sospesa»** — tolto il 26/09/2026,
+  /// decisione del committente (`memory/decisioni.md`).
+  ///
+  /// 🚨 Quei test pretendevano che una palestra sospesa portasse l'app su una
+  /// schermata di servizio **e ce la tenesse**, vincendo *«anche su una
+  /// posizione qualsiasi»*. ⛔ Erano **verdi**, e proteggevano un
+  /// comportamento indifendibile: una persona non raggiungeva più nemmeno il
+  /// proprio diario per un inadempimento commerciale di un terzo.
+  ///
+  /// 📌 *«il mio account è e sarà sempre mio: se il mio abbonamento lo paga
+  /// qualcun altro lo ringrazio, ma non mi può togliere l'accesso»*.
+  ///
+  /// 💡 **Un test verde non vuol dire che la regola sia giusta.** Lo stato
+  /// `AuthStatus.gymInactive` non esiste più, e al suo posto c'è il test qui
+  /// sotto: chi ha la palestra sospesa **sta dove vuole**.
+  group('palestra sospesa: non cambia dove si può stare', () {
+    /// 🎯 Una sessione valida porta dove porta, comunque stia la palestra: lo
+    /// stato della palestra non è più una risposta possibile del router.
+    test('🎯 chi è dentro resta dentro, e raggiunge il proprio diario', () {
+      expect(dove(AuthStatus.loggedIn, posizione: AppRoutes.diary), isNull);
     });
   });
 

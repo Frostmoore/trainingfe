@@ -190,17 +190,44 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
         const SizedBox(height: Gap.md),
 
         for (final provider in disponibili) ...[
-          OutlinedButton.icon(
+          /*
+           * 🆕 🎨 **Ogni fornitore col proprio colore** — 26/09/2026.
+           *
+           * 📌 Il committente: *«il tasto continua con google deve essere di
+           * colore rosso google e avere l'icona della g di google. Idem per
+           * quello della apple, deve essere grigio scuro apple e avere la
+           * mela»*.
+           *
+           * ⚠️ **Apple è conforme**: il nero è uno degli stili che Apple
+           * ammette per «Accedi con Apple», e la mela è in Material
+           * (`Icons.apple`). ⛔ Apple **respinge** le app il cui pulsante non
+           * segue la sua specifica, quindi qui non si improvvisa.
+           *
+           * 🚨 **Google: il rosso NON è uno stile ufficiale** (i suoi sono
+           * bianco, grigio neutro o nero), e soprattutto **la G non si
+           * ridisegna**: va presa dal kit di Google. ⏳ Finché quel file non
+           * c'è, qui sotto c'è una lettera stilizzata — è un **segnaposto
+           * dichiarato**, non il marchio.
+           */
+          FilledButton.icon(
             onPressed: _inCorso != null || !widget.dichiarazioniDate
                 ? null
                 : () => _accedi(provider),
+            style: FilledButton.styleFrom(
+              backgroundColor: _sfondo(provider),
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+            ),
             icon: _inCorso == provider
                 ? const SizedBox(
                     height: 18,
                     width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : Icon(_icona(provider)),
+                : _segno(provider),
             label: Text('Continua con ${SocialProviderId.etichetta(provider)}'),
           ),
           const SizedBox(height: Gap.sm),
@@ -228,8 +255,44 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
   /// versione approssimata è il genere di cosa che fa **rifiutare la
   /// pubblicazione** — quindi finché non ci sono gli asset ufficiali, meglio
   /// un'icona neutra che una imitazione.
-  IconData _icona(String provider) => switch (provider) {
-    SocialProviderId.apple => Icons.phone_iphone_rounded,
-    _ => Icons.account_circle_outlined,
+  /// 🎨 Il colore di sfondo del pulsante, per fornitore.
+  ///
+  /// ⚠️ **Apple `#1A1A1A`**: il nero è uno degli stili che Apple ammette, e
+  /// discostarsene è motivo di rifiuto della pubblicazione.
+  /// 🚨 **Google `#DB4437`**: è il rosso del marchio, chiesto dal committente,
+  /// ⛔ **ma non è uno stile di pulsante ufficiale di Google** (i suoi sono
+  /// bianco, grigio neutro o nero). Va rivisto prima di pubblicare.
+  Color _sfondo(String provider) => switch (provider) {
+    SocialProviderId.apple => const Color(0xFF1A1A1A),
+    SocialProviderId.google => const Color(0xFFDB4437),
+    _ => Theme.of(context).colorScheme.primary,
+  };
+
+  /// Il segno dentro il pulsante.
+  ///
+  /// 🍎 Apple ha la sua mela in Material (`Icons.apple`), ed è quella giusta.
+  ///
+  /// 🚨 **Google no**, e non si può ridisegnare: la «G» ufficiale è un marchio
+  /// e va presa dal kit di Google, che ne vieta espressamente le riproduzioni.
+  /// ⏳ Finché quel file non c'è, qui c'è una **lettera**, non il logo: è un
+  /// segnaposto dichiarato, così nessuno lo scambia per il marchio vero.
+  Widget _segno(String provider) => switch (provider) {
+    SocialProviderId.apple => const Icon(Icons.apple, size: 22),
+    SocialProviderId.google => const SizedBox(
+      width: 22,
+      height: 22,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1,
+          ),
+        ),
+      ),
+    ),
+    _ => const Icon(Icons.account_circle_outlined, size: 22),
   };
 }

@@ -440,9 +440,24 @@ String? destinazione({
   if (stato == AuthStatus.unknown) return null;
 
   // 2. Palestra sospesa: prima di tutto il resto.
-  if (stato == AuthStatus.gymInactive) {
-    return posizione == AppRoutes.gymInactive ? null : AppRoutes.gymInactive;
-  }
+  /*
+   * 🆕 ⛔ **QUI C'ERA LA REGOLA 2: «palestra sospesa → fuori da tutto»** —
+   * tolta il 26/09/2026, decisione del committente (`memory/decisioni.md`).
+   *
+   * 📌 *«il mio account è e sarà sempre mio: se il mio abbonamento lo paga
+   * qualcun altro lo ringrazio, ma non mi può togliere l'accesso»*.
+   *
+   * 🚨 Questa regola stava **prima di tutte le altre** e dirottava l'app
+   * intera su una schermata di servizio: una persona non raggiungeva più
+   * nemmeno il **proprio** diario, per un inadempimento commerciale di un
+   * terzo. ⚖️ E i dati di allenamento e alimentari sono **suoi** (artt. 15 e
+   * 20 GDPR: accesso e portabilità non dipendono da chi paga).
+   *
+   * 💡 Ora lo stato della palestra non decide più **dove si può stare**, ma
+   * **cosa funziona**: le rotte che la palestra finanzia (`ai`, `trainer`,
+   * `gym`, `nutrition-plans`, `importazioni`) rispondono 403 e la singola
+   * schermata lo dice. ⛔ Tutto il resto è della persona e resta raggiungibile.
+   */
 
   /*
    * 3. 🔒 Sessione bloccata — A1.

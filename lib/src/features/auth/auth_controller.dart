@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/errors/api_exception.dart';
 import '../../core/notifications/notifiche_push.dart';
 import '../../core/providers.dart';
 import '../../core/sicurezza/blocco_biometrico.dart';
@@ -33,7 +32,6 @@ enum AuthStatus {
   /// niente. Mandarlo al login lo farebbe riprovare all'infinito con la
   /// password corretta, convinto di sbagliarla. Serve una schermata che dica
   /// cosa è successo.
-  gymInactive,
 
   /// 🔒 Il token c'è, ma è **chiuso a chiave** — A1.
   ///
@@ -569,21 +567,26 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState(status: AuthStatus.loggedIn, user: persona);
 
       unawaited(_sincronizzaFuso());
-    } on Object catch (error) {
-      // 🚨 Sul **tipo**, non sul messaggio. Riconoscere un errore dal testo
-      // significa che il giorno in cui qualcuno riformula una frase l'app
-      // smette di distinguere «palestra sospesa» da «errore generico» — e
-      // manda al login una persona che ha le credenziali giuste.
-      final tradotto = ApiClient.unwrapError(error);
-
-      if (tradotto is GymInactiveException) {
-        state = AuthState(
-          status: AuthStatus.gymInactive,
-          message: tradotto.message,
-        );
-
-        return;
-      }
+    } on Object catch (_) {
+      /*
+       * 🆕 ⛔ **Qui c'era: «palestra sospesa → l'app si chiude»** — tolto il
+       * 26/09/2026, decisione del committente (`memory/decisioni.md`).
+       *
+       * 📌 *«il mio account è e sarà sempre mio: se il mio abbonamento lo paga
+       * qualcun altro lo ringrazio, ma non mi può togliere l'accesso»*.
+       *
+       * 🚨 Un 403 su **una** funzione faceva cambiare stato a **tutta**
+       * l'applicazione, e da lì il router portava fuori da ogni schermata —
+       * compreso il proprio diario — per un inadempimento commerciale di un
+       * terzo.
+       *
+       * 💡 `GymInactiveException` **resta**, ma è un errore **locale**: lo
+       * mostra la schermata che ha provato a usare una funzione finanziata
+       * dalla palestra, e nient'altro si muove.
+       *
+       * ⚠️ E dal 26/09 il server non risponde più così a `me`: quella rotta
+       * non è più fra quelle riservate alle palestre attive.
+       */
 
       // Il 401 ha già fatto scattare `_forgetSession()` dallo stream.
       if (state.status == AuthStatus.unknown) {

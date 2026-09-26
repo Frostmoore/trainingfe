@@ -558,6 +558,28 @@
                     android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
         </activity-alias>
+        <!--
+            🔔 L'ICONA E IL COLORE DELLE NOTIFICHE — 26/09/2026.
+
+            🚨 Senza questa riga Android usa l'icona dell'app, e da Android 5
+            la disegna **col solo canale alpha**: i colori si buttano, resta la
+            sagoma riempita di bianco. ⛔ L'icona dell'app ha lo sfondo pieno,
+            quindi la sagoma e' **tutto il quadrato** — ed e' il cerchio bianco
+            che si vedeva nella tenda delle notifiche il 26/09.
+
+            💡 `ic_notifica` e' il segno del marchio, bianco su trasparente,
+            generato dalle cinque densita' a partire da `assets/marchio/segno.png`.
+
+            ⚠️ Il colore tinge la sagoma e il puntino nella barra di stato: senza,
+            Android sceglie un grigio di sistema che non e' di nessuno.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notifica"/>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colore_notifica"/>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

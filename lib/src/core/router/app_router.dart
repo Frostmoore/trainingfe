@@ -419,6 +419,17 @@ String? destinazione({
   /// avrebbe continuato a suggerire la domanda sbagliata a chi legge.
   required bool sceltaFatta,
   required String posizione,
+
+  /// 🆕 🧭 **Dove si stava andando quando è calato il blocco** — 26/09/2026.
+  ///
+  /// `null` = non si sa, e allora si va a casa come si è sempre fatto.
+  ///
+  /// 💡 Arriva da [DoveSiStavaAndando], che se lo segna mentre la sessione è
+  /// bloccata. ⚠️ **Non è una scorciatoia**: quello che si restituisce qui
+  /// ripassa da questa stessa cascata, quindi tutte le altre regole valgono
+  /// ancora. Se la rotta ricordata fosse diventata irraggiungibile nel
+  /// frattempo, viene spostata da chi di dovere.
+  String? dopoLoSblocco,
 }) {
   final autenticato = stato == AuthStatus.loggedIn;
 
@@ -466,8 +477,27 @@ String? destinazione({
    *
    * 💡 Qui basta il caso autenticato: quando non lo è, ci pensa la regola 6
    * proprio perché `/bloccata` non è pubblica.
+   *
+   * ══ 🆕 🚨 E SI TORNA DOVE SI STAVA ANDANDO — 26/09/2026 ═══════════════
+   *
+   * 📌 Il committente, provando la prima notifica che porta da qualche parte:
+   * *«quando ho cliccato, mi ha correttamente indirizzato sulla pagina degli
+   * allenamenti ma, dopo meno di un decimo di secondo, è partita l'interfaccia
+   * per autenticarsi con l'impronta digitale. Appena autenticato mi ha mandato
+   * sulla pagina oggi»*.
+   *
+   * ⛔ **La destinazione era giusta e veniva buttata via qui.** Il tocco sulla
+   * notifica faceva `go('/allenamento')`, poi la sessione risultava bloccata,
+   * la regola 3 portava a `/bloccata`, e questa riga — che conosceva una sola
+   * risposta, `home` — rimandava a «Oggi» chiunque sbloccasse.
+   *
+   * 🚨 **Non era un difetto delle notifiche**: colpiva *ogni* navigazione
+   * interrotta dal blocco. Si vedeva solo adesso perché prima non c'era niente
+   * che facesse navigare l'app da fuori.
    */
-  if (posizione == AppRoutes.bloccata && autenticato) return AppRoutes.home;
+  if (posizione == AppRoutes.bloccata && autenticato) {
+    return dopoLoSblocco ?? AppRoutes.home;
+  }
 
   /*
    * 4-bis. 🆕 🔗 **Un invito si apre sempre** — 17/09/2026.
@@ -514,6 +544,55 @@ String? destinazione({
   return null;
 }
 
+/// 🆕 🧭 **Dove si stava andando quando è calato il blocco** — 26/09/2026.
+///
+/// ══ ⛔ IL DIFETTO CHE CHIUDE ════════════════════════════════════════════
+///
+/// 🚨 Il blocco biometrico **interrompe** una navigazione: si stava andando da
+/// qualche parte, la sessione risulta bloccata, e si finisce su `/bloccata`.
+/// ⛔ Finita l'impronta, la regola 4 sapeva dire solo «a casa» — e la
+/// destinazione era persa per sempre.
+///
+/// 💡 Qui si tiene **l'ultimo posto visto mentre la sessione era bloccata**.
+/// Non è «la rotta della notifica»: è più generale di proposito, perché il
+/// difetto era più generale delle notifiche. Vale anche per chi aveva l'app
+/// aperta sugli allenamenti, l'ha messa via, e la ritrova sull'impronta: dopo
+/// torna sugli allenamenti, non a «Oggi».
+///
+/// ══ ⚠️ PERCHE' UNO STATICO, E PERCHE' NON E' UN BUCO ══════════════════
+///
+/// ⚠️ Vive fuori da Riverpod perché deve **sopravvivere alla ricostruzione
+/// del router**, che è esattamente quello che succede quando la sessione
+/// cambia: un provider che si ricostruisce con lei dimenticherebbe il dato nel
+/// momento preciso in cui serve.
+///
+/// 🔑 **Non è una chiave.** Quello che si ricorda qui non scavalca niente: la
+/// regola 3 continua a portare a `/bloccata` finché la sessione è bloccata, e
+/// la rotta restituita alla fine **ripassa dalla cascata intera**. ⛔ Non si
+/// ricordano le schermate d'accesso né `/bloccata` stessa: la prima non è un
+/// posto dove tornare, la seconda farebbe girare il router su sé stesso.
+///
+/// 💡 Si azzera quando la sessione sparisce: un indirizzo lasciato lì da chi
+/// si è disconnesso non deve far da bussola a chi entra dopo.
+abstract final class DoveSiStavaAndando {
+  static String? _rotta;
+
+  /// L'ultimo posto ricordato, o `null`. Leggerlo non lo consuma: la cascata è
+  /// rivalutata molte volte di fila, e consumarlo alla prima lo perderebbe.
+  static String? get rotta => _rotta;
+
+  /// Si segna [posizione], se è un posto dove ha senso tornare.
+  static void ricorda(String posizione) {
+    if (posizione == AppRoutes.bloccata) return;
+    if (AppRoutes.isPublic(posizione)) return;
+
+    _rotta = posizione;
+  }
+
+  /// Dimentica tutto. Si chiama quando la sessione non c'è più.
+  static void dimentica() => _rotta = null;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   // `Listenable` costruito dai due controller: go_router rivaluta il
   // `redirect` quando cambia la sessione **o** quando cambia la palestra.
@@ -547,11 +626,36 @@ final routerProvider = Provider<GoRouter>((ref) {
      * qualunque punto dell'albero — anche da sopra.
      */
     navigatorKey: chiaveDelNavigatore,
-    redirect: (context, state) => destinazione(
-      stato: ref.read(authControllerProvider).status,
-      sceltaFatta: ref.read(brandingControllerProvider).sceltaFatta,
-      posizione: state.matchedLocation,
-    ),
+    /*
+     * 🆕 🧭 **Ci si segna dove si stava andando** — 26/09/2026.
+     *
+     * 🚨 Qui, e non dentro `destinazione()`: quella è una funzione **pura** e
+     * deve restare tale, perché è l'unica parte della cascata che si prova
+     * senza montare l'app. ⛔ Un effetto collaterale là dentro renderebbe i
+     * test dipendenti dall'ordine in cui girano.
+     *
+     * ⚠️ Si ricorda a **ogni** giro fatto da bloccati, non solo al primo: la
+     * posizione buona può arrivare dopo (il tocco su una notifica fa `go()`
+     * mentre lo schermo di blocco è già in piedi).
+     */
+    redirect: (context, state) {
+      final stato = ref.read(authControllerProvider).status;
+      final posizione = state.matchedLocation;
+
+      if (stato == AuthStatus.locked) {
+        DoveSiStavaAndando.ricorda(posizione);
+      }
+
+      // Sessione finita: l'indirizzo di chi se n'è andato non guida chi entra.
+      if (stato == AuthStatus.loggedOut) DoveSiStavaAndando.dimentica();
+
+      return destinazione(
+        stato: stato,
+        sceltaFatta: ref.read(brandingControllerProvider).sceltaFatta,
+        posizione: posizione,
+        dopoLoSblocco: DoveSiStavaAndando.rotta,
+      );
+    },
     routes: [
       GoRoute(
         path: AppRoutes.gymCode,

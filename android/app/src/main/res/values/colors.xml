@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#0F766E</color>
+
+    <!--
+        🔔 Il colore delle notifiche — 26/09/2026, cambiato il 26/09.
+
+        ⚠️ Android lo usa per il **tondo** dentro cui disegna l'icona piccola
+        (dal 12) e per il puntino nella barra di stato. ⛔ Senza, sceglie un
+        grigio di sistema che non è di nessuno.
+
+        ══ 🚨 PERCHE' NON E' L'ORO DEL MARCHIO ═══════════════════════════════
+
+        📌 Il primo giro usava `#C9A227`, l'oro del tema. Il committente,
+        guardandolo sul telefono: *«il cerchio intorno è tipo marroncino»*.
+
+        💡 A quella misura un oro medio non legge come oro: legge come ocra
+        sporca, e il bianco sopra ci stacca poco. Qui c'è il verde petrolio del
+        marchio — lo stesso `ic_launcher_background`, cioè lo sfondo dell'icona
+        dell'app — che è scuro: il monogramma bianco ci salta addosso.
+
+        ⚠️ **Il tondo non si può togliere**: lo disegna Android, non noi. Le
+        sole cose che si scelgono sono questo colore e quanto il monogramma lo
+        riempie (vedi `ic_notifica`, che occupa il 92% della sua tela).
+    -->
+    <color name="colore_notifica">#0F766E</color>
 </resources>

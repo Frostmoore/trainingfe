@@ -102,5 +102,51 @@ void main() {
       expect(destinazioneDellaNotifica({'tipo': 'promozione'}), isNull);
       expect(destinazioneDellaNotifica({}), isNull);
     });
+
+    /// 🆕 📣 **Un avviso porta a casa** — 26/09/2026.
+    ///
+    /// ══ ⛔ IL DIFETTO CHE QUESTO TEST CHIUDE ═════════════════════════
+    ///
+    /// 🚨 `MandaLAvvisoInPush` manda `tipo: avviso` dal 24/09, e il suo
+    /// commento prometteva che *«toccando la notifica l'app sa quale modale
+    /// aprire»*. ⛔ Non era vero: `avviso` non era gestito, e il tocco non
+    /// faceva **niente**.
+    ///
+    /// ⚠️ Non si vedeva perché le push non partivano: il sintomo del difetto
+    /// era **identico** a quello atteso. 💡 È saltato fuori il giorno che
+    /// Firebase si è acceso.
+    ///
+    /// 💡 Porta a **casa** e non a una pagina dell'avviso, perché quella
+    /// pagina non esiste: l'avviso è una modale che compare da sé al rientro.
+    test('un avviso porta alla casa, dove la modale compare da sola', () {
+      expect(
+        destinazioneDellaNotifica({'tipo': 'avviso', 'avviso_id': '7'}),
+        AppRoutes.home,
+      );
+    });
+
+    /// 🆕 🗺️ **Le sezioni note** — 26/09/2026.
+    ///
+    /// 📌 Il committente: *«la prossima notifica mandami — che ne so — alla
+    /// pagina degli allenamenti»*.
+    test('una sezione conosciuta porta alla sua pagina', () {
+      expect(destinazioneDellaNotifica({'tipo': 'allenamenti'}), AppRoutes.training);
+      expect(destinazioneDellaNotifica({'tipo': 'diario'}), AppRoutes.diary);
+      expect(destinazioneDellaNotifica({'tipo': 'progressi'}), AppRoutes.progress);
+      expect(destinazioneDellaNotifica({'tipo': 'messaggi'}), AppRoutes.chat);
+      expect(destinazioneDellaNotifica({'tipo': 'profilo'}), AppRoutes.profile);
+    });
+
+    /// 🚨 **Un percorso qualunque non apre niente.**
+    ///
+    /// ⛔ Quello che arriva in una notifica è testo che viene da fuori:
+    /// accettare un indirizzo libero vorrebbe dire far navigare l'app dove dice
+    /// il messaggio. 💡 Le destinazioni sono **dichiarate**, e ciò che non è
+    /// in elenco non porta da nessuna parte.
+    test('un tipo sconosciuto o un percorso libero non portano niente', () {
+      expect(destinazioneDellaNotifica({'tipo': 'inventato'}), isNull);
+      expect(destinazioneDellaNotifica({'rotta': '/profilo/i-miei-utenti'}), isNull);
+      expect(destinazioneDellaNotifica({'tipo': '/allenamento'}), isNull);
+    });
   });
 }

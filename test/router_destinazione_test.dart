@@ -26,10 +26,12 @@ void main() {
     AuthStatus stato, {
     String posizione = AppRoutes.home,
     bool sceltaFatta = true,
+    String? dopoLoSblocco,
   }) => destinazione(
     stato: stato,
     sceltaFatta: sceltaFatta,
     posizione: posizione,
+    dopoLoSblocco: dopoLoSblocco,
   );
 
   group('mentre si legge il token', () {
@@ -97,6 +99,104 @@ void main() {
         dove(AuthStatus.loggedOut, posizione: AppRoutes.bloccata),
         AppRoutes.login,
       );
+    });
+
+    /// 🆕 🎯 **Il difetto del 26/09**, riferito provando la prima notifica che
+    /// porta da qualche parte: *«mi ha correttamente indirizzato sulla pagina
+    /// degli allenamenti ma … appena autenticato mi ha mandato sulla pagina
+    /// oggi»*.
+    ///
+    /// ⛔ La destinazione era **giusta** e veniva buttata via allo sblocco,
+    /// perché questa regola conosceva una sola risposta.
+    test('si torna dove si stava andando, non a casa', () {
+      expect(
+        dove(
+          AuthStatus.loggedIn,
+          posizione: AppRoutes.bloccata,
+          dopoLoSblocco: AppRoutes.training,
+        ),
+        AppRoutes.training,
+      );
+    });
+
+    /// ⚠️ E quando non c'è niente da ricordare, si fa come si è sempre fatto:
+    /// 💡 il rimedio non deve cambiare il comportamento di chi apre l'app e
+    /// basta, che è il caso di gran lunga più frequente.
+    test('ma senza niente da ricordare si va a casa, come prima', () {
+      expect(
+        dove(AuthStatus.loggedIn, posizione: AppRoutes.bloccata),
+        AppRoutes.home,
+      );
+    });
+
+    /// 🚨 **E il ricordo non scavalca il blocco.** ⛔ Se bastasse averne uno
+    /// per entrare, il blocco non bloccherebbe: finché la sessione è bloccata
+    /// si va a `/bloccata` e basta, ricordo o no.
+    test('un ricordo non apre la porta a chi è ancora bloccato', () {
+      expect(
+        dove(
+          AuthStatus.locked,
+          posizione: AppRoutes.training,
+          dopoLoSblocco: AppRoutes.training,
+        ),
+        AppRoutes.bloccata,
+      );
+    });
+  });
+
+  /// 🆕 🧭 **Cosa si lascia ricordare** — 26/09/2026.
+  ///
+  /// 💡 Il pezzo che tiene il dato è separato dalla cascata apposta: la
+  /// cascata resta pura, e le due cose si provano da sole.
+  group('il ricordo di dove si stava andando', () {
+    setUp(DoveSiStavaAndando.dimentica);
+
+    test('si ricorda una pagina qualunque dell\'app', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.training);
+
+      expect(DoveSiStavaAndando.rotta, AppRoutes.training);
+    });
+
+    /// ⛔ Ricordarsi `/bloccata` vorrebbe dire, allo sblocco, rimandare alla
+    /// schermata di blocco: il router girerebbe su sé stesso.
+    test('⛔ non si ricorda la schermata di blocco', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.bloccata);
+
+      expect(DoveSiStavaAndando.rotta, isNull);
+    });
+
+    /// ⛔ E nemmeno le schermate d'accesso: non sono posti dove tornare.
+    test('⛔ né le schermate d\'accesso', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.login);
+
+      expect(DoveSiStavaAndando.rotta, isNull);
+    });
+
+    /// 🚨 L'ultimo vince: mentre lo schermo di blocco è in piedi il tocco su
+    /// una notifica può ancora far cambiare idea.
+    test('l\'ultimo posto visto vince sul precedente', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.diary);
+      DoveSiStavaAndando.ricorda(AppRoutes.training);
+
+      expect(DoveSiStavaAndando.rotta, AppRoutes.training);
+    });
+
+    /// ⚠️ Leggere non consuma: la cascata è rivalutata molte volte di fila, e
+    /// un ricordo che sparisce alla prima lettura non arriverebbe mai alla
+    /// regola che lo usa.
+    test('⚠️ leggerlo non lo consuma', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.training);
+
+      expect(DoveSiStavaAndando.rotta, AppRoutes.training);
+      expect(DoveSiStavaAndando.rotta, AppRoutes.training);
+    });
+
+    /// 🔑 Chi se n'è andato non fa da bussola a chi entra dopo.
+    test('🔑 si dimentica quando la sessione finisce', () {
+      DoveSiStavaAndando.ricorda(AppRoutes.training);
+      DoveSiStavaAndando.dimentica();
+
+      expect(DoveSiStavaAndando.rotta, isNull);
     });
   });
 

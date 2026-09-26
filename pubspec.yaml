@@ -41,7 +41,7 @@ publish_to: 'none'
 # 🛡️ Lo tiene fermo `test/versione_allineata_test.dart`, che confronta questa
 # riga col nome del ramo: dimenticarsene fa fallire la suite, non lo scopre il
 # committente guardando il telefono.
-version: 18.45.0+184500
+version: 18.45.1+184501
 
 environment:
   sdk: ^3.12.2

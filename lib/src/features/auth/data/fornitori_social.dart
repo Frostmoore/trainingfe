@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
@@ -35,11 +36,34 @@ final fornitoriSocialProvider = FutureProvider<List<String>>((ref) async {
   final api = ref.watch(apiClientProvider);
 
   try {
-    final risposta = await api.get<Map<String, dynamic>>('/auth/fornitori');
+    /*
+     * 🚨 **Una lista, non una mappa — e ci sono cascato.**
+     *
+     * ⛔ `ApiClient.get` **srotola già** l'involucro `data` (c'è un test che
+     * si chiama *«srotola `data` senza che il chiamante debba saperlo»*).
+     * Quindi qui arriva `["google","apple"]`, non `{"data": [...]}`.
+     *
+     * ⚠️ Chiedendo una `Map<String, dynamic>` il cast falliva, l'errore
+     * finiva nel `catch` qui sotto, e l'app si comportava **esattamente come
+     * se il server non avesse risposto**: nessun pulsante, nessun messaggio.
+     * 💡 Il server invece rispondeva 200 — si è scoperto solo guardando il
+     * suo log di accesso.
+     */
+    final risposta = await api.get<List<dynamic>>('/auth/fornitori');
 
-    return leggiIFornitori(risposta['data']);
-  } on Object {
-    // ⚠️ Nessun rilancio: l'assenza di pulsanti è una risposta valida.
+    return leggiIFornitori(risposta);
+  } on Object catch (errore) {
+    /*
+     * ⚠️ Nessun rilancio: l'assenza di pulsanti è una risposta valida, e un
+     * errore a schermo per una funzione facoltativa sarebbe peggio.
+     *
+     * 🚨 **Ma in sviluppo si dice.** ⛔ Senza questa riga, un difetto di
+     * programmazione — un tipo sbagliato, un percorso storto — è
+     * indistinguibile da «il server non risponde». È successo il 26/09, ed è
+     * costato la diagnosi più lunga della giornata.
+     */
+    if (kDebugMode) debugPrint('Fornitori social non letti: $errore');
+
     return const [];
   }
 });

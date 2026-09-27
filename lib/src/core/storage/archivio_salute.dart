@@ -1015,6 +1015,30 @@ class ArchivioSalute extends _$ArchivioSalute {
             ..limit(quante))
           .get();
 
+  /// 🆕 🏋️ **Quando è finita l'ultima seduta** — voce 62, 27/09/2026.
+  ///
+  /// ══ 📌 A COSA SERVE ═══════════════════════════════════════════════════
+  ///
+  /// 💡 È il fatto su cui `IPromemoria` decide se chiedere «ci alleniamo?»: chi
+  /// si è allenato stamattina non deve sentirselo chiedere alle 18.
+  ///
+  /// ══ 🚨 `finitaIl` E NON `iniziataIl` ══════════════════════════════════
+  ///
+  /// ⛔ Una seduta **aperta e abbandonata** non è un allenamento fatto: succede
+  /// (si apre l'app, si cambia idea, si esce), e contarla vorrebbe dire
+  /// **saltare** il promemoria proprio a chi non si è allenato.
+  ///
+  /// 💡 Un metodo dedicato e non `sedute()` filtrato: ⚠️ quello carica fino a 200
+  /// righe con tutte le colonne per leggerne una data, e questo gira a ogni
+  /// apertura dell'app.
+  Future<DateTime?> ultimaSedutaFinita() async {
+    final riga = await (selectOnly(
+      seduteAllenamento,
+    )..addColumns([seduteAllenamento.finitaIl.max()])).getSingleOrNull();
+
+    return riga?.read(seduteAllenamento.finitaIl.max());
+  }
+
   /// 🔒 Quante sedute sono state **aperte dall'app** in un giorno — 08/09/2026.
   ///
   /// ══ 🚨 SERVE AL GATE, E CONTA UNA COSA SOLA ═══════════════════════════

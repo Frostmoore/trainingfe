@@ -12,6 +12,8 @@ import '../../features/auth/auth_controller.dart';
 import '../api/api_client.dart';
 import '../providers.dart';
 import '../router/app_router.dart';
+import 'catalogo.dart';
+import 'notifications.dart';
 
 /// 🔔 **Le notifiche push, dall'arrivo al tocco** — 24/09/2026.
 ///
@@ -110,11 +112,55 @@ class NotifichePush {
     _ultimoToken = null;
   }
 
+  /// 🔑 **Registra il token, e NON chiede il permesso** — corretto il 27/09/2026,
+  /// voce 62.3.
+  ///
+  /// ══ 🚨 IL DIFETTO CHE C'ERA ═══════════════════════════════════════════
+  ///
+  /// ⛔ Qui c'era `await FirebaseMessaging.instance.requestPermission()`, e girava
+  /// **al login**: la prima cosa che una persona nuova vedeva, appena entrata, era
+  /// il dialogo di sistema «consenti le notifiche» — senza nessun motivo davanti.
+  ///
+  /// 🚨 E `notifications.dart` lo scrive a due passi da qui: *«chiederlo
+  /// all'avvio, prima che l'utente abbia capito a cosa serve, è il modo più rapido
+  /// per farselo negare per sempre»*. ⛔ Lo scriveva, e intanto qui lo si faceva.
+  ///
+  /// ══ ⚖️ PERCHE' IL DANNO NON ERA SOLO «MENO PUSH» ═══════════════════════
+  ///
+  /// 🔑 **Su Android e su iOS il permesso delle notifiche è UNO**: non esiste un
+  /// «sì alle locali, no alle push». ⛔ Quindi un no dato a freddo su una notifica
+  /// di marketing portava via anche **il cronometro del recupero** — la notifica
+  /// più utile che l'app abbia, quella che fa funzionare il riposo fra le serie
+  /// col telefono in tasca.
+  ///
+  /// 💡 Chiederlo dove il motivo è evidente — alla prima serie registrata, come
+  /// fa `RestTimer` — non è una cortesia: è l'unico modo perché quel sì ci sia
+  /// **anche** per le push. ⚖️ Le due cose non si possono separare, e allora si
+  /// chiede una volta, nel punto migliore.
+  ///
+  /// ══ ⚠️ CONSEGUENZA, DETTA CHIARAMENTE ══════════════════════════════════
+  ///
+  /// 🚨 Finché il permesso non c'è, **il token non si registra**: senza permesso
+  /// una push non si vedrebbe comunque, e un token registrato darebbe l'idea che
+  /// la persona sia raggiungibile quando non lo è.
+  ///
+  /// 💡 E si riprova: questo metodo gira a ogni accesso e `onTokenRefresh` a ogni
+  /// rinnovo, quindi il primo giro **dopo** il sì registra il token da solo.
   static Future<void> _registraIlTokenAttuale(
     ProviderContainer container,
   ) async {
     try {
-      await FirebaseMessaging.instance.requestPermission();
+      if (!await notificheConsentite()) {
+        if (kDebugMode) {
+          debugPrint(
+            'Token push non registrato: il permesso delle notifiche non c\'è ancora. '
+            'Lo chiederà il primo recupero, dove il motivo si vede.',
+          );
+        }
+
+        return;
+      }
+
       final token = await FirebaseMessaging.instance.getToken();
 
       if (token != null) await _registra(container, token);
@@ -245,17 +291,17 @@ class NotifichePush {
   }
 }
 
-/// 🧭 **Dove porta il tocco su una notifica** — 24/09/2026, allargata il
-/// 26/09.
+/// 🧭 **Dove porta il tocco su una notifica** — 24/09/2026, allargata il 26/09,
+/// portata sul catalogo il 27/09.
 ///
-/// I `data` li scrive il server (`PushSender::toUser`), e sono stringhe:
+/// I `data` li scrive il server (`LeNotifiche::manda()`), e sono stringhe:
 ///
 /// | `data` | Destinazione |
 /// |---|---|
 /// | `tipo: promozione`, `codice` | l'offerta, in cima a «Offerte per te» |
 /// | `conversation_id` | la chat |
-/// | 🆕 `tipo: avviso` | la **casa**: l'avviso è una modale, e compare da sé |
-/// | 🆕 `tipo` fra le **sezioni note** | quella sezione (vedi `_leSezioni`) |
+/// | 🆕 `tipo` nel **catalogo** | la sua `destinazione` dichiarata, tradotta da `_leDestinazioni` |
+/// | 🆕 `dove`, con un `tipo` che non conosciamo | quella sezione, se è in elenco |
 /// | altro | niente: si resta dove si apre l'app |
 ///
 /// ══ 🚨 IL DIFETTO CHE C'ERA, E NON SI POTEVA VEDERE ════════════════
@@ -282,6 +328,14 @@ String? destinazioneDellaNotifica(Map<String, dynamic> dati) {
   final codice = dati['codice']?.toString() ?? '';
   final tipo = dati['tipo']?.toString() ?? '';
 
+  /*
+   * 🎁 **L'unico affinamento**: l'offerta vuole il suo codice, e senza quello
+   * «offerte» è la pagina giusta ma non la riga giusta.
+   *
+   * ⚠️ Sta **prima** del catalogo perché è più specifico di quello che il
+   * catalogo può dire: `promozione` dichiara `offerte`, e qui si scende
+   * all'offerta singola quando il codice c'è.
+   */
   if (tipo == 'promozione' && codice.isNotEmpty) {
     return AppRoutes.offertaDaMostrare(codice);
   }
@@ -291,35 +345,66 @@ String? destinazioneDellaNotifica(Map<String, dynamic> dati) {
   }
 
   /*
-   * 🆕 📣 **Un avviso porta a casa** — 26/09/2026.
+   * 🆕 🧭 **Il nome lo dichiara il catalogo, il percorso lo decide qui** —
+   * 27/09/2026.
    *
-   * ⚠️ Non c'è una pagina «avviso» da aprire: l'avviso è una **modale**, e la
-   * mostra `AvvisoAllApertura` non appena l'app torna in primo piano — che è
-   * esattamente quello che succede toccando la notifica.
+   * 📌 Il committente: *«ci deve essere un altro parametro nelle notifiche: dove
+   * rimanda. Cioè a che pagina dell'app o a che url»*.
    *
-   * 💡 Quindi si porta alla casa e si lascia fare a lei: ⛔ aprire la modale
-   * da qui vorrebbe dire due strade per la stessa cosa, e due strade che si
-   * accavallano fanno comparire la finestra due volte.
+   * ⛔ **Prima erano tre `if` più una mappa**, e le due metà non si parlavano:
+   * `_leSezioni` era indicizzata su `tipo` con chiavi — `allenamenti`,
+   * `progressi`, `profilo` — che **nessuna notifica ha mai mandato**. 🚨 Sembrava
+   * un elenco di destinazioni funzionanti, ed era codice morto: le uniche due
+   * che arrivavano davvero (`promozione` e `avviso`) erano gestite a mano sopra.
+   *
+   * 🔑 Ora la destinazione è **una proprietà della notifica**, dichiarata nel
+   * catalogo di qua e di là. ⚠️ Si preferisce quella del **nostro** catalogo a
+   * quella che arriva nel carico: sono tenute uguali da
+   * `test/catalogo_delle_notifiche_test.dart`, e fidarsi della propria copia
+   * vuol dire che un carico storto o vecchio non sposta l'app da nessuna parte.
+   *
+   * 💡 `dove` dal carico resta come ripiego, e serve davvero: una notifica di un
+   * tipo che questa versione dell'app **non conosce ancora** — il server si
+   * aggiorna prima dei telefoni — può comunque portare in una sezione, purché
+   * sia una di quelle in elenco.
    */
-  if (tipo == 'avviso') return AppRoutes.home;
+  final dal = Notifica.dalTipo(tipo)?.destinazione;
+  final dalCarico = dati['dove']?.toString();
 
-  return _leSezioni[tipo];
+  return _leDestinazioni[dal ?? dalCarico];
 }
 
-/// 🗺️ **Le sezioni dove una notifica può portare** — 26/09/2026.
+/// 🗺️ **Da un nome a una schermata, e l'elenco è chiuso** — 26/09/2026,
+/// rifatto il 27/09.
 ///
-/// 🔑 **Un elenco chiuso, e non un percorso libero**: il server manda un
-/// nome, non un indirizzo. ⛔ Così una notifica non può far aprire all'app una
-/// pagina qualunque, e chi aggiunge una destinazione deve passare **da qui** —
-/// cioè da un posto dove qualcuno la legge.
+/// 🔑 **Il server manda un nome, non un indirizzo.** ⛔ Un campo `rotta` che
+/// l'app apre e basta sarebbe comodo, ma quello che arriva in una notifica è
+/// testo che viene da fuori: vorrebbe dire far navigare l'app dove dice il
+/// messaggio. 💡 Qui un nome che non è in elenco non porta **da nessuna
+/// parte**, e chi aggiunge una destinazione passa da qui — cioè da un posto
+/// dove qualcuno la legge.
 ///
-/// ⚠️ Sono le sezioni della barra, quelle che esistono sempre: una notifica
-/// che porta a una schermata di dettaglio dovrebbe portarsi dietro anche il
-/// **suo** identificativo, e allora non basta un nome.
-const Map<String, String> _leSezioni = {
+/// ⚠️ Le chiavi sono le stesse stringhe di `Notifica.destinazione` e di
+/// `App\Enums\Notifica::destinazione()` nel backend.
+///
+/// 🚨 **Solo schermate che si aprono senza un identificativo.** Una pagina di
+/// dettaglio — l'invito col suo token, una bozza col suo id — non ci può
+/// stare: il nome da solo non basta, e il pezzo che manca è spesso una
+/// credenziale, che in una push non ci va (vedi `Notifica::destinazione()`).
+const Map<String, String> _leDestinazioni = {
+  'casa': AppRoutes.home,
   'allenamenti': AppRoutes.training,
   'diario': AppRoutes.diary,
   'progressi': AppRoutes.progress,
   'messaggi': AppRoutes.chat,
   'profilo': AppRoutes.profile,
+  'offerte': AppRoutes.offerte,
+
+  /*
+   * 💳 ⚠️ `/acquisti`, **non** il pannello: chi riceve le notifiche del denaro
+   * sta sul telefono. 💡 Il pannello ha la sua strada — l'avviso del widget
+   * `AvvisoDaPagare` — e sono due sedi dello stesso messaggio per due
+   * pubblici diversi.
+   */
+  'abbonamento': AppRoutes.acquisti,
 };

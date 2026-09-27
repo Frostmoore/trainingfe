@@ -64,6 +64,38 @@ Future<void> initNotifications() async {
   }
 }
 
+/// 🆕 🔎 **Il permesso c'è?** — voce 62, 27/09/2026.
+///
+/// ══ 📌 PERCHE' SERVE SAPERLO, E NON SOLO CHIEDERLO ════════════════════════
+///
+/// 🚨 La schermata «Promemoria» ha quattro interruttori. ⛔ Senza il permesso di
+/// sistema **non fanno niente**: una persona li accende tutti, non riceve nulla,
+/// e conclude che l'app è rotta.
+///
+/// 💡 Quindi si guarda **prima** e, se manca, lo si dice — invece di chiederlo a
+/// freddo. ⚠️ Chiedere il permesso all'apertura di una schermata di impostazioni
+/// è il modo più rapido per farselo negare per sempre: il dialogo di sistema si
+/// mostra **una volta**.
+///
+/// ⚠️ `true` quando non si riesce a sapere (iOS non espone la risposta in modo
+/// affidabile, e il plugin può non essere inizializzato): ⛔ un avviso «manca il
+/// permesso» mostrato a chi ce l'ha è peggio di nessun avviso — manda a cercare
+/// un problema che non c'è.
+Future<bool> notificheConsentite() async {
+  try {
+    final android = FlutterLocalNotificationsPlugin()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    if (android != null) return await android.areNotificationsEnabled() ?? true;
+
+    return true;
+  } on Object {
+    return true;
+  }
+}
+
 /// Chiede il permesso, la prima volta che serve davvero.
 ///
 /// Restituisce `false` anche quando l'utente ha detto no: il chiamante deve

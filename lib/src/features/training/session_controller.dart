@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/notifications/il_giro_dei_promemoria.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../acquisti/data/gate_dell_abbonamento.dart';
 import '../health/health_controller.dart';
@@ -378,6 +381,20 @@ class SessionActions {
 
     _rileggi();
     _ref.invalidate(sessionsProvider);
+
+    /*
+     * 🆕 ⏰ **I promemoria si rifanno** — voce 62, 27/09/2026.
+     *
+     * ⛔ Senza questa riga, chi finisce di allenarsi alle 17 si sente chiedere
+     * «ci alleniamo?» alle 18: il promemoria era già programmato, e nessuno lo
+     * cancella. 🚨 Un promemoria che arriva per una cosa appena fatta è il
+     * genere di errore per cui si spengono tutte le notifiche.
+     *
+     * ⚠️ `unawaited` e mai un `await`: ⛔ far fallire la chiusura di una seduta
+     * perché non si è riusciti a riprogrammare un avviso vorrebbe dire perdere
+     * l'allenamento. `rifai()` non lancia comunque, questo è il secondo strato.
+     */
+    unawaited(_ref.read(giroDeiPromemoriaProvider).rifai());
   }
 
   /// Corregge a mano le calorie. `null` **rimette la stima**, non azzera.

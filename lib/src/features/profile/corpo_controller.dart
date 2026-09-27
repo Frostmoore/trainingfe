@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/notifications/il_giro_dei_promemoria.dart';
 import '../../core/storage/archivio_salute.dart';
 import '../dashboard/data/dashboard_models.dart';
 import '../health/health_controller.dart';
@@ -151,6 +154,18 @@ class AzioniCorpo {
         );
 
     _ref.read(revisioneCorpoProvider.notifier).state++;
+
+    /*
+     * 🆕 ⚖️ **E il richiamo settimanale si sposta** — voce 62, 27/09/2026.
+     *
+     * 💡 Chi si pesa martedì non va richiamato il lunedì dopo: il prossimo
+     * promemoria va **sette giorni da questa pesata**, non al prossimo giorno
+     * scelto. ⛔ Senza questa riga resterebbe quello vecchio, e arriverebbe dopo
+     * due giorni.
+     *
+     * ⚠️ `unawaited`: una pesata non si perde per un avviso non programmato.
+     */
+    unawaited(_ref.read(giroDeiPromemoriaProvider).rifai());
   }
 }
 

@@ -21,10 +21,13 @@
 /// diario così com'è. 💡 La rotta valida e **restituisce**; a scrivere è l'app.
 library;
 
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/notifications/il_giro_dei_promemoria.dart';
 import '../../core/providers.dart';
 import '../health/health_controller.dart';
 import 'data/diario_locale.dart';
@@ -121,6 +124,23 @@ class DiaryActions {
   /// schermata del diario, lasciando «Oggi» sulle calorie di prima.
   void _cambiato() {
     _ref.read(revisioneDiarioProvider.notifier).state++;
+
+    /*
+     * 🆕 ⏰ **E i promemoria si rifanno** — voce 62, 27/09/2026.
+     *
+     * ⛔ Senza, chi segna la cena alle 20 si sente chiedere alle 21 se l'ha
+     * segnata: il promemoria era già programmato all'apertura dell'app, quando
+     * il diario di oggi era vuoto, e nessuno lo cancella.
+     *
+     * 🔑 **Sta qui e non nei singoli inserimenti**, che è il motivo per cui
+     * questo metodo esiste: è già «un posto solo per dire che il diario è
+     * cambiato», e un promemoria che dipende dal diario dipende esattamente da
+     * questo.
+     *
+     * ⚠️ `unawaited`: ⛔ far fallire l'inserimento di un alimento perché non si è
+     * riusciti a riprogrammare un avviso vorrebbe dire perdere il pasto.
+     */
+    unawaited(_ref.read(giroDeiPromemoriaProvider).rifai());
   }
 
   /// Inserimento manuale — A4.4.

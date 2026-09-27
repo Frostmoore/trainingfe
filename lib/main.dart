@@ -11,6 +11,7 @@ import 'src/core/backup/backup_che_gira_da_solo.dart';
 import 'src/core/backup/backup_in_background.dart';
 import 'src/core/config/app_config.dart';
 import 'src/core/media/archivio_foto.dart';
+import 'src/core/notifications/il_giro_dei_promemoria.dart';
 import 'src/core/notifications/notifications.dart';
 import 'src/core/notifications/notifiche_push.dart';
 import 'src/core/providers.dart';
@@ -105,6 +106,25 @@ Future<void> main() async {
     } on Object catch (errore) {
       debugPrint('Notifiche push non avviate: $errore');
     }
+
+    /*
+     * 🆕 ⏰ **I promemoria locali si rifanno a ogni avvio** — voce 62, 27/09/2026.
+     *
+     * ══ 🚨 PERCHE' ALL'AVVIO, E PERCHE' OGNI VOLTA ════════════════════════
+     *
+     * ⛔ Una notifica programmata **non è condizionale**: suona all'ora e basta,
+     * non può chiedersi «si è allenato?» quando arriva il momento. 💡 Quindi si
+     * guarda lo stato adesso, si cancella tutto e si riprogramma.
+     *
+     * 🔑 E si programmano **sette giorni avanti**: è la parte che fa funzionare
+     * «sono tre giorni che non ti alleni» per chi non apre l'app.
+     *
+     * ⚠️ **Non si attende** (`unawaited`): legge il database locale e parla col
+     * plugin delle notifiche, e nessuna delle due cose deve stare fra l'utente e
+     * la prima schermata. ⛔ Un promemoria programmato mezzo secondo più tardi non
+     * cambia niente; mezzo secondo di schermo bianco all'avvio sì.
+     */
+    unawaited(container.read(giroDeiPromemoriaProvider).rifai());
 
     // 🚨 Si fa partire il ripristino della sessione **prima** di disegnare:
     // il router resta su `AuthStatus.unknown` e non decide niente finché non

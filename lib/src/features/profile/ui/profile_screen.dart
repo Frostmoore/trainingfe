@@ -382,6 +382,23 @@ class ProfileScreen extends ConsumerWidget {
                  * 💡 La rotta `/progressi` **resta**: ci puntano le notifiche
                  * e la scheda di «Oggi».
                  */
+                /*
+                  * 🆕 ⏰ **«Promemoria»** — voce 62, 27/09/2026.
+                  *
+                  * 💡 Sopra «Privacy e consensi» perche' e' la cosa che si cerca
+                  * quando una notifica da' fastidio — e chi la cerca la cerca
+                  * **adesso**, prima di spegnere tutto dal sistema.
+                  */
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('Promemoria'),
+                  subtitle: const Text(
+                    'Allenamento, diario e misure: quali vuoi e a che ora',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.promemoria),
+                ),
+
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('Privacy e consensi'),

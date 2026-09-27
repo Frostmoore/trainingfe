@@ -32,6 +32,7 @@ import '../../features/profile/ui/edit_profile_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/profile/ui/schermata_modello_calorie.dart';
 import '../../features/profile/ui/schermata_palestra.dart';
+import '../../features/profile/ui/schermata_promemoria.dart';
 import '../../features/profile/ui/schermata_tu.dart';
 import '../../features/progress/ui/progress_screen.dart';
 import '../../features/promozioni/ui/schermata_amico.dart';
@@ -223,6 +224,13 @@ class AppRoutes {
 
   /// ⚖️ Come si contano le calorie: il modello, e poi il livello — 3b-G.1.
   static const modelloCalorie = '/profilo/calorie';
+
+  /// 🆕 ⏰ **I promemoria locali** — voce 62, 27/09/2026.
+  ///
+  /// 💡 Sotto `/profilo` e non in barra: si aprono **una volta**, per scegliere
+  /// gli orari, e poi non si riaprono piu'. ⚠️ Non e' la schermata dei permessi
+  /// di sistema: quelli li da' il telefono, qui si scegli QUALI promemoria.
+  static const promemoria = '/profilo/promemoria';
   static const deleteAccount = '/profilo/elimina';
   static const credentials = '/profilo/credenziali';
 
@@ -960,6 +968,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.modelloCalorie,
         builder: (_, _) => const SchermataModelloCalorie(),
+      ),
+      GoRoute(
+        path: AppRoutes.promemoria,
+        builder: (_, _) => const SchermataPromemoria(),
       ),
       GoRoute(
         path: AppRoutes.deleteAccount,

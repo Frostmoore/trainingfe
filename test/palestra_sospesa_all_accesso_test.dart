@@ -10,7 +10,6 @@ import 'package:training_companion/src/core/config/app_config.dart';
 import 'package:training_companion/src/core/providers.dart';
 import 'package:training_companion/src/core/storage/token_store.dart';
 import 'package:training_companion/src/features/auth/auth_controller.dart';
-import 'package:training_companion/src/features/auth/ui/gym_inactive_screen.dart';
 import 'package:training_companion/src/features/auth/ui/login_screen.dart';
 
 import 'aiuto/intestazione.dart';
@@ -25,13 +24,16 @@ import 'aiuto/intestazione.dart';
 /// riattivare l'accesso.»*
 ///
 /// ⚠️ La frase che conta — **«il tuo account e i tuoi dati sono al sicuro»** —
-/// viveva solo in `GymInactiveScreen`, che si vede quando la palestra viene
-/// sospesa **mentre sei già dentro**. 🚨 Chi stava provando a entrare, cioè chi
-/// se lo sta chiedendo davvero, non la riceveva.
+/// viveva in una schermata dedicata che si vedeva solo **da dentro**. 🚨 Chi stava
+/// provando a entrare, cioè chi se lo sta chiedendo davvero, non la riceveva.
 ///
-/// 💡 Non si manda alla schermata dedicata: il suo «Controlla di nuovo» chiama
-/// `/auth/me`, e dopo un accesso fallito non c'è nessun token. La spiegazione
-/// va dove la persona può agire.
+/// 🆕 **27/09/2026**: quella schermata è stata **cancellata** — era irraggiungibile
+/// dal 26/09 e diceva l'opposto di quello che è stato deciso (si entra, e si vede
+/// l'interfaccia dei non abbonati). 💡 La costante è rimasta, e vive nella
+/// schermata d'accesso: è l'unico posto che la usa.
+///
+/// 🔑 Questo test resta valido parola per parola, e continua a proteggere la cosa
+/// giusta: che chi **non riesce a entrare** senta dire che i suoi dati sono al sicuro.
 void main() {
   testWidgets('l\'errore dice anche che i dati sono al sicuro', (tester) async {
     final rete = _PalestraSospesa();

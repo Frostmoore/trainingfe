@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/acquisti/ui/schermata_acquisti.dart';
 import '../../features/auth/auth_controller.dart';
-import '../../features/auth/ui/gym_inactive_screen.dart';
 import '../../features/auth/ui/login_screen.dart';
 import '../../features/auth/ui/register_screen.dart';
 import '../../features/auth/ui/schermata_di_blocco.dart';
@@ -97,7 +96,18 @@ class AppRoutes {
   static const gymCode = '/benvenuto';
   static const login = '/accedi';
   static const register = '/registrati';
-  static const gymInactive = '/palestra-sospesa';
+  /// ⛔ **TOLTA il 27/09/2026** — 63.C. Era `/palestra-sospesa`, una schermata
+  /// a tutto schermo che diceva *«La tua palestra ha sospeso il servizio»*.
+  ///
+  /// 🚨 **Era codice morto da quando, il 26/09, è stata tolta la regola del
+  /// router che ci portava**: la rotta esisteva, la schermata esisteva, e nessuno
+  /// ci navigava. ⚠️ È la trappola già pagata con `RunnerDebug.entitlements` —
+  /// *il nome di un file non dice che sia collegato a qualcosa*.
+  ///
+  /// ⛔ E soprattutto **diceva l'opposto di quello che è stato deciso**: chi ha
+  /// lo spazio sospeso **entra** e vede l'interfaccia dei non abbonati, non una
+  /// porta chiusa. 💡 Lasciarla lì vorrebbe dire che un giorno qualcuno la
+  /// ricollega credendo di sistemare qualcosa.
   static const bloccata = '/bloccata';
 
   static const home = '/';
@@ -300,7 +310,7 @@ class AppRoutes {
   static String day(String date) => '/giorno/$date';
 
   /// Le schermate raggiungibili senza sessione.
-  static const _public = {gymCode, login, register, gymInactive};
+  static const _public = {gymCode, login, register};
 
   static bool isPublic(String location) => _public.contains(location);
 
@@ -761,10 +771,6 @@ final routerProvider = Provider<GoRouter>((ref) {
          */
         builder: (_, stato) =>
             RegisterScreen(invito: stato.uri.queryParameters['invito']),
-      ),
-      GoRoute(
-        path: AppRoutes.gymInactive,
-        builder: (_, _) => const GymInactiveScreen(),
       ),
       GoRoute(
         path: AppRoutes.bloccata,

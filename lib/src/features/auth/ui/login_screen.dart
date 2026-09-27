@@ -9,8 +9,30 @@ import '../../../core/theme/app_theme.dart';
 import '../../onboarding/branding_controller.dart';
 import '../../onboarding/ui/widgets/marchio_in_cima.dart';
 import '../auth_controller.dart';
-import 'gym_inactive_screen.dart';
 import 'widgets/social_buttons.dart';
+
+/// 🚬 **La rassicurazione per chi trova l'abbonamento sospeso.**
+///
+/// ⛔ Il giro UX del 23/09: sospesa la palestra e rifatto l'accesso, l'app
+/// rispondeva con la sola riga del server, mentre la frase che conta — **che i
+/// dati sono al sicuro** — la riceveva solo chi era già dentro. ⚠️ Cioè chi è
+/// più in ansia non la vedeva.
+///
+/// ── 📦 Perché vive qui, dal 27/09/2026 ─────────────────────────────────
+///
+/// 🚨 Stava in `gym_inactive_screen.dart`, che è stato **cancellato**: quella
+/// schermata a tutto schermo era irraggiungibile da quando, il 26/09, è stata
+/// tolta la regola del router che ci portava — e diceva l'opposto di quello che
+/// è stato deciso, cioè una porta chiusa invece dell'interfaccia dei non abbonati.
+///
+/// ⚠️ **Ma il file non era del tutto morto**: il widget sì, questa costante no.
+/// 💡 È la lezione al rovescio — non basta chiedersi *«chi naviga qui?»*, va
+/// chiesto anche *«cos'altro c'è dentro questo file?»*. L'ha trovato l'analisi
+/// statica, in un secondo.
+const rassicurazionePalestraSospesa =
+    'Il tuo account e i tuoi dati sono al sicuro: torneranno disponibili '
+    "appena l'abbonamento riprenderà. Nel frattempo resta tutto quello che è "
+    'tuo: allenamenti, diario e progressi.';
 
 /// L'accesso — A2.3.
 class LoginScreen extends ConsumerStatefulWidget {

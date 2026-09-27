@@ -41,9 +41,29 @@ class UnauthenticatedException extends ApiException {
 /// 🚨 Va distinto dal 401: l'utente **ha** le credenziali giuste e non può
 /// farci niente. Mandarlo alla schermata di accesso lo farebbe riprovare
 /// all'infinito con la password corretta, convinto di sbagliarla.
+/// ── 🔄 Il testo è cambiato il 27/09/2026 — 63.E ────────────────────────────
+///
+/// ⛔ Diceva: *«La tua palestra ha sospeso il servizio. **Rivolgiti a loro**»*.
+/// 🚨 Detto al **titolare** della palestra, gli diceva di rivolgersi a sé stesso;
+/// detto a un **trainer indipendente**, parlava di una palestra che non ha.
+///
+/// ⚠️ Non è un dettaglio di stile: è la stessa famiglia dei due guasti del
+/// 26–27/09, dove il messaggio mostrava una **diagnosi falsa** e mandava a cercare
+/// una causa che non c'era. 💡 Il committente ci ha perso una notte.
+///
+/// 🔑 Il testo nuovo dice **una cosa vera per tutti**: cos'è spento, cosa non si è
+/// perso, e che si riprende pagando. ⚖️ Chi può pagare sa già di poterlo fare;
+/// chi non può, non viene mandato da nessuno.
+///
+/// 💡 Dal 27/09 questo messaggio si vede **raramente**: `PianoAttivo` non conta
+/// più uno spazio sospeso, quindi l'app mostra l'interfaccia dei non abbonati
+/// **prima** di chiamare quelle rotte. ⛔ Ma «raramente» non è «mai», e un
+/// messaggio che mente è peggio quando compare di rado: nessuno lo corregge.
 class GymInactiveException extends ApiException {
   const GymInactiveException([
-    super.message = 'La tua palestra ha sospeso il servizio. Rivolgiti a loro.',
+    super.message = 'Questo abbonamento è sospeso: le funzioni che dipendono da '
+        'lui sono spente. I tuoi dati restano dove sono, e tutto riprende appena '
+        'il pagamento riparte.',
   ]);
 }
 

@@ -17,6 +17,14 @@ import 'le_dichiarazioni.dart';
 /// credenziali: un pulsante che risponde sempre errore fa sembrare rotta tutta
 /// l'applicazione, non solo quel pulsante. È anche il motivo per cui la
 /// disponibilità non è una costante dentro l'app — cambiarla richiederebbe una
+/// 🎨 Il marchio «G» di Google.
+///
+/// ⚠️ Vive in una costante e non scritto a mano nel widget perché lo nomina
+/// anche il test che ne pretende l'esistenza: ⛔ due stringhe uguali scritte in
+/// due posti divergono, e il giorno che divergono il test passa mentre l'app
+/// mostra il ripiego.
+const marchioGoogle = 'assets/marchio/google_g.png';
+
 /// pubblicazione sugli store.
 class SocialButtons extends ConsumerStatefulWidget {
   const SocialButtons({this.dichiarazioniDate = true, super.key});
@@ -203,11 +211,20 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
            * (`Icons.apple`). ⛔ Apple **respinge** le app il cui pulsante non
            * segue la sua specifica, quindi qui non si improvvisa.
            *
-           * 🚨 **Google: il rosso NON è uno stile ufficiale** (i suoi sono
-           * bianco, grigio neutro o nero), e soprattutto **la G non si
-           * ridisegna**: va presa dal kit di Google. ⏳ Finché quel file non
-           * c'è, qui sotto c'è una lettera stilizzata — è un **segnaposto
-           * dichiarato**, non il marchio.
+           * 🔄 **GOOGLE È CAMBIATO il 27/09/2026, e il rosso è andato via.**
+           *
+           * ⛔ Il rosso **non è uno stile ufficiale di Google** (i suoi sono
+           * bianco, grigio neutro o nero). ⚠️ Finché dentro c'era una lettera
+           * disegnata da noi era solo una scelta estetica; **col marchio vero
+           * sopra diventa un uso non conforme**, ed è il genere di cosa che si
+           * scopre a revisione dello store già avviata.
+           *
+           * ⚖️ Scelto dal committente fra i tre stili ammessi: **bianco con
+           * bordo grigio**, che è quello che Google mette per primo.
+           *
+           * 🚨 E la «G» **non si ridisegna**: è il marchio ufficiale, incollato
+           * dal loro snippet in `assets/marchio/google_g.svg` e rasterizzato da
+           * `memory/scripts/fai-la-g-di-google.sh`.
            */
           FilledButton.icon(
             onPressed: _inCorso != null || !widget.dichiarazioniDate
@@ -215,16 +232,24 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
                 : () => _accedi(provider),
             style: FilledButton.styleFrom(
               backgroundColor: _sfondo(provider),
-              foregroundColor: Colors.white,
+              foregroundColor: _inchiostro(provider),
               minimumSize: const Size.fromHeight(48),
+
+              /*
+               * ⚠️ **Il bordo serve solo al bianco**, e non è decorazione: senza,
+               * su uno sfondo chiaro il pulsante sparisce. 💡 È anche il motivo
+               * per cui Google, nel suo stile chiaro, lo prescrive.
+               */
+              side: _bordo(provider),
             ),
             icon: _inCorso == provider
-                ? const SizedBox(
+                ? SizedBox(
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      // ⚠️ Bianca su un pulsante bianco non si vedrebbe.
+                      color: _inchiostro(provider),
                     ),
                   )
                 : _segno(provider),
@@ -259,40 +284,88 @@ class _SocialButtonsState extends ConsumerState<SocialButtons> {
   ///
   /// ⚠️ **Apple `#1A1A1A`**: il nero è uno degli stili che Apple ammette, e
   /// discostarsene è motivo di rifiuto della pubblicazione.
-  /// 🚨 **Google `#DB4437`**: è il rosso del marchio, chiesto dal committente,
-  /// ⛔ **ma non è uno stile di pulsante ufficiale di Google** (i suoi sono
-  /// bianco, grigio neutro o nero). Va rivisto prima di pubblicare.
+  ///
+  /// 🔄 **Google: bianco, dal 27/09/2026.** ⛔ Era `#DB4437`, il rosso del
+  /// marchio, chiesto dal committente il 26/09 — ma il rosso **non è fra gli
+  /// stili che Google ammette**, e col marchio vero sopra sarebbe un uso non
+  /// conforme. ⚖️ Scelto il bianco con bordo, che è il primo dei suoi.
   Color _sfondo(String provider) => switch (provider) {
     SocialProviderId.apple => const Color(0xFF1A1A1A),
-    SocialProviderId.google => const Color(0xFFDB4437),
+    SocialProviderId.google => Colors.white,
     _ => Theme.of(context).colorScheme.primary,
   };
+
+  /// 🖋️ Il colore del testo.
+  ///
+  /// ⚠️ **Google `#1F1F1F`**, non nero pieno: è il grigio scurissimo che le sue
+  /// linee guida indicano per il pulsante chiaro.
+  Color _inchiostro(String provider) => switch (provider) {
+    SocialProviderId.google => const Color(0xFF1F1F1F),
+    _ => Colors.white,
+  };
+
+  /// 🔲 Il bordo: **solo** per il pulsante chiaro di Google.
+  ///
+  /// ⛔ `null` per gli altri, che hanno lo sfondo scuro e si vedono da soli.
+  BorderSide? _bordo(String provider) => provider == SocialProviderId.google
+      ? const BorderSide(color: Color(0xFFDADCE0))
+      : null;
 
   /// Il segno dentro il pulsante.
   ///
   /// 🍎 Apple ha la sua mela in Material (`Icons.apple`), ed è quella giusta.
   ///
-  /// 🚨 **Google no**, e non si può ridisegnare: la «G» ufficiale è un marchio
-  /// e va presa dal kit di Google, che ne vieta espressamente le riproduzioni.
-  /// ⏳ Finché quel file non c'è, qui c'è una **lettera**, non il logo: è un
-  /// segnaposto dichiarato, così nessuno lo scambia per il marchio vero.
+  /// 🎨 **Google: il marchio ufficiale**, da `assets/marchio/google_g.png`.
+  /// ⛔ Non è ridisegnato: i tracciati vengono dallo snippet che Google pubblica
+  /// (`google_g.svg`), rasterizzati da `memory/scripts/fai-la-g-di-google.sh`.
   Widget _segno(String provider) => switch (provider) {
     SocialProviderId.apple => const Icon(Icons.apple, size: 22),
-    SocialProviderId.google => const SizedBox(
-      width: 22,
-      height: 22,
-      child: Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            height: 1,
-          ),
-        ),
-      ),
+    SocialProviderId.google => Image.asset(
+      marchioGoogle,
+      width: 20,
+      height: 20,
+
+      /*
+       * 🚨 **La rete di sicurezza, e il test che la rende inutile.**
+       *
+       * ⛔ Se il file mancasse, `Image.asset` lancerebbe **a schermo**: la
+       * persona vedrebbe una schermata di accesso rotta al posto di un pulsante
+       * un po' più brutto. 💡 Qui invece ricompare la lettera di prima.
+       *
+       * ⚠️ Ma una rete che salva in silenzio è la cosa che questo progetto ha
+       * già pagato troppe volte: per questo c'è
+       * `test/marchio_di_google_test.dart`, che diventa **rosso** se l'asset non
+       * c'è o non è dichiarato. 🔑 La rete evita lo schianto; il test evita che
+       * ce ne dimentichiamo.
+       */
+      errorBuilder: (_, _, _) => const _LetteraDiRipiego(),
     ),
     _ => const Icon(Icons.account_circle_outlined, size: 22),
   };
+}
+
+/// 🔤 Il ripiego: **non è il marchio**, ed è dichiarato.
+///
+/// ⛔ Si vede solo se `assets/marchio/google_g.png` manca. 💡 Deliberatamente
+/// una lettera e non un disegno somigliante: una «G» approssimata sarebbe una
+/// **imitazione del marchio**, e quella sì che fa rifiutare la pubblicazione.
+class _LetteraDiRipiego extends StatelessWidget {
+  const _LetteraDiRipiego();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    width: 20,
+    height: 20,
+    child: Center(
+      child: Text(
+        'G',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1F1F1F),
+          height: 1,
+        ),
+      ),
+    ),
+  );
 }

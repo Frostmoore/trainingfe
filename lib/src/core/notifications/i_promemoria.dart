@@ -78,17 +78,27 @@ class IPromemoria {
   static const idMisure = 8830;
 
   /*
-   * ⛔ **8840 era «scheda finita», e non c'e' piu'** — 27/09/2026.
+   * ⛔ **8840 era «scheda finita», e il caso non esiste piu'** — 27/09, chiuso
+   * il 28/09.
    *
-   * 🚨 Il caso `Notifica::SchedaFinita` esiste nel catalogo ed e' segnato «da
-   * fare», ma **non c'e' niente su cui farlo scattare**: `SchedaAllenamento` ha
-   * id, origineId e giorni, e nessuna durata o conteggio di cicli;
-   * `SettimanaProgrammata` mappa giorno -> scheda ed e' ricorrente.
+   * 🚨 Il 27/09 avevo scritto il meccanismo e l'avevo toltato subito, perche'
+   * **non c'era niente su cui farlo scattare**: `SchedaAllenamento` ha id,
+   * origineId e giorni, e nessuna durata o conteggio di cicli;
+   * `SettimanaProgrammata` mappa giorno -> scheda ed e' **ricorrente**. ⛔ Senza
+   * chi lo chiama era lo stesso residuo di `PlanImportResource::iscritti()`:
+   * codice che fa **credere** implementata una cosa che non parte mai.
    *
-   * ⛔ Il meccanismo c'era ed era scritto, e l'ho toltato: senza chi lo chiama
-   * era lo stesso residuo di `PlanImportResource::iscritti()` — codice che fa
-   * **credere** implementata una cosa che non parte mai. 💡 Quando la scheda
-   * avra' una fine, il numero libero e' questo.
+   * 💡 Il 28/09 il committente ha sciolto il dubbio: *«Che cazzo significa
+   * scheda finita?? Le schede non finiscono. Al massimo finisce
+   * l'allenamento»*. 🔑 Quindi il caso e' stato **togliato anche dal catalogo**,
+   * di qua e dal backend: non era «da fare», era una cosa che il prodotto non
+   * ha.
+   *
+   * ⚠️ **«Allenamento finito» non e' il sostituto**: chiudendo una seduta hai il
+   * telefono in mano e la schermata davanti, e una notifica li' e' rumore.
+   *
+   * 💡 Il numero 8840 resta libero, se un giorno una scheda dovesse avere una
+   * fine.
    */
 
   /// 🔄 **Cancella e riprogramma tutto**, secondo lo stato e le preferenze.

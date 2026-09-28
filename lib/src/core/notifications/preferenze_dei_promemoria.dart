@@ -27,12 +27,11 @@ import 'catalogo.dart';
 /// | 🍎 diario | ✅ sì | 21:00 | 💡 Dopo cena: prima non si potrebbe segnarla, e la cena è il pasto che si dimentica |
 /// | ⚖️ misure | ✅ sì | lunedì 9:00 | 💡 Settimanale e non giornaliera: pesarsi ogni giorno misura l'acqua, non i progressi. E di mattina, a digiuno, che è l'unico modo per cui due pesate si possano confrontare |
 ///
-/// ⛔ **«Scheda finita» non è in questo elenco, e non è una dimenticanza**: il
-/// caso c'è nel catalogo ed è segnato «da fare», ma nell'app non esiste niente
-/// che dica quando una scheda **finisce** — `SchedaAllenamento` ha giorni e
-/// nessuna durata, e la settimana programmata è ricorrente. 💡 Un interruttore
-/// per una notifica che non può scattare sarebbe una promessa falsa in una
-/// schermata di impostazioni.
+/// ⛔ **«Scheda finita» non c'è, e dal 28/09 non è più nemmeno nel catalogo.**
+/// 📌 Il committente: *«Le schede non finiscono. Al massimo finisce
+/// l'allenamento»*. 💡 Un interruttore per una notifica che non può scattare
+/// sarebbe una promessa falsa in una schermata di impostazioni — e un caso in
+/// catalogo che non si può implementare è un elenco che mente.
 ///
 /// ══ 🚨 NIENTE DI QUESTO ESCE DAL TELEFONO ═════════════════════════════════
 ///
@@ -81,14 +80,6 @@ class PreferenzeDeiPromemoria {
     Notifica.promemoriaAllenamento => allenamento,
     Notifica.promemoriaDiario => diario,
     Notifica.promemoriaMisure => misure,
-
-    /*
-     * 🏁 `schedaFinita` è nel catalogo ma **non è implementata**: non c'è un
-     * fatto su cui scattare (vedi la nota in testa a questo file). ⚠️ `true`
-     * perché questo metodo risponde a «suona?», e la risposta per una notifica
-     * che non parte non dipende da queste preferenze.
-     */
-    Notifica.schedaFinita => true,
 
     /*
      * ⏱️ `fineRecupero` ha il suo interruttore dentro il player (`RestTimer`),

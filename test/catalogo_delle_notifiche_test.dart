@@ -260,8 +260,13 @@ void main() {
   /// dall'elenco abbiano un punto che le manda.
   ///
   /// ⛔ Ma per le **locali** quel test non puo' dire niente: le programma l'app,
-  /// quindi in `app/` del backend non c'e' niente da trovare. 🚨 Verificato
-  /// togliendo `SchedaFinita` da `daFare()`: il test PHP resta verde.
+  /// quindi in `app/` del backend non c'e' niente da trovare. 🚨 Verificato il
+  /// 27/09 togliendo una locale da `daFare()`: il test PHP resta verde.
+  ///
+  /// ⚠️ La locale con cui l'avevo provato era `SchedaFinita`, che dal 28/09 **non
+  /// esiste piu'**: e' stata togliata dal catalogo, non implementata — il
+  /// committente, *«Le schede non finiscono»*. 💡 La verifica resta valida: vale
+  /// per qualunque locale, non per quella.
   ///
   /// 💡 Quindi la guardia sulle locali sta **qui**, che e' l'unico posto dove una
   /// locale puo' essere implementata. ⚖️ Senza, il catalogo potrebbe dichiarare

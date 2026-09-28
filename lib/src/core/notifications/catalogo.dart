@@ -74,9 +74,6 @@ enum Notifica {
   /// 🍎 ⛔ Il diario ha lasciato il server il 22/09.
   promemoriaDiario('promemoria_diario', CanaleDellaNotifica.locale, null),
 
-  /// 🏁 Il conteggio delle sedute è locale.
-  schedaFinita('scheda_finita', CanaleDellaNotifica.locale, null),
-
   /// ⚖️ I progressi stanno sul telefono.
   promemoriaMisure('promemoria_misure', CanaleDellaNotifica.locale, null);
 

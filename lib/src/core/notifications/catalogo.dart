@@ -53,7 +53,7 @@ enum Notifica {
     CanaleDellaNotifica.push,
     'abbonamento',
   ),
-  invito('invito', CanaleDellaNotifica.push, 'casa'),
+  invito('invito', CanaleDellaNotifica.push, 'inviti'),
   slotDeciso('slot_deciso', CanaleDellaNotifica.push, 'messaggi'),
   rispostaARichiesta('risposta_a_richiesta', CanaleDellaNotifica.push, 'casa'),
   importPronto('import_pronto', CanaleDellaNotifica.push, 'casa'),

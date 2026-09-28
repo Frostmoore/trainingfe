@@ -401,6 +401,18 @@ const Map<String, String> _leDestinazioni = {
   'offerte': AppRoutes.offerte,
 
   /*
+   * 🆕 ✉️ **Gli inviti ricevuti** — 62.6, 28/09/2026.
+   *
+   * ⛔ Fino al 28/09 `invito` portava alla **casa**, perche` la schermata
+   * dell'invito vuole il **token** — una credenziale, che in una push non ci va
+   * — e non esisteva nessuna rotta che elencasse gli inviti ricevuti.
+   *
+   * ✅ Adesso c'e': la schermata se li va a prendere da sola dall'API
+   * autenticata, e il codice non passa da Google.
+   */
+  'inviti': AppRoutes.invitiRicevuti,
+
+  /*
    * 💳 ⚠️ `/acquisti`, **non** il pannello: chi riceve le notifiche del denaro
    * sta sul telefono. 💡 Il pannello ha la sua strada — l'avviso del widget
    * `AvvisoDaPagare` — e sono due sedi dello stesso messaggio per due

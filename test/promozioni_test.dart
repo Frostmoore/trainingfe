@@ -230,7 +230,16 @@ void main() {
             '📄 ⚠️ Debito noto: nessuna rotta riapre QUELLA bozza, e '
             "/schede/importa ricomincerebbe un caricamento nuovo.",
       );
-      expect(destinazioneDellaNotifica({'tipo': 'invito'}), AppRoutes.home);
+      expect(
+        destinazioneDellaNotifica({'tipo': 'invito'}),
+        AppRoutes.invitiRicevuti,
+        reason:
+            "✉️ Dal 28/09 porta agli INVITI, non più alla casa. ⛔ Prima ci "
+            "portava perché la schermata dell'invito vuole il token — una "
+            'credenziale, che in una push non ci va — e non esisteva nessuna rotta '
+            "che elencasse gli inviti ricevuti. ✅ Adesso c'è, e il codice passa "
+            "dall'API autenticata invece che da Google.",
+      );
       expect(
         destinazioneDellaNotifica({'tipo': 'risposta_a_richiesta'}),
         AppRoutes.home,

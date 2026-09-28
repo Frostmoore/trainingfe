@@ -23,6 +23,7 @@ import '../../features/nutrition/ui/compositore_consigli.dart';
 import '../../features/nutrition/ui/miei_piani_screen.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/ui/schermata_benvenuto.dart';
+import '../../features/onboarding/ui/schermata_inviti_ricevuti.dart';
 import '../../features/onboarding/ui/schermata_invito.dart';
 import '../../features/onboarding/ui/schermata_invito_trainer.dart';
 import '../../features/privacy/ui/schermata_consensi.dart';
@@ -166,6 +167,13 @@ class AppRoutes {
    * invito di un trainer — la pagina sbagliata, senza nessun errore.
    */
   static const invito = '/invito-palestra';
+
+  /// 🆕 ✉️ **Gli inviti che ho ricevuto** — voce 62.6, 28/09/2026.
+  ///
+  /// ⛔ Non prende un token: e` la **schermata che se li va a prendere**, e il
+  /// codice glielo da` l'API autenticata. 🔑 E` qui che porta la notifica
+  /// «Hai un invito», e il codice non passa piu` da Google.
+  static const invitiRicevuti = '/inviti';
 
   /// Il catalogo di palestre e trainer — Parte M7.4.
   ///
@@ -972,6 +980,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.promemoria,
         builder: (_, _) => const SchermataPromemoria(),
+      ),
+      GoRoute(
+        path: AppRoutes.invitiRicevuti,
+        builder: (_, _) => const SchermataInvitiRicevuti(),
       ),
       GoRoute(
         path: AppRoutes.deleteAccount,

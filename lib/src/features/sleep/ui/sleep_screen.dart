@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/ui/barra_della_data.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../../core/ui/sezioni.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../health/sessioni_di_sonno.dart';
 import '../../health/ui/widgets/cosa_leggiamo.dart';
 import '../sleep_controller.dart';
@@ -32,7 +35,12 @@ class SleepScreen extends ConsumerWidget {
     final pisolini = ref.watch(pisoliniProvider).valueOrNull ?? const [];
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Sonno'),
+      // 🌑 Senza angoli solo quando sotto c'è il seguito scuro con la notte —
+      // I8. Senza notte (vuoto, errore, solo riposi brevi) li tiene lei.
+      appBar: IntestazioneApp(
+        titolo: 'Sonno',
+        arrotondata: notte.valueOrNull == null,
+      ),
       body: notte.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
@@ -240,101 +248,136 @@ class _Notte extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    /*
+     * ══ 🌑 LA TESTATA — `plan_interfaccia.md` I8, 19/11/2026 ══════════════
+     *
+     * 📌 Tavola «Sonno»: in testata la notte (frecce e data), le ore, l'orario
+     * e l'ipnogramma (I8.D2); nel corpo le fasi a coppie, i riposi brevi, e
+     * quello che c'era sotto.
+     *
+     * 💡 L'ipnogramma è **lo stesso** di prima, con le larghezze proporzionali
+     * alla durata (C14): cambia dove sta, non come disegna.
+     */
     return ListView(
-      padding: const EdgeInsets.all(Gap.md),
+      padding: EdgeInsets.zero,
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => ref.read(sleepNightProvider.notifier).state =
-                  notte.night.subtract(const Duration(days: 1)),
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
-            Expanded(
-              child: Text(
-                DateFormat('EEEE d MMMM', 'it').format(notte.night),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+        CodaDellaTestata(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BarraDellaData(
+                testo: DateFormat('EEEE d MMMM', 'it').format(notte.night),
+                etichettaPrima: 'Notte prima',
+                etichettaDopo: 'Notte dopo',
+                onPrima: () => ref.read(sleepNightProvider.notifier).state =
+                    notte.night.subtract(const Duration(days: 1)),
+                onDopo: () => ref.read(sleepNightProvider.notifier).state =
+                    notte.night.add(const Duration(days: 1)),
               ),
-            ),
-            IconButton(
-              onPressed: () => ref.read(sleepNightProvider.notifier).state =
-                  notte.night.add(const Duration(days: 1)),
-              icon: const Icon(Icons.chevron_right_rounded),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: Gap.sm),
-        Center(
-          child: Text(
-            notte.durata,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: _coloreGiudizio(context, notte.ratings['asleep_minutes']),
-            ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      notte.durata,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: _coloreGiudizio(
+                          context,
+                          notte.ratings['asleep_minutes'],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${DateFormat('HH:mm').format(notte.from)} → '
+                    '${DateFormat('HH:mm').format(notte.to)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gap.sm),
+              _Ipnogramma(notte: notte),
+            ],
           ),
         ),
-        Center(
-          child: Text(
-            '${DateFormat('HH:mm').format(notte.from)} → ${DateFormat('HH:mm').format(notte.to)}',
-            style: theme.textTheme.bodySmall,
+
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _corpo(context, theme),
           ),
         ),
+      ],
+    );
+  }
 
-        const SizedBox(height: Gap.lg),
-        _Ipnogramma(notte: notte),
+  List<Widget> _corpo(BuildContext context, ThemeData theme) => [
+    const TitoloDiSezione('Le fasi'),
+    const SizedBox(height: 10),
+    Coppia(
+      sinistra: _Fase(
+        colore: SleepScreen._colori[3]!,
+        nome: 'Profondo',
+        minuti: notte.deepMinutes,
+        totale: notte.asleepMinutes + notte.awakeMinutes,
+        percentuale: notte.deepPct,
+        giudizio: notte.ratings['deep_pct'],
+      ),
+      destra: _Fase(
+        colore: SleepScreen._colori[4]!,
+        nome: 'REM',
+        minuti: notte.remMinutes,
+        totale: notte.asleepMinutes + notte.awakeMinutes,
+        percentuale: notte.remPct,
+        giudizio: notte.ratings['rem_pct'],
+      ),
+    ),
+    const SizedBox(height: 10),
+    Coppia(
+      sinistra: _Fase(
+        colore: SleepScreen._colori[2]!,
+        nome: 'Leggero',
+        minuti: notte.lightMinutes,
+        totale: notte.asleepMinutes + notte.awakeMinutes,
+      ),
+      destra: _Fase(
+        colore: SleepScreen._colori[1]!,
+        nome: 'Sveglio',
+        minuti: notte.awakeMinutes,
+        totale: notte.asleepMinutes + notte.awakeMinutes,
+        giudizio: notte.ratings['awake_minutes'],
+      ),
+    ),
 
-        const SizedBox(height: Gap.lg),
-
-        /*
+    /*
          * 🆕 **I riposi brevi, sotto la notte e separati da essa** — 21/08.
          *
          * ⚠️ Sotto e non sopra: la domanda che porta qui è «come ho dormito
          * stanotte», e mettere le pennichelle prima farebbe leggere per primo il
-         * numero più piccolo. 💡 Sparisce da sola quando non ce ne sono.
+         * numero più piccolo. 💡 Sparisce da sola quando non ce ne sono — e con
+         * lei il suo titolo (I8.D3: né sommati né nascosti).
          */
-        _Pisolini(pisolini: pisolini),
+    if (pisolini.isNotEmpty) ...[
+      const TitoloDiSezione('Riposi brevi'),
+      const SizedBox(height: 10),
+      _Pisolini(pisolini: pisolini),
+    ],
 
-        const SizedBox(height: Gap.lg),
-        _Fase(
-          colore: SleepScreen._colori[3]!,
-          nome: 'Profondo',
-          minuti: notte.deepMinutes,
-          percentuale: notte.deepPct,
-          giudizio: notte.ratings['deep_pct'],
-        ),
-        _Fase(
-          colore: SleepScreen._colori[4]!,
-          nome: 'REM',
-          minuti: notte.remMinutes,
-          percentuale: notte.remPct,
-          giudizio: notte.ratings['rem_pct'],
-        ),
-        _Fase(
-          colore: SleepScreen._colori[2]!,
-          nome: 'Leggero',
-          minuti: notte.lightMinutes,
-        ),
-        _Fase(
-          colore: SleepScreen._colori[1]!,
-          nome: 'Sveglio',
-          minuti: notte.awakeMinutes,
-          giudizio: notte.ratings['awake_minutes'],
-        ),
+    if (notte.disclaimer != null) ...[
+      const SizedBox(height: Gap.lg),
+      Text(
+        notte.disclaimer!,
+        style: theme.textTheme.bodySmall,
+        textAlign: TextAlign.center,
+      ),
+    ],
 
-        if (notte.disclaimer != null) ...[
-          const SizedBox(height: Gap.lg),
-          Text(
-            notte.disclaimer!,
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-        ],
-
-        /*
+    /*
          * ══ 🌙 QUI FINISCE «SONNO E RECUPERO» — 3b-P.8.1, 22/08/2026 ═══════
          *
          * 📌 Il committente: *«questa pagina dovrebbe apparire sotto
@@ -348,13 +391,11 @@ class _Notte extends StatelessWidget {
          * ⛔ **Il collegamento a Health Connect non e' qui**: sta in «Privacy e
          * consensi», perche' collegare e' un consenso, non un'impostazione.
          */
-        const SizedBox(height: Gap.xl),
-        const CosaLeggiamoDaSalute(),
+    const SizedBox(height: Gap.xl),
+    const CosaLeggiamoDaSalute(),
 
-        const SizedBox(height: Gap.xl),
-      ],
-    );
-  }
+    const SizedBox(height: Gap.xl),
+  ];
 }
 
 /// L'ipnogramma a bande.
@@ -373,6 +414,9 @@ class _Ipnogramma extends StatefulWidget {
 
 class _IpnogrammaState extends State<_Ipnogramma> {
   static const _altezzaBanda = 22.0;
+
+  /// La colonna dei nomi delle righe, a sinistra del grafico — I8.
+  static const _larghezzaNomi = 60.0;
 
   /// L'ordine verticale: sveglio in alto, profondo in basso, come su ogni
   /// dispositivo che disegna il sonno.
@@ -466,60 +510,99 @@ class _IpnogrammaState extends State<_Ipnogramma> {
 
         const SizedBox(height: Gap.xs),
 
-        SizedBox(
-          height: _altezzaBanda * 4,
-          child: LayoutBuilder(
-            builder: (context, vincoli) => GestureDetector(
-              // ⚠️ `opaque`: senza, il tocco passa attraverso gli spazi vuoti
-              // fra le bande e il trascinamento si interrompe da solo appena il
-              // dito attraversa una riga senza blocco.
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragStart: (d) =>
-                  _aggiorna(d.localPosition.dx, vincoli.maxWidth),
-              onHorizontalDragUpdate: (d) =>
-                  _aggiorna(d.localPosition.dx, vincoli.maxWidth),
-              onHorizontalDragEnd: (_) => setState(() => _dito = null),
-              onHorizontalDragCancel: () => setState(() => _dito = null),
-              onTapDown: (d) => _aggiorna(d.localPosition.dx, vincoli.maxWidth),
-              onTapUp: (_) => setState(() => _dito = null),
-              onTapCancel: () => setState(() => _dito = null),
-              child: Stack(
+        /*
+         * 🏷️ **I nomi delle righe, a sinistra** — I8, 19/11/2026.
+         *
+         * 📌 La leggenda dei colori stava sotto il grafico; ora le fasi sono
+         * tessere più giù, e il grafico in testata si deve leggere da solo. 💡
+         * Il nome sulla riga è più diretto di un colore da cercare in legenda.
+         * ⚠️ Lo stesso ordine di [_riga]: sveglio in alto, profondo in basso.
+         */
+        Row(
+          children: [
+            SizedBox(
+              width: _larghezzaNomi,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final b in _notte.hypnogram)
-                    Positioned(
-                      left:
-                          b.from.difference(_notte.from).inSeconds /
-                          totale *
-                          vincoli.maxWidth,
-                      top: (_riga[b.stage] ?? 2) * _altezzaBanda,
-                      width:
-                          (b.to.difference(b.from).inSeconds /
-                                  totale *
-                                  vincoli.maxWidth)
-                              .clamp(1.0, vincoli.maxWidth),
+                  for (final nome in ['Sveglio', 'REM', 'Leggero', 'Profondo'])
+                    SizedBox(
                       height: _altezzaBanda,
-                      child: ColoredBox(
-                        color: SleepScreen._colori[b.stage] ?? Colors.grey,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          nome,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    ),
-
-                  // La linea che segue il dito: senza, si legge un'ora e non si
-                  // sa a quale punto del grafico appartenga.
-                  if (_dito != null)
-                    Positioned(
-                      left: (_dito! * vincoli.maxWidth).clamp(
-                        0.0,
-                        vincoli.maxWidth - 2,
-                      ),
-                      top: 0,
-                      width: 2,
-                      height: _altezzaBanda * 4,
-                      child: ColoredBox(color: theme.colorScheme.onSurface),
                     ),
                 ],
               ),
             ),
-          ),
+            Expanded(
+              child: SizedBox(
+                height: _altezzaBanda * 4,
+                child: LayoutBuilder(
+                  builder: (context, vincoli) => GestureDetector(
+                    // ⚠️ `opaque`: senza, il tocco passa attraverso gli spazi vuoti
+                    // fra le bande e il trascinamento si interrompe da solo appena il
+                    // dito attraversa una riga senza blocco.
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragStart: (d) =>
+                        _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+                    onHorizontalDragUpdate: (d) =>
+                        _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+                    onHorizontalDragEnd: (_) => setState(() => _dito = null),
+                    onHorizontalDragCancel: () => setState(() => _dito = null),
+                    onTapDown: (d) =>
+                        _aggiorna(d.localPosition.dx, vincoli.maxWidth),
+                    onTapUp: (_) => setState(() => _dito = null),
+                    onTapCancel: () => setState(() => _dito = null),
+                    child: Stack(
+                      children: [
+                        for (final b in _notte.hypnogram)
+                          Positioned(
+                            left:
+                                b.from.difference(_notte.from).inSeconds /
+                                totale *
+                                vincoli.maxWidth,
+                            top: (_riga[b.stage] ?? 2) * _altezzaBanda,
+                            width:
+                                (b.to.difference(b.from).inSeconds /
+                                        totale *
+                                        vincoli.maxWidth)
+                                    .clamp(1.0, vincoli.maxWidth),
+                            height: _altezzaBanda,
+                            child: ColoredBox(
+                              color:
+                                  SleepScreen._colori[b.stage] ?? Colors.grey,
+                            ),
+                          ),
+
+                        // La linea che segue il dito: senza, si legge un'ora e non si
+                        // sa a quale punto del grafico appartenga.
+                        if (_dito != null)
+                          Positioned(
+                            left: (_dito! * vincoli.maxWidth).clamp(
+                              0.0,
+                              vincoli.maxWidth - 2,
+                            ),
+                            top: 0,
+                            width: 2,
+                            height: _altezzaBanda * 4,
+                            child: ColoredBox(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -537,6 +620,7 @@ class _Fase extends StatelessWidget {
     required this.colore,
     required this.nome,
     required this.minuti,
+    required this.totale,
     this.percentuale,
     this.giudizio,
   });
@@ -547,6 +631,10 @@ class _Fase extends StatelessWidget {
   final double? percentuale;
   final String? giudizio;
 
+  /// I minuti dell'intera notte (sonno + veglia): la barra della fase è la sua
+  /// quota di **tutta** la notte, così le quattro barre sommate fanno una notte.
+  final int totale;
+
   @override
   Widget build(BuildContext context) {
     final allarme = _Notte._coloreGiudizio(context, giudizio);
@@ -554,41 +642,47 @@ class _Fase extends StatelessWidget {
     final theme = Theme.of(context);
 
     /*
-     * 📌 **La leggenda piu' piccola** — 3b-P.8.2, richiesta del committente.
+     * 🃏 **Una tessera per fase** — I8, 19/11/2026 (tavola «Sonno»).
      *
-     * ⚠️ Quattro `ListTile` a densita' normale sono quattro righe da 48 px:
-     * novantasei pixel di elenco sotto un grafico che ne occupa sessanta. 🚨
-     * La leggenda **spiegava** l'ipnogramma e finiva per pesare piu' di lui.
+     * 📌 Era la leggenda sotto l'ipnogramma, resa piccola apposta (3b-P.8.2:
+     * *la leggenda spiegava l'ipnogramma e finiva per pesare più di lui*). 💡 Ora
+     * il grafico sta in testata con i nomi delle righe accanto, e qui le fasi
+     * sono una sezione a sé: non competono più con il grafico.
      *
-     * 💡 Righe da 32 px e testo `bodySmall`: si legge lo stesso, e il grafico
-     * torna a essere la cosa piu' grande della sezione. ⛔ Il pallino del
-     * colore resta 12 px — rimpicciolirlo lo renderebbe indistinguibile fra
-     * profondo e leggero, che sono due blu vicini.
+     * ⛔ Il colore della fase resta — nella barra — perché è quello che lega la
+     * tessera alla sua riga del grafico.
      */
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
+    return Tessera(
+      etichetta: nome,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: colore,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-          const SizedBox(width: Gap.sm),
-          Expanded(child: Text(nome, style: theme.textTheme.bodySmall)),
           Text(
-            [
-              '${minuti ~/ 60}h ${(minuti % 60).toString().padLeft(2, '0')}',
-              if (percentuale != null) '${percentuale!.toStringAsFixed(0)}%',
-            ].join('  ·  '),
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: allarme,
+            '${minuti ~/ 60}h ${(minuti % 60).toString().padLeft(2, '0')}',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
+          const SizedBox(height: Gap.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: totale <= 0 ? 0 : (minuti / totale).clamp(0.0, 1.0),
+              minHeight: 6,
+              color: colore,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+          ),
+          if (percentuale != null) ...[
+            const SizedBox(height: Gap.xs),
+            Text(
+              '${percentuale!.toStringAsFixed(0)}%',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: allarme,
+              ),
+            ),
+          ],
         ],
       ),
     );

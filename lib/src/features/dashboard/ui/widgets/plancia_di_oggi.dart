@@ -43,7 +43,16 @@ import '../../../health/recupero_controller.dart';
 /// regola dell'08/09/2026, *«dall'header dei non abbonati devono sparire»* —
 /// sparire, non sfumare. La sceglie `TodayHeader`.
 class PlanciaDiOggi extends ConsumerWidget {
-  const PlanciaDiOggi({super.key});
+  const PlanciaDiOggi({this.apreLaForma = true, super.key});
+
+  /// `true` su «Oggi»: toccarla apre «Carico e carica». `false` dentro quella
+  /// pagina — I8, 19/11/2026 —, dove sta in testata: aprire la pagina in cui
+  /// si è già sarebbe un tocco che impila la stessa schermata due volte.
+  ///
+  /// 💡 **La stessa plancia, non una copia**: su «Oggi» e in testata a «Carico
+  /// e carica» gli strumenti devono dire la stessa cosa nello stesso modo, e
+  /// due disegni divergerebbero al primo ritocco.
+  final bool apreLaForma;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -70,7 +79,7 @@ class PlanciaDiOggi extends ConsumerWidget {
     final battito = recupero?.parametri[MetricaSalute.battitoARiposo];
 
     return InkWell(
-      onTap: () => context.push(AppRoutes.forma),
+      onTap: apreLaForma ? () => context.push(AppRoutes.forma) : null,
       borderRadius: BorderRadius.circular(Gap.radius),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,9 +117,13 @@ class PlanciaDiOggi extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (sonno != null) _Lettura(valore: sonno, etichetta: 'sonno'),
+                    if (sonno != null)
+                      _Lettura(valore: sonno, etichetta: 'sonno'),
                     if (hrv != null)
-                      _Lettura(valore: _numero(hrv.valore), etichetta: 'hrv ms'),
+                      _Lettura(
+                        valore: _numero(hrv.valore),
+                        etichetta: 'hrv ms',
+                      ),
                     if (battito != null)
                       _Lettura(
                         valore: _numero(battito.valore),
@@ -130,7 +143,9 @@ class PlanciaDiOggi extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
 
-          if (prontezza != null && forma != null && !forma.prontezza.eAttendibile)
+          if (prontezza != null &&
+              forma != null &&
+              !forma.prontezza.eAttendibile)
             Text(
               'stima poco attendibile: mancano '
               '${forma.prontezza.giorniCheMancano} giorni di dati',

@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../../core/ui/sezioni.dart';
+import '../../../core/ui/testata_scura.dart';
+import '../../dashboard/ui/widgets/plancia_di_oggi.dart';
 import '../carica_batteria.dart';
 import '../carica_controller.dart';
 import '../forma_controller.dart';
@@ -34,57 +37,108 @@ import 'pezzi_della_forma.dart';
 /// esteso invece di rimandare a «un algoritmo»: la scala `0–100` è **nostra**, e
 /// una scala inventata che non si può ispezionare è indistinguibile da una
 /// misura vera.
+///
+/// ══ 🌑 LA TESTATA — `plan_interfaccia.md` I8, 19/11/2026 ══════════════════
+///
+/// 📌 Tavola «Carico e carica»: in testata l'avvertenza e gli strumenti; nel
+/// corpo **gli ingredienti a coppie** (oggi contro la tua media), poi gli
+/// indici uno per uno, poi «Come si calcola».
+///
+/// 💡 Gli strumenti sono **`PlanciaDiOggi`**, la stessa di «Oggi», con
+/// `apreLaForma: false`. ⚠️ Per questo alcuni numeri compaiono due volte — in
+/// testata e nella sezione del loro indice —: è voluto, la testata dice
+/// *quanto*, la sezione dice *perché*.
+///
+/// 🚨 **Niente è stato tolto dalle spiegazioni**: le quattro sezioni e le due
+/// card delle formule sono quelle di prima, parola per parola.
 class SchermataForma extends ConsumerWidget {
   const SchermataForma({super.key});
+
+  /// La chiave del corpo, sotto la testata: i test cercano lì dentro i numeri
+  /// che la testata ripete.
+  static const chiaveDelCorpo = Key('forma-corpo');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stato = ref.watch(formaProvider);
 
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Carico e carica'),
+      // 🌑 Senza angoli: sotto c'è il seguito scuro con gli strumenti — I8.
+      appBar: const IntestazioneApp(
+        titolo: 'Carico e carica',
+        arrotondata: false,
+      ),
       body: RefreshIndicator(
         onRefresh: () =>
             aggiornaTutto(context, ref, () => ref.invalidate(formaProvider)),
         child: ListView(
-          padding: const EdgeInsets.all(Gap.md),
+          padding: EdgeInsets.zero,
           children: [
-            const AvvertenzaStima(),
-            const SizedBox(height: Gap.lg),
-
-            ...switch (stato) {
-              AsyncData(:final value) => _contenuto(context, value),
-
-              /*
-               * ⚠️ L'errore si dice, non si nasconde: qui — a differenza della
-               * scheda in dashboard, che sparisce in silenzio — la persona ci è
-               * arrivata **apposta**, e una pagina vuota senza spiegazione
-               * sembra un guasto dell'app.
-               */
-              AsyncError() => [
-                const _Vuoto(
-                  'Il calcolo non è riuscito. Prova a tirare giù '
-                  'per aggiornare.',
-                ),
-              ],
-              _ => const [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: Gap.xl),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ],
-            },
-
-            const SizedBox(height: Gap.lg),
-            const _CardFormula(),
-            const SizedBox(height: Gap.md),
-            const _CardComeFunziona(),
-            const SizedBox(height: Gap.xl),
+            const CodaDellaTestata(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AvvertenzaStima(),
+                  SizedBox(height: Gap.md),
+                  PlanciaDiOggi(apreLaForma: false),
+                ],
+              ),
+            ),
+            Padding(
+              key: chiaveDelCorpo,
+              padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _corpo(context, stato),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  static List<Widget> _corpo(BuildContext context, AsyncValue<Forma> stato) => [
+    ...switch (stato) {
+      AsyncData(:final value) => [
+        const TitoloDiSezione(
+          'Gli ingredienti',
+          nota: 'oggi contro la tua media',
+        ),
+        const SizedBox(height: 10),
+        _Ingredienti(forma: value),
+        const TitoloDiSezione('Gli indici, uno per uno'),
+        const SizedBox(height: 10),
+        ..._contenuto(context, value),
+      ],
+
+      /*
+               * ⚠️ L'errore si dice, non si nasconde: qui — a differenza della
+               * scheda in dashboard, che sparisce in silenzio — la persona ci è
+               * arrivata **apposta**, e una pagina vuota senza spiegazione
+               * sembra un guasto dell'app.
+               */
+      AsyncError() => [
+        const _Vuoto(
+          'Il calcolo non è riuscito. Prova a tirare giù '
+          'per aggiornare.',
+        ),
+      ],
+      _ => const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: Gap.xl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ],
+    },
+
+    const TitoloDiSezione('Come si calcola'),
+    const SizedBox(height: 10),
+    const _CardFormula(),
+    const SizedBox(height: Gap.md),
+    const _CardComeFunziona(),
+    const SizedBox(height: Gap.xl),
+  ];
 
   static List<Widget> _contenuto(BuildContext context, Forma forma) => [
     _Carico(forma: forma),
@@ -491,7 +545,7 @@ class _Prontezza extends StatelessWidget {
           '**E il confronto con il tuo solito**, che è un\'altra domanda: '
           'quanto stai bene o male rispetto alle tue medie di sonno, '
           'variabilità cardiaca, battito e cibo. Alimenta la scheda del sonno, '
-          'e qui sotto trovi da cosa è fatto oggi.',
+          'e da cosa è fatto oggi lo trovi in cima, in «Gli ingredienti».',
         ),
 
         if (forma.prontezza.valore != null)
@@ -500,10 +554,12 @@ class _Prontezza extends StatelessWidget {
             'ingredienti su ${forma.ingredienti.length}.',
           ),
 
-        const SizedBox(height: Gap.sm),
-
-        for (final i in forma.ingredienti) _Ingrediente(pezzo: i),
-
+        /*
+         * ⛔ **Le righe degli ingredienti non stanno più qui** — I8, 19/11/2026:
+         * sono salite in cima al corpo, a coppie, come nella tavola. 💡 Sono la
+         * prima cosa da controllare — se un ingrediente è sbagliato l'indice lo
+         * è con lui — e in fondo a una sezione lunga non le guardava nessuno.
+         */
         if (valore == null)
           const _Vuoto(
             'Serve almeno un dato fra sonno, variabilità cardiaca e battito a '
@@ -515,7 +571,50 @@ class _Prontezza extends StatelessWidget {
   }
 }
 
-/// Una riga di ingrediente: **quanto vale oggi, la tua media, e quanto conta**.
+/// 🧂 **Gli ingredienti, a coppie** — I8.D1, 19/11/2026.
+///
+/// 📌 Tavola «Carico e carica»: una tessera per ingrediente, *oggi contro la
+/// tua media*. Due per riga; se sono dispari l'ultima sta da sola a metà
+/// larghezza, invece di allargarsi e sembrare più importante delle altre.
+class _Ingredienti extends StatelessWidget {
+  const _Ingredienti({required this.forma});
+
+  final Forma forma;
+
+  @override
+  Widget build(BuildContext context) {
+    final pezzi = forma.ingredienti;
+
+    if (pezzi.isEmpty) {
+      return const _Vuoto(
+        'Ancora nessun ingrediente: servono sonno, battito o variabilità '
+        'cardiaca dal telefono o dall\'orologio.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < pezzi.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 10),
+          Coppia(
+            sinistra: _Ingrediente(pezzo: pezzi[i]),
+            destra: i + 1 < pezzi.length
+                ? _Ingrediente(pezzo: pezzi[i + 1])
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Un ingrediente: **quanto vale oggi, la tua media, lo scarto e quanto conta**.
+///
+/// 🚨 **Il numero grezzo accanto allo scarto** è il motivo per cui questa pagina
+/// esiste: «−1.2» da solo chiede di essere creduto, «48 ms, tua media 65 ms» si
+/// può controllare — e smentire, se le medie sono sballate perché il telefono
+/// ha perso dei giorni.
 class _Ingrediente extends StatelessWidget {
   const _Ingrediente({required this.pezzo});
 
@@ -524,45 +623,54 @@ class _Ingrediente extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final tenue = tema.colorScheme.onSurfaceVariant;
     final z = pezzo.z;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Gap.sm),
+    return Tessera(
+      etichetta: pezzo.nome,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  pezzo.nome,
-                  style: tema.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                z == null ? 'non disponibile' : _scarto(z),
-                style: tema.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: z == null
-                      ? tema.colorScheme.outline
-                      : _colore(tema, z),
-                ),
-              ),
-            ],
-          ),
-
           Text(
-            _dettaglio(),
-            style: tema.textTheme.labelSmall?.copyWith(
-              color: tema.colorScheme.onSurfaceVariant,
+            pezzo.oggi == null ? '—' : '${pezzo.oggi!.round()} ${pezzo.unita}',
+            style: tema.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
+          ),
+          Text(
+            pezzo.oggi == null
+                ? 'nessun dato oggi'
+                : pezzo.media == null
+                ? 'non c\'è ancora una tua media'
+                : 'tua media ${pezzo.media!.round()} ${pezzo.unita}',
+            style: tema.textTheme.bodySmall?.copyWith(color: tenue),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            z == null ? 'non disponibile' : _scarto(z),
+            style: tema.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: z == null ? tema.colorScheme.outline : _colore(tema, z),
+            ),
+          ),
+          Text(
+            _quantoConta(),
+            style: tema.textTheme.labelSmall?.copyWith(color: tenue),
           ),
         ],
       ),
     );
   }
+
+  /// `pesa 1.0 · più basso è meglio` — il peso e il verso, scritti.
+  ///
+  /// ⚠️ Il verso non è un dettaglio: senza, un `+0.9` sul battito a riposo
+  /// sembrerebbe una buona notizia.
+  String _quantoConta() => [
+    'pesa ${pezzo.peso.toStringAsFixed(1)}',
+    if (pezzo.invertito) 'più basso è meglio',
+    if (pezzo.soloInNegativo) 'conta solo se sei sotto',
+  ].join(' · ');
 
   /// 💡 Si scrive `−1.7 dalla tua media`, non `z = −1.7`: la lettera greca non
   /// aggiunge niente a chi legge, e a chi vuole la formula c'è la card in fondo.
@@ -581,30 +689,6 @@ class _Ingrediente extends StatelessWidget {
     }
 
     return effetto > 0 ? Colors.green.shade700 : tema.colorScheme.error;
-  }
-
-  String _dettaglio() {
-    final pesa = 'pesa ${pezzo.peso.toStringAsFixed(1)}';
-
-    final versi = [
-      if (pezzo.invertito) 'più basso è meglio',
-      if (pezzo.soloInNegativo) 'conta solo se sei sotto',
-    ];
-
-    final coda = [pesa, ...versi].join(' · ');
-
-    if (pezzo.oggi == null) {
-      return 'nessun dato — $coda';
-    }
-
-    final oggi = '${pezzo.oggi!.round()} ${pezzo.unita}';
-
-    if (pezzo.media == null) {
-      return 'oggi $oggi · non c\'è ancora una tua media — $coda';
-    }
-
-    return 'oggi $oggi · tua media ${pezzo.media!.round()} ${pezzo.unita} '
-        '— $coda';
   }
 }
 

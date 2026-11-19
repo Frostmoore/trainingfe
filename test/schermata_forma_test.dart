@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:training_companion/src/core/ui/sezioni.dart';
+import 'package:training_companion/src/core/ui/testata_scura.dart';
+import 'package:training_companion/src/features/dashboard/ui/widgets/plancia_di_oggi.dart';
 import 'package:training_companion/src/features/forma/carica_batteria.dart';
 import 'package:training_companion/src/features/forma/forma_controller.dart';
 import 'package:training_companion/src/features/forma/indici_di_forma.dart';
 import 'package:training_companion/src/features/forma/reattivita.dart';
+import 'package:training_companion/src/features/forma/ui/pezzi_della_forma.dart';
 import 'package:training_companion/src/features/forma/ui/schermata_forma.dart';
 
 import 'aiuto/intestazione.dart';
@@ -32,17 +36,16 @@ void main() {
     double peso = 1,
     bool invertito = false,
     bool soloInNegativo = false,
-  }) =>
-      IngredienteCarica(
-        nome: nome,
-        unita: 'ms',
-        peso: peso,
-        z: z,
-        oggi: oggi,
-        media: media,
-        invertito: invertito,
-        soloInNegativo: soloInNegativo,
-      );
+  }) => IngredienteCarica(
+    nome: nome,
+    unita: 'ms',
+    peso: peso,
+    z: z,
+    oggi: oggi,
+    media: media,
+    invertito: invertito,
+    soloInNegativo: soloInNegativo,
+  );
 
   Forma forma({
     double? carico = 1.42,
@@ -57,43 +60,54 @@ void main() {
     /// 🆕 06/09/2026 — `null` di partenza: questi test guardano la schermata,
     /// non il modello a tre processi, che ha i suoi in `reattivita_test.dart`.
     Reattivita? reattivita,
-  }) =>
-      Forma(
-        reattivita: reattivita,
-        stanchezza: Indice(
-          valore: carico,
-          giorniDiStoria: storiaCarico,
-          giorniPerEsserePieno: IndiciDiForma.giorniCronici,
-        ),
-        prontezza: Indice(
-          valore: carica,
-          giorniDiStoria: notti,
-          giorniPerEsserePieno: IndiciDiForma.nottiPerLaProntezza,
-        ),
-        acuto: acuto,
-        cronico: cronico,
-        caricoPerGiorno: giorni ?? List<double>.filled(28, 120),
-        ingredienti: ingredienti ??
-            [
-              pezzo('Variabilità cardiaca', z: -1.2, oggi: 48, media: 65),
-              pezzo(
-                'Battito a riposo',
-                z: 0.9,
-                oggi: 58,
-                media: 54,
-                invertito: true,
-              ),
-              pezzo('Sonno', z: 0.3, oggi: 430, media: 415, peso: 1.5),
-              pezzo(
-                'Cibo',
-                z: -0.8,
-                oggi: 1800,
-                media: 2200,
-                peso: 0.5,
-                soloInNegativo: true,
-              ),
-            ],
-      );
+  }) => Forma(
+    reattivita: reattivita,
+    stanchezza: Indice(
+      valore: carico,
+      giorniDiStoria: storiaCarico,
+      giorniPerEsserePieno: IndiciDiForma.giorniCronici,
+    ),
+    prontezza: Indice(
+      valore: carica,
+      giorniDiStoria: notti,
+      giorniPerEsserePieno: IndiciDiForma.nottiPerLaProntezza,
+    ),
+    acuto: acuto,
+    cronico: cronico,
+    caricoPerGiorno: giorni ?? List<double>.filled(28, 120),
+    ingredienti:
+        ingredienti ??
+        [
+          pezzo('Variabilità cardiaca', z: -1.2, oggi: 48, media: 65),
+          pezzo(
+            'Battito a riposo',
+            z: 0.9,
+            oggi: 58,
+            media: 54,
+            invertito: true,
+          ),
+          pezzo('Sonno', z: 0.3, oggi: 430, media: 415, peso: 1.5),
+          pezzo(
+            'Cibo',
+            z: -0.8,
+            oggi: 1800,
+            media: 2200,
+            peso: 0.5,
+            soloInNegativo: true,
+          ),
+        ],
+  );
+
+  /// 🌑 Dentro il corpo, sotto la testata — I8, 19/11/2026.
+  ///
+  /// ⚠️ Da quando la pagina ha in testata gli strumenti di «Oggi», alcuni
+  /// numeri (il carico, la frase della stima incompleta) compaiono **due
+  /// volte**: in testata e nella sezione che li spiega. Questi test difendono
+  /// la spiegazione, quindi cercano nel corpo.
+  Finder nelCorpo(Finder f) => find.descendant(
+    of: find.byKey(SchermataForma.chiaveDelCorpo),
+    matching: f,
+  );
 
   Future<void> apri(WidgetTester tester, Forma f) async {
     /*
@@ -131,7 +145,7 @@ void main() {
     await apri(tester, forma());
 
     // Il carico, con i due `EWMA` che lo producono.
-    expect(find.text('142%'), findsOneWidget);
+    expect(nelCorpo(find.text('142%')), findsOneWidget);
 
     // ⚠️ Esatto e non `textContaining`: «in salita» compare **anche** nella
     // legenda delle fasce qui sotto, e un `contains` passerebbe pure se la
@@ -141,7 +155,7 @@ void main() {
     expect(find.text('338 kcal'), findsOneWidget);
 
     // La carica.
-    expect(find.text('61'), findsOneWidget);
+    expect(nelCorpo(find.text('61')), findsOneWidget);
 
     /*
      * 🚨 **Il numero grezzo accanto allo scarto.** È il motivo per cui questa
@@ -149,7 +163,25 @@ void main() {
      * media di 65» si può controllare — e smentire, se le medie sono sballate
      * perché il telefono ha perso dei giorni.
      */
-    expect(find.textContaining('oggi 48 ms · tua media 65 ms'), findsOneWidget);
+    // 🆕 I8: la riga è diventata una tessera — il numero grande e, sotto,
+    // la media. ⚠️ Cercati **nella stessa tessera**: sparsi per la pagina
+    // potrebbero venire da due ingredienti diversi.
+    final tessera = find.ancestor(
+      of: find.text('VARIABILITÀ CARDIACA'),
+      matching: find.byType(Card),
+    );
+    expect(
+      find.descendant(of: tessera, matching: find.text('48 ms')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tessera, matching: find.text('tua media 65 ms')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tessera, matching: find.text('−1.2')),
+      findsOneWidget,
+    );
 
     // ⚠️ Il verso, scritto: senza, un `+0.9` sul battito sembrerebbe una buona
     // notizia.
@@ -208,7 +240,10 @@ void main() {
      */
     expect(find.text('—'), findsWidgets);
     expect(find.text('non calcolabile'), findsWidgets);
-    expect(find.textContaining('Serve almeno un allenamento'), findsOneWidget);
+    expect(
+      nelCorpo(find.textContaining('Serve almeno un allenamento')),
+      findsOneWidget,
+    );
 
     // 💡 Le righe delle due medie spariscono: senza denominatore non vogliono
     // dire niente, e mostrarle inviterebbe a fare il rapporto a mano.
@@ -221,15 +256,49 @@ void main() {
     // 📌 Decisione D-2s/A: il numero **si mostra lo stesso**, con sotto quanto
     // manca. E la frase è **la stessa** della card in dashboard: chi ha cliccato
     // lì deve ritrovarla identica, non una sua variante.
-    expect(find.text('142%'), findsOneWidget);
+    expect(nelCorpo(find.text('142%')), findsOneWidget);
     expect(
-      find.text('stima poco attendibile: mancano 24 giorni di dati'),
+      nelCorpo(find.text('stima poco attendibile: mancano 24 giorni di dati')),
       findsOneWidget,
     );
     expect(
-      find.text('stima poco attendibile: mancano 4 giorni di dati'),
+      nelCorpo(find.text('stima poco attendibile: mancano 4 giorni di dati')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('in testata ci sono l\'avvertenza e gli strumenti, e non '
+      'riaprono la pagina', (tester) async {
+    await apri(tester, forma());
+
+    final testata = find.byType(CodaDellaTestata);
+
+    expect(
+      find.descendant(of: testata, matching: find.byType(AvvertenzaStima)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: testata, matching: find.byType(PlanciaDiOggi)),
+      findsOneWidget,
+    );
+
+    // ⛔ Dentro «Carico e carica» la plancia non deve aprire «Carico e carica».
+    final plancia = tester.widget<PlanciaDiOggi>(find.byType(PlanciaDiOggi));
+    expect(plancia.apreLaForma, isFalse);
+  });
+
+  testWidgets('gli ingredienti stanno a coppie, prima degli indici', (
+    tester,
+  ) async {
+    await apri(tester, forma());
+
+    // Quattro ingredienti → due coppie.
+    expect(nelCorpo(find.byType(Coppia)), findsNWidgets(2));
+
+    // ⚠️ Prima degli indici: sono la cosa da controllare per prima.
+    final ingredienti = tester.getTopLeft(find.text('GLI INGREDIENTI')).dy;
+    final indici = tester.getTopLeft(find.text('GLI INDICI, UNO PER UNO')).dy;
+    expect(ingredienti, lessThan(indici));
   });
 
   testWidgets('le due card in fondo ci sono sempre', (tester) async {

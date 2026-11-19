@@ -152,7 +152,14 @@ class _SchermataRipresaDatiState extends ConsumerState<SchermataRipresaDati> {
           indietro: !inCorso,
         ),
         body: SafeArea(
-          child: Padding(
+          /*
+           * 🚨 **Scorre** — I8, 19/11/2026, visto sull'emulatore: con la
+           * tastiera aperta (il campo ha `autofocus`, quindi lo è **sempre**
+           * all'arrivo) la colonna fissa traboccava di 31 px, e «Riprendi» e
+           * «Più tardi» finivano sotto la tastiera. ⚠️ Proprio i due pulsanti
+           * che servono, sulla schermata che rimette a posto i dati.
+           */
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(Gap.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -8,7 +8,6 @@ import '../../../../core/ui/testata_scura.dart';
 import '../../../acquisti/data/gate_dell_abbonamento.dart';
 import '../../../diary/data/bruciate_del_giorno.dart';
 import '../../../diary/data/target_del_giorno.dart';
-import '../../../forma/carica_controller.dart';
 import '../../../forma/ui/pezzi_della_forma.dart';
 import '../../../health/health_controller.dart';
 import '../../../profile/somma_bruciate.dart';
@@ -81,52 +80,38 @@ class TodayHeader extends ConsumerWidget {
       onTesto: eOggi ? null : controllo.oggi,
     );
 
+    /*
+     * ══ 🌑 COME NELLA TAVOLA — 20/11/2026 ══════════════════════════════════
+     *
+     * 📌 Il committente, sulla 22.9.0: *«Un bugiardino di una medicina
+     * sopra?? deve essere come nella tavola»*. La tavola: **la data in cima**,
+     * **una riga** d'avvertenza, gli strumenti.
+     *
+     * ⛔ Fino al 20/11 qui c'erano le due avvertenze lunghe e la data in fondo
+     * (I2, «le regole scritte vincono sulla tavola»). Il committente ha scelto
+     * la tavola: le avvertenze lunghe e le frasi sotto gli strumenti sono
+     * passate in «Carico e carica» (`SchermataForma`), che si apre toccando la
+     * plancia. `decisioni.md`, 20/11.
+     *
+     * 🚨 L'avvertenza resta **SOPRA** gli strumenti (D-2s/B): `TestataScura` la
+     * mette prima di [strumenti] per costruzione. Cambia la lunghezza, non il
+     * posto.
+     */
     if (abbonato) {
-      // 🔋 Solo per sapere se aggiungere l'avvertenza della carica: senza
-      // carica, un'avvertenza su un numero che non c'è sarebbe rumore.
-      final carica = ref.watch(caricaProvider).valueOrNull;
-
       return TestataScura(
-        /*
-         * 🚨 **Le avvertenze SOPRA gli strumenti** — D-2s/B. `TestataScura` le
-         * mette nel loro posto, che viene prima di [strumenti] per
-         * costruzione: non dipende dall'ordine in cui le scrivo qui.
-         */
-        avvertenza: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AvvertenzaStima(),
-            if (carica != null) const AvvertenzaDellaCarica(),
-          ],
-        ),
-        strumenti: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const PlanciaDiOggi(),
-            const SizedBox(height: Gap.md),
-            data,
-          ],
-        ),
+        navigatore: data,
+        avvertenza: const AvvertenzaBreve(),
+        strumenti: const PlanciaDiOggi(),
       );
     }
 
     return TestataScura(
-      strumenti: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _NumeriLiberi(riepilogo: riepilogo, giorno: giorno),
-          const SizedBox(height: Gap.md),
-          data,
-        ],
-      ),
+      navigatore: data,
+      strumenti: _NumeriLiberi(riepilogo: riepilogo, giorno: giorno),
     );
   }
 }
 
-/// Le calorie mangiate e le bruciate: i due numeri di chi non è abbonato.
-///
-/// ⚠️ Sono **gli stessi** che la testata mostrava prima del 19/11, con la
-/// stessa catena e le stesse regole: cambia solo dove stanno.
 class _NumeriLiberi extends ConsumerWidget {
   const _NumeriLiberi({required this.riepilogo, required this.giorno});
 

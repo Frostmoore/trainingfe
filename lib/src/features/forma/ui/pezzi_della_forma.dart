@@ -85,6 +85,34 @@ class AvvertenzaStima extends StatelessWidget {
   }
 }
 
+/// 🏷️ **L'avvertenza corta, per la testata di «Oggi»** — 20/11/2026.
+///
+/// 📌 Il committente, sulla 22.9.0: *«Un bugiardino di una medicina sopra?? No
+/// no, deve essere come nella tavola»*. La tavola ha **una riga**: questa, con
+/// le stesse parole.
+///
+/// 🚨 **Resta sopra i numeri** (D-2s/B, R3): cambia la lunghezza, non il posto.
+/// Le due avvertenze lunghe ([AvvertenzaStima], [AvvertenzaDellaCarica]) stanno
+/// in «Carico e carica», che si apre toccando gli strumenti.
+class AvvertenzaBreve extends StatelessWidget {
+  const AvvertenzaBreve({super.key});
+
+  static const testo = 'Stime dai tuoi dati, non misure mediche.';
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+
+    return Text(
+      testo,
+      textAlign: TextAlign.center,
+      style: tema.textTheme.labelSmall?.copyWith(
+        color: tema.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
 /// ⚠️ **La carica non è una stima affidabile, e lo dice** — 28/08/2026.
 ///
 /// 📌 *«carica mi piace, ma ci va una frase per capire che non è una stima

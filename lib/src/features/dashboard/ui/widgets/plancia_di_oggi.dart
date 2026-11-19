@@ -43,7 +43,25 @@ import '../../../health/recupero_controller.dart';
 /// regola dell'08/09/2026, *«dall'header dei non abbonati devono sparire»* —
 /// sparire, non sfumare. La sceglie `TodayHeader`.
 class PlanciaDiOggi extends ConsumerWidget {
-  const PlanciaDiOggi({this.apreLaForma = true, super.key});
+  const PlanciaDiOggi({
+    this.apreLaForma = true,
+    this.conLeSpiegazioni = false,
+    super.key,
+  });
+
+  /// Le frasi sotto gli strumenti: perché la prontezza è quella, «stima poco
+  /// attendibile: mancano N giorni», l'affidabilità della carica e
+  /// «stamattina eri a».
+  ///
+  /// 🚨 **Su «Oggi» no, in «Carico e carica» sì** — 20/11/2026. Il
+  /// committente, vista la 22.9.0 sul telefono: *«mi fa cagare sta roba ma che
+  /// è?? Un bugiardino di una medicina sopra?? deve essere come nella tavola»*.
+  /// La tavola ha **solo gli strumenti**.
+  ///
+  /// ⛔ Le frasi **non sono state cancellate**: le aveva chieste lui una per una
+  /// (21/08, 28/08, 07/09), e stanno nella pagina che si apre toccando la
+  /// plancia — quella fatta apposta per spiegare.
+  final bool conLeSpiegazioni;
 
   /// `true` su «Oggi»: toccarla apre «Carico e carica». `false` dentro quella
   /// pagina — I8, 19/11/2026 —, dove sta in testata: aprire la pagina in cui
@@ -135,15 +153,17 @@ class PlanciaDiOggi extends ConsumerWidget {
             ],
           ),
 
-          const SizedBox(height: Gap.sm),
+          if (conLeSpiegazioni) ...[
+            const SizedBox(height: Gap.sm),
+            Text(
+              fraseDellaProntezza(reattivita, prontezza),
+              style: tema.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
 
-          Text(
-            fraseDellaProntezza(reattivita, prontezza),
-            style: tema.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-
-          if (prontezza != null &&
+          if (conLeSpiegazioni &&
+              prontezza != null &&
               forma != null &&
               !forma.prontezza.eAttendibile)
             Text(
@@ -170,7 +190,7 @@ class PlanciaDiOggi extends ConsumerWidget {
             ),
           ],
 
-          if (carica != null) ...[
+          if (conLeSpiegazioni && carica != null) ...[
             const SizedBox(height: Gap.sm),
             AffidabilitaDellaCarica(carica: carica),
           ],

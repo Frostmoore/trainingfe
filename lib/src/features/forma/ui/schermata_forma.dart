@@ -74,13 +74,24 @@ class SchermataForma extends ConsumerWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const CodaDellaTestata(
+            /*
+             * 📌 **Qui le avvertenze lunghe e le spiegazioni** — 20/11/2026:
+             * da Oggi sono state tolte (il committente: *«un bugiardino»*), e
+             * questa è la pagina che si apre toccando gli strumenti. ⚠️
+             * `AvvertenzaDellaCarica` c'è solo se la carica c'è, come su Oggi.
+             */
+            CodaDellaTestata(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AvvertenzaStima(),
-                  SizedBox(height: Gap.md),
-                  PlanciaDiOggi(apreLaForma: false),
+                  const AvvertenzaStima(),
+                  if (ref.watch(caricaProvider).valueOrNull != null)
+                    const AvvertenzaDellaCarica(),
+                  const SizedBox(height: Gap.md),
+                  const PlanciaDiOggi(
+                    apreLaForma: false,
+                    conLeSpiegazioni: true,
+                  ),
                 ],
               ),
             ),

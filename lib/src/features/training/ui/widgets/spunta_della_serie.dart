@@ -31,6 +31,9 @@ class SpuntaDellaSerie extends StatefulWidget {
   final bool fatta;
   final VoidCallback onTocco;
 
+  /// Il lato dell'area che risponde al tocco — 48, la regola R7 del piano.
+  static const double lato = 48;
+
   @override
   State<SpuntaDellaSerie> createState() => _SpuntaDellaSerieState();
 }
@@ -70,11 +73,16 @@ class _SpuntaDellaSerieState extends State<SpuntaDellaSerie>
       label: fatta ? 'Serie fatta' : 'Segna la serie come fatta',
       child: InkResponse(
         onTap: _premuta,
-        radius: 22,
+        radius: 24,
         child: SizedBox(
           // 🚨 Il bersaglio, non il disegno: vedi la nota in cima.
-          width: 40,
-          height: 40,
+          //
+          // 🆕 **48 e non più 40** — `plan_interfaccia.md` R7, 19/11/2026:
+          // nella seduta nessun bersaglio sotto i 48 punti, la misura minima
+          // di Material per un dito. ⚠️ Il tondo disegnato resta 28 (*«più
+          // piccolo e più carino»*, 25/08): cresce solo l'area che si tocca.
+          width: SpuntaDellaSerie.lato,
+          height: SpuntaDellaSerie.lato,
           child: Center(
             child: ScaleTransition(
               scale: _pulsazione,

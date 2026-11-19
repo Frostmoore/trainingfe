@@ -177,6 +177,58 @@ void main() {
     );
   });
 
+  testWidgets('il piede scuro ha il tema scuro e gli angoli in alto', (
+    tester,
+  ) async {
+    Brightness? dentro;
+
+    await monta(
+      tester,
+      PiedeScuro(
+        child: Builder(
+          builder: (context) {
+            dentro = Theme.of(context).brightness;
+            return const SizedBox(height: 40);
+          },
+        ),
+      ),
+    );
+
+    final scatola = tester.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: find.byType(PiedeScuro),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    final decorazione = scatola.decoration as BoxDecoration;
+
+    expect(dentro, Brightness.dark);
+    expect(
+      decorazione.borderRadius,
+      const BorderRadius.vertical(top: Radius.circular(TestataScura.raggio)),
+    );
+  });
+
+  testWidgets('senza recupero in corso il piede scuro non lascia una striscia', (
+    tester,
+  ) async {
+    /*
+     * ⚠️ La barra del recupero sparisce (`SizedBox.shrink`) quando il recupero
+     * non c'è: il piede non deve aggiungere margini, o resterebbe una striscia
+     * scura vuota in fondo alla seduta.
+     */
+    await monta(tester, const PiedeScuro(child: SizedBox.shrink()));
+
+    // ⚠️ `skipOffstage: false`: un elemento alto zero, per il cercatore, è
+    // «fuori schermo» — ed è proprio il caso che si vuole misurare.
+    expect(
+      tester.getSize(find.byType(PiedeScuro, skipOffstage: false)).height,
+      0,
+    );
+  });
+
   testWidgets('col telefono in scuro la testata resta diversa dal corpo', (
     tester,
   ) async {

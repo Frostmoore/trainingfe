@@ -223,3 +223,46 @@ class CodaDellaTestata extends ConsumerWidget {
     );
   }
 }
+
+/// 🌑 **Il piede scuro**: il gemello di [CodaDellaTestata], in fondo allo
+/// schermo — `plan_interfaccia.md` I5, 19/11/2026.
+///
+/// 📌 Nella seduta in corso la barra del recupero sta **in fondo**, e non in
+/// testata come nella tavola: è una regola del committente (C9.3) — *«si legge
+/// da lontano con il telefono appoggiato: fra una serie e l'altra nessuno tiene
+/// il telefono in mano»*. La regola batte il disegno; ma la barra prende la
+/// faccia della testata, così la seduta ha due blocchi scuri coerenti, uno
+/// sopra e uno sotto.
+///
+/// ⚠️ **Nessun margine qui dentro**: quando il figlio non disegna niente (il
+/// recupero non è in corso), il piede deve sparire del tutto, non lasciare una
+/// striscia scura vuota.
+class PiedeScuro extends ConsumerWidget {
+  const PiedeScuro({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palestra = ref.watch(brandingControllerProvider).branding;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: TestataScura.sfondoPer(context),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(TestataScura.raggio),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(TestataScura.raggio),
+        ),
+        child: Theme(
+          data: TestataScura.temaPer(palestra),
+          // 🚨 Il `DefaultTextStyle` del tema scuro: vedi la nota in [TestataScura].
+          child: Material(type: MaterialType.transparency, child: child),
+        ),
+      ),
+    );
+  }
+}

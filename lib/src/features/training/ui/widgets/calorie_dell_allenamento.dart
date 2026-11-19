@@ -255,8 +255,9 @@ class _CalorieDellAllenamentoState
   /// ⚠️ Mentre lo storico si carica si dice la frase prudente: dire «dal tuo
   /// peso» e poi correggersi sarebbe peggio del contrario.
   bool _siEMaiPesato(WidgetRef ref) =>
-      ref.watch(storicoCorpoProvider).valueOrNull?.any(
-        (m) => (m.pesoKg ?? 0) > 0,
-      ) ??
+      ref
+          .watch(storicoCorpoProvider)
+          .valueOrNull
+          ?.any((m) => (m.pesoKg ?? 0) > 0) ??
       false;
 }

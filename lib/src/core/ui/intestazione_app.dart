@@ -113,9 +113,21 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
 
   static const altezzaTitolo = 48.0;
 
+  /// 🆕 **La riga del titolo con il sottotitolo sotto** — I5, 19/11/2026.
+  ///
+  /// 🚨 Visto sull'emulatore nella seduta in corso: «Sessione libera» con il
+  /// cronometro sotto **sforava di 5 px** i 48 della riga — *BOTTOM OVERFLOWED*.
+  /// In produzione le strisce gialle non si vedono, ma il cronometro esce
+  /// tagliato in basso. ⚠️ Un `titleLarge` e un `bodySmall` uno sopra l'altro
+  /// non ci stanno in 48: servono 60.
+  static const altezzaTitoloConSottotitolo = 60.0;
+
+  double get _altezzaTitolo =>
+      sottotitolo == null ? altezzaTitolo : altezzaTitoloConSottotitolo;
+
   @override
   Size get preferredSize => Size.fromHeight(
-    altezzaIdentita + (titolo == null ? 0.0 : altezzaTitolo) + altezzaSotto,
+    altezzaIdentita + (titolo == null ? 0.0 : _altezzaTitolo) + altezzaSotto,
   );
 
   @override
@@ -292,7 +304,7 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
 
               if (titolo != null)
                 SizedBox(
-                  height: altezzaTitolo,
+                  height: _altezzaTitolo,
                   child: Padding(
                     padding: EdgeInsets.only(
                       // 💡 Meno padding a sinistra quando c'è la freccia: il

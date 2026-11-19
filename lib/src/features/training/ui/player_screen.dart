@@ -64,6 +64,7 @@ import '../../../core/notifications/notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../health/health_controller.dart';
 import '../data/allenamento_in_corso.dart';
 import '../data/catalogo_esercizi.dart';
@@ -712,7 +713,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
           // La barra del riposo sta in fondo e non copre il contenuto: fra una
           // serie e l'altra si guarda il telefono da lontano, appoggiato.
-          RestBar(timer: _riposo),
+          //
+          // 🌑 I5, 19/11/2026: **in fondo anche nella nuova interfaccia** (la
+          // tavola la metteva in testata; la regola C9.3 batte il disegno), ma
+          // con la faccia della testata: il `PiedeScuro`.
+          PiedeScuro(child: RestBar(timer: _riposo)),
         ],
       ),
     );

@@ -116,6 +116,27 @@ void main() {
     expect(find.byType(SpuntaDellaSerie), findsNWidgets(3));
   });
 
+  /// 🆕 **Nessun bersaglio sotto i 48 punti nella seduta** —
+  /// `plan_interfaccia.md` R7, I5, 19/11/2026.
+  ///
+  /// ⚠️ Si misura **dentro il player vero**, non la spunta da sola: è lì che
+  /// la riga potrebbe stringerla, e una spunta da 48 schiacciata a 40 da chi
+  /// la contiene sarebbe lo stesso difetto di prima con un numero giusto nel
+  /// sorgente.
+  testWidgets('la spunta si prende con un dito: almeno 48 per 48', (
+    tester,
+  ) async {
+    await tester.pumpWidget(attorno());
+    await tester.pumpAndSettle();
+
+    for (final spunta in tester.widgetList(find.byType(SpuntaDellaSerie))) {
+      final misura = tester.getSize(find.byWidget(spunta));
+
+      expect(misura.width, greaterThanOrEqualTo(48));
+      expect(misura.height, greaterThanOrEqualTo(48));
+    }
+  });
+
   /// 📌 *«con campi precompilati secondo quanto registrato nella scheda»*.
   ///
   /// 🚨 È la differenza che si vede a schermo: prima l'esercizio aveva **un**

@@ -137,6 +137,53 @@ void main() {
     );
   });
 
+  /// 🆕 I5, 19/11/2026 — visto sull'emulatore nella seduta in corso: con il
+  /// cronometro come sottotitolo la riga sforava di 5 px. ⚠️ Un trabocco in un
+  /// test di widget **fa fallire il test da solo** (è un errore riportato).
+  ///
+  /// 🚨 **Ma il font dei test non è quello del telefono**: Ahem è più compatto,
+  /// e a carattere normale non trabocca nemmeno con la riga vecchia da 48 —
+  /// la prima stesura di questo test passava anche col difetto (falsificata il
+  /// 19/11). 💡 Quindi si misura col **carattere ingrandito del 30%**, che è una
+  /// impostazione vera del telefono: con 60 ci sta, con 48 trabocca.
+  testWidgets('titolo e sottotitolo stanno nella riga, senza traboccare', (
+    tester,
+  ) async {
+    final overrides = await intestazioneFinta();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides,
+        child: MaterialApp(
+          builder: (context, figlio) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: figlio!,
+          ),
+          home: Scaffold(
+            appBar: IntestazioneApp(
+              titolo: 'Sessione libera',
+              sottotitolo: '0:39',
+              azioni: [
+                TextButton(onPressed: () {}, child: const Text('Concludi')),
+              ],
+            ),
+            body: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('0:39'), findsOneWidget);
+    expect(
+      const IntestazioneApp(titolo: 'X', sottotitolo: 'Y').preferredSize.height,
+      IntestazioneApp.altezzaIdentita +
+          IntestazioneApp.altezzaTitoloConSottotitolo,
+    );
+  });
+
   testWidgets('la freccia indietro NON compare su una radice', (tester) async {
     await apri(tester, titolo: 'Oggi');
 

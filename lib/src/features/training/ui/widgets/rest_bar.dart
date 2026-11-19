@@ -39,10 +39,17 @@ class RestBar extends StatelessWidget {
       if (!timer.attivo) return const SizedBox.shrink();
 
       final theme = Theme.of(context);
-      final colore = theme.colorScheme.onPrimaryContainer;
+      final colore = theme.colorScheme.onSurface;
 
+      /*
+       * 🌑 **Il fondo non lo mette più la barra** — I5, 19/11/2026. Nel player
+       * sta dentro un `PiedeScuro`, che le dà la faccia della testata (fondo
+       * scuro, angoli in alto, tema scuro). ⚠️ Qui il `Material` è trasparente
+       * e i colori vengono dal tema che ha sopra: così la barra resta un widget
+       * semplice, che si monta anche senza provider (lo fa il suo test).
+       */
       return Material(
-        color: theme.colorScheme.primaryContainer,
+        type: MaterialType.transparency,
         child: SafeArea(
           top: false,
           child: Column(

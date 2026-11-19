@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../data/session_models.dart';
 import '../session_controller.dart';
 import '../storico_unificato_controller.dart';
@@ -41,7 +42,14 @@ class SessionSummaryScreen extends ConsumerWidget {
       // all'elenco, non a una sessione chiusa. E da G13 a questa schermata si
       // arriva anche dallo storico e dal calendario, dove una schermata senza
       // via d'uscita sarebbe un vicolo cieco.
-      appBar: const IntestazioneApp(titolo: 'Allenamento concluso'),
+      /*
+       * 🌑 **Senza angoli**: sotto c'è il seguito scuro con la testa della
+       * seduta e il suo carosello — I5, 19/11/2026.
+       */
+      appBar: const IntestazioneApp(
+        titolo: 'Allenamento concluso',
+        arrotondata: false,
+      ),
       body: sessione.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(
@@ -83,15 +91,28 @@ class _Corpo extends ConsumerWidget {
     final theme = Theme.of(context);
     final gruppi = _perEsercizio;
 
+    /*
+     * ══ 🌑 GLI STRUMENTI DELLA SEDUTA IN TESTATA — I5, 19/11/2026 ═════════════
+     *
+     * 📌 Tavola «Allenamento concluso»: i numeri della seduta stanno nel blocco
+     * scuro. ⚠️ Non si riscrivono: sono la testa e il carosello di sempre (G7,
+     * 3b-B.20.1), che salgono nel seguito della testata come gli strumenti
+     * dello storico. Le calorie da correggere, la foto e gli esercizi restano
+     * sotto: sono le cose da **fare**, non da guardare.
+     */
     return ListView(
-      padding: const EdgeInsets.all(Gap.md),
+      padding: const EdgeInsets.only(bottom: Gap.md),
       children: [
-        // 📌 *«stesso layout»*: la stessa prima riga della pagina del polso.
-        _TestaDiQuestaSeduta(sessione: sessione),
+        CodaDellaTestata(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 📌 *«stesso layout»*: la stessa prima riga della pagina del polso.
+              _TestaDiQuestaSeduta(sessione: sessione),
 
-        const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.lg),
 
-        /*
+              /*
          * ⛔ **Qui c'era una riga di quattro numeri**, e diceva le stesse cose
          * della terza card del carosello — minuti, serie, chili — a dieci pixel
          * di distanza. 🚨 Due volte lo stesso numero nella stessa schermata è il
@@ -103,7 +124,7 @@ class _Corpo extends ConsumerWidget {
          * senza serie registrate «esercizi» e «serie» sarebbero due trattini.
          */
 
-        /*
+              /*
          * 📌 *«aggiungere sopra le tre cards a carosello come nella sezione
          * storico, ma limitate allo specifico allenamento»* — 3b-B.20.1.
          *
@@ -111,36 +132,42 @@ class _Corpo extends ConsumerWidget {
          * sbaglio e ripresa è *un* allenamento, e le tre card devono parlare di
          * quello. 💡 `voceDelloStoricoProvider` lo trova nello storico già fuso.
          */
-        _CaroselloDiQuestaSeduta(sessione: sessione),
+              _CaroselloDiQuestaSeduta(sessione: sessione),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.md, Gap.lg, Gap.md, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CalorieDiQuestaSeduta(sessione: sessione),
 
-        const SizedBox(height: Gap.lg),
-        _CalorieDiQuestaSeduta(sessione: sessione),
-
-        /*
+              /*
          * 📐 **I numeri non sono piu' qui** — 08/09/2026: sono dentro il
          * carosello in cima, insieme al percorso.
          */
-        const SizedBox(height: Gap.lg),
-        FotoDellAllenamento(sedutaId: sessione.id),
+              const SizedBox(height: Gap.lg),
+              FotoDellAllenamento(sedutaId: sessione.id),
 
-        const SizedBox(height: Gap.lg),
-        Text('Cosa hai fatto', style: theme.textTheme.titleMedium),
-        const SizedBox(height: Gap.sm),
+              const SizedBox(height: Gap.lg),
+              Text('Cosa hai fatto', style: theme.textTheme.titleMedium),
+              const SizedBox(height: Gap.sm),
 
-        if (gruppi.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(Gap.md),
-              child: Text(
-                'Non hai registrato nessuna serie. La prossima volta tocca «OK» '
-                'accanto a ogni serie mentre la fai: è quello che finisce nello '
-                'storico e nei grafici.',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-          ),
+              if (gruppi.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Gap.md),
+                    child: Text(
+                      'Non hai registrato nessuna serie. La prossima volta tocca «OK» '
+                      'accanto a ogni serie mentre la fai: è quello che finisce nello '
+                      'storico e nei grafici.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
 
-        /*
+              /*
          * ⛔ **Qui le serie stavano tutte su una riga sola**, separate da un
          * puntino. Con quattro si leggeva a fatica, con sette non si leggeva
          * più — e il numero della serie, che è quello che si cerca per sapere
@@ -150,25 +177,28 @@ class _Corpo extends ConsumerWidget {
          * deve comparire sulla pagina di un allenamento del polso con una
          * scheda attaccata (B.20.4), e due copie divergono sempre.
          */
-        for (final esercizio in raggruppaPerEsercizio(sessione.sets))
-          CardEsercizioFatto(esercizio: esercizio),
+              for (final esercizio in raggruppaPerEsercizio(sessione.sets))
+                CardEsercizioFatto(esercizio: esercizio),
 
-        /*
+              /*
          * 🗑️ **Rimuovere l'allenamento sta anche qui** — 3b-B.20.2/B.20.4. La
          * pagina di una seduta dell'app e quella di un allenamento del polso
          * devono poter fare le stesse cose, o «identica» resta una parola.
          */
-        const SizedBox(height: Gap.lg),
-        _AzioniDiQuestaSeduta(sessione: sessione),
+              const SizedBox(height: Gap.lg),
+              _AzioniDiQuestaSeduta(sessione: sessione),
 
-        /*
+              /*
          * ⛔ **Il pulsante «Fine» se n'è andato.** Faceva `pop()`, cioè quello
          * che fa già la freccia dell'intestazione — e sulla pagina di un
          * allenamento del polso non c'era mai stato. ⚠️ In una schermata che si
          * apre anche dallo storico e dal calendario, un pulsante grande che
          * duplica una freccia è un invito a uscire da una cosa appena aperta.
          */
-        const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.lg),
+            ],
+          ),
+        ),
       ],
     );
   }

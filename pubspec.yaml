@@ -150,6 +150,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   drift: ^2.34.3
   sqlite3_flutter_libs: ^0.6.0+eol
+  # Serve per tipare il `setup:` di NativeDatabase (busy_timeout e WAL):
+  # era gia' presente come transitiva di drift, qui e' solo dichiarata.
+  sqlite3: ^3.5.1
   path: ^1.9.1
   health: ^13.3.1
   sodium: 3.2.0

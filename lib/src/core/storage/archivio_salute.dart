@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' show Database, SqliteException;
 
 import '../../features/health/dati_salute.dart';
 import '../../features/health/salute_in_piu.dart';
@@ -4009,8 +4010,81 @@ class ArchivioSalute extends _$ArchivioSalute {
        */
       final file = File(p.join(cartella.path, 'salute.sqlite'));
 
-      return NativeDatabase.createInBackground(file);
+      return NativeDatabase.createInBackground(file, setup: preparaLaConnessione);
     });
+  }
+}
+
+/// ⚙️ **Le due righe che si eseguono prima di qualunque query** — 19/11/2026.
+///
+/// ══ 🚨 IL DIFETTO CHE CHIUDE: «database is locked» SU `PRAGMA user_version` ═
+///
+/// 📌 Successo sul telefono del committente, sulla schermata «Backup e dati»:
+/// `SqliteException(5): database is locked, causing statement: PRAGMA
+/// user_version`.
+///
+/// ⚠️ `PRAGMA user_version` è la **prima** query che drift esegue aprendo il
+/// file. Quindi quell'errore non dice «il ripristino è fallito»: dice **«non
+/// sono proprio riuscito ad aprire il database»**, perché un'altra connessione
+/// ce l'aveva in mano in quell'istante.
+///
+/// Le altre connessioni che esistono davvero sono due, e nessuna è un errore:
+///
+/// 1. 🔁 quella **vecchia che sta chiudendo**: `BackupAutomatico.riprendi()`
+///    fa `ref.invalidate(archivioSaluteProvider)`, l'`onDispose` chiama
+///    `close()` — ⛔ ma `close()` ritorna un `Future` **che Riverpod non
+///    aspetta**, e `createInBackground` deve far terminare il suo isolato.
+///    Nel frattempo una schermata rilegge il provider e ne apre una nuova.
+/// 2. 🌙 quella dell'**isolato di WorkManager**: `backup_in_background.dart` si
+///    costruisce un `ProviderContainer` suo, quindi apre il **secondo**
+///    `ArchivioSalute` sullo stesso file. Alle 4 di notte non dà fastidio; con
+///    l'app aperta sì.
+///
+/// ══ 🔑 PERCHE' PROPRIO QUESTE DUE PRAGMA, E PERCHE' QUI ═══════════════════
+///
+/// **`busy_timeout`** — 🚨 il default di SQLite è **zero**: se trova occupato
+/// **non aspetta un millisecondo** e torna subito `SQLITE_BUSY` (codice 5). Con
+/// cinque secondi, la contesa di cui sopra — che dura millisecondi — si risolve
+/// da sola aspettando, invece di diventare un errore in faccia a chi sta
+/// ripristinando i suoi dati.
+///
+/// **`journal_mode = WAL`** — ⛔ col journal classico **un solo scrittore
+/// blocca anche i lettori**: basta un backup in corso perché una schermata che
+/// legge il peso fallisca. Con il WAL, chi legge e chi scrive non si vedono.
+///
+/// ⚠️ **E devono stare nel `setup:`, non in `beforeOpen`.** 🚨 `beforeOpen` gira
+/// **dopo** l'apertura, cioè **dopo** `PRAGMA user_version`: un `busy_timeout`
+/// messo lì arriverebbe in ritardo proprio alla query che fallisce. È il
+/// dettaglio che fa sembrare applicata una correzione che non lo è.
+///
+/// ⚠️ **Funzione di primo livello, non una chiusura**: drift la manda a un
+/// **altro isolato** per eseguirla là. 💡 Una chiusura che catturi stato non è
+/// trasferibile, e il guasto arriverebbe a tempo di esecuzione.
+/// ⚠️ **L'ordine conta, e il WAL può non riuscire: è previsto.**
+///
+/// 🚨 Trappola trovata dal test il 19/11/2026, **nella prima stesura di questa
+/// funzione**: il passaggio a WAL pretende un lock **esclusivo** sul file, e
+/// sotto contesa fallisce `SqliteException(5)` — ⛔ cioè esattamente l'errore
+/// che questa funzione esiste per togliere, spostato dall'`user_version` al
+/// `journal_mode`. E sarebbe stato **peggio** dell'originale: un'eccezione nel
+/// `setup:` impedisce al database di **aprirsi**.
+///
+/// 💡 Per questo il WAL è un **tentativo**: è un miglioramento (chi legge non
+/// aspetta più chi scrive), non la correzione. ✅ La correzione è il
+/// `busy_timeout`, che non fallisce mai e va messo **per primo** — così vale
+/// già durante il tentativo di conversione.
+void preparaLaConnessione(Database db) {
+  db.execute('PRAGMA busy_timeout = 5000;');
+
+  try {
+    db.execute('PRAGMA journal_mode = WAL;');
+  } on SqliteException {
+    /*
+     * ⛔ Si resta col journal classico, e va bene: è come ha sempre funzionato
+     * fino a oggi. 🚨 Il file è già in WAL dalla prima apertura riuscita, quindi
+     * questo ramo si percorre al più una volta, e il giro dopo la conversione
+     * trova il campo libero.
+     */
   }
 }
 

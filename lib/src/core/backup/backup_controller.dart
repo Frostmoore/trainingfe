@@ -563,6 +563,29 @@ class BackupAutomatico extends AsyncNotifier<StatoBackup> {
      * dell'app, e chi ha appena ripristinato concluderebbe che non ha
      * funzionato.
      */
+    /*
+     * 🚨 **La chiusura si aspetta PRIMA di invalidare** — difetto del
+     * 19/11/2026, sul telefono del committente.
+     *
+     * ⛔ `ref.invalidate` fa scattare l'`onDispose`, che chiama `close()` — ma
+     * `close()` ritorna un `Future` **che Riverpod non aspetta**, e
+     * `NativeDatabase.createInBackground` deve far terminare il suo isolato.
+     * ⚠️ Subito dopo `invalidateSelf()` risveglia le schermate, una rilegge il
+     * provider, se ne apre una **nuova** sullo stesso file e la sua prima query
+     * — `PRAGMA user_version` — trova il lock di quella che sta ancora
+     * chiudendo: `SqliteException(5): database is locked`.
+     *
+     * 💡 Chiudendo **e aspettando** qui, quando l'invalidazione riapre il file è
+     * davvero libero. ⚠️ L'`onDispose` chiamerà `close()` una seconda volta: è
+     * innocuo (drift lo tratta come già chiuso), ed è il motivo per cui questa
+     * riga può stare qui senza toccare il provider.
+     *
+     * 🔑 `preparaLaConnessione` (`archivio_salute.dart`) resta comunque la rete
+     * di sicurezza: il `busy_timeout` copre anche la contesa con l'isolato di
+     * WorkManager, che da qui non si governa.
+     */
+    await ref.read(archivioSaluteProvider).close();
+
     ref
       ..invalidate(archivioSaluteProvider)
       ..invalidateSelf();

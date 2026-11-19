@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/acquisti/ui/modale_acquisti.dart';
 import '../../features/auth/auth_controller.dart';
+import '../../features/auth/data/app_user.dart';
 import '../../features/dashboard/gettoni_controller.dart';
 import '../../features/onboarding/branding_controller.dart';
 import '../../features/onboarding/data/gym_branding.dart';
 import '../../features/profile/ui/widgets/bottone_profilo.dart';
 import '../theme/app_theme.dart';
+import 'testata_scura.dart';
 
 /// L'intestazione dell'app — **una sola, su tutte le schermate**. 3b-O.1a.6,
 /// 21/08/2026.
@@ -71,6 +73,7 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
     this.indietro = true,
     this.sotto,
     this.altezzaSotto = 0,
+    this.arrotondata = true,
     super.key,
   });
 
@@ -97,6 +100,14 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
   /// 💡 Dentro il corpo — il caso di «Oggi» — si lascia a zero.
   final double altezzaSotto;
 
+  /// 🆕 Gli angoli in basso arrotondati — `plan_interfaccia.md` I1, 19/11/2026.
+  ///
+  /// `true` quando fa da `Scaffold.appBar`: è la testata della pagina, e sopra
+  /// il corpo chiaro si deve vedere finire. ⚠️ `false` quando sta **dentro**
+  /// una [TestataScura]: lì gli angoli li fa il blocco intero, e una curva a
+  /// metà testata sembrerebbe un pezzo staccato.
+  final bool arrotondata;
+
   /// Alta come una barra Material, così le due si somigliano dove convivono.
   static const altezzaIdentita = 56.0;
 
@@ -109,7 +120,6 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final palestra = ref.watch(brandingControllerProvider).branding;
 
     /*
@@ -144,27 +154,63 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
      */
     final puoTornare = indietro && Navigator.of(context).canPop();
 
+    /*
+     * ══ 🌑 SCURA, DAL 19/11/2026 — `plan_interfaccia.md` §3.2 ════════════════
+     *
+     * ⛔ Fino al 19/11 qui c'era il gradiente `primaryContainer` della palestra.
+     * Le tavole approvate vogliono una testata **scura** su tutte le pagine, e
+     * farlo qui vuol dire farlo su tutte e 44 in una mossa — comprese quelle
+     * che una tavola non ce l'hanno.
+     *
+     * 🔑 **Lo sfondo si calcola FUORI dal tema scuro**: `sfondoPer` guarda se
+     * il telefono è in chiaro o in scuro, e dentro il `Theme` scuro qui sotto
+     * la risposta sarebbe sempre «scuro».
+     *
+     * 💡 Il colore della palestra non sparisce: il logo resta, e dentro il
+     * tema scuro `onPrimaryContainer` è il tono chiaro del suo colore — i testi
+     * qui sotto lo usavano già, e non serve toccarli.
+     */
+    final sfondo = TestataScura.sfondoPer(context);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      // 🚨 A2 — le icone di sistema sopra il gradiente della palestra.
-      //
-      // Ora, batteria e segnale li disegna Android, non noi, e di serie li fa
-      // scuri. Su una palestra con il colore acceso diventano illeggibili — e
-      // non è un caso raro: `primaryContainer` nasce dal colore scelto dal
-      // cliente, quindi può essere qualunque cosa.
-      value: stileBarraDiSistema(theme.colorScheme.primaryContainer),
+      // 🚨 A2 — le icone di sistema sopra la testata. Ora, batteria e segnale
+      // li disegna Android, di serie scuri: sopra un fondo quasi nero
+      // sparirebbero. `stileBarraDiSistema` legge lo sfondo e li fa chiari.
+      value: stileBarraDiSistema(sfondo),
+      child: Theme(
+        data: TestataScura.temaPer(palestra),
+        child: Builder(
+          builder: (context) =>
+              _disegna(context, palestra, utente, nome, puoTornare, sfondo),
+        ),
+      ),
+    );
+  }
+
+  Widget _disegna(
+    BuildContext context,
+    GymBranding palestra,
+    AppUser? utente,
+    String nome,
+    bool puoTornare,
+    Color sfondo,
+  ) {
+    // ⚠️ Il tema **scuro** della testata, non quello della pagina: è il
+    // `context` del `Builder` sotto il `Theme`.
+    final theme = Theme.of(context);
+
+    return Material(
+      // 🚨 Rimette il `DefaultTextStyle` del tema scuro: senza, un testo senza
+      // stile proprio fra le [azioni] prenderebbe il nero dello `Scaffold`.
+      type: MaterialType.transparency,
       child: Container(
         decoration: BoxDecoration(
-          // Il colore della palestra, sfumato: pieno sarebbe una fascia colorata
-          // che schiaccia tutto il resto, e con un logo acceso diventerebbe
-          // illeggibile.
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.colorScheme.primaryContainer,
-              theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-            ],
-          ),
+          color: sfondo,
+          borderRadius: arrotondata
+              ? const BorderRadius.vertical(
+                  bottom: Radius.circular(TestataScura.raggio),
+                )
+              : null,
         ),
 
         /*
@@ -361,6 +407,40 @@ class LogoPalestra extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /*
+     * 🆕 **L'anello chiaro** — `plan_interfaccia.md` I1, 19/11/2026.
+     *
+     * 🚨 Visto sull'emulatore col caso A5: il cerchio del logo ha il colore
+     * della palestra, e una palestra **blu scuro** sulla testata quasi nera
+     * spariva del tutto — restava una «A» che galleggiava. ⚠️ Non è un caso
+     * raro: i colori «seri» delle palestre sono spesso scuri.
+     *
+     * 💡 Un anello sottile del colore del testo lo stacca dal fondo qualunque
+     * sia il colore della palestra, senza toccare il colore stesso (che è il
+     * marchio del cliente, ADR-A01).
+     */
+    return DecoratedBox(
+      /*
+       * 🚨 **`foreground`, non la posizione di serie** — visto sull'emulatore.
+       * Di serie la decorazione sta **dietro** il figlio: il `CircleAvatar` è
+       * grande esattamente quanto il cerchio, e lo copriva tutto. L'anello
+       * c'era e non si vedeva.
+       */
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          // ⚠️ 0.3 era troppo poco: sull'emulatore, a una palestra blu scuro,
+          // l'anello quasi non si vedeva. 0.55 lo stacca senza fare cornice.
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+          width: 2,
+        ),
+      ),
+      child: _cerchio(context),
+    );
+  }
+
+  Widget _cerchio(BuildContext context) {
     final theme = Theme.of(context);
 
     // ⚠️ Il logo può non esserci: molte palestre non lo caricano. L'iniziale su

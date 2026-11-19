@@ -3,16 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../core/backup/backup_controller.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/intestazione_app.dart';
+import '../../../core/ui/sezioni.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/data/app_user.dart';
 import '../../dashboard/consiglio_da_mostrare.dart';
 import '../../onboarding/branding_controller.dart';
+import '../../onboarding/data/gym_branding.dart';
 import '../profile_controller.dart';
 import 'widgets/riga_blocco_biometrico.dart';
+import 'widgets/voce_del_profilo.dart';
 
-/// Il profilo — A8.
+/// Il profilo — A8; ridisegnato in `plan_interfaccia.md` I7, 19/11/2026.
+///
+/// 📌 Tavola «Profilo»: in testata la persona, la tessera della palestra e
+/// quella dell'abbonamento (I7.D1); sotto, le sezioni «Tu», «Dati e privacy»,
+/// «Per te», con le voci corte a coppie e le lunghe a tutta larghezza (I7.D2).
+///
+/// 🚨 **Chi vede cosa non è cambiato** (I7.D4): ogni voce che prima era
+/// condizionale lo è ancora, con la stessa condizione — trainer, gestore,
+/// consiglio nascosto, password o accesso social, palestra o no. Il ridisegno
+/// sposta le voci, non decide chi le vede.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -21,508 +36,262 @@ class ProfileScreen extends ConsumerWidget {
     final utente = ref.watch(authControllerProvider).user;
     final palestra = ref.watch(brandingControllerProvider).branding;
 
+    const spazio = SizedBox(height: 10);
+
     return Scaffold(
-      appBar: const IntestazioneApp(titolo: 'Profilo'),
+      // 🌑 Senza angoli: sotto c'è il seguito scuro con la persona — I7.
+      appBar: const IntestazioneApp(titolo: 'Profilo', arrotondata: false),
       body: ListView(
-        padding: const EdgeInsets.all(Gap.md),
+        padding: EdgeInsets.zero,
         children: [
-          /*
-           * ══ 🪪 LA CARD DEL NOME È UNA PORTA — 3b-P.1, 22/08/2026 ═════════
-           *
-           * 📌 Il committente: *«Questa non ha senso se non fa nulla. Ci
-           * mettiamo che se ci clicchi manda a una pagina per mettere
-           * l'avatar, cambiare i colori dell'app e la tua città»*.
-           *
-           * 🚨 **Una card grande e inerte non è un'occasione sprecata: è una
-           * lezione sbagliata.** Chi la tocca e non ottiene niente impara che
-           * qui le cose grandi non si toccano, e smette di provare anche dove
-           * funzionerebbe.
-           *
-           * ⚠️ **La freccia non è decorazione**: è l'unica cosa che distingue
-           * questa card da quella di prima. Senza, il fatto che adesso funzioni
-           * lo scopre solo chi ci riprova — cioè nessuno.
-           */
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => context.push(AppRoutes.tu),
-              child: Padding(
-                padding: const EdgeInsets.all(Gap.md),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: palestra.primary,
-                      child: Text(
-                        utente?.initials ?? '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: Gap.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            utente?.name ?? '—',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            utente?.email ?? '',
-                            style: Theme.of(context).textTheme.bodySmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Foto, città e colore',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded),
-                  ],
-                ),
-              ),
-            ),
+          CodaDellaTestata(
+            child: _TestaDelProfilo(utente: utente, palestra: palestra),
           ),
-
-          const SizedBox(height: Gap.md),
-
-          // ── C8: le voci che prima non c'erano ────────────────────────
-          Card(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, 0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── TU ───────────────────────────────────────────────────
+                const TitoloDiSezione('Tu'),
+                spazio,
                 Consumer(
                   builder: (context, ref, _) {
                     final profilo = ref.watch(profileProvider);
 
-                    return ListTile(
-                      leading: const Icon(Icons.tune_rounded),
-                      title: const Text('I tuoi dati'),
+                    return VoceDelProfilo(
+                      icona: Icons.tune_rounded,
+                      titolo: 'I tuoi dati',
                       // Il sottotitolo dice a colpo d'occhio se il fabbisogno
                       // esiste: è la domanda che porta qui.
-                      subtitle: Text(
-                        profilo.maybeWhen(
-                          data: (p) => p.isComplete
-                              ? 'Fabbisogno: ${p.derived!.targetKcal} kcal al giorno'
-                              : 'Da completare per avere il tuo fabbisogno',
-                          orElse: () => 'Sesso, età, altezza, obiettivo',
-                        ),
+                      sottotitolo: profilo.maybeWhen(
+                        data: (p) => p.isComplete
+                            ? 'Fabbisogno: ${p.derived!.targetKcal} kcal al giorno'
+                            : 'Da completare per avere il tuo fabbisogno',
+                        orElse: () => 'Sesso, età, altezza, obiettivo',
                       ),
-                      trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push(AppRoutes.profileEdit),
                     );
                   },
                 ),
                 /*
-                 * ⛔ **«Registra il peso» non e' piu' una voce qui** — 3b-P.2.4.
-                 *
-                 * 📌 *«Uniamoci dentro anche la pagina di registrazione del
-                 * peso (non ha senso che sia una pagina a parte)»*. Sta dentro
-                 * «I tuoi dati», accanto ad altezza, eta' e obiettivo, che sono
-                 * la stessa domanda.
+                 * ⛔ **«Registra il peso» non e' piu' una voce qui** — 3b-P.2.4:
+                 * sta dentro «I tuoi dati», accanto ad altezza, eta' e
+                 * obiettivo. ⛔ Nemmeno «Sonno e recupero» (3b-P.8.5) e «Foto
+                 * dei progressi» (3b-P.9.3, terzo segmento di «Allenamento»).
+                 * ⛔ Foto, città e colore stanno in `/profilo/tu`, dietro la
+                 * persona in testata (3b-P.1).
                  */
-                const Divider(height: 1),
-
+                spazio,
                 /*
-                 * ⚠️ Qui c'era la voce «Sonno» che portava all'ipnogramma;
-                 * nascosta in S2.2 perche' dopo S1 non c'era piu' nessuna
-                 * sorgente. **Torna in S4.3**, quando l'archivio locale
-                 * comincera' a produrre il giudizio della notte.
-                 *
-                 * Al suo posto, da S3.4, c'e' il collegamento: prima si collega
-                 * la sorgente, poi ha senso mostrarne il risultato.
+                 * ⏰ **«Promemoria»** — voce 62, 27/09/2026: è la cosa che si
+                 * cerca quando una notifica da' fastidio, e chi la cerca la
+                 * cerca **adesso**, prima di spegnere tutto dal sistema.
                  */
-                /*
-                 * 🆕 **«I miei utenti» — F5.1, solo per chi allena.**
-                 *
-                 * ⚠️ Sta qui e non in una sesta scheda della barra: **un
-                 * trainer si allena anche lui**, e la barra è la sua vita da
-                 * atleta. Una scheda in più la trasformerebbe in un pannello di
-                 * gestione con dentro anche il diario — il contrario di come
-                 * questa app viene usata.
-                 *
-                 * 💡 `isTrainer` copre sia il trainer di palestra sia quello
-                 * indipendente: per l'app sono la stessa cosa — gente che segue
-                 * altre persone — e la differenza la fa il server.
-                 */
-                /*
-                 * 🆕 🏋️ **«Inviti della palestra» — blocco B2, 24/09/2026.**
-                 *
-                 * 📌 Il committente, 23/09: *«trainer e palestre possono
-                 * proprio fare gli inviti direttamente dall'app»*. Questa è la
-                 * metà della palestra.
-                 *
-                 * ⚠️ **Sta FUORI dal blocco di chi allena**, e non è una
-                 * sfumatura: chi gestisce una palestra può non allenare nessuno
-                 * — è un cappello diverso, non un grado in più. ⛔ Dentro
-                 * quell'`if` la voce sparirebbe proprio al gestore che non
-                 * segue allievi, cioè al caso più comune.
-                 *
-                 * 💡 E chi ha **tutti e due** i cappelli le vede tutte e due,
-                 * che è esattamente quello che deve succedere: sono due elenchi
-                 * di inviti diversi, su due piani diversi.
-                 */
-                if (utente?.gestisceUnaPalestra ?? false) ...[
-                  ListTile(
-                    leading: const Icon(Icons.mail_outline),
-                    title: const Text('Inviti della palestra'),
-                    subtitle: const Text(
-                      'Invita iscritti e trainer, e vedi i posti che restano',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(AppRoutes.invitiDellaPalestra),
-                  ),
-                  const Divider(height: 1),
-                ],
-
-                if (utente?.isTrainer ?? false) ...[
-                  /*
-                   * ⛔ **Scaduta, la voce NON sparisce** — 3b-U.3.1.
-                   *
-                   * 📌 *«si deve capire che è perché non ha pagato»*: una voce
-                   * che sparisce non spiega niente, e chi la cerca pensa che
-                   * l'app si sia rotta o che l'aggiornamento gliel'abbia tolta.
-                   *
-                   * 💡 Resta, lo dice qui, e la schermata lo spiega per esteso.
-                   */
-                  ListTile(
-                    leading: Icon(
-                      utente?.abbonato == false
-                          ? Icons.lock_clock_outlined
-                          : Icons.groups_2_outlined,
-                    ),
-                    title: const Text('I miei utenti'),
-                    subtitle: Text(
-                      utente?.abbonato == false
-                          ? 'Abbonamento scaduto — tocca per sapere cosa resta'
-                          : 'Invita, segui e gestisci le persone che alleni',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(AppRoutes.mieiUtenti),
-                  ),
-                  const Divider(height: 1),
-
-                  /*
-                   * G7 — l'autore dei piani alimentari.
-                   *
-                   * 💡 Sta accanto a «i miei utenti» e non in una scheda in
-                   * fondo: chi allena resta prima di tutto un atleta, e una
-                   * scheda in più cambierebbe l'app a tutti per servirne pochi.
-                   */
-                  ListTile(
-                    leading: const Icon(Icons.restaurant_menu_outlined),
-                    title: const Text('I miei consigli alimentari'),
-                    subtitle: const Text(
-                      'Scrivili qui, poi mandali dalla chat',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(AppRoutes.mieiPiani),
-                  ),
-                  const Divider(height: 1),
-
-                  /*
-                   * G7.2 — l'autore delle schede.
-                   *
-                   * ⚠️ **Non è «Schede» della barra**, che sono le schede che
-                   * questa persona esegue. Queste sono quelle che **scrive per
-                   * altri**, ed è una distinzione che il titolo deve reggere da
-                   * solo: chi allena vede entrambe le voci nella stessa app.
-                   */
-                  ListTile(
-                    leading: const Icon(Icons.fitness_center_outlined),
-                    title: const Text('Le mie schede'),
-                    subtitle: const Text(
-                      'Quelle che scrivi per i tuoi allievi',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(AppRoutes.mieSchede),
-                  ),
-                  const Divider(height: 1),
-                ],
-
-                /*
-                 * 📍 La città — M1.2.
-                 *
-                 * 🚨 Sta **sopra** «sonno e recupero» e non in fondo: è il
-                 * campo che accende la vicinanza nel catalogo, e senza di esso
-                 * chi cerca una palestra riceve un elenco in ordine alfabetico
-                 * senza capire perché.
-                 *
-                 * ⚠️ E non è obbligatoria: si può togliere.
-                 */
-                /*
-                 * ⛔ **Foto, città e colore non stanno più qui** — 3b-P.1.
-                 * Sono migrate in `/profilo/tu`, dietro la card del nome:
-                 * erano tre righe sparse fra diciannove, e sono l'unica
-                 * famiglia che non cambia *cosa fa* l'app ma **come ti si
-                 * presenta**.
-                 */
-
-                /*
-                 * 💾 M7.3 — la copia di sicurezza.
-                 *
-                 * 🚨 Fino a oggi l'app sapeva **importare** un file di backup e
-                 * non crearne nessuno: si poteva ripristinare da un file che
-                 * non si poteva fare. Era il buco più silenzioso di tutto
-                 * l'impianto delle chiavi, perché si scopre solo quando serve.
-                 */
-                ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: const Text('Backup e dati'),
-                  subtitle: const Text(
-                    'Se perdi il telefono, è quello che ti fa rientrare',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.backup),
+                VoceDelProfilo(
+                  icona: Icons.notifications_active_outlined,
+                  titolo: 'Promemoria',
+                  sottotitolo:
+                      'Allenamento, diario e misure: quali vuoi e a che ora',
+                  onTap: () => context.push(AppRoutes.promemoria),
                 ),
-                const Divider(height: 1),
-
-                /*
-                 * 🆕 🎁 P8 di plan_promozioni.md — le offerte e «porta un amico».
-                 * 💡 Sempre visibili: un'offerta può arrivare in qualunque
-                 * momento, e il posto per trovarla deve esserci prima.
-                 */
-                ListTile(
-                  leading: const Icon(Icons.card_giftcard_rounded),
-                  title: const Text('Offerte per te'),
-                  subtitle: const Text('Regali e sconti per te'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.offerte),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.group_add_rounded),
-                  title: const Text('Porta un amico'),
-                  subtitle: const Text('Il tuo link da condividere'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.portaUnAmico),
-                ),
-                const Divider(height: 1),
 
                 /*
                  * 🆕 **Dove si riaccende il consiglio nascosto** — 3b-O.3.2.
-                 *
-                 * 🚨 È la metà che rende accettabile il pulsante «nascondi»
-                 * sulla card: un elemento che sparisce senza un posto dove
-                 * tornare è un elemento **perso**, e chi l'ha nascosto per
-                 * sbaglio non ha modo di rimediare.
-                 *
-                 * ⚠️ Compare **solo quando è nascosta**: una voce che dice
-                 * «mostra una cosa che stai già vedendo» è rumore in un elenco
-                 * che ne ha già abbastanza.
-                 */
-                /*
-                 * 🆕 **Il colore d'accento, solo senza palestra** — 3b-O.1a.1.
-                 *
-                 * 🚨 Chi una palestra ce l'ha **non lo vede**, e non è una
-                 * dimenticanza: il colore è l'identità del cliente (ADR-A01), e
-                 * lasciarlo cambiare a un iscritto vorrebbe dire che può
-                 * spegnere il marchio della palestra che lo paga.
-                 */
-                /*
-                 * 🚨 **`haPalestra`, e qui era rimasto il controllo sbagliato**
-                 * — difetto O.D.2, secondo giro, 22/08/2026.
-                 *
-                 * ⚠️ Il 21/08 quel controllo era stato corretto in quattro
-                 * punti. **Questo era il quinto**, e non è stato trovato per un
-                 * motivo stupido: era spezzato su sei righe, e il `grep` cercava
-                 * `name?.isNotEmpty ?? false` su una riga sola.
-                 *
-                 * ⛔ Risultato: `GymBranding.neutral` ha `name: 'Training
-                 * Companion'`, quindi «ha una palestra» era **vero** per tutti,
-                 * e il selettore del colore **non lo vedeva nessuno**. Il
-                 * committente: *«non mi hai messo nessuna interfaccia per
-                 * selezionare il colore di accento»*. C'era, ed era invisibile.
-                 *
-                 * 💡 Adesso c'è un test che legge il sorgente e non si fa
-                 * ingannare dagli a capo: `niente_nome_per_la_palestra_test.dart`.
+                 * Un elemento che sparisce senza un posto dove tornare è un
+                 * elemento **perso**. ⚠️ Compare **solo quando è nascosto**.
                  */
                 if (ref.watch(consiglioNascostoProvider)) ...[
-                  ListTile(
-                    leading: const Icon(Icons.auto_awesome_outlined),
-                    title: const Text('Consiglio del giorno'),
-                    subtitle: const Text('Nascosto dalla schermata Oggi'),
-                    trailing: const Text('Mostra'),
+                  spazio,
+                  VoceDelProfilo(
+                    icona: Icons.auto_awesome_outlined,
+                    titolo: 'Consiglio del giorno',
+                    sottotitolo: 'Nascosto dalla schermata Oggi',
+                    coda: const Text('Mostra'),
                     onTap: () => ref
                         .read(consiglioNascostoProvider.notifier)
                         .imposta(nascosto: false),
                   ),
-                  const Divider(height: 1),
                 ],
 
                 /*
-                 * ⛔ **«Sonno e recupero» non e' piu' una voce qui** — 3b-P.8.5.
+                 * ══ 🆕 IN PALESTRA SI ENTRA DA UN LINK, NON DA UN CODICE ════
                  *
-                 * 📌 *«non ha molto senso tenerla qui nelle impostazioni»*. La
-                 * spiegazione sta sotto l'ipnogramma di `/sonno`, il
-                 * collegamento sta in «Privacy e consensi» qui sotto.
+                 * 📌 Il committente, 15/09/2026: *«Il codice d'ingresso va
+                 * tolto»*. ⛔ Qui c'era il modulo del codice (B4, 13/08): un
+                 * codice finito in una chat di gruppo fa entrare venti persone,
+                 * un invito è monouso e scade. ✅ Con F11 (24/09) il codice non
+                 * esiste più nemmeno sul server.
+                 *
+                 * 💡 La riga resta — chi non ha una palestra deve sapere che può
+                 * averne una — ma dice dove si prende l'invito. 🚨 Solo **senza**
+                 * palestra (F3): chi ce l'ha la trova in testata.
                  */
-                // La galleria ha lasciato la prima scheda alla dashboard: si
-                // guarda ogni tanto, non ogni volta che si apre l'app.
-                /*
-                 * ⛔ **«Foto dei progressi» non sta piu' qui** — 3b-P.9.3.
-                 *
-                 * 📌 *«Non ha senso che sia qui, mettila in una nuova tab
-                 * nella sezione allenamento»*. E' il terzo segmento di
-                 * «Allenamento», accanto a Storico e Schede.
-                 *
-                 * 💡 La rotta `/progressi` **resta**: ci puntano le notifiche
-                 * e la scheda di «Oggi».
-                 */
-                /*
-                  * 🆕 ⏰ **«Promemoria»** — voce 62, 27/09/2026.
-                  *
-                  * 💡 Sopra «Privacy e consensi» perche' e' la cosa che si cerca
-                  * quando una notifica da' fastidio — e chi la cerca la cerca
-                  * **adesso**, prima di spegnere tutto dal sistema.
-                  */
-                ListTile(
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  title: const Text('Promemoria'),
-                  subtitle: const Text(
-                    'Allenamento, diario e misure: quali vuoi e a che ora',
+                if (!palestra.haPalestra) ...[
+                  spazio,
+                  const VoceDelProfilo(
+                    icona: Icons.storefront_outlined,
+                    titolo: 'Entrare in una palestra',
+                    sottotitolo:
+                        'Ti sei iscritto da solo. Per entrare in una palestra '
+                        'serve un invito: chiedilo a loro, e apri il link che '
+                        'ti mandano. Ti porti dietro tutto.',
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.promemoria),
-                ),
+                ],
 
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: const Text('Privacy e consensi'),
-                  subtitle: const Text(
-                    'Decidi cosa può leggere l\'app e cosa può uscire da qui',
+                // ── SE ALLENI ────────────────────────────────────────────
+                if ((utente?.gestisceUnaPalestra ?? false) ||
+                    (utente?.isTrainer ?? false)) ...[
+                  const TitoloDiSezione('Se alleni'),
+                  spazio,
+                ],
+
+                /*
+                 * 🏋️ **«Inviti della palestra» — blocco B2, 24/09/2026.**
+                 *
+                 * ⚠️ **FUORI dalla condizione di chi allena**: chi gestisce una
+                 * palestra può non allenare nessuno — è un cappello diverso,
+                 * non un grado in più. Chi ha tutti e due i cappelli vede tutte
+                 * e due le cose.
+                 */
+                if (utente?.gestisceUnaPalestra ?? false) ...[
+                  VoceDelProfilo(
+                    icona: Icons.mail_outline,
+                    titolo: 'Inviti della palestra',
+                    sottotitolo:
+                        'Invita iscritti e trainer, e vedi i posti che restano',
+                    onTap: () => context.push(AppRoutes.invitiDellaPalestra),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(AppRoutes.consensi),
+                  spazio,
+                ],
+
+                /*
+                 * 🆕 **Le voci di chi allena — F5.1, G7, G7.2.**
+                 *
+                 * ⚠️ Stanno qui e non in una sesta scheda della barra: **un
+                 * trainer si allena anche lui**, e la barra è la sua vita da
+                 * atleta. `isTrainer` copre il trainer di palestra e quello
+                 * indipendente.
+                 *
+                 * ⛔ **Scaduta, «I miei utenti» NON sparisce** — 3b-U.3.1: *«si
+                 * deve capire che è perché non ha pagato»*. Resta, e lo dice.
+                 *
+                 * ⚠️ **«Le mie schede» non è «Schede» della barra**: queste sono
+                 * quelle che **scrive per altri**.
+                 */
+                if (utente?.isTrainer ?? false) ...[
+                  VoceDelProfilo(
+                    icona: utente?.abbonato == false
+                        ? Icons.lock_clock_outlined
+                        : Icons.groups_2_outlined,
+                    titolo: 'I miei utenti',
+                    sottotitolo: utente?.abbonato == false
+                        ? 'Abbonamento scaduto — tocca per sapere cosa resta'
+                        : 'Invita, segui e gestisci le persone che alleni',
+                    avviso: utente?.abbonato == false,
+                    onTap: () => context.push(AppRoutes.mieiUtenti),
+                  ),
+                  spazio,
+                  Coppia(
+                    sinistra: VoceDelProfilo(
+                      larga: false,
+                      icona: Icons.restaurant_menu_outlined,
+                      titolo: 'I miei consigli alimentari',
+                      sottotitolo: 'Scrivili qui, poi mandali dalla chat',
+                      onTap: () => context.push(AppRoutes.mieiPiani),
+                    ),
+                    destra: VoceDelProfilo(
+                      larga: false,
+                      icona: Icons.fitness_center_outlined,
+                      titolo: 'Le mie schede',
+                      sottotitolo: 'Quelle che scrivi per i tuoi allievi',
+                      onTap: () => context.push(AppRoutes.mieSchede),
+                    ),
+                  ),
+                ],
+
+                // ── DATI E PRIVACY ───────────────────────────────────────
+                const TitoloDiSezione('Dati e privacy'),
+                spazio,
+                const _VoceBackup(),
+                spazio,
+                Coppia(
+                  sinistra: VoceDelProfilo(
+                    larga: false,
+                    icona: Icons.privacy_tip_outlined,
+                    titolo: 'Privacy e consensi',
+                    sottotitolo: 'Cosa può leggere l\'app e cosa esce da qui',
+                    onTap: () => context.push(AppRoutes.consensi),
+                  ),
+                  destra: _VoceAccesso(utente: utente),
                 ),
 
                 // 🔒 A1 — si disegna da solo, e **sparisce** sui telefoni che
-                // non sanno fare il riconoscimento.
-                const RigaBloccoBiometrico(),
+                // non sanno fare il riconoscimento (con la sua carta).
+                const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: RigaBloccoBiometrico(),
+                ),
 
-                if (utente?.passwordIsSet ?? true) ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.key_outlined),
-                    title: const Text('Email e password'),
-                    subtitle: const Text(
-                      'Cambia le tue credenziali di accesso',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(AppRoutes.credentials),
+                // ── PER TE ───────────────────────────────────────────────
+                /*
+                 * 🎁 P8 di plan_promozioni.md — le offerte e «porta un amico».
+                 * 💡 Sempre visibili: un'offerta può arrivare in qualunque
+                 * momento, e il posto per trovarla deve esserci prima.
+                 */
+                const TitoloDiSezione('Per te'),
+                spazio,
+                Coppia(
+                  sinistra: VoceDelProfilo(
+                    larga: false,
+                    piena: true,
+                    icona: Icons.card_giftcard_rounded,
+                    titolo: 'Offerte per te',
+                    sottotitolo: 'Regali e sconti',
+                    onTap: () => context.push(AppRoutes.offerte),
                   ),
-                ] else if ((utente?.social ?? const []).isNotEmpty) ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.verified_user_outlined),
-                    title: const Text('Accesso'),
-                    subtitle: Text(
-                      'Entri con ${utente!.social.map(_nomeFornitore).join(' e ')}. '
-                      'Non c\'è nessuna password da cambiare.',
+                  destra: VoceDelProfilo(
+                    larga: false,
+                    icona: Icons.group_add_rounded,
+                    titolo: 'Porta un amico',
+                    sottotitolo: 'Il tuo link da condividere',
+                    onTap: () => context.push(AppRoutes.portaUnAmico),
+                  ),
+                ),
+
+                const SizedBox(height: Gap.lg),
+
+                OutlinedButton.icon(
+                  onPressed: () => _esci(context, ref),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Esci'),
+                ),
+
+                const SizedBox(height: Gap.md),
+
+                // ⚠️ In fondo e in colore d'errore, ma **presente**: Apple
+                // pretende che l'eliminazione sia raggiungibile dall'app.
+                // Nasconderla dietro un contatto via email è motivo di rifiuto.
+                TextButton.icon(
+                  onPressed: () => context.push(AppRoutes.deleteAccount),
+                  icon: Icon(
+                    Icons.delete_forever_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  label: Text(
+                    'Elimina account',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
-                ],
+                ),
+
+                const SizedBox(height: Gap.lg),
+                const _QualeVersione(),
+                const SizedBox(height: Gap.xl),
               ],
             ),
           ),
-
-          const SizedBox(height: Gap.md),
-
-          // 🚨 La scheda della palestra c'è **solo se una palestra c'è** — F3.
-          //
-          // ⚠️ Per chi si è iscritto senza codice questa card diceva «La tua
-          // palestra» seguita da un ripiego. Meglio non mostrarla: una sezione
-          // vuota fa cercare un dato che non manca — semplicemente non esiste.
-          if (palestra.haPalestra)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.storefront_outlined),
-                title: const Text('La tua palestra'),
-                subtitle: Text(palestra.name!),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(AppRoutes.palestra),
-              ),
-            )
-          else
-            /*
-             * ══ 🆕 IN PALESTRA SI ENTRA DA UN LINK, NON DA UN CODICE ══════
-             *
-             * 📌 Il committente, 15/09/2026: *«Il codice d'ingresso va tolto»*,
-             * e l'ingresso *«dovrà funzionare solo con link di invito»*.
-             *
-             * ⛔ **Qui c'era un modulo con il campo del codice** (`B4`,
-             * 13/08/2026) che chiamava `POST /account/join-gym`. Era l'ultimo
-             * posto dell'app in cui un codice palestra si digitava a mano: le
-             * schermate d'ingresso avevano già smesso di chiederlo con 3b-J.1.
-             *
-             * 🚨 **Perché il link è meglio di un codice**, e non è una
-             * questione di comodità: l'invito è **monouso** e **scade**, il
-             * codice no. Un codice finito in una chat di gruppo fa entrare
-             * venti persone e consuma venti posti; un link ne fa entrare una.
-             *
-             * 💡 La riga resta — chi non ha una palestra deve sapere che può
-             * averne una — ma dice dove si prende l'invito invece di chiedere
-             * qualcosa che nessuno ha.
-             *
-             * ✅ Con F11 (24/09/2026) il codice palestra non esiste più
-             * nemmeno sul server.
-             */
-            // 💡 Tutta costante da quando non ha piu' un `onTap`: senza il
-            // modulo del codice, qui non c'e' piu' niente che cambi.
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.storefront_outlined),
-                title: Text('Entrare in una palestra'),
-                subtitle: Text(
-                  'Ti sei iscritto da solo. Per entrare in una palestra serve '
-                  'un invito: chiedilo a loro, e apri il link che ti mandano. '
-                  'Ti porti dietro tutto.',
-                ),
-                isThreeLine: true,
-              ),
-            ),
-
-          const SizedBox(height: Gap.lg),
-
-          OutlinedButton.icon(
-            onPressed: () => _esci(context, ref),
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Esci'),
-          ),
-
-          const SizedBox(height: Gap.md),
-
-          // ⚠️ In fondo e in colore d'errore, ma **presente**: Apple pretende
-          // che l'eliminazione sia raggiungibile dall'app. Nasconderla dietro
-          // un contatto via email è motivo di rifiuto.
-          TextButton.icon(
-            onPressed: () => context.push(AppRoutes.deleteAccount),
-            icon: Icon(
-              Icons.delete_forever_outlined,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            label: Text(
-              'Elimina account',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-
-          const SizedBox(height: Gap.lg),
-          const _QualeVersione(),
-          const SizedBox(height: Gap.xl),
         ],
       ),
     );
@@ -556,6 +325,240 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
+/// 🪪 **La testa del profilo, nel seguito scuro** — I7.D1, 19/11/2026.
+///
+/// ══ 🪪 LA PERSONA È UNA PORTA — 3b-P.1, 22/08/2026 ═══════════════════════
+///
+/// 📌 Il committente: *«Questa non ha senso se non fa nulla. Ci mettiamo che se
+/// ci clicchi manda a una pagina per mettere l'avatar, cambiare i colori
+/// dell'app e la tua città»*. 🚨 Una cosa grande e inerte insegna che qui le
+/// cose grandi non si toccano. ⚠️ **La freccia non è decorazione**: è quello
+/// che dice che si tocca.
+///
+/// 💡 Sotto, le due tessere della tavola: **palestra** e **abbonamento**.
+/// La palestra si tocca solo se c'è (porta alla sua pagina, F3); senza, dice
+/// «Nessuna» e la spiegazione sta nella sezione «Tu».
+class _TestaDelProfilo extends StatelessWidget {
+  const _TestaDelProfilo({required this.utente, required this.palestra});
+
+  final AppUser? utente;
+  final GymBranding palestra;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final tenue = tema.colorScheme.onSurfaceVariant;
+    final valore = tema.textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
+    final nota = tema.textTheme.bodySmall?.copyWith(
+      color: tema.colorScheme.primary,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => context.push(AppRoutes.tu),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Gap.sm),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: palestra.primary,
+                    child: Text(
+                      utente?.initials ?? '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          utente?.name ?? '—',
+                          style: tema.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          utente?.email ?? '',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tenue,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Foto, città e colore',
+                          style: tema.textTheme.labelSmall?.copyWith(
+                            color: tenue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: tenue),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: Gap.sm),
+        Coppia(
+          sinistra: Tessera(
+            etichetta: 'Palestra',
+            onTap: palestra.haPalestra
+                ? () => context.push(AppRoutes.palestra)
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  palestra.haPalestra ? palestra.name! : 'Nessuna',
+                  style: valore,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  palestra.haPalestra ? 'iscritto' : 'serve un invito',
+                  style: palestra.haPalestra
+                      ? nota
+                      : tema.textTheme.bodySmall?.copyWith(color: tenue),
+                ),
+              ],
+            ),
+          ),
+          /*
+           * 💳 **L'abbonamento dice solo se c'è** — I7.D1.
+           *
+           * ⚠️ `abbonato` è `PianoAttivo::eAbbonato()` del server, e in questo
+           * impianto paga il **tenant**: chi è in una palestra abbonata è
+           * coperto da quella, e qui legge «Attivo» — che è vero. ⛔ Nessuna
+           * promessa su cosa comprende: le regole su gettoni e AI stanno
+           * altrove, e una frase qui divergerebbe alla prima che cambia.
+           */
+          destra: Tessera(
+            etichetta: 'Abbonamento',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (utente?.abbonato ?? false) ? 'Attivo' : 'Non attivo',
+                  style: valore,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 💾 **La frase sotto «Backup e dati», e se è un avviso** — I7.D3.
+///
+/// 💡 Pubblica e pura perché è **la regola**, e una regola si prova senza
+/// disegnare niente: `profilo_in_testata_test.dart` passa tutti i casi.
+/// L'ordine conta: spento prima di «da ricollegare» e «non riuscito», perché
+/// da spento le altre due non hanno senso.
+({String testo, bool avviso}) fraseDelBackup(StatoBackup? s) {
+  if (s == null || !s.disponibile) {
+    return (
+      testo: 'Se perdi il telefono, è quello che ti fa rientrare',
+      avviso: false,
+    );
+  }
+  if (!s.acceso) return (testo: 'Backup automatico spento', avviso: true);
+  if (s.daRicollegare) {
+    return (testo: 'Backup automatico da ricollegare', avviso: true);
+  }
+  if (s.inErrore) {
+    return (testo: 'L\'ultimo backup non è riuscito', avviso: true);
+  }
+  return (testo: 'Backup automatico acceso', avviso: false);
+}
+
+/// 💾 **«Backup e dati», che dice se il backup automatico è spento** — I7.D3.
+///
+/// 📌 Il 19/11/2026, sul telefono del committente, il backup automatico era
+/// **spento** e nessuno se n'era accorto: lo si è scoperto il giorno in cui
+/// serviva. 🚨 Una protezione spenta che non si vede è peggio di una che non
+/// c'è, perché fa credere di esserlo.
+///
+/// 💡 L'avviso compare **solo quando il cloud c'è** (`disponibile`): senza un
+/// cloud configurato non c'è niente da accendere, e un avviso su una cosa che
+/// non si può fare è solo rumore. Durante il caricamento o su un errore di
+/// lettura resta la frase di sempre: un arancio a intermittenza spaventa.
+///
+/// 💾 M7.3 — la voce porta alla copia di sicurezza: fino ad allora l'app
+/// sapeva importare un backup e non crearne nessuno.
+class _VoceBackup extends ConsumerWidget {
+  const _VoceBackup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final f = fraseDelBackup(ref.watch(backupAutomaticoProvider).valueOrNull);
+
+    return VoceDelProfilo(
+      icona: Icons.shield_outlined,
+      titolo: 'Backup e dati',
+      sottotitolo: f.testo,
+      avviso: f.avviso,
+      onTap: () => context.push(AppRoutes.backup),
+    );
+  }
+}
+
+/// 🔑 **«Email e password», o «Accesso» per chi entra con Google/Apple.**
+///
+/// ⚠️ Stesse condizioni di prima: con una password si cambia; senza password
+/// e con un accesso social si dice con cosa si entra; senza nessuna delle due
+/// (caso che il server non dovrebbe produrre) la carta non si disegna.
+class _VoceAccesso extends StatelessWidget {
+  const _VoceAccesso({required this.utente});
+
+  final AppUser? utente;
+
+  @override
+  Widget build(BuildContext context) {
+    if (utente?.passwordIsSet ?? true) {
+      return VoceDelProfilo(
+        larga: false,
+        icona: Icons.key_outlined,
+        titolo: 'Email e password',
+        sottotitolo: 'Cambia le credenziali di accesso',
+        onTap: () => context.push(AppRoutes.credentials),
+      );
+    }
+
+    if ((utente?.social ?? const []).isNotEmpty) {
+      return VoceDelProfilo(
+        larga: false,
+        icona: Icons.verified_user_outlined,
+        titolo: 'Accesso',
+        sottotitolo:
+            'Entri con ${utente!.social.map(_nomeFornitore).join(' e ')}. '
+            'Nessuna password da cambiare.',
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+}
+
 /// `google` → «Google». Le stringhe sono quelle del backend.
 String _nomeFornitore(String id) => switch (id) {
   'google' => 'Google',
@@ -563,32 +566,20 @@ String _nomeFornitore(String id) => switch (id) {
   _ => id,
 };
 
-/// La tavolozza dell'accento — 3b-O.1a.1.
-///
-/// ⚠️ **Otto colori e non un selettore libero**, ed è una scelta di sicurezza
-/// oltre che del committente: questo colore diventa lo sfondo
-/// dell'intestazione, e sopra ci vanno testo e icone di sistema. 🚨 Con un
-/// colore qualunque quel testo **sparisce**, e non c'è modo di impedirlo a
-/// valle.
-
 /// 🏷️ **«Che versione hai?»** — aggiunta il 23/09/2026.
 ///
 /// ⛔ **Prima non c'era risposta.** Il numero di versione esisteva solo dentro
-/// il pacchetto Android, leggibile con `adb`: per saperlo bisognava avere il
-/// telefono in mano e un cavo. 🚨 E a quel punto era pure sbagliato, perché
-/// `pubspec.yaml` era fermo a `18.8.0` da fine agosto.
+/// il pacchetto Android, leggibile con `adb`.
 ///
 /// 💡 Sta **in fondo al profilo**, dove sta la stessa riga in ogni app del
-/// mondo: non è una cosa che si cerca, è una cosa che si trova quando serve —
-/// cioè quando qualcuno dall'assistenza la chiede.
+/// mondo: non è una cosa che si cerca, è una cosa che si trova quando serve.
 ///
-/// ⚠️ **Si mostrano tutti e due i numeri** (`18.31.0 (183100)`): quello
-/// leggibile è per la persona, quello fra parentesi è il `versionCode`, ed è
-/// **l'unico che conta** quando si guarda perché il server ha rifiutato quella
-/// copia (`VersioneMinima` confronta `X-App-Build`).
+/// ⚠️ **Si mostrano tutti e due i numeri** (`18.31.0 (183100)`): quello fra
+/// parentesi è il `versionCode`, ed è **l'unico che conta** quando si guarda
+/// perché il server ha rifiutato quella copia (`VersioneMinima` confronta
+/// `X-App-Build`).
 ///
-/// ⛔ Se la lettura fallisce non si scrive niente: una riga di errore in fondo
-/// al profilo preoccuperebbe per un dato che non serve a chi legge.
+/// ⛔ Se la lettura fallisce non si scrive niente.
 class _QualeVersione extends StatelessWidget {
   const _QualeVersione();
 

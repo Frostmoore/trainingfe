@@ -75,19 +75,23 @@ class _RigaBloccoBiometricoState extends ConsumerState<RigaBloccoBiometrico> {
     // farlo sparire è peggio che aspettare mezzo secondo.
     if (_disponibile != true) return const SizedBox.shrink();
 
-    return Column(
-      children: [
-        const Divider(height: 1),
-        SwitchListTile(
-          secondary: const Icon(Icons.fingerprint_rounded),
-          title: const Text('Sblocco rapido'),
-          subtitle: const Text(
-            'Riapri l\'app con l\'impronta invece della password',
-          ),
-          value: _acceso,
-          onChanged: _inCorso ? null : _cambia,
+    /*
+     * 🃏 **Una carta a sé** — I7, 19/11/2026: il profilo non è più un elenco
+     * con i divisori, ma sezioni di carte. ⚠️ La carta la mette la riga e non
+     * chi la usa: sui telefoni senza impronta la riga sparisce, e una carta
+     * messa da fuori resterebbe lì vuota.
+     */
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SwitchListTile(
+        secondary: const Icon(Icons.fingerprint_rounded),
+        title: const Text('Sblocco rapido'),
+        subtitle: const Text(
+          'Riapri l\'app con l\'impronta invece della password',
         ),
-      ],
+        value: _acceso,
+        onChanged: _inCorso ? null : _cambia,
+      ),
     );
   }
 }

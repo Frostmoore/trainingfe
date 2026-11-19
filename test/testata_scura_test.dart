@@ -135,6 +135,48 @@ void main() {
     expect(sfondoDellaTestata(tester), TestataScura.sfondoInChiaro);
   });
 
+  testWidgets('il seguito della testata è scuro e arrotondato come lei', (
+    tester,
+  ) async {
+    /*
+     * 🌑 I4: in Allenamento la testata sta ferma in alto e gli strumenti
+     * scorrono in un seguito separato. Se il seguito non fosse scuro, o non
+     * avesse il tema scuro, si vedrebbe un blocco chiaro attaccato a uno nero.
+     */
+    Brightness? dentro;
+
+    await monta(
+      tester,
+      CodaDellaTestata(
+        child: Builder(
+          builder: (context) {
+            dentro = Theme.of(context).brightness;
+            return const SizedBox(height: 10);
+          },
+        ),
+      ),
+    );
+
+    final scatola = tester.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: find.byType(CodaDellaTestata),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    final decorazione = scatola.decoration as BoxDecoration;
+
+    expect(dentro, Brightness.dark);
+    expect(decorazione.color, TestataScura.sfondoInChiaro);
+    expect(
+      decorazione.borderRadius,
+      const BorderRadius.vertical(
+        bottom: Radius.circular(TestataScura.raggio),
+      ),
+    );
+  });
+
   testWidgets('col telefono in scuro la testata resta diversa dal corpo', (
     tester,
   ) async {

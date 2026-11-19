@@ -10,6 +10,7 @@ import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/foto_locale.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../achievements/achievement.dart';
 import '../../achievements/ui/carosello_achievements.dart';
 import '../../health/tipo_allenamento.dart';
@@ -59,7 +60,24 @@ class HistoryScreen extends ConsumerWidget {
 /// anche dalla scheda «Allenamento» del riepilogo di oggi, dove una schermata
 /// propria con il suo titolo è la cosa giusta.
 class StoricoAllenamenti extends ConsumerWidget {
-  const StoricoAllenamenti({super.key});
+  const StoricoAllenamenti({
+    this.inTestata = false,
+    this.sottoLaTestata,
+    super.key,
+  });
+
+  /// 🌑 `true` dentro la sezione Allenamento — `plan_interfaccia.md` I4.
+  ///
+  /// Il carosello del mese sta nel **seguito scuro** della testata
+  /// ([CodaDellaTestata]): sono gli strumenti dello storico, e devono scorrere
+  /// via insieme a lui. ⚠️ `false` nella rotta a sé (`HistoryScreen`), dove
+  /// sopra c'è un'intestazione normale e un seguito scuro non attaccherebbe a
+  /// niente.
+  final bool inTestata;
+
+  /// Quello che sta **subito sotto** il seguito scuro: la striscia
+  /// «Riprendi». ⚠️ Non sopra: spezzerebbe la testata in due.
+  final Widget? sottoLaTestata;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,7 +105,11 @@ class StoricoAllenamenti extends ConsumerWidget {
           ref.invalidate(sessionsProvider);
           ref.invalidate(allenamentiDalPolsoProvider);
         }),
-        child: _LaSettimana(tutte: lista),
+        child: _LaSettimana(
+          tutte: lista,
+          inTestata: inTestata,
+          sottoLaTestata: sottoLaTestata,
+        ),
       ),
     );
   }
@@ -110,11 +132,18 @@ class StoricoAllenamenti extends ConsumerWidget {
 /// guardando lo storico — e infatti non è sparito: è finito nell'etichetta del
 /// navigatore, dove sta insieme all'intervallo che descrive.
 class _LaSettimana extends ConsumerWidget {
-  const _LaSettimana({required this.tutte});
+  const _LaSettimana({
+    required this.tutte,
+    required this.inTestata,
+    this.sottoLaTestata,
+  });
 
   /// 🚨 **Tutte**, non solo quelle della settimana: lo stato vuoto deve poter
   /// dire *dov'è* l'ultimo allenamento, e per saperlo gli servono le altre.
   final List<VoceStorico> tutte;
+
+  final bool inTestata;
+  final Widget? sottoLaTestata;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -161,7 +190,22 @@ class _LaSettimana extends ConsumerWidget {
 
         return CustomScrollView(
           slivers: [
-            const SliverToBoxAdapter(child: CaroselloDelMese()),
+            /*
+             * 🌑 **Il carosello in testata** — I4, 19/11/2026.
+             *
+             * 📌 3b-A.6: *«All'inizio della schermata ci deve essere un
+             * carosello di cards con tre card di altezza identica»*. ⚠️ La
+             * tavola del 19/11 lo sostituiva con figura e stella affiancate; la
+             * regola scritta batte il disegno: **il carosello resta**, e sale
+             * nel seguito scuro della testata come strumento dello storico.
+             */
+            SliverToBoxAdapter(
+              child: inTestata
+                  ? const CodaDellaTestata(child: CaroselloDelMese())
+                  : const CaroselloDelMese(),
+            ),
+            if (sottoLaTestata != null)
+              SliverToBoxAdapter(child: sottoLaTestata),
             const SliverToBoxAdapter(child: CalendarioDelMese()),
 
             /*

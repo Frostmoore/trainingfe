@@ -9,6 +9,7 @@ import '../../../core/ui/etichetta_ai.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/miniatura.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../acquisti/data/costo_delle_funzioni.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
 import '../../import/ui/importa_documento_screen.dart';
@@ -23,7 +24,6 @@ import '../data/stima_della_scheda.dart';
 import '../muscoli_allenati.dart';
 import '../progressione_controller.dart';
 import '../session_controller.dart';
-import '../settimana_controller.dart';
 import '../storico_unificato_controller.dart';
 import '../training_controller.dart';
 import 'history_screen.dart';
@@ -31,6 +31,7 @@ import 'widgets/barra_settimana.dart';
 import 'widgets/esercizio_della_scheda.dart';
 import 'widgets/muscoli_della_scheda.dart';
 import 'widgets/scelta_tipo_scheda.dart';
+import 'widgets/settimana_in_testata.dart';
 
 /// La sezione Allenamento — A5.1, riorganizzata in G6.
 ///
@@ -109,6 +110,13 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
         // ⚠️ **Anche «Foto» adesso**: da 3b-C.7 le foto si guardano per
         // settimana, quindi il navigatore serve su due delle tre viste.
         altezzaSotto: _vista == 1 ? 52 : 52 + altezzaBarraSettimana,
+        /*
+         * 🌑 **Arrotondata solo sulle Foto** — I4, 19/11/2026. Su Storico e
+         * Schede sotto c'è il seguito scuro con gli strumenti della vista
+         * (`CodaDellaTestata`): gli angoli li fa lui, e due curve una sopra
+         * l'altra spezzerebbero il blocco.
+         */
+        arrotondata: _vista == 2,
         sotto: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -199,6 +207,11 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       floatingActionButton: _vista == 2
           ? const AggiungiFoto()
           : const _AvviaAllenamento(),
+      /*
+       * ⚠️ **La striscia «Riprendi» sta sotto il seguito scuro**, non sopra —
+       * I4, 19/11/2026: sopra spezzerebbe la testata in due. Resta comunque la
+       * prima cosa dopo gli strumenti, in tutte e tre le viste.
+       */
       body: Column(
         children: [
           // 🚨 L'allenamento lasciato a metà si vede **prima di tutto il
@@ -210,10 +223,13 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           // ancora, e ne apriva una nuova — lasciando la prima aperta per
           // sempre. Una riga in cima, con dentro il nome e da quanto è aperta,
           // è l'unica cosa che lo rende evidente.
-          const _SessioneAperta(),
+          if (_vista == 2) const _SessioneAperta(),
           Expanded(
             child: switch (_vista) {
-              0 => const StoricoAllenamenti(),
+              0 => const StoricoAllenamenti(
+                inTestata: true,
+                sottoLaTestata: _SessioneAperta(),
+              ),
               2 => const CorpoFotoProgressi(),
               _ => _corpo(context, ref, schede),
             },
@@ -228,11 +244,35 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     WidgetRef ref,
     AsyncValue<List<WorkoutPlan>> schede,
   ) {
+    /*
+     * 🌑 **Il seguito scuro con la settimana** — I4, 19/11/2026. Sta in cima
+     * anche mentre carica e quando non ci sono schede: la settimana si
+     * programma lo stesso, e una testata che compare e scompare con l'elenco
+     * sposta tutto.
+     */
+    const cima = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CodaDellaTestata(child: SettimanaInTestata()),
+        _SessioneAperta(),
+      ],
+    );
+
+    Widget sotto(Widget figlio) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        cima,
+        Expanded(child: figlio),
+      ],
+    );
+
     return schede.when(
-      loading: () => const LoadingState(),
-      error: (e, _) => ErrorState(
-        error: e,
-        onRetry: () => ref.invalidate(schedeUniteProvider),
+      loading: () => sotto(const LoadingState()),
+      error: (e, _) => sotto(
+        ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(schedeUniteProvider),
+        ),
       ),
       data: (elenco) => elenco.isEmpty
           // 🚨 Il vuoto dice **di chi è la palla**: l'iscritto non può darsi
@@ -241,23 +281,24 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           // 🚨 Il vuoto è cambiato con C2: adesso l'iscritto **può** farsi
           // una scheda, quindi il messaggio non deve più dire che dipende
           // dal trainer — sarebbe una bugia che scoraggia dal provarci.
-          ? EmptyState(
-              icon: Icons.assignment_outlined,
-              title: 'Nessuna scheda',
-              message:
-                  'Il tuo trainer non te ne ha ancora assegnata una, '
-                  'ma puoi scrivertene una tu.',
-              action: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FilledButton.icon(
-                    onPressed: () => nuovaScheda(context),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Crea una scheda'),
-                  ),
-                  const SizedBox(height: Gap.sm),
+          ? sotto(
+              EmptyState(
+                icon: Icons.assignment_outlined,
+                title: 'Nessuna scheda',
+                message:
+                    'Il tuo trainer non te ne ha ancora assegnata una, '
+                    'ma puoi scrivertene una tu.',
+                action: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => nuovaScheda(context),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Crea una scheda'),
+                    ),
+                    const SizedBox(height: Gap.sm),
 
-                  /*
+                    /*
                    * 🆕 **K5.2 — e se ce l'ha gia' su un foglio, la importa.**
                    *
                    * 🚨 Qui e non in un menu: chi apre questa schermata e non
@@ -265,8 +306,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                    * borsa**. Una funzione che esiste e non si trova, per chi
                    * guarda, e' identica al non averla.
                    */
-                  const _ImportaUnaScheda(),
-                ],
+                    const _ImportaUnaScheda(),
+                  ],
+                ),
               ),
             )
           : RefreshIndicator(
@@ -285,7 +327,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 () => ref.invalidate(schedeUniteProvider),
               ),
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
+                // ⚠️ Niente margine laterale: il seguito scuro arriva ai bordi.
+                // Il margine lo mette ogni riga qui sotto.
+                padding: const EdgeInsets.only(bottom: 96),
 
                 /*
                  * ══ 📅 LA SETTIMANA STA IN CIMA — corretto il 27/08/2026 ═══
@@ -313,30 +357,34 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 itemCount: elenco.length + 2,
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: Gap.md),
-                itemBuilder: (context, index) => switch (index) {
-                  0 => const _ProgrammaLaSettimana(),
-                  _ when index == elenco.length + 1 => Column(
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => nuovaScheda(context),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Nuova scheda'),
-                      ),
-                      const SizedBox(height: Gap.sm),
+                itemBuilder: (context, index) => index == 0
+                    ? cima
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                        child: switch (index) {
+                          _ when index == elenco.length + 1 => Column(
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => nuovaScheda(context),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Nuova scheda'),
+                              ),
+                              const SizedBox(height: Gap.sm),
 
-                      // 🆕 K5.2 — vedi la nota nel vuoto qui sopra.
-                      const _ImportaUnaScheda(),
-                    ],
-                  ),
-                  _ => _SchedaCard(
-                    scheda: elenco[index - 1],
-                    // 💡 La regola sta in `schedeBloccateProvider`, non
-                    // qui: la stessa domanda la fa anche il dettaglio.
-                    bloccata: ref
-                        .watch(schedeBloccateProvider)
-                        .valueOrNull?[elenco[index - 1].id],
-                  ),
-                },
+                              // 🆕 K5.2 — vedi la nota nel vuoto qui sopra.
+                              const _ImportaUnaScheda(),
+                            ],
+                          ),
+                          _ => _SchedaCard(
+                            scheda: elenco[index - 1],
+                            // 💡 La regola sta in `schedeBloccateProvider`, non
+                            // qui: la stessa domanda la fa anche il dettaglio.
+                            bloccata: ref
+                                .watch(schedeBloccateProvider)
+                                .valueOrNull?[elenco[index - 1].id],
+                          ),
+                        },
+                      ),
               ),
             ),
     );
@@ -1340,67 +1388,3 @@ String _spiegazione(EsitoAnalisi esito) => switch (esito) {
 
 String _giorno(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-
-/// 📅 L'ingresso alla settimana programmata, in cima alle schede — 27/08/2026.
-///
-/// ══ ⛔ IL DIFETTO CHE CHIUDE ══════════════════════════════════════════════
-///
-/// 📌 *«Come faccio a fargli programmare le schede nei giorni?»*.
-///
-/// 🚨 L'unico ingresso era nella card «Allenamento» della **dashboard**. Chi
-/// cerca di programmare le schede però apre la **sezione Allenamento** — quella
-/// con Storico, Schede e Foto — e lì non c'era niente. ⛔ Una funzione che
-/// esiste e non si trova, per chi guarda, è identica a una che non c'è.
-///
-/// 💡 **Dice anche cosa c'è già**: senza, sarebbe un pulsante che non promette
-/// niente. Con la riga sotto si sa, senza aprirla, se la settimana è vuota o
-/// no — e chi ce l'ha piena non ha nessun motivo di entrare.
-class _ProgrammaLaSettimana extends ConsumerWidget {
-  const _ProgrammaLaSettimana();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tema = Theme.of(context);
-    final puo = ref.watch(puoProgrammareProvider);
-
-    final settimana =
-        ref.watch(settimanaProvider).valueOrNull ?? const <int?>[];
-
-    final quanti = settimana.whereType<int>().length;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        onTap: () => context.push(AppRoutes.settimana),
-        leading: Icon(
-          Icons.event_repeat_rounded,
-          color: tema.colorScheme.primary,
-        ),
-        title: Text(
-          'Programma la settimana',
-          style: tema.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        subtitle: Text(
-          /*
-           * ⚠️ **Tre frasi e non due.** ⛔ Chi non è abbonato deve leggere
-           * *cosa serve*, non «non hai programmato niente» — che sarebbe vero e
-           * lo manderebbe a cercare un difetto che non c'è.
-           */
-          !puo
-              ? 'Serve l\'abbonamento'
-              : quanti == 0
-              ? 'Nessun giorno programmato'
-              : '$quanti ${quanti == 1 ? 'giorno' : 'giorni'} a settimana',
-          style: tema.textTheme.bodySmall,
-        ),
-        trailing: Icon(
-          puo ? Icons.chevron_right_rounded : Icons.lock_outline_rounded,
-          size: 20,
-          color: puo ? null : tema.colorScheme.error,
-        ),
-      ),
-    );
-  }
-}

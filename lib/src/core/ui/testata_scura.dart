@@ -155,12 +155,7 @@ class TestataScura extends ConsumerWidget {
               child: Material(
                 type: MaterialType.transparency,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    Gap.md,
-                    0,
-                    Gap.md,
-                    Gap.lg,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.lg),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,6 +175,50 @@ class TestataScura extends ConsumerWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// 🌑 **Il seguito della testata**, quando la testata vera sta ferma in alto —
+/// `plan_interfaccia.md` I4, 19/11/2026.
+///
+/// 📌 In Allenamento la riga d'identità, le linguette Storico/Schede/Foto e la
+/// settimana stanno in `Scaffold.appBar`: le tre viste scorrono **ognuna a modo
+/// suo** (una griglia, un elenco, le foto), e la testata deve restare ferma
+/// sopra tutte e tre. ⚠️ Ma gli strumenti della vista — il carosello del mese,
+/// la settimana programmata — devono **scorrere via** col contenuto.
+///
+/// 💡 Questo è il pezzo scuro che li porta: stesso fondo, stesso tema scuro e
+/// stessi angoli della [TestataScura], **senza** la riga d'identità (che è già
+/// sopra). L'`IntestazioneApp` sopra va messa con `arrotondata: false`, così le
+/// due parti si leggono come un blocco solo.
+class CodaDellaTestata extends ConsumerWidget {
+  const CodaDellaTestata({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palestra = ref.watch(brandingControllerProvider).branding;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: TestataScura.sfondoPer(context),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(TestataScura.raggio),
+        ),
+      ),
+      child: Theme(
+        data: TestataScura.temaPer(palestra),
+        // 🚨 Il `DefaultTextStyle` del tema scuro: vedi la nota in [TestataScura].
+        child: Material(
+          type: MaterialType.transparency,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.lg),
+            child: child,
+          ),
+        ),
       ),
     );
   }

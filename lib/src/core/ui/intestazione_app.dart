@@ -163,8 +163,18 @@ class IntestazioneApp extends ConsumerWidget implements PreferredSizeWidget {
      * 💡 Ed è esattamente quello che fa il `BackButton` di Material da sempre:
      * `Navigator.maybePop`. Funziona anche con go_router, perché `context.push`
      * impila sullo stesso `Navigator`.
+     *
+     * 🚨 **`ModalRoute.impliesAppBarDismissal`, e `canPop()` solo di riserva**
+     * — I6, 19/11/2026. `canPop()` è una fotografia: se la schermata si
+     * ridisegna mentre un'altra le sta sopra (Messaggi che aggiorna l'elenco
+     * con una conversazione aperta), la freccia resta anche dopo il ritorno,
+     * e non fa niente. 💡 `ModalRoute.of` invece **iscrive** l'intestazione ai
+     * cambi della pila: è quello che fa l'`AppBar` di Material.
      */
-    final puoTornare = indietro && Navigator.of(context).canPop();
+    final rotta = ModalRoute.of(context);
+    final puoTornare =
+        indietro &&
+        (rotta?.impliesAppBarDismissal ?? Navigator.of(context).canPop());
 
     /*
      * ══ 🌑 SCURA, DAL 19/11/2026 — `plan_interfaccia.md` §3.2 ════════════════
@@ -444,7 +454,9 @@ class LogoPalestra extends StatelessWidget {
         border: Border.all(
           // ⚠️ 0.3 era troppo poco: sull'emulatore, a una palestra blu scuro,
           // l'anello quasi non si vedeva. 0.55 lo stacca senza fare cornice.
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.55),
           width: 2,
         ),
       ),

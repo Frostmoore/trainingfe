@@ -14,6 +14,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
 import '../../../core/ui/intestazione_app.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../auth/auth_controller.dart';
 import '../../fotocamera/ui/schermata_fotocamera.dart';
 import '../../fotocamera/ui/schermata_ingrandimento.dart';
@@ -57,23 +58,16 @@ class ConversationsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: IntestazioneApp(
         titolo: 'Messaggi',
+        // 🌑 Senza angoli: sotto c'è il seguito scuro con la ricerca — I6.
+        arrotondata: false,
         azioni: [
           /*
-           * 🚨 Il catalogo si raggiunge **da qui** — M7.4.
-           *
-           * ⚠️ Non da una sesta scheda in barra: una palestra la si cerca una
-           * volta, quando si comincia o quando si cambia città, e una scheda
-           * permanente per una cosa che si fa una volta l'anno toglierebbe
-           * spazio alle quattro che si usano ogni giorno.
-           *
-           * 💡 E sta nei messaggi perché è lì che la domanda nasce: «con chi
-           * posso parlare?».
+           * ⛔ **L'icona del catalogo non sta più qui** — I6, 19/11/2026: è
+           * diventata la ricerca grande nel seguito scuro ([_CercaInTestata]),
+           * che resta in questa schermata — la regola M7.4 è rispettata. ⚠️ Due
+           * strade per lo stesso gesto, una accanto all'altra, vorrebbero dire
+           * che quella meno usata diverge per prima.
            */
-          IconButton(
-            icon: const Icon(Icons.travel_explore_rounded),
-            tooltip: 'Trova una palestra o un trainer',
-            onPressed: () => context.push(AppRoutes.catalogo),
-          ),
 
           /*
            * 🆕 🔎 **«Trova qualcuno»** — B3 (24/09), allargata lo stesso
@@ -134,43 +128,66 @@ class ConversationsScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: const _NuovoMessaggio(),
-      body: elenco.when(
-        loading: () => const LoadingState(),
-        error: (e, _) => ErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(conversationsProvider),
-        ),
-        data: (conversazioni) => conversazioni.isEmpty
-            ? EmptyState(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Nessun messaggio',
-                message: allena
-                    ? 'Qui compaiono le conversazioni con i tuoi allievi.'
-                    : 'Qui compaiono le conversazioni col tuo trainer.',
-                // 🚨 Il vuoto porta all'azione, non si limita a constatarlo.
-                // Prima diceva «se non hai un trainer chiedi in palestra» e
-                // finiva lì: chi il trainer ce l'aveva restava comunque senza
-                // nessun modo di scrivergli.
-                action: FilledButton.icon(
-                  onPressed: () => _scegliDestinatario(context, ref),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: Text(
-                    allena ? 'Scrivi a un allievo' : 'Scrivi al tuo trainer',
-                  ),
-                ),
-              )
-            : RefreshIndicator(
-                onRefresh: () => aggiornaTutto(
-                  context,
-                  ref,
-                  () => ref.invalidate(conversationsProvider),
-                ),
-                child: ListView.builder(
-                  itemCount: conversazioni.length,
-                  itemBuilder: (context, index) {
-                    final c = conversazioni[index];
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const CodaDellaTestata(child: _CercaInTestata()),
+          Expanded(child: _elenco(context, ref, elenco, allena)),
+        ],
+      ),
+    );
+  }
 
-                    return ListTile(
+  Widget _elenco(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Conversation>> elenco,
+    bool allena,
+  ) {
+    return elenco.when(
+      loading: () => const LoadingState(),
+      error: (e, _) => ErrorState(
+        error: e,
+        onRetry: () => ref.invalidate(conversationsProvider),
+      ),
+      data: (conversazioni) => conversazioni.isEmpty
+          ? EmptyState(
+              icon: Icons.chat_bubble_outline_rounded,
+              title: 'Nessun messaggio',
+              message: allena
+                  ? 'Qui compaiono le conversazioni con i tuoi allievi.'
+                  : 'Qui compaiono le conversazioni col tuo trainer.',
+              // 🚨 Il vuoto porta all'azione, non si limita a constatarlo.
+              // Prima diceva «se non hai un trainer chiedi in palestra» e
+              // finiva lì: chi il trainer ce l'aveva restava comunque senza
+              // nessun modo di scrivergli.
+              action: FilledButton.icon(
+                onPressed: () => _scegliDestinatario(context, ref),
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(
+                  allena ? 'Scrivi a un allievo' : 'Scrivi al tuo trainer',
+                ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => aggiornaTutto(
+                context,
+                ref,
+                () => ref.invalidate(conversationsProvider),
+              ),
+              child: ListView.builder(
+                // 💡 96 in fondo: lo spazio del pulsante «Scrivi».
+                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 96),
+                itemCount: conversazioni.length,
+                itemBuilder: (context, index) {
+                  final c = conversazioni[index];
+
+                  // 🃏 Una carta per conversazione — I6: è il disegno di
+                  // tutto il resto della nuova interfaccia.
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: Gap.sm),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
                       leading: CircleAvatar(
                         child: Text(c.withName.characters.first.toUpperCase()),
                       ),
@@ -192,11 +209,84 @@ class ConversationsScreen extends ConsumerWidget {
                               ThreadScreen(id: c.id, titolo: c.withName),
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
-      ),
+            ),
+    );
+  }
+}
+
+/// 🔎 **La ricerca e la cifratura, nel seguito scuro** — I6, 19/11/2026.
+///
+/// 📌 Tavola «Messaggi»: in testata il campo «Trova un trainer o una palestra»
+/// e la riga che dice che i messaggi sono cifrati.
+///
+/// 🚨 **Il catalogo si raggiunge da qui** — M7.4: non da una sesta scheda in
+/// barra (una palestra la si cerca una volta, quando si comincia o si cambia
+/// città), e nei messaggi perché è lì che la domanda nasce: «con chi posso
+/// parlare?». Fino al 19/11 era un'icona fra le azioni; ora è la porta grande.
+///
+/// 💡 **Un bottone che sembra un campo**, non un campo: la ricerca vera vive
+/// nel catalogo (`AppRoutes.catalogo`), coi suoi filtri.
+///
+/// 🔒 **Le parole della cifratura sono quelle che l'app dice già** (schermata
+/// «Backup e dati»): un'affermazione sulla sicurezza si scrive una volta e si
+/// ripete uguale, o due frasi diverse fanno pensare a due cose diverse.
+class _CercaInTestata extends StatelessWidget {
+  const _CercaInTestata();
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final tenue = tema.colorScheme.onSurfaceVariant;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: Gap.sm),
+        Material(
+          color: tema.colorScheme.surfaceContainerHigh,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => context.push(AppRoutes.catalogo),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Gap.md,
+                vertical: 14,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search_rounded, color: tenue),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
+                      'Trova un trainer o una palestra',
+                      style: tema.textTheme.bodyLarge?.copyWith(color: tenue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: Gap.sm + 4),
+        Row(
+          children: [
+            Icon(Icons.lock_outline_rounded, size: 14, color: tenue),
+            const SizedBox(width: Gap.xs),
+            Expanded(
+              child: Text(
+                'I messaggi sono cifrati con una chiave che sta solo sul tuo '
+                'telefono.',
+                style: tema.textTheme.labelSmall?.copyWith(color: tenue),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -923,7 +1013,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     ref.listen(threadProvider(widget.id), (prima, dopo) => _inFondo());
 
     return Scaffold(
-      appBar: IntestazioneApp(titolo: widget.titolo),
+      /*
+       * 🔒 **«Conversazione cifrata» sotto il nome** — I6, 19/11/2026: la
+       * tavola lo metteva accanto al lucchetto. ⚠️ Con un sottotitolo la riga
+       * del titolo è alta 60 (I5): a 48 traboccava.
+       */
+      appBar: IntestazioneApp(
+        titolo: widget.titolo,
+        sottotitolo: 'Conversazione cifrata',
+      ),
       body: Column(
         children: [
           Expanded(

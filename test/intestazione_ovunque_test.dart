@@ -203,6 +203,63 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
   });
 
+  /// 🆕 I6, 19/11/2026 — visto sull'emulatore: aperta una conversazione da
+  /// «Scrivi» e tornati indietro, **Messaggi aveva la freccia indietro**, e la
+  /// freccia non faceva niente. ⚠️ L'elenco si era aggiornato mentre la
+  /// conversazione gli stava sopra: in quel momento `canPop()` era vero, e
+  /// dopo il ritorno nessuno ha ridisegnato l'intestazione.
+  ///
+  /// 💡 Qui la radice si ridisegna mentre è coperta (cambia il provider che
+  /// legge), poi si torna: la freccia deve sparire.
+  testWidgets('tornati su una radice, la freccia sparisce anche se la radice '
+      'si era ridisegnata mentre era coperta', (tester) async {
+    final overrides = await intestazioneFinta();
+    final conto = StateProvider<int>((ref) => 0);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides,
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, ref, _) => Scaffold(
+              appBar: IntestazioneApp(titolo: 'Messaggi ${ref.watch(conto)}'),
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        appBar: const IntestazioneApp(titolo: 'Conversazione'),
+                        body: Consumer(
+                          builder: (context, ref, _) => TextButton(
+                            onPressed: () => ref.read(conto.notifier).state++,
+                            child: const Text('aggiorna sotto'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text('apri'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('apri'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('aggiorna sotto'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Messaggi 1'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+  });
+
   testWidgets('`indietro: false` toglie la freccia anche potendo tornare', (
     tester,
   ) async {

@@ -7,8 +7,10 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
-import '../../../core/ui/intestazione_app.dart';
+import '../../../core/ui/barra_della_data.dart';
+import '../../../core/ui/sezioni.dart';
 import '../../../core/ui/states.dart';
+import '../../../core/ui/testata_scura.dart';
 import '../../achievements/achievement.dart';
 import '../../achievements/ui/carosello_achievements.dart';
 import '../data/diary_models.dart';
@@ -30,103 +32,134 @@ class DiaryScreen extends ConsumerWidget {
     final giorno = ref.watch(selectedDateProvider);
     final diario = ref.watch(diaryProvider);
 
+    /*
+     * ══ 🌑 LA TESTATA SCURA, CON DENTRO IL RIEPILOGO — I3, 19/11/2026 ════════
+     *
+     * 📌 Tavola «Diario A»: calorie, bruciate e macro salgono in testata.
+     *
+     * ⚠️ La testata c'è **anche mentre carica e in errore**: è la riga con la
+     * palestra (R2), e una pagina che compare senza e poi la mette sposta tutto
+     * mezzo secondo dopo. Gli strumenti invece arrivano col diario.
+     *
+     * ⛔ **Il riassunto tolto il 22/08 non torna** (3b-D.2.1): *«non mi piace
+     * sto header della sezione cibo, togli il riassunto»*. Quello era una
+     * **copia** della card, messa sopra la card stessa. Qui sale la card, e
+     * sotto non resta un doppione: la ragione di quella regola non c'è più.
+     */
+    Widget testata({Widget? strumenti}) => TestataScura(
+      titolo: 'Diario',
+      azioni: [
+        IconButton(
+          onPressed: () => _scegliData(context, ref, giorno),
+          icon: const Icon(Icons.calendar_today_rounded),
+          tooltip: 'Cambia giorno',
+        ),
+        // C13 — il mese intero. Sta qui perché la domanda «come è andata la
+        // settimana» nasce guardando la giornata, non da un'altra sezione.
+        IconButton(
+          onPressed: () => context.push(AppRoutes.calendar),
+          icon: const Icon(Icons.calendar_month_rounded),
+          tooltip: 'Calendario',
+        ),
+      ],
+      navigatore: _barraDelGiorno(ref, giorno),
+      strumenti: strumenti,
+    );
+
     return Scaffold(
-      appBar: IntestazioneApp(
-        titolo: 'Diario',
-        azioni: [
-          IconButton(
-            onPressed: () => _scegliData(context, ref, giorno),
-            icon: const Icon(Icons.calendar_today_rounded),
-            tooltip: 'Cambia giorno',
-          ),
-          // C13 — il mese intero. Sta qui perché la domanda «come è andata la
-          // settimana» nasce guardando la giornata, non da un'altra sezione.
-          IconButton(
-            onPressed: () => context.push(AppRoutes.calendar),
-            icon: const Icon(Icons.calendar_month_rounded),
-            tooltip: 'Calendario',
-          ),
-          /*
-           * ⛔ **Il `BottoneProfilo` non sta piu' qui** — 3b-O.1a.6.
-           *
-           * ⚠️ Sta nella riga d'identita' di [IntestazioneApp], su **ogni**
-           * pagina. Lasciarlo anche fra le azioni lo disegnerebbe due volte
-           * nella stessa barra, a due centimetri di distanza.
-           */
-        ],
-        /*
-         * ⛔ **Niente riassunto qui** — 22/08/2026, dopo averlo visto.
-         *
-         * 📌 Era stato chiesto (3b-D.2.1) e poi tolto: *«non mi piace sto
-         * header della sezione cibo, togli il riassunto delle calorie e dei
-         * macro da lì»*.
-         *
-         * 💡 E aveva ragione: la scheda subito sotto dice **le stesse quattro
-         * cose**, con la barra e i riquadri. In cima era una copia più piccola
-         * e peggiore, che rubava sessantasei pixel a ogni schermata.
-         *
-         * ⚠️ Su «Oggi» quel riassunto ha senso perché lì sotto **non** c'è la
-         * stessa scheda: è la differenza fra le due pagine, non un'incoerenza.
-         */
-        sotto: _BarraGiorno(giorno: giorno, ref: ref),
-        altezzaSotto: 48,
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddFoodSheet.show(context),
         icon: const Icon(Icons.add),
         label: const Text('Aggiungi'),
       ),
       body: diario.when(
-        loading: () => const LoadingState(),
-        error: (e, _) =>
-            ErrorState(error: e, onRetry: () => ref.invalidate(diaryProvider)),
+        loading: () => Column(
+          children: [
+            testata(),
+            const Expanded(child: LoadingState()),
+          ],
+        ),
+        error: (e, _) => Column(
+          children: [
+            testata(),
+            Expanded(
+              child: ErrorState(
+                error: e,
+                onRetry: () => ref.invalidate(diaryProvider),
+              ),
+            ),
+          ],
+        ),
         data: (day) => RefreshIndicator(
           onRefresh: () =>
               aggiornaTutto(context, ref, () => ref.invalidate(diaryProvider)),
           child: ListView(
-            // ⚠️ 120 e non 96: il pulsante «Aggiungi» è **esteso**, quindi
-            // più alto di uno tondo, e copriva la riga «Preferiti» dell'ultimo
-            // pasto — cioè un pulsante vero, non uno spazio vuoto.
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 120),
+            // ⚠️ Niente padding orizzontale: la testata arriva ai bordi. Il
+            // margine lo mette il `Padding` sotto. ⚠️ 120 in fondo e non 96: il
+            // pulsante «Aggiungi» è **esteso**, e copriva la riga «Preferiti»
+            // dell'ultimo pasto — cioè un pulsante vero, non uno spazio vuoto.
+            padding: const EdgeInsets.only(bottom: 120),
             children: [
-              /*
-               * 🆕 FASE 9.7 — la stima lasciata a metà.
-               *
-               * 🚨 **In cima e non in fondo**: chi ha chiuso l'app mentre il
-               * server pensava sta cercando *quel* piatto, e trovarlo sotto ai
-               * totali vorrebbe dire non trovarlo.
-               *
-               * 💡 Nel caso normale non si vede e non costa niente: `inSospeso()`
-               * guarda prima sul telefono, e senza id locale non parte nemmeno
-               * una richiesta.
-               */
-              const StimaRitrovata(),
-              MacroSummary(day: day),
+              testata(strumenti: MacroSummary(day: day)),
 
-              /*
-               * 🏅 **Le medaglie, sotto la card delle calorie** — 3b-A.8.4.
-               *
-               * 📌 Il committente: *«nella pagina diario deve stare subito
-               * sotto alla card delle calorie (deve mostrare gli achievements
-               * relativi all'alimentazione)»*.
-               *
-               * ⛔ **Solo l'alimentazione**: qui una medaglia sui chili
-               * sollevati sarebbe fuori posto, e la sezione smetterebbe di
-               * voler dire qualcosa.
-               *
-               * ⏳ Finché FASE 12 non esiste non disegna niente, nemmeno lo
-               * spazio.
-               */
-              const CaroselloAchievements(
-                ambito: AmbitoAchievement.alimentazione,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    /*
+                     * 🆕 FASE 9.7 — la stima lasciata a metà. 🚨 **In cima**:
+                     * chi ha chiuso l'app mentre il server pensava sta
+                     * cercando *quel* piatto. Nel caso normale non si vede e
+                     * non costa niente.
+                     */
+                    const StimaRitrovata(),
+
+                    /*
+                     * 🏅 **Le medaglie, subito sotto le calorie** — 3b-A.8.4:
+                     * *«nella pagina diario deve stare subito sotto alla card
+                     * delle calorie»*. ⛔ Solo l'alimentazione.
+                     */
+                    const CaroselloAchievements(
+                      ambito: AmbitoAchievement.alimentazione,
+                    ),
+
+                    const TitoloDiSezione('Pasti'),
+                    const SizedBox(height: Gap.sm),
+
+                    for (final pasto in day.meals) _Pasto(pasto: pasto),
+                  ],
+                ),
               ),
-
-              const SizedBox(height: Gap.md),
-              for (final pasto in day.meals) _Pasto(pasto: pasto),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// La data con le frecce, nel posto del navigatore della testata.
+  ///
+  /// 💡 Cambiare giorno è il gesto più frequente del diario, e farlo passare
+  /// da un calendario ogni volta è troppo attrito. ⛔ La freccia avanti si
+  /// spegne su oggi: il diario non si compila in anticipo.
+  ///
+  /// ⚠️ **Il provider resta quello del diario** (`selectedDateProvider`), non
+  /// quello di Oggi: `BarraDellaData` unifica il disegno, non lo stato.
+  static Widget _barraDelGiorno(WidgetRef ref, DateTime giorno) {
+    final oggi = DateTime.now();
+    final eOggi = DateUtils.isSameDay(giorno, oggi);
+    final data = ref.read(selectedDateProvider.notifier);
+
+    return BarraDellaData(
+      testo: eOggi
+          ? 'Oggi · ${DateFormat('d MMMM', 'it').format(giorno)}'
+          : DateFormat('EEEE d MMMM', 'it').format(giorno),
+      onPrima: () => data.state = giorno.subtract(const Duration(days: 1)),
+      onDopo: eOggi
+          ? null
+          : () => data.state = giorno.add(const Duration(days: 1)),
+      onTesto: eOggi ? null : () => data.state = DateUtils.dateOnly(oggi),
     );
   }
 
@@ -147,56 +180,6 @@ class DiaryScreen extends ConsumerWidget {
     if (scelta != null) {
       ref.read(selectedDateProvider.notifier).state = scelta;
     }
-  }
-}
-
-/// La riga con «ieri / oggi / domani»: cambiare giorno è il gesto più frequente
-/// del diario, e farlo passare da un calendario a ogni volta è troppo attrito.
-class _BarraGiorno extends StatelessWidget implements PreferredSizeWidget {
-  const _BarraGiorno({required this.giorno, required this.ref});
-
-  final DateTime giorno;
-  final WidgetRef ref;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(48);
-
-  @override
-  Widget build(BuildContext context) {
-    final oggi = DateTime.now();
-    final isOggi = DateUtils.isSameDay(giorno, oggi);
-
-    return SizedBox(
-      height: 48,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: () => ref.read(selectedDateProvider.notifier).state =
-                giorno.subtract(const Duration(days: 1)),
-            icon: const Icon(Icons.chevron_left_rounded),
-          ),
-          SizedBox(
-            width: 180,
-            child: Text(
-              isOggi ? 'Oggi' : DateFormat('EEEE d MMMM', 'it').format(giorno),
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          IconButton(
-            // Disabilitato su oggi: in avanti non c'è niente da vedere.
-            onPressed: isOggi
-                ? null
-                : () => ref.read(selectedDateProvider.notifier).state = giorno
-                      .add(const Duration(days: 1)),
-            icon: const Icon(Icons.chevron_right_rounded),
-          ),
-        ],
-      ),
-    );
   }
 }
 

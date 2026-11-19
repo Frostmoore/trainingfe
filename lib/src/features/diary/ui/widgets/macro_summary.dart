@@ -12,6 +12,7 @@ import '../../data/bruciate_del_giorno.dart';
 import '../../data/diary_models.dart';
 import '../../data/target_del_giorno.dart';
 import '../../diary_controller.dart';
+import 'semicerchio_macro.dart';
 
 /// Il riepilogo in cima al diario — A4.1.
 ///
@@ -118,13 +119,21 @@ class MacroSummary extends ConsumerWidget {
     final progresso = haTarget ? day.kcal / targetKcal : 0.0;
     final residuo = haTarget ? targetKcal - day.kcal : 0.0;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Gap.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            /*
+    /*
+     * ══ 🌑 IN TESTATA, SENZA CARD — `plan_interfaccia.md` I3, 19/11/2026 ═════
+     *
+     * 📌 Tavola «Diario A»: il riepilogo sale nella testata scura, e la
+     * cornice la fa il blocco scuro. ⛔ Una card dentro la testata sarebbe un
+     * rettangolo grigio dentro uno nero.
+     *
+     * ⚠️ **Non è il riassunto che il committente tolse il 22/08** (vedi il
+     * commento in `DiaryScreen`): quello era una **copia** di questa card,
+     * messa in cima. Qui sale la card stessa, e sotto non ne resta un doppione.
+     */
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        /*
              * ══ 🚨 DUE RIGHE, PERCHÉ UNA NON CI STA — 22/08/2026 ════════════
              *
              * 📌 Il committente, guardandola sul telefono: *«Le calorie bruciate
@@ -140,35 +149,35 @@ class MacroSummary extends ConsumerWidget {
              * da solo: sfora e basta. 💡 Due righe — il numero sopra, il
              * contesto sotto — e ognuna ha lo spazio che le serve.
              */
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  day.kcal.round().toString(),
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: sforato
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: Gap.xs),
-                Expanded(
-                  child: Text(
-                    haTarget ? '/ ${targetKcal.round()} kcal' : 'kcal',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              day.kcal.round().toString(),
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: sforato
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.onSurface,
+              ),
             ),
-            const SizedBox(height: Gap.xs),
+            const SizedBox(width: Gap.xs),
+            Expanded(
+              child: Text(
+                haTarget ? '/ ${targetKcal.round()} kcal' : 'kcal',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Gap.xs),
 
-            /*
+        /*
              * ⚠️ **`Wrap` e non `Row`** — 22/08/2026, terzo giro su questa riga.
              *
              * 🚨 Con il carattere ingrandito «547 · dall'orologio» non ci sta
@@ -180,33 +189,33 @@ class MacroSummary extends ConsumerWidget {
              * una riga che «di solito ci sta» è una riga che su qualche
              * telefono non ci sta, e l'analizzatore non lo vede.
              */
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: Gap.md,
-              runSpacing: Gap.xs,
-              children: [
-                /*
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: Gap.md,
+          runSpacing: Gap.xs,
+          children: [
+            /*
                  * 🆕 Il consumo stimato — 3b-D.1.3. Sta **sotto** il target e
                  * non accanto: sono due numeri della stessa famiglia, e in fila
                  * sulla stessa riga si leggono come uno solo lungo.
                  */
-                if (consumo != null)
-                  Text(
-                    'TDEE ${consumo.round()}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+            if (consumo != null)
+              Text(
+                'TDEE ${consumo.round()}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
 
-                // Le bruciate si mostrano perché il target del giorno le
-                // comprende già: senza, l'utente vedrebbe un target più alto
-                // del solito e non capirebbe perché.
-                //
-                // C15 — ed è toccabile: il totale bruciato si può dichiarare a
-                // mano, per chi porta un orologio che conta meglio della nostra
-                // stima o per chi ha fatto qualcosa che non ha registrato.
-                /*
+            // Le bruciate si mostrano perché il target del giorno le
+            // comprende già: senza, l'utente vedrebbe un target più alto
+            // del solito e non capirebbe perché.
+            //
+            // C15 — ed è toccabile: il totale bruciato si può dichiarare a
+            // mano, per chi porta un orologio che conta meglio della nostra
+            // stima o per chi ha fatto qualcosa che non ha registrato.
+            /*
                  * ══ 🚨 UNA PASTICCA, PERCHÉ SI DEVE CAPIRE CHE SI TOCCA ═════
                  *
                  * 📌 Il committente, 22/08/2026: *«le calorie bruciate nella
@@ -226,79 +235,79 @@ class MacroSummary extends ConsumerWidget {
                  * `tooltip`, per chi non la riconosce e per i lettori di
                  * schermo.
                  */
-                ActionChip(
-                  avatar: Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 16,
-                    color: theme.colorScheme.tertiary,
-                  ),
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${bruciate.kcal}'),
-                      if (bruciate.fonte.icona != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          bruciate.fonte.icona,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ],
-                  ),
-                  tooltip: bruciate.fonte == FonteBruciate.nessuna
-                      ? 'Dichiara le calorie bruciate'
-                      : 'Calorie bruciate ${bruciate.fonte.etichetta}',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _bruciateAMano(context, ref, aMano),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: Gap.xs),
-            if (haTarget) ...[
-              const SizedBox(height: Gap.sm),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  // `clamp` a 1 solo per il disegno: il colore dice il resto.
-                  value: progresso.clamp(0.0, 1.0),
-                  minHeight: 10,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  color: sforato
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
-                ),
+            ActionChip(
+              avatar: Icon(
+                Icons.local_fire_department_rounded,
+                size: 16,
+                color: theme.colorScheme.tertiary,
               ),
-              const SizedBox(height: Gap.xs),
-              Row(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Text(
-                      sforato
-                          ? 'Hai superato di ${(-residuo).round()} kcal'
-                          : 'Ti restano ${residuo.round()} kcal',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: sforato
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
+                  Text('${bruciate.kcal}'),
+                  if (bruciate.fonte.icona != null) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      bruciate.fonte.icona,
+                      size: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                  ),
-
-                  // 🚨 D8 / S7.5 — da dove viene il numero. «Calcolato sui tuoi
-                  // dati» e «prescritto dal tuo trainer» meritano fiducia
-                  // diversa, e il secondo non si discute.
-                  Text(
-                    day.hasTarget ? 'Dal tuo piano' : 'Calcolato sui tuoi dati',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
+                  ],
                 ],
               ),
+              tooltip: bruciate.fonte == FonteBruciate.nessuna
+                  ? 'Dichiara le calorie bruciate'
+                  : 'Calorie bruciate ${bruciate.fonte.etichetta}',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _bruciateAMano(context, ref, aMano),
+            ),
+          ],
+        ),
 
-              /*
+        const SizedBox(height: Gap.xs),
+        if (haTarget) ...[
+          const SizedBox(height: Gap.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              // `clamp` a 1 solo per il disegno: il colore dice il resto.
+              value: progresso.clamp(0.0, 1.0),
+              minHeight: 10,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              color: sforato
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: Gap.xs),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  sforato
+                      ? 'Hai superato di ${(-residuo).round()} kcal'
+                      : 'Ti restano ${residuo.round()} kcal',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: sforato
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+
+              // 🚨 D8 / S7.5 — da dove viene il numero. «Calcolato sui tuoi
+              // dati» e «prescritto dal tuo trainer» meritano fiducia
+              // diversa, e il secondo non si discute.
+              Text(
+                day.hasTarget ? 'Dal tuo piano' : 'Calcolato sui tuoi dati',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
+          ),
+
+          /*
                * 🚨 N17.2 — l'avvertenza **accanto al numero**, non nei termini
                * d'uso.
                *
@@ -306,29 +315,29 @@ class MacroSummary extends ConsumerWidget {
                * dal piano del trainer, l'avvertenza sulle formule generiche
                * parlerebbe di un calcolo che non abbiamo fatto noi.
                */
-              if (!day.hasTarget) const AvvertenzaNutrizionale(compatta: true),
-            ] else ...[
-              const SizedBox(height: Gap.sm),
+          if (!day.hasTarget) const AvvertenzaNutrizionale(compatta: true),
+        ] else ...[
+          const SizedBox(height: Gap.sm),
 
-              /*
+          /*
                * 🚨 Si dice **cosa** manca invece di mostrare un numero
                * inventato — che diventerebbe la dieta di qualcuno — e invece di
                * mandare genericamente «a compilare i dati».
                */
-              if (esito != null && !esito.riuscito)
-                MancaPerIlTarget(esito: esito, compatto: true)
-              else
-                Text(
-                  'Nessun obiettivo impostato. Chiedi al tuo trainer un piano '
-                  'alimentare.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-            const SizedBox(height: Gap.md),
+          if (esito != null && !esito.riuscito)
+            MancaPerIlTarget(esito: esito, compatto: true)
+          else
+            Text(
+              'Nessun obiettivo impostato. Chiedi al tuo trainer un piano '
+              'alimentare.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+        const SizedBox(height: Gap.md),
 
-            /*
+        /*
              * ⚠️ **Anche i macro seguono la stessa precedenza del totale.**
              *
              * Il committente li ha chiesti esplicitamente: *«in cibo,
@@ -339,33 +348,29 @@ class MacroSummary extends ConsumerWidget {
              * 🚨 Mostrarne uno calcolato accanto a un totale che viene dal
              * piano — o viceversa — darebbe una scheda che si contraddice.
              */
-            Row(
-              children: [
-                _Macro(
-                  nome: 'Proteine',
-                  valore: day.protein,
-                  colore: theme.colorScheme.primary,
-                  target:
-                      day.targetProtein ?? locale?.macro.proteineG.toDouble(),
-                ),
-                _Macro(
-                  nome: 'Carboidrati',
-                  valore: day.carbs,
-                  colore: theme.colorScheme.tertiary,
-                  target:
-                      day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
-                ),
-                _Macro(
-                  nome: 'Grassi',
-                  valore: day.fat,
-                  colore: theme.colorScheme.secondary,
-                  target: day.targetFat ?? locale?.macro.grassiG.toDouble(),
-                ),
-              ],
+        Row(
+          children: [
+            _Macro(
+              nome: 'Proteine',
+              valore: day.protein,
+              colore: theme.colorScheme.primary,
+              target: day.targetProtein ?? locale?.macro.proteineG.toDouble(),
+            ),
+            _Macro(
+              nome: 'Carboidrati',
+              valore: day.carbs,
+              colore: theme.colorScheme.tertiary,
+              target: day.targetCarbs ?? locale?.macro.carboidratiG.toDouble(),
+            ),
+            _Macro(
+              nome: 'Grassi',
+              valore: day.fat,
+              colore: theme.colorScheme.secondary,
+              target: day.targetFat ?? locale?.macro.grassiG.toDouble(),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -481,7 +486,13 @@ class _Macro extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            /*
+             * 🌗 **Il semicerchio dentro il quadrato** — I3, 19/11/2026: il
+             * quadrato è la regola del 22/08, l'arco è lo strumento della
+             * tavola. Sforare lo fa rosso e dice di quanto.
+             */
+            const SizedBox(height: Gap.xs),
+            SemicerchioMacro(grammi: valore, obiettivo: target, colore: colore),
             Text(
               '${valore.round()}',
               style: theme.textTheme.titleMedium?.copyWith(

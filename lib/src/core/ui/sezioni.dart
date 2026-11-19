@@ -58,10 +58,17 @@ class TitoloDiSezione extends StatelessWidget {
 
 /// Il rettangolo con l'etichetta piccola in alto.
 ///
-/// ⚠️ **Non è una `Card`**: la `Card` del tema ha l'ombra e il colore
-/// `surfaceContainer`, pensati per una colonna di schede tutte uguali. Le
-/// tessere stanno su un fondo grigio chiaro e si distinguono per il bianco —
-/// è il disegno delle tavole del 19/11.
+/// ══ 🔄 È UNA `Card`, DAL 19/11/2026 (I3) ═════════════════════════════════
+///
+/// ⛔ In I1 era bianca e piatta, come nelle tavole. Ma accanto alle card
+/// vecchie — peso, grafico, calorie, grigie e con l'ombra — sulla stessa
+/// pagina di Oggi sembrava un pezzo di un'altra app (visto sull'emulatore).
+///
+/// 🚨 **E l'ombra delle card è una richiesta del committente**, non un caso:
+/// 21/08/2026, *«una lieve ombreggiatura […] tutta l'interfaccia deve essere
+/// modernizzata»* — scritta in `AppTheme.cardTheme`. Una regola scritta batte
+/// un disegno (`plan_interfaccia.md` R1/R2): quindi è la tessera che si adegua
+/// alle card, prendendone colore, ombra e raggio dal tema, in un posto solo.
 class Tessera extends StatelessWidget {
   const Tessera({
     required this.etichetta,
@@ -77,15 +84,12 @@ class Tessera extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  /// `null` = `surfaceContainerLowest`, cioè il bianco in chiaro.
+  /// `null` = il colore delle card del tema.
   final Color? colore;
-
-  static const double raggio = 20;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final forma = BorderRadius.circular(raggio);
 
     final contenuto = Padding(
       padding: const EdgeInsets.all(14),
@@ -107,13 +111,14 @@ class Tessera extends StatelessWidget {
       ),
     );
 
-    return Material(
-      color: colore ?? theme.colorScheme.surfaceContainerLowest,
-      borderRadius: forma,
+    // 💡 `Card` senza parametri di forma: colore, ombra e raggio li decide
+    // `cardTheme`, e se un giorno cambiano lì cambiano anche qui.
+    return Card(
+      color: colore,
       clipBehavior: Clip.antiAlias,
       child: onTap == null
           ? contenuto
-          : InkWell(onTap: onTap, borderRadius: forma, child: contenuto),
+          : InkWell(onTap: onTap, child: contenuto),
     );
   }
 }

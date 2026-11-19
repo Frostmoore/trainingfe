@@ -10,7 +10,7 @@ import '../forma_controller.dart';
 import '../indice_di_effetto.dart';
 import '../indice_di_effetto_controller.dart';
 import '../indici_di_forma.dart';
-import 'scheda_forma.dart';
+import 'pezzi_della_forma.dart';
 
 /// Il dettaglio dei due indici — FASE 2-sexies, richiesta del 20/08/2026.
 ///

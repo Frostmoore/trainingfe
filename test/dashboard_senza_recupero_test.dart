@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:training_companion/src/core/storage/archivio_salute.dart';
 import 'package:training_companion/src/features/dashboard/data/dashboard_models.dart';
-import 'package:training_companion/src/features/dashboard/ui/widgets/today_cards.dart';
+import 'package:training_companion/src/features/dashboard/ui/widgets/tessere_di_oggi.dart';
 import 'package:training_companion/src/features/health/health_controller.dart';
 
 /// 🚨 **Il contratto nuovo di `/dashboard` — S2.4.**
@@ -70,7 +70,7 @@ void main() {
     });
   });
 
-  group('la card del recupero', () {
+  group('la tessera del sonno (era la card del recupero fino al 19/11)', () {
     /// Un archivio vuoto: nessun dato del sensore su questo telefono.
     ///
     /// ⚠️ Da S4.3 la card **non legge più da `DashboardSummary`**: legge da
@@ -90,7 +90,7 @@ void main() {
     testWidgets('senza dati invita a collegare, invece di promettere', (
       tester,
     ) async {
-      await tester.pumpWidget(conArchivioVuoto(const RecoveryCard()));
+      await tester.pumpWidget(conArchivioVuoto(const TesseraSonno()));
       await tester.pumpAndSettle();
 
       // 🚨 Prima di S2 qui c'era «compaiono appena il tuo orologio comincia a
@@ -114,7 +114,7 @@ void main() {
         conArchivioVuoto(
           const Column(
             children: [
-              RecoveryCard(),
+              TesseraSonno(),
               Expanded(child: SizedBox()),
             ],
           ),

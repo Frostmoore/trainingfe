@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/aggiornamento.dart';
+import '../../../core/ui/sezioni.dart';
 import '../../../core/ui/states.dart';
 import '../../achievements/ui/carosello_achievements.dart';
 import '../../acquisti/data/costo_delle_funzioni.dart';
@@ -14,17 +15,18 @@ import '../../acquisti/data/gate_dell_abbonamento.dart';
 import '../../acquisti/ui/modale_acquisti.dart';
 import '../../acquisti/ui/widgets/sotto_abbonamento.dart';
 import '../../auth/auth_controller.dart';
-import '../../forma/ui/scheda_forma.dart';
 import '../../health/ui/widgets/banner_salute.dart';
 import '../../profile/corpo_controller.dart';
 import '../../profile/profile_controller.dart';
 import '../consiglio_da_mostrare.dart';
 import '../dashboard_controller.dart';
 import '../gettoni_controller.dart';
+import '../ordine_di_oggi.dart';
 import 'widgets/aggiungi_qualcosa.dart';
 import 'widgets/grafico_calorie.dart';
 import 'widgets/scheda_composizione.dart';
 import 'widgets/scheda_peso.dart';
+import 'widgets/tessere_di_oggi.dart';
 import 'widgets/today_cards.dart';
 import 'widgets/today_header.dart';
 
@@ -112,19 +114,23 @@ class DashboardScreen extends ConsumerWidget {
     };
 
     /*
-     * 🆕 FASE 2-sexies — carico e carica.
+     * ══ 🌑 CARICO E CARICA SONO SALITI IN TESTATA — 19/11/2026 ═══════════════
      *
-     * 💡 Accanto al recupero e non altrove: sono la stessa domanda vista da due
-     * distanze — come sto stanotte, e come sto questa settimana.
+     * ⛔ `SchedaForma` e `RecoveryCard` **non esistono più** come card: i loro
+     * strumenti stanno in `PlanciaDiOggi`, dentro la testata scura, e il resto
+     * si è diviso fra queste tessere (`plan_interfaccia.md` I2.D5).
+     *
+     * 💡 **Sonno ed Effetto affiancati**: due misure piccole, una della notte e
+     * una della settimana. HRV e battito affiancati fra loro, sotto.
      */
-    const forma = SottoAbbonamento(
-      motivo: 'Carico e carica',
-      child: SchedaForma(),
+    const sonnoEdEffetto = SottoAbbonamento(
+      motivo: 'Sonno',
+      child: Coppia(sinistra: TesseraSonno(), destra: TesseraEffetto()),
     );
 
-    const recupero = SottoAbbonamento(
-      motivo: 'Recupero',
-      child: RecoveryCard(),
+    const cuore = SottoAbbonamento(
+      motivo: 'Battito e variabilità',
+      child: CoppiaDelCuore(),
     );
 
     /*
@@ -246,83 +252,47 @@ class DashboardScreen extends ConsumerWidget {
               TodayHeader(riepilogo: r),
 
               /*
-               * ══ 🔒 L'ORDINE CAMBIA PER CHI NON È ABBONATO — 08/09/2026 ══
+               * ══ 📋 L'ORDINE STA IN `pezziDiOggi`, NON QUI — 19/11/2026 ══
                *
-               * 📌 Il committente: *«per gli utenti non abbonati, ovviamente le
-               * cards vanno riarrangiate in modo che quelle visibili siano le
-               * prime»*.
+               * 🔒 Le tre regole che lo governano — chi non è abbonato vede
+               * prima le cose sue (08/09), «Com'è fatto» subito sotto il peso
+               * (30/08), le medaglie sopra il consiglio (3b-A.8.3) — sono
+               * scritte e provate in `ordine_di_oggi.dart`. Qui si traduce solo
+               * ogni nome nel suo widget.
                *
-               * 🚨 **Ed è la differenza fra una vetrina e un muro.** Con
-               * l'ordine di sempre, un non abbonato scorreva **tre card
-               * sfumate di fila** prima di incontrare qualcosa di suo: l'app
-               * si presentava come una cosa che non può usare.
-               *
-               * 💡 Adesso quello che è suo viene prima, e le sfumate stanno in
-               * fondo — dove chi ha voglia di sapere cosa manca le trova
-               * tutte insieme.
-               *
-               * ⛔ **Per gli abbonati l'ordine è quello di sempre**, e non è
-               * pigrizia: «Com'è fatto» sta *«subito sotto il peso, e non
-               * altrove»* perché è la stessa domanda guardata più a fondo, e
-               * quell'accostamento si perde solo dove il gate lo spezza per
-               * forza.
+               * 💳 Il banner dell'abbonamento sta **sotto** la card delle
+               * calorie: l'app deve aver già dato qualcosa prima di chiedere.
+               * 🩺 Il banner di Health sta lì perché il numero che il
+               * collegamento migliora è proprio quello delle calorie.
                */
               _Blocchi(
                 children: [
-                  CaloriesCard(riepilogo: r),
-
-                  /*
-                   * ══ 💳 IL BANNER, E IL POSTO È LA METÀ DEL MESSAGGIO ═════
-                   *
-                   * 📌 *«sotto alla card delle calorie iniziale, ci va un
-                   * banner che propone di abbonarsi per sbloccare le analisi
-                   * avanzate dei propri dati»*.
-                   *
-                   * 💡 **Sotto e non sopra**: la card delle calorie è l'unica
-                   * cosa completa che un non abbonato vede, e il banner deve
-                   * arrivare **dopo** che l'app ha già dato qualcosa. ⛔ Sopra
-                   * sarebbe un annuncio prima del prodotto.
-                   *
-                   * ⚠️ Sparisce da solo per gli abbonati.
-                   */
-                  const BannerAbbonamento(),
-
-                  /*
-                   * ══ 🆕 GOOGLE HEALTH SI PROPONE QUI, NON ALL'INGRESSO ════
-                   *
-                   * 📌 *«per Collega google health c'è il tasto + quindi in
-                   * realtà quella la possiamo anche togliere, magari mettiamo
-                   * un bannerino in oggi»* — dopo il giro sull'emulatore.
-                   *
-                   * 💡 **Subito sotto la card delle calorie**, e non altrove:
-                   * il numero che il collegamento cambia è proprio quello —
-                   * le calorie bruciate si sommano all'obiettivo del giorno.
-                   * ⛔ In fondo alla pagina sarebbe un'offerta lontana dalla
-                   * cosa che migliora.
-                   *
-                   * ⚠️ Sparisce da solo a chi il permesso ce l'ha già.
-                   */
-                  const BannerSalute(),
-
-                  if (abbonato) ...[
-                    achievements,
-                    spunto,
-                    forma,
-                    recupero,
-                    peso,
-                    composizione,
-                    allenamento,
-                    grafico,
-                  ] else ...[
-                    achievements,
-                    peso,
-                    grafico,
-                    spunto,
-                    forma,
-                    recupero,
-                    composizione,
-                    allenamento,
-                  ],
+                  for (final pezzo in pezziDiOggi(abbonato: abbonato))
+                    switch (pezzo) {
+                      PezzoDiOggi.titoloEnergia => const TitoloDiSezione(
+                        'Energia di oggi',
+                      ),
+                      PezzoDiOggi.calorie => CaloriesCard(riepilogo: r),
+                      PezzoDiOggi.bannerAbbonamento =>
+                        const BannerAbbonamento(),
+                      PezzoDiOggi.bannerSalute => const BannerSalute(),
+                      PezzoDiOggi.achievements => achievements,
+                      PezzoDiOggi.spunto => spunto,
+                      PezzoDiOggi.titoloAllenamento => const TitoloDiSezione(
+                        'Allenamento',
+                      ),
+                      PezzoDiOggi.allenamento => allenamento,
+                      PezzoDiOggi.titoloAndamento => const TitoloDiSezione(
+                        'Andamento',
+                      ),
+                      PezzoDiOggi.sonnoEdEffetto => sonnoEdEffetto,
+                      PezzoDiOggi.cuore => cuore,
+                      PezzoDiOggi.peso => peso,
+                      PezzoDiOggi.composizione => composizione,
+                      PezzoDiOggi.grafico => grafico,
+                      PezzoDiOggi.titoloConLAbbonamento =>
+                        const TitoloDiSezione("Con l'abbonamento"),
+                    },
                 ],
               ),
 

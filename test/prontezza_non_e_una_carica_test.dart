@@ -125,21 +125,41 @@ void main() {
 
   /// 💡 E la carica vera, quella sì, la batteria se la merita: nell'header
   /// deve esserci.
-  test('l\'header di «Oggi» mostra la Carica vera', () {
-    final header = File(
+  /*
+   * ══ 🌑 DAL 19/11/2026 LA TESTATA È DUE FILE — `plan_interfaccia.md` I2 ════
+   *
+   * ⚠️ Fino al 19/11 i tre numeri erano **pillole** in `today_header.dart`
+   * (`etichetta: 'carica'`…). Con la nuova interfaccia sono **gli strumenti
+   * veri** — batteria, tachimetro, barra del carico — dentro `PlanciaDiOggi`,
+   * che la testata di Oggi contiene.
+   *
+   * 🔑 La domanda resta la stessa — *la testata di Oggi mostra la Carica vera,
+   * e la chiama col suo nome, distinta dalla Prontezza?* — e si fa ai due file
+   * insieme. ⛔ Non si è allentata: si cerca lo **strumento**, non più la
+   * parola.
+   */
+  test('la testata di «Oggi» mostra la Carica vera', () {
+    final testata = [
       'lib/src/features/dashboard/ui/widgets/today_header.dart',
-    ).readAsStringSync();
+      'lib/src/features/dashboard/ui/widgets/plancia_di_oggi.dart',
+    ].map((p) => File(p).readAsStringSync()).join('\n');
 
     expect(
-      header.contains('caricaProvider'),
+      testata.contains('caricaProvider'),
       isTrue,
       reason:
-          'L\'header non legge la Carica: resterebbe visibile solo entrando '
+          'La testata non legge la Carica: resterebbe visibile solo entrando '
           'in «Carico e carica».',
     );
 
-    expect(header.contains("etichetta: 'prontezza'"), isTrue);
-    expect(header.contains("etichetta: 'carico'"), isTrue);
-    expect(header.contains("etichetta: 'carica'"), isTrue);
+    // 🔋 La Carica è una batteria; la Prontezza un tachimetro; il carico una
+    // barra. Tre forme diverse per tre domande diverse.
+    expect(testata.contains('BatteriaCarica('), isTrue);
+    expect(testata.contains('TachimetroProntezza('), isTrue);
+    expect(testata.contains('SezioneCarico('), isTrue);
+
+    // E ognuno col suo nome, scritto sotto.
+    expect(testata.contains("_Etichetta('carica')"), isTrue);
+    expect(testata.contains("_Etichetta('prontezza')"), isTrue);
   });
 }

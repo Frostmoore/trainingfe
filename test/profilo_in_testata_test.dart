@@ -188,6 +188,26 @@ void main() {
     expect(find.text('PAGINA TU'), findsOneWidget);
   });
 
+  /// 🆕 I9, 19/11/2026 — visto sul giro con una palestra blu notte: il cerchio
+  /// della persona era del colore della palestra, cioè quasi nero su quasi
+  /// nero. ⚠️ Deve usare il primario **del tema scuro** della testata, che è lo
+  /// stesso colore schiarito per quel fondo.
+  testWidgets('il cerchio della persona usa il colore del tema scuro', (
+    tester,
+  ) async {
+    await disegna(tester);
+
+    final cerchio = find.descendant(
+      of: find.byType(CodaDellaTestata),
+      matching: find.byType(CircleAvatar),
+    );
+    final widget = tester.widget<CircleAvatar>(cerchio);
+    final temaDellaTestata = Theme.of(tester.element(cerchio));
+
+    expect(widget.backgroundColor, temaDellaTestata.colorScheme.primary);
+    expect(temaDellaTestata.brightness, Brightness.dark);
+  });
+
   testWidgets('chi non allena non vede le voci di chi allena', (tester) async {
     await disegna(tester);
 

@@ -97,12 +97,26 @@ class Tessera extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            etichetta.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-              color: theme.colorScheme.onSurfaceVariant,
+          /*
+           * 🔠 **L'etichetta rimpicciolisce, non si spezza** — I9, 19/11/2026.
+           *
+           * ⛔ Col carattere del telefono ingrandito, in mezza larghezza
+           * «ABBONAMENTO» andava a capo **a metà parola** («ABBONAMENT» / «O»).
+           * 💡 È un'etichetta di una o due parole: rimpicciolita resta
+           * leggibile, spezzata no. ⚠️ `scaleDown` non la ingrandisce mai:
+           * col carattere normale è identica a prima.
+           */
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              etichetta.toUpperCase(),
+              maxLines: 1,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: Gap.sm),

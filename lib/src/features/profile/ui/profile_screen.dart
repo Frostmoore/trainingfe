@@ -368,13 +368,22 @@ class _TestaDelProfilo extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: Gap.sm),
               child: Row(
                 children: [
+                  /*
+                   * 🚨 **Il colore del tema scuro, non quello della palestra**
+                   * — I9, 19/11/2026, visto sul giro con A6: una palestra blu
+                   * notte dava un cerchio blu notte su fondo quasi nero, e la
+                   * persona spariva. ⚠️ È lo stesso difetto già chiuso per il
+                   * logo in I1. `colorScheme.primary` qui è quello del tema
+                   * scuro della palestra: stesso colore, schiarito apposta per
+                   * stare su questo fondo.
+                   */
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: palestra.primary,
+                    backgroundColor: tema.colorScheme.primary,
                     child: Text(
                       utente?.initials ?? '?',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: tema.colorScheme.onPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 22,
                       ),

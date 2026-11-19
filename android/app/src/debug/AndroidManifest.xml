@@ -4,4 +4,33 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application>
+        <!--
+          🧭 IL SALTO A UNA SCHERMATA, SOLO IN DEBUG — I9, 19/11/2026.
+
+          📌 Il giro completo dell'interfaccia guarda 55 schermate, in chiaro e
+          in scuro, con due utenti: arrivarci a tocchi sono centinaia di passi
+          fragili. Con questo filtro un comando apre la rotta che si vuole:
+
+              adb shell am start -a android.intent.action.VIEW \
+                  -d "tcgiro://giro/profilo/tu" com.smp.mytrainingcompanion
+
+          e go_router riceve il percorso (/profilo/tu) come qualunque link.
+
+          ⛔ STA NEL MANIFEST DI DEBUG E SOLO LÌ: src/debug si fonde solo nelle
+          build di debug. In produzione questo schema non esiste, e nessun'altra
+          app può spingere qualcuno a una schermata interna.
+
+          💡 I cancelli restano: il redirect del router (accesso, abbonamento,
+          chiavi) vale anche per questo ingresso.
+        -->
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="tcgiro" android:host="giro"/>
+            </intent-filter>
+        </activity>
+    </application>
 </manifest>

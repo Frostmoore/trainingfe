@@ -41,7 +41,7 @@ publish_to: 'none'
 # 🛡️ Lo tiene fermo `test/versione_allineata_test.dart`, che confronta questa
 # riga col nome del ramo: dimenticarsene fa fallire la suite, non lo scopre il
 # committente guardando il telefono.
-version: 22.8.0+220800
+version: 22.9.0+220900
 
 environment:
   sdk: ^3.12.2
@@ -260,46 +260,48 @@ flutter:
     - assets/marchio/
 
 # ══════════════════════════════════════════════════════════════════════════
-# 🎨 L'icona dell'app — 3b-T
+# 🎨 L'icona dell'app — I10, 19/11/2026 (prima: 3b-T)
 #
-# 📌 *«Facciamo il logo e la splash dell'app con lo stesso logo del sito»*.
+# 📌 Il committente, 19/11: *«training_companion.png è la nuova icona»*; e
+#    alle tre domande: fondo **nero**, monogramma **rifatto**, anche lo store
+#    (`memory/decisioni.md`).
 #
-# 💡 La sorgente e' **la stessa** del sito: `trainingbe/public/img/sito/
-#    marchio.svg`, il monogramma TC. I PNG in `assets/marchio/` si
-#    rigenerano da quello — vedi §… dell'atlante — e non si disegnano a mano.
+# 💡 La sorgente e' `memory/training_companion.png`. I PNG in
+#    `assets/marchio/` (`icona`, `icona_primo_piano`, `segno`, `segno_avvio`)
+#    si rigenerano con `python memory/scripts/prepara-icona-nuova.py`, che
+#    spiega i ritagli: **non si disegnano a mano**.
 #
-# ⚠️ **Segno bianco su fondo teal, non il contrario.** Il marchio del sito e'
-#    teal su bianco, ma un'icona chiara sparisce fra le altre sullo schermo:
-#    il fondo pieno e' quello che la fa riconoscere in mezzo a trenta app.
+# ⚠️ `#111011` non e' un nero qualunque: e' il colore che l'emblema ha sul
+#    bordo del suo cerchio, misurato. Con un nero puro il cerchio si vedrebbe.
 #
-# 🚨 `adaptive_icon_foreground` e' **piu' piccolo** dell'icona intera (560px
-#    contro 640 su 1024): Android ritaglia l'icona adattiva in cerchio,
-#    quadrato o goccia a seconda del telefono, e un segno grande fino al bordo
-#    si ritroverebbe tagliato su meta' dei dispositivi.
+# 🚨 `adaptive_icon_foreground` e' **piu' piccolo** dell'icona intera (62%):
+#    Android ritaglia l'icona adattiva in cerchio, quadrato o goccia a seconda
+#    del telefono, e un segno grande fino al bordo si ritroverebbe tagliato.
+#    ⛔ (Prima: segno bianco su fondo teal, dal marchio del sito — 3b-T.)
 flutter_launcher_icons:
   image_path: assets/marchio/icona.png
   android: true
-  adaptive_icon_background: "#0F766E"
+  adaptive_icon_background: "#111011"
   adaptive_icon_foreground: assets/marchio/icona_primo_piano.png
   ios: true
   remove_alpha_ios: true
 
 # ══════════════════════════════════════════════════════════════════════════
-# 🚀 La schermata d'avvio — 3b-T
+# 🚀 La schermata d'avvio — I10, 19/11/2026 (prima: 3b-T)
 #
-# ⚠️ **Lo stesso teal dell'icona.** Quello che si vede all'apertura e' il
+# ⚠️ **Lo stesso fondo dell'icona.** Quello che si vede all'apertura e' il
 #    passaggio fra l'icona toccata e l'app: due colori diversi si leggono
 #    come uno stacco, cioe' come lentezza.
 #
 # 💡 `android_12` a parte perche' da Android 12 la splash e' di sistema e
-#    prende **solo** un'icona su un colore: le regole le detta il sistema, e
-#    dichiararle qui evita che il telefono ci metta il suo grigio.
+#    prende **solo** un'icona su un colore, ritagliata a un cerchio di 2/3:
+#    per questo li' va `segno_avvio.png`, col cerchio gia' dentro quella zona.
 flutter_native_splash:
-  color: "#0F766E"
+  color: "#111011"
   image: assets/marchio/segno.png
   android: true
   ios: true
   android_12:
-    color: "#0F766E"
-    image: assets/marchio/segno.png
-    icon_background_color: "#0F766E"
+    color: "#111011"
+    image: assets/marchio/segno_avvio.png
+    icon_background_color: "#111011"

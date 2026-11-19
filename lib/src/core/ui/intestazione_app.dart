@@ -497,17 +497,19 @@ class LogoPalestra extends StatelessWidget {
              * 💡 Lo stesso ripiego di `MarchioInCima` se l'asset non arrivasse.
              */
             /*
-             * ⚠️ **Niente margine, e il segno ingrandito**: in `segno.png` il
-             * disegno occupa solo il 48% del quadrato (il resto è trasparente).
-             * A 36 px, col margine della schermata d'accesso, restava un segno
-             * di 9 px — illeggibile, visto sull'emulatore. Così è circa due
-             * terzi del cerchio.
+             * 🆕 **Il monogramma nuovo riempie il cerchio** — I10, 19/11/2026.
+             *
+             * 💡 `segno.png` adesso è **il cerchio dell'icona nuova** (emblema
+             * e anello arancione su fondo scuro, trasparente fuori): si mostra
+             * a tutto cerchio, ritagliato tondo. ⛔ Prima era un segno bianco
+             * che occupava il 48% del quadrato, e qui lo si ingrandiva di 1,35.
              */
-            : Transform.scale(
-                scale: 1.35,
+            : ClipOval(
                 child: Image.asset(
                   'assets/marchio/segno.png',
-                  fit: BoxFit.contain,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => const Icon(
                     Icons.fitness_center_rounded,
                     color: Colors.white,

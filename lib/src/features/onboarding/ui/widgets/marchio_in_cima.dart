@@ -128,13 +128,18 @@ class _Cerchio extends StatelessWidget {
            * `pubspec.yaml` lo stesso giorno**: prima quei file li leggevano
            * solo i generatori dell'icona, e dentro l'APK non finivano.
            */
-          ? Padding(
-              // 💡 Il segno ha il suo respiro dentro il quadrato: senza
-              // margine toccherebbe il bordo del cerchio.
-              padding: const EdgeInsets.all(22),
+          /*
+           * 🆕 **Dal 19/11 (I10) `segno.png` è il cerchio dell'icona nuova**:
+           * emblema e anello su fondo scuro, già tondo. Si mostra a tutto
+           * cerchio, senza il margine che serviva al vecchio segno bianco — e
+           * il colore del cerchio sotto non si vede più.
+           */
+          ? ClipOval(
               child: Image.asset(
                 'assets/marchio/segno.png',
-                fit: BoxFit.contain,
+                width: 88,
+                height: 88,
+                fit: BoxFit.cover,
                 // ⚠️ Se l'asset non arrivasse — dichiarazione dimenticata in un
                 // `pubspec.yaml` futuro — si torna al manubrio invece di
                 // lasciare un cerchio vuoto che sembra un guasto.
